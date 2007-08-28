@@ -81,10 +81,11 @@ static struct option long_options[] = {
 	{"overwrite",      no_argument,       0, 'O'},
 	{"no-plots",    no_argument,       0, 'P'},
 	{"no-fits2fits",    no_argument,       0, '2'},
+	{"temp-dir",    required_argument, 0, 'm'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -108,6 +109,7 @@ static void print_help(const char* progname) {
 	       "  [--backend-config <filename>]: use this config file for the \"backend\" program.  (-c <file>)\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
 	       "  [--files-on-stdin]: read files to solve on stdin, one per line (-f)\n"
+           "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
@@ -169,17 +171,17 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'm':
+            sl_appendf(augmentxyargs, "--temp-dir \"%s\"", optarg);
+            break;
         case '2':
             sl_append(augmentxyargs, "--no-fits2fits");
             break;
         case 'F':
-            sl_append(augmentxyargs, "--fields");
-            sl_appendf(augmentxyargs, optarg);
+            sl_appendf(augmentxyargs, "--fields \"%s\"", optarg);
             break;
         case 'D':
-            sl_append(augmentxyargs, "--depth");
-            sl_append(augmentxyargs, optarg);
-            //sl_appendf(augmentxyargs, "%i", atoi(optarg));
+            sl_appendf(augmentxyargs, "--depth \"%s\"", optarg);
             break;
         case 'P':
             makeplots = FALSE;
@@ -216,8 +218,7 @@ int main(int argc, char** args) {
 			sl_append(augmentxyargs, optarg);
 			break;
 		case 'c':
-			sl_append(backendargs, "--config");
-			sl_append(backendargs, optarg);
+			sl_appendf(backendargs, "--config \"%s\"", optarg);
 			break;
 		case 'd':
 			outdir = optarg;
@@ -417,11 +418,9 @@ int main(int argc, char** args) {
 		}
 
 		if (image) {
-			sl_append(augmentxyargs, "--image");
-			sl_append(augmentxyargs, image);
+			sl_appendf(augmentxyargs, "--image \"%s\"", image);
 		} else {
-			sl_append(augmentxyargs, "--xylist");
-			sl_append(augmentxyargs, xyls);
+			sl_appendf(augmentxyargs, "--xylist \"%s\"", xyls);
 			/*
 			 if (!width || !height) {
 			 // Load the xylist and compute the min/max.
@@ -430,12 +429,10 @@ int main(int argc, char** args) {
 		}
 
 		if (width) {
-			sl_append(augmentxyargs, "--width");
-			sl_appendf(augmentxyargs, "%i", width);
+			sl_appendf(augmentxyargs, "--width %i", width);
 		}
 		if (height) {
-			sl_append(augmentxyargs, "--height");
-			sl_appendf(augmentxyargs, "%i", height);
+			sl_appendf(augmentxyargs, "--height %i", height);
 		}
 
 		if (image) {
@@ -447,21 +444,15 @@ int main(int argc, char** args) {
 			}
 			ppmfn = sl_append(outfiles, tmpfn);
 
-			sl_append(augmentxyargs, "--pnm");
-			sl_append(augmentxyargs, ppmfn);
+			sl_appendf(augmentxyargs, "--pnm \"%s\"", ppmfn);
 			sl_append(augmentxyargs, "--force-ppm");
 		}
 
-		sl_append(augmentxyargs, "--out");
-		sl_append(augmentxyargs, axyfn);
-		sl_append(augmentxyargs, "--match");
-		sl_append(augmentxyargs, matchfn);
-		sl_append(augmentxyargs, "--rdls");
-		sl_append(augmentxyargs, rdlsfn);
-		sl_append(augmentxyargs, "--solved");
-		sl_append(augmentxyargs, solvedfn);
-		sl_append(augmentxyargs, "--wcs");
-		sl_append(augmentxyargs, wcsfn);
+		sl_appendf(augmentxyargs, "--out \"%s\"", axyfn);
+		sl_appendf(augmentxyargs, "--match \"%s\"", matchfn);
+		sl_appendf(augmentxyargs, "--rdls \"%s\"", rdlsfn);
+		sl_appendf(augmentxyargs, "--solved \"%s\"", solvedfn);
+		sl_appendf(augmentxyargs, "--wcs \"%s\"", wcsfn);
 
 		cmd = sl_implode(augmentxyargs, " ");
 		//printf("Running augment-xylist:\n  %s\n", cmd);
@@ -478,11 +469,9 @@ int main(int argc, char** args) {
             // source extraction overlay
             // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
             sl_append_nocopy(cmdline, get_path("plotxy", me));
-            sl_append(cmdline, "-i");
-            sl_append(cmdline, axyfn);
+            sl_appendf(cmdline, "-i \"%s\"", axyfn);
             if (image) {
-                sl_append(cmdline, "-I");
-                sl_append(cmdline, ppmfn);
+                sl_appendf(cmdline, "-I \"%s\"", ppmfn);
             }
             sl_append(cmdline, "-P");
             sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
@@ -490,12 +479,10 @@ int main(int argc, char** args) {
             sl_append(cmdline, "|");
 
             sl_append_nocopy(cmdline, get_path("plotxy", me));
-            sl_append(cmdline, "-i");
-            sl_append(cmdline, axyfn);
+            sl_appendf(cmdline, "-i \"%s\"", axyfn);
             sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
-            sl_append(cmdline, ">");
-            sl_append(cmdline, objsfn);
+            sl_appendf(cmdline, "> \"%s\"", objsfn);
 
             cmd = sl_implode(cmdline, " ");
             sl_remove_all(cmdline);
@@ -511,7 +498,7 @@ int main(int argc, char** args) {
             free(cmd);
         }
 
-		sl_append(backendargs, axyfn);
+		sl_appendf(backendargs, "\"%s\"", axyfn);
 		cmd = sl_implode(backendargs, " ");
 		printf("Running backend:\n  %s\n", cmd);
         fflush(NULL);

@@ -113,10 +113,11 @@ static struct option long_options[] = {
 	{"no-plot",		no_argument,	   0, 'p'},
 	{"no-tweak",	no_argument,	   0, 'T'},
 	{"no-fits2fits", no_argument,      0, '2'},
+	{"temp-dir",    required_argument, 0, 'm'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -145,6 +146,7 @@ static void print_help(const char* progname) {
            "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane  (-2)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
            "  [--no-plots]: don't create any PNG plots  (-p)\n"
+           "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
 		   "\n", progname);
 }
 
@@ -178,6 +180,7 @@ int main(int argc, char** args) {
 	char* rdlsfile = NULL;
 	char* wcsfile = NULL;
     const char* errmsg = NULL;
+    // contains ranges of depths as pairs of ints.
     il* depths;
     // contains ranges of fields as pairs of ints.
     il* fields;
@@ -207,6 +210,9 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 'm':
+            tempdir = optarg;
+            break;
         case '2':
             nof2f = TRUE;
             break;
