@@ -152,7 +152,7 @@ static void print_help(const char* progname) {
 
 static int parse_depth_string(il* depths, const char* str) {
     // -10,10-20,20-30,40-
-    for (; str && *str;) {
+    while (str && *str) {
         unsigned int lo, hi;
         int nread;
         lo = hi = 0;
@@ -186,7 +186,7 @@ static int parse_depth_string(il* depths, const char* str) {
 
 static int parse_fields_string(il* fields, const char* str) {
     // 10,11,20-25,30,40-50
-    for (; str && *str;) {
+    while (str && *str) {
         unsigned int lo, hi;
         int nread;
         if (sscanf(str, "%u-%u", &lo, &hi) == 2) {

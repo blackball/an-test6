@@ -275,34 +275,33 @@ static int read_parameters(blind_t* bp)
 			bp->lastfield = atoi(nextword);
 		} else if (is_word(line, "fields ", &nextword)) {
 			char* str = nextword;
-			char* endp;
-			int i, firstfld = -1;
-			for (;;) {
-				int fld = strtol(str, &endp, 10);
-				if (str == endp) {
-					// non-numeric value
-					logerr("Couldn't parse: %.20s [etc]\n", str);
-					break;
-				}
-				if (firstfld == -1) {
-					il_insert_unique_ascending(bp->fieldlist, fld);
-				} else {
-					if (firstfld > fld) {
-						logerr("Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
-					} else {
-						for (i = firstfld + 1; i <= fld; i++) {
-							il_insert_unique_ascending(bp->fieldlist, i);
-						}
-					}
-					firstfld = -1;
-				}
-				if (*endp == '/')
-					firstfld = fld;
-				if (*endp == '\0')
-					// end of string
-					break;
-				str = endp + 1;
-			}
+            while (str && *str) {
+                unsigned int lo, hi, i;
+                int nread;
+                if (sscanf(str, "%u%*1[-/]%u", &lo, &hi) == 2) {
+                    sscanf(str, "%*u%*1[-/]%*u%n", &nread);
+                } else if (sscanf(str, "%u", &lo) == 1) {
+                    sscanf(str, "%*u%n", &nread);
+                    hi = lo;
+                } else {
+                    fprintf(stderr, "Failed to parse fields fragment: \"%s\"\n", str);
+                    return -1;
+                }
+                if (lo < 1) {
+                    fprintf(stderr, "Field number %i is invalid: must be >= 1.\n", lo);
+                    return -1;
+                }
+                if (lo > hi) {
+                    fprintf(stderr, "Field range %i to %i is invalid: max must be >= min!\n", lo, hi);
+                    return -1;
+                }
+                for (i=lo; i<=hi; i++) {
+                    il_insert_unique_ascending(bp->fieldlist, i);
+                }
+                str += nread;
+                while ((*str == ',') || isspace(*str))
+                    str++;
+            }
 		} else if (is_word(line, "run", &nextword)) {
 			return 0;
 		} else if (is_word(line, "quit", &nextword)) {
