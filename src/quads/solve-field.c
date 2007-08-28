@@ -20,31 +20,7 @@
 /**
    A command-line interface to the blind solver system.
 
-   eg:
-
-   solve-a-field --image mypic.fits --tweak-order 4 \
-     --scale-low 2 --scale-high 4 --scale-units degwide --dir mypic-results
-
-   must run:
-   mkdir -p mypic-results
-   augment-xylist --guess-scale --image mypic.fits --scale-low 2 \
-        --scale-high 4 --scale-units degwide --tweak-order 4 \
-		--out mypic-results/mypic.axy \
-        --match match.fits --solved solved --rdls rdls.fits \
-		--wcs wcs.fits
-   backend mypic-results/mypic.axy
-   render-job mypic-results/mypic.axy
-
-
 TODO:
-
--add quad to base-idx.png
--depending on image size, do or don't plot constellations (plot-constellations -C)
-
-(1) it assumes you have "." in your path, which I never do.
-
-> Right, so what should it do: look at args[0] to figure out where the other
-> executables are?
 
 (2) It assumes you have netpbm tools installed which the main build
 doesn't require.
@@ -53,10 +29,7 @@ doesn't require.
 > its work - and it cannot do anything sensible (except print a friendly
 > error message) if they don't exist.
 
-(5) by default, we produce:
-- myfile-ngc.png (ngc labels)
-   -- but there should be a flag (e.g --pngs=off) to supress this
-* by default, we do not produce an entirely new fits file but this can
+(6)  by default, we do not produce an entirely new fits file but this can
 be turned on
 
 (7) * by default, we output to stdout a single line for each file something like:
