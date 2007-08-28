@@ -491,9 +491,13 @@ int main(int argc, char** args) {
             fflush(NULL);
             if (run_command(cmd, &ctrlc)) {
                 fflush(NULL);
-                fprintf(stderr, "Plotting command %s; exiting.\n",
+                fprintf(stderr, "Plotting command %s.\n",
                         (ctrlc ? "was cancelled" : "failed"));
-                exit(-1);
+                if (ctrlc)
+                    exit(-1);
+                // don't try any more plots...
+                fprintf(stderr, "Maybe you didn't build the plotting programs?\n");
+                makeplots = FALSE;
             }
             free(cmd);
         }
