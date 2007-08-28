@@ -150,6 +150,32 @@ static void print_help(const char* progname) {
 		   "\n", progname);
 }
 
+static int parse_depth_string(il* depths, const char* str) {
+    // -10,10-20,20-30,40-
+    for (; str && *str;) {
+        unsigned int lo, hi;
+        int nread;
+        lo = hi = 0;
+        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
+            sscanf(str, "%*u-%*u%n", &nread);
+        } else if (sscanf(str, "%u-", &lo) == 1) {
+            sscanf(str, "%*u-%n", &nread);
+        } else if (sscanf(str, "-%u", &hi) == 1) {
+            sscanf(str, "-%*u%n", &nread);
+        } else if (sscanf(str, "%u", &hi) == 1) {
+            sscanf(str, "%*u%n", &nread);
+        } else {
+            return -1;
+        }
+        il_append(depths, lo);
+        il_append(depths, hi);
+        str += nread;
+        while ((*str == ',') || isspace(*str))
+            str++;
+    }
+    return 0;
+}
+
 int main(int argc, char** args) {
 	int c;
 	int rtn;

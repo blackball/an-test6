@@ -24,6 +24,4 @@
 char* get_path(const char* prog, const char* me);
 char* create_temp_file(char* fn, char* dir);
 
-int parse_depth_string(il* depths, const char* str);
-
 #endif
