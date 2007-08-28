@@ -303,12 +303,6 @@ blind: blind-main.o blind.o solver.o codekd.o matchfile.o tic.o \
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@.tmp $^
 	mv $@.tmp $@
 
-whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
-		solvedclient.o solvedfile.o \
-		idfile.o verify.o svd.o intmap.o blind_wcs.o noise.o \
-		$(UTIL_OBJS) \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
-
 whynot: whynot.o index.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o \
 		idfile.o verify.o svd.o intmap.o blind_wcs.o log.o \
