@@ -154,7 +154,7 @@ static char* get_path(const char* prog, const char* me) {
 int main(int argc, char** args) {
 	int c;
 	bool help = FALSE;
-	sl* lowlevelargs;
+	sl* augmentxyargs;
 	char* outdir = NULL;
 	char* image = NULL;
 	char* xyls = NULL;
@@ -172,8 +172,8 @@ int main(int argc, char** args) {
     bool makeplots = TRUE;
     char* me = args[0];
 
-	lowlevelargs = sl_new(16);
-	sl_append_nocopy(lowlevelargs, get_path("augment-xylist", me));
+	augmentxyargs = sl_new(16);
+	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
 
 	backendargs = sl_new(16);
 	sl_append_nocopy(backendargs, get_path("backend", me));
@@ -188,15 +188,15 @@ int main(int argc, char** args) {
 			help = TRUE;
 			break;
         case '2':
-            sl_append(lowlevelargs, "--no-fits2fits");
+            sl_append(augmentxyargs, "--no-fits2fits");
             break;
         case 'F':
-            sl_append(lowlevelargs, "--fields");
-            sl_appendf(lowlevelargs, optarg);
+            sl_append(augmentxyargs, "--fields");
+            sl_appendf(augmentxyargs, optarg);
             break;
         case 'D':
-            sl_append(lowlevelargs, "--depth");
-            sl_appendf(lowlevelargs, "%i", atoi(optarg));
+            sl_append(augmentxyargs, "--depth");
+            sl_appendf(augmentxyargs, "%i", atoi(optarg));
             break;
         case 'P':
             makeplots = FALSE;
@@ -214,23 +214,23 @@ int main(int argc, char** args) {
 			height = atoi(optarg);
 			break;
 		case 'T':
-			sl_append(lowlevelargs, "--no-tweak");
+			sl_append(augmentxyargs, "--no-tweak");
 			break;
 		case 'L':
-			sl_append(lowlevelargs, "--scale-low");
-			sl_append(lowlevelargs, optarg);
+			sl_append(augmentxyargs, "--scale-low");
+			sl_append(augmentxyargs, optarg);
 			break;
 		case 'U':
-			sl_append(lowlevelargs, "--scale-high");
-			sl_append(lowlevelargs, optarg);
+			sl_append(augmentxyargs, "--scale-high");
+			sl_append(augmentxyargs, optarg);
 			break;
 		case 'u':
-			sl_append(lowlevelargs, "--scale-units");
-			sl_append(lowlevelargs, optarg);
+			sl_append(augmentxyargs, "--scale-units");
+			sl_append(augmentxyargs, optarg);
 			break;
 		case 't':
-			sl_append(lowlevelargs, "--tweak-order");
-			sl_append(lowlevelargs, optarg);
+			sl_append(augmentxyargs, "--tweak-order");
+			sl_append(augmentxyargs, optarg);
 			break;
 		case 'c':
 			sl_append(backendargs, "--config");
@@ -278,11 +278,11 @@ int main(int argc, char** args) {
 	}
 
 	if (guess_scale)
-		sl_append(lowlevelargs, "--guess-scale");
+		sl_append(augmentxyargs, "--guess-scale");
 	// pnm?
 
 	// number of low-level and backend args (not specific to a particular file)
-	nllargs = sl_size(lowlevelargs);
+	nllargs = sl_size(augmentxyargs);
 	nbeargs = sl_size(backendargs);
 
 	f = optind;
@@ -325,7 +325,7 @@ int main(int argc, char** args) {
         cmdline = sl_new(16);
 
         // Remove arguments that might have been added in previous trips through this loop
-		sl_remove_from(lowlevelargs, nllargs);
+		sl_remove_from(augmentxyargs, nllargs);
 		sl_remove_from(backendargs,  nbeargs);
 
 		// Choose the base path/filename for output files.
@@ -434,11 +434,11 @@ int main(int argc, char** args) {
 		}
 
 		if (image) {
-			sl_append(lowlevelargs, "--image");
-			sl_append(lowlevelargs, image);
+			sl_append(augmentxyargs, "--image");
+			sl_append(augmentxyargs, image);
 		} else {
-			sl_append(lowlevelargs, "--xylist");
-			sl_append(lowlevelargs, xyls);
+			sl_append(augmentxyargs, "--xylist");
+			sl_append(augmentxyargs, xyls);
 			/*
 			 if (!width || !height) {
 			 // Load the xylist and compute the min/max.
@@ -447,12 +447,12 @@ int main(int argc, char** args) {
 		}
 
 		if (width) {
-			sl_append(lowlevelargs, "--width");
-			sl_appendf(lowlevelargs, "%i", width);
+			sl_append(augmentxyargs, "--width");
+			sl_appendf(augmentxyargs, "%i", width);
 		}
 		if (height) {
-			sl_append(lowlevelargs, "--height");
-			sl_appendf(lowlevelargs, "%i", height);
+			sl_append(augmentxyargs, "--height");
+			sl_appendf(augmentxyargs, "%i", height);
 		}
 
 		if (image) {
@@ -464,23 +464,23 @@ int main(int argc, char** args) {
 			}
 			ppmfn = sl_append(outfiles, tmpfn);
 
-			sl_append(lowlevelargs, "--pnm");
-			sl_append(lowlevelargs, ppmfn);
-			sl_append(lowlevelargs, "--force-ppm");
+			sl_append(augmentxyargs, "--pnm");
+			sl_append(augmentxyargs, ppmfn);
+			sl_append(augmentxyargs, "--force-ppm");
 		}
 
-		sl_append(lowlevelargs, "--out");
-		sl_append(lowlevelargs, axyfn);
-		sl_append(lowlevelargs, "--match");
-		sl_append(lowlevelargs, matchfn);
-		sl_append(lowlevelargs, "--rdls");
-		sl_append(lowlevelargs, rdlsfn);
-		sl_append(lowlevelargs, "--solved");
-		sl_append(lowlevelargs, solvedfn);
-		sl_append(lowlevelargs, "--wcs");
-		sl_append(lowlevelargs, wcsfn);
+		sl_append(augmentxyargs, "--out");
+		sl_append(augmentxyargs, axyfn);
+		sl_append(augmentxyargs, "--match");
+		sl_append(augmentxyargs, matchfn);
+		sl_append(augmentxyargs, "--rdls");
+		sl_append(augmentxyargs, rdlsfn);
+		sl_append(augmentxyargs, "--solved");
+		sl_append(augmentxyargs, solvedfn);
+		sl_append(augmentxyargs, "--wcs");
+		sl_append(augmentxyargs, wcsfn);
 
-		cmd = sl_implode(lowlevelargs, " ");
+		cmd = sl_implode(augmentxyargs, " ");
 		//printf("Running augment-xylist:\n  %s\n", cmd);
         fflush(NULL);
 		if (run_command(cmd, &ctrlc)) {
@@ -657,7 +657,7 @@ int main(int argc, char** args) {
 		sl_free(outfiles);
 	}
 
-	sl_free(lowlevelargs);
+	sl_free(augmentxyargs);
 	sl_free(backendargs);
 
 	return 0;
