@@ -352,9 +352,14 @@ static void job_print(job_t* job)
 		printf("  [%g, %g] arcsec/pix\n", lo, hi);
 	}
 	printf("Depths:");
-	for (i = 0; i < il_size(job->depths); i++) {
-		int depth = il_get(job->depths, i);
-		printf(" %i", depth);
+	for (i = 0; i < il_size(job->depths)/2; i++) {
+		int dlo, dhi;
+        dlo = il_get(job->depths, 2*i);
+        dhi = il_get(job->depths, 2*i + 1);
+        if (!dhi)
+            printf(" %i-", dlo);
+        else
+            printf(" %i-%i", dlo, dhi);
 	}
 	printf("\n");
 	printf("Fields:");
@@ -393,22 +398,17 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 	bool firsttime = TRUE;
 	WRITE(fout, "timelimit %i\n", job->timelimit);
 	WRITE(fout, "cpulimit %i\n", job->cpulimit);
-	for (i = 0;; i++) {
-		int startobj, endobj;
-		if (il_size(job->depths) < 2) {
-			if (i > 0)
-				break;
-			startobj = 0;
-			if (i < il_size(job->depths))
-				endobj = il_get(job->depths, i);
-			else
-				endobj = 0;
-		} else {
-			if (i >= il_size(job->depths) - 1)
-				break;
-			startobj = il_get(job->depths, i);
-			endobj = il_get(job->depths, i + 1);
-		}
+    for (i=0;; i++) {
+		int startobj = 0, endobj = 0;
+        // if no depths were specified, run through once with the defaults.
+        if (!il_size(job->depths) && i > 0)
+            break;
+        if (il_size(job->depths)) {
+            if (i >= il_size(job->depths)/2)
+                break;
+            startobj = il_get(job->depths, 2*i);
+            endobj = il_get(job->depths, 2*i + 1);
+        }
 
 		for (j = 0; j < dl_size(job->scales) / 2; j++) {
 			double fmin, fmax;
@@ -649,12 +649,15 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	n = 1;
 	while (1) {
 		char key[64];
-		int depth;
-		sprintf(key, "ANDEPTH%i", n);
-		depth = qfits_header_getint(hdr, key, -1);
-		if (depth == -1)
+		int dlo, dhi;
+		sprintf(key, "ANDPL%i", n);
+		dlo = qfits_header_getint(hdr, key, 0);
+		sprintf(key, "ANDPU%i", n);
+		dhi = qfits_header_getint(hdr, key, 0);
+		if (dlo == 0 && dhi == 0)
 			break;
-		il_append(job->depths, depth);
+		il_append(job->depths, dlo);
+		il_append(job->depths, dhi);
 		n++;
 	}
 	n = 1;

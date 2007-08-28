@@ -89,7 +89,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
 	plot-constellations.o constellations.o quadcenters.o startree2rdls.o \
 	brightstars.o grab-stellarium-constellations.o cairoutils.o ngcic-accurate.o \
-	ngc2000.o noisesim.o noisesim4.o noise.o
+	ngc2000.o noisesim.o noisesim4.o noise.o scriptutils.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -289,10 +289,10 @@ unpermute-quads: unpermute-quads.o codekd.o \
 
 backend: backend.o fileutil.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-solve-field: solve-field.o matchfile.o fileutil.o \
+solve-field: solve-field.o scriptutils.o matchfile.o fileutil.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-augment-xylist: augment-xylist.o fileutil.o \
+augment-xylist: augment-xylist.o scriptutils.o fileutil.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 blind: blind-main.o blind.o solver.o codekd.o matchfile.o tic.o \

@@ -44,7 +44,7 @@
  * ANTWEAKO - Tweak order.
  * ANAPPL# - Lower bound on scale (in arcseconds per pixel)
  * ANAPPU# - Upper bound on scale (in arcseconds per pixel)
- * ANDEPTH# - The deepening strategy.
+ * ANDPL#/ANDPU# - The range of depths (field objects) to examine
  * ANFDL#/ANFDU# - Add fields to be solved, specified in inclusive table HDU ranges starting from 1. The ANFD'''L'''/ANFD'''U''' stands for Upper and Lower. Defaults to all HDU's, but if a single ANFD[LU]# is specified, then only the fields explicitly listed are used. Multiple ANFD[LU]#'s can be present and the solved field are the union of the specified ranges. Only valid in the primary header.
  * ANFD#### - Add single fields to be solved. Only valid in the primary header.
  * ANODDSPR - Odds ratio required before to printing a solution.
@@ -85,6 +85,7 @@
 #include "solver.h"
 #include "math.h"
 #include "fitsioutils.h"
+#include "scriptutils.h"
 
 #include "qfits.h"
 
@@ -145,39 +146,6 @@ static void print_help(const char* progname) {
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
            "  [--no-plots]: don't create any PNG plots  (-p)\n"
 		   "\n", progname);
-}
-
-static char* get_path(const char* prog, const char* me) {
-    char* cpy;
-    char* dir;
-    char* path;
-
-    // First look for it in solve-field's directory.
-    cpy = strdup(me);
-    dir = strdup(dirname(cpy));
-    free(cpy);
-    asprintf_safe(&path, "%s/%s", dir, prog);
-    free(dir);
-    if (file_executable(path))
-        return path;
-
-    // Otherwise, let the normal PATH-search machinery find it...
-    free(path);
-    path = strdup(prog);
-    return path;
-}
-
-static char* create_temp_file(char* fn, char* dir) {
-    char* tempfile;
-    int fid;
-    asprintf_safe(&tempfile, "%s/tmp.%s.XXXXXX", dir, fn);
-    fid = mkstemp(tempfile);
-    if (fid == -1) {
-        fprintf(stderr, "Failed to create temp file: %s\n", strerror(errno));
-        exit(-1);
-    }
-    close(fid);
-    return tempfile;
 }
 
 int main(int argc, char** args) {
@@ -260,7 +228,10 @@ int main(int argc, char** args) {
             }
             break;
         case 'd':
-            il_append(depths, atoi(optarg));
+            if (parse_depth_string(depths, optarg)) {
+                fprintf(stderr, "Failed to parse depth specification: \"%s\"\n", optarg);
+                exit(-1);
+            }
             break;
 		case 'o':
 			outfn = optarg;
@@ -658,11 +629,15 @@ int main(int argc, char** args) {
 	if (wcsfile)
 		qfits_header_add(hdr, "ANWCS", wcsfile, "output filename", NULL);
 
-    for (i=0; i<il_size(depths); i++) {
-        int depth = il_get(depths, i);
+    for (i=0; i<il_size(depths)/2; i++) {
+        int depthlo, depthhi;
         char key[64];
-        sprintf(key, "ANDEPTH%i", (i+1));
-		fits_header_addf(hdr, key, "", "%i", depth);
+        depthlo = il_get(depths, 2*i);
+        depthhi = il_get(depths, 2*i + 1);
+        sprintf(key, "ANDPL%i", (i+1));
+		fits_header_addf(hdr, key, "", "%i", depthlo);
+        sprintf(key, "ANDPU%i", (i+1));
+		fits_header_addf(hdr, key, "", "%i", depthhi);
     }
 
     for (i=0; i<il_size(fields)/2; i++) {

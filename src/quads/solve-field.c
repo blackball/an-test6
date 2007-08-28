@@ -59,6 +59,8 @@ pixels=UxV arcmin
 #include "ioutils.h"
 #include "xylist.h"
 #include "matchfile.h"
+#include "scriptutils.h"
+
 #include "qfits_error.h"
 
 static struct option long_options[] = {
@@ -131,26 +133,6 @@ static int run_command(const char* cmd, bool* ctrlc) {
 	return rtn;
 }
 
-static char* get_path(const char* prog, const char* me) {
-    char* cpy;
-    char* dir;
-    char* path;
-
-    // First look for it in solve-field's directory.
-    cpy = strdup(me);
-    dir = strdup(dirname(cpy));
-    free(cpy);
-    asprintf_safe(&path, "%s/%s", dir, prog);
-    free(dir);
-    if (file_executable(path))
-        return path;
-
-    // Otherwise, let the normal PATH-search machinery find it...
-    free(path);
-    path = strdup(prog);
-    return path;
-}
-
 int main(int argc, char** args) {
 	int c;
 	bool help = FALSE;
@@ -196,7 +178,8 @@ int main(int argc, char** args) {
             break;
         case 'D':
             sl_append(augmentxyargs, "--depth");
-            sl_appendf(augmentxyargs, "%i", atoi(optarg));
+            sl_append(augmentxyargs, optarg);
+            //sl_appendf(augmentxyargs, "%i", atoi(optarg));
             break;
         case 'P':
             makeplots = FALSE;
