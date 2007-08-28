@@ -176,6 +176,28 @@ static int parse_depth_string(il* depths, const char* str) {
     return 0;
 }
 
+static int parse_fields_string(il* fields, const char* str) {
+    // 10,11,20-25,30,40-50
+    for (; str && *str;) {
+        unsigned int lo, hi;
+        int nread;
+        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
+            sscanf(str, "%*u-%*u%n", &nread);
+        } else if (sscanf(str, "%u", &lo) == 1) {
+            sscanf(str, "%*u%n", &nread);
+            hi = lo;
+        } else {
+            return -1;
+        }
+        il_append(fields, lo);
+        il_append(fields, hi);
+        str += nread;
+        while ((*str == ',') || isspace(*str))
+            str++;
+    }
+    return 0;
+}
+
 int main(int argc, char** args) {
 	int c;
 	int rtn;
@@ -243,19 +265,8 @@ int main(int argc, char** args) {
             nof2f = TRUE;
             break;
         case 'F':
-            if (sscanf(optarg, "%d/%d", &lo, &hi) == 2) {
-                if (hi < lo) {
-                    fprintf(stderr, "Error parsing range of fields \"%s\".\n", optarg);
-                    exit(-1);
-                }
-                il_append(fields, lo);
-                il_append(fields, hi);
-            } else if (sscanf(optarg, "%i", &lo) == 1) {
-                // hi == lo
-                il_append(fields, lo);
-                il_append(fields, lo);
-            } else {
-                fprintf(stderr, "Error parsing fields specification \"%s\".\n", optarg);
+            if (parse_field_string(fields, optarg)) {
+                fprintf(stderr, "Failed to parse fields specification \"%s\".\n", optarg);
                 exit(-1);
             }
             break;
