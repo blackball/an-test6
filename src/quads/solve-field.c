@@ -132,7 +132,6 @@ static int run_command(const char* cmd, bool* ctrlc) {
 }
 
 static char* get_path(const char* prog, const char* me) {
-    //char* path = find_executable(prog, me);
     char* cpy;
     char* dir;
     char* path;
@@ -149,12 +148,6 @@ static char* get_path(const char* prog, const char* me) {
     // Otherwise, let the normal PATH-search machinery find it...
     free(path);
     path = strdup(prog);
-    /*
-     if (!path) {
-     fprintf(stderr, "Failed to find executable \"%s\".\n", prog);
-     exit(-1);
-     }
-     */
     return path;
 }
 
@@ -178,33 +171,12 @@ int main(int argc, char** args) {
 	bool overwrite = FALSE;
     bool makeplots = TRUE;
     char* me = args[0];
-    //char* cpy;
-    //char* mydir;
-
-    // Add this program's directory to PATH.
-    /*
-     cpy = strdup(me);
-     mydir = strdup(dirname(cpy));
-     free(cpy);
-     if (mydir) {
-     char* path;
-     char* newpath;
-     path = getenv("PATH");
-     asprintf_safe(&newpath, "PATH=%s:%s", path, mydir);
-     putenv(newpath);
-     // Note, we leak "newpath" because it becomes part of the environment, so
-     // changing it changes the environment.
-     free(mydir);
-     }
-     */
 
 	lowlevelargs = sl_new(16);
 	sl_append_nocopy(lowlevelargs, get_path("augment-xylist", me));
-	//sl_append(lowlevelargs, "augment-xylist");
 
 	backendargs = sl_new(16);
 	sl_append_nocopy(backendargs, get_path("backend", me));
-	//sl_append(backendargs, "backend");
 
 	while (1) {
 		int option_index = 0;
@@ -523,7 +495,6 @@ int main(int argc, char** args) {
             // source extraction overlay
             // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
             sl_append_nocopy(cmdline, get_path("plotxy", me));
-            //sl_append(cmdline, "plotxy");
             sl_append(cmdline, "-i");
             sl_append(cmdline, axyfn);
             if (image) {
@@ -536,7 +507,6 @@ int main(int argc, char** args) {
             sl_append(cmdline, "|");
 
             sl_append_nocopy(cmdline, get_path("plotxy", me));
-            //sl_append(cmdline, "plotxy");
             sl_append(cmdline, "-i");
             sl_append(cmdline, axyfn);
             sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
@@ -572,7 +542,7 @@ int main(int argc, char** args) {
         fflush(NULL);
 
 		if (!file_exists(solvedfn)) {
-			// boo.
+			// boo hoo.
 			printf("Field didn't solve.\n");
 		} else {
 			matchfile* mf;
@@ -580,7 +550,6 @@ int main(int argc, char** args) {
 
 			// index rdls to xyls.
             sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
-            //sl_append(cmdline, "wcs-rd2xy");
 			sl_append(cmdline, "-w");
 			sl_append(cmdline, wcsfn);
 			sl_append(cmdline, "-i");
@@ -603,7 +572,6 @@ int main(int argc, char** args) {
             if (makeplots) {
                 // sources + index overlay
                 sl_append_nocopy(cmdline, get_path("plotxy", me));
-                //sl_append(cmdline, "plotxy");
                 sl_append(cmdline, "-i");
                 sl_append(cmdline, axyfn);
                 if (image) {
@@ -614,7 +582,6 @@ int main(int argc, char** args) {
                 sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
                 sl_append(cmdline, "|");
                 sl_append_nocopy(cmdline, get_path("plotxy", me));
-                //sl_append(cmdline, "plotxy");
                 sl_append(cmdline, "-i");
                 sl_append(cmdline, indxylsfn);
                 sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
@@ -633,7 +600,6 @@ int main(int argc, char** args) {
 
                 sl_append(cmdline, " -P |");
                 sl_append_nocopy(cmdline, get_path("plotquad", me));
-                //sl_append(cmdline, "plotquad");
                 sl_append(cmdline, "-I -");
                 sl_append(cmdline, "-C green");
                 sl_append(cmdline, "-w 2");
@@ -660,7 +626,6 @@ int main(int argc, char** args) {
 
             if (image && makeplots) {
                 sl_append_nocopy(cmdline, get_path("plot-constellations", me));
-                //sl_append(cmdline, "plot-constellations");
 				sl_append(cmdline, "-w");
 				sl_append(cmdline, wcsfn);
 				sl_append(cmdline, "-i");
