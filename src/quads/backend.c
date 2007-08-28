@@ -642,6 +642,10 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 		hi = qfits_header_getdouble(hdr, key, dnil);
 		if (hi == dnil)
 			break;
+        if ((lo <= 0) || (lo > hi)) {
+            fprintf(stderr, "Scale range %g to %g is invalid: min must be >= 0, max must be >= min.\n", lo, hi);
+            goto bailout;
+        }
 		dl_append(job->scales, lo);
 		dl_append(job->scales, hi);
 		n++;
@@ -656,22 +660,34 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 		dhi = qfits_header_getint(hdr, key, 0);
 		if (dlo == 0 && dhi == 0)
 			break;
+        if ((dlo < 0) || (dlo > dhi)) {
+            fprintf(stderr, "Depth range %i to %i is invalid: min must be >= 1, max must be >= min.\n", dlo, dhi);
+            goto bailout;
+        }
 		il_append(job->depths, dlo);
 		il_append(job->depths, dhi);
 		n++;
 	}
 	n = 1;
 	while (1) {
-		char key[64];
+		char lokey[64];
+		char hikey[64];
 		int lo, hi;
-		sprintf(key, "ANFDL%i", n);
-		lo = qfits_header_getint(hdr, key, -1);
+		sprintf(lokey, "ANFDL%i", n);
+		lo = qfits_header_getint(hdr, lokey, -1);
 		if (lo == -1)
 			break;
-		sprintf(key, "ANFDU%i", n);
-		hi = qfits_header_getint(hdr, key, -1);
+		sprintf(hikey, "ANFDU%i", n);
+		hi = qfits_header_getint(hdr, hikey, -1);
 		if (hi == -1)
 			break;
+        if ((lo <= 0) || (lo > hi)) {
+            fprintf(stderr, "Field range %i to %i is invalid: min must be >= 1, max must be >= min.\n", lo, hi);
+            fprintf(stderr, "  (FITS headers: \"%s = %s\", \"%s = %s\")\n",
+                    lokey, qfits_pretty_string(qfits_header_getstr(hdr, lokey)),
+                    hikey, qfits_pretty_string(qfits_header_getstr(hdr, hikey)));
+            goto bailout;
+        }
 		il_append(job->fields, lo);
 		il_append(job->fields, hi);
 		n++;
@@ -684,6 +700,11 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 		fld = qfits_header_getint(hdr, key, -1);
 		if (fld == -1)
 			break;
+        if (fld <= 0) {
+            fprintf(stderr, "Field %i is invalid: must be >= 1.  (FITS header: \"%s = %s\")\n", fld, key,
+                    qfits_pretty_string(qfits_header_getstr(hdr, key)));
+            goto bailout;
+        }
 		il_append(job->fields, fld);
 		il_append(job->fields, fld);
 		n++;
@@ -723,8 +744,8 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 
 	// Default: solve first field.
 	if (job->run && !il_size(job->fields)) {
-		il_append(job->fields, 0);
-		il_append(job->fields, 0);
+		il_append(job->fields, 1);
+		il_append(job->fields, 1);
 	}
 
 	return job;

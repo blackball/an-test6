@@ -167,6 +167,14 @@ static int parse_depth_string(il* depths, const char* str) {
         } else {
             return -1;
         }
+        if (lo < 0) {
+            fprintf(stderr, "Depth %i is invalid: must be >= 0.\n", lo);
+            return -1;
+        }
+        if (lo > hi) {
+            fprintf(stderr, "Depth range %i to %i is invalid: max must be >= min!\n", lo, hi);
+            return -1;
+        }
         il_append(depths, lo);
         il_append(depths, hi);
         str += nread;
@@ -187,6 +195,15 @@ static int parse_fields_string(il* fields, const char* str) {
             sscanf(str, "%*u%n", &nread);
             hi = lo;
         } else {
+            fprintf(stderr, "Failed to parse fragment: \"%s\"\n", str);
+            return -1;
+        }
+        if (lo <= 0) {
+            fprintf(stderr, "Field number %i is invalid: must be >= 1.\n", lo);
+            return -1;
+        }
+        if (lo > hi) {
+            fprintf(stderr, "Field range %i to %i is invalid: max must be >= min!\n", lo, hi);
             return -1;
         }
         il_append(fields, lo);
@@ -232,7 +249,6 @@ int main(int argc, char** args) {
     il* depths;
     // contains ranges of fields as pairs of ints.
     il* fields;
-    int lo, hi;
     bool nof2f = FALSE;
     char* me = args[0];
     char* tempdir = "/tmp";
@@ -265,7 +281,7 @@ int main(int argc, char** args) {
             nof2f = TRUE;
             break;
         case 'F':
-            if (parse_field_string(fields, optarg)) {
+            if (parse_fields_string(fields, optarg)) {
                 fprintf(stderr, "Failed to parse fields specification \"%s\".\n", optarg);
                 exit(-1);
             }
