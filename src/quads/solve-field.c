@@ -27,7 +27,7 @@
 
    must run:
    mkdir -p mypic-results
-   low-level-frontend --guess-scale --image mypic.fits --scale-low 2 \
+   augment-xylist --guess-scale --image mypic.fits --scale-low 2 \
         --scale-high 4 --scale-units degwide --tweak-order 4 \
 		--out mypic-results/mypic.axy \
         --match match.fits --solved solved --rdls rdls.fits \
@@ -226,8 +226,8 @@ int main(int argc, char** args) {
      */
 
 	lowlevelargs = sl_new(16);
-	sl_append_nocopy(lowlevelargs, get_path("low-level-frontend", me));
-	//sl_append(lowlevelargs, "low-level-frontend");
+	sl_append_nocopy(lowlevelargs, get_path("augment-xylist", me));
+	//sl_append(lowlevelargs, "augment-xylist");
 
 	backendargs = sl_new(16);
 	sl_append_nocopy(backendargs, get_path("backend", me));
@@ -536,11 +536,11 @@ int main(int argc, char** args) {
 		sl_append(lowlevelargs, wcsfn);
 
 		cmd = sl_implode(lowlevelargs, " ");
-		//printf("Running low-level-frontend:\n  %s\n", cmd);
+		//printf("Running augment-xylist:\n  %s\n", cmd);
         fflush(NULL);
 		if (run_command(cmd, &ctrlc)) {
             fflush(NULL);
-            fprintf(stderr, "low-level-frontend %s; exiting.\n",
+            fprintf(stderr, "augment-xylist %s; exiting.\n",
                     (ctrlc ? "was cancelled" : "failed"));
 			exit(-1);
         }

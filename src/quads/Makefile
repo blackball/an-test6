@@ -97,7 +97,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	startree hpquads codetree unpermute-quads unpermute-stars blind \
 	solvedserver printsolved xylist2fits mergesolved \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable \
-	new-wcs get-wcs backend low-level-frontend solve-field
+	new-wcs get-wcs backend augment-xylist solve-field
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate \
@@ -292,7 +292,7 @@ backend: backend.o fileutil.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 solve-field: solve-field.o matchfile.o fileutil.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-low-level-frontend: low-level-frontend.o fileutil.o \
+augment-xylist: augment-xylist.o fileutil.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 blind: blind-main.o blind.o solver.o codekd.o matchfile.o tic.o \

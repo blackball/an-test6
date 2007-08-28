@@ -20,10 +20,10 @@
  * Accepts an xylist and command-line options, and produces an augmented
  * xylist.
 
- low-level-frontend --guess-scale --image mypic.fits --scale-low 2 \
+ augment-xylist --guess-scale --image mypic.fits --scale-low 2 \
  --scale-high 4 --scale-units degwide --tweak-order 4 --out mypic.axy
 
- low-level-frontend --xylist sdss.fits --scale-low 0.38 --scale-high 0.41 \
+ augment-xylist --xylist sdss.fits --scale-low 0.38 --scale-high 0.41 \
  --scale-units arcsecperpix --fields 1-9999 --noplots --nordls \
  --out sdss.axy
 
