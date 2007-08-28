@@ -33,6 +33,7 @@
 #include <sys/wait.h>
 #include <libgen.h>
 #include <getopt.h>
+#include <dirent.h>
 
 #include "fileutil.h"
 #include "ioutils.h"
@@ -155,6 +156,7 @@ static int add_index(backend_t* backend, char* index)
 
 static int parse_config_file(FILE* fconf, backend_t* backend)
 {
+    bool auto_index = FALSE;
 	while (1) {
 		char buffer[10240];
 		char* nextword;
@@ -183,7 +185,9 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			if (add_index(backend, nextword)) {
 				return -1;
 			}
-		} else if (is_word(line, "blind ", &nextword)) {
+        } else if (is_word(line, "autoindex", &nextword)) {
+            auto_index = TRUE;
+        } else if (is_word(line, "blind ", &nextword)) {
 			free(backend->blind);
 			backend->blind = strdup(nextword);
 		} else if (is_word(line, "inparallel", &nextword)) {
@@ -193,13 +197,53 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 		} else if (is_word(line, "maxwidth ", &nextword)) {
 			backend->maxwidth = atof(nextword);
 		} else if (is_word(line, "add_path ", &nextword)) {
-			sl_append(backend->index_paths, strdup(nextword));
+			sl_append(backend->index_paths, nextword);
 		} else {
 			printf("Didn't understand this config file line: \"%s\"\n", line);
 			return -1; // unknown config line is a firing offense
 		}
-
 	}
+
+    if (auto_index) {
+        // Search the paths specified and add any indexes that are found.
+        int i;
+        for (i=0; i<sl_size(backend->index_paths); i++) {
+            char* path = sl_get(backend->index_paths, i);
+            DIR* dir = opendir(path);
+            if (!dir) {
+                fprintf(stderr, "Failed to open directory \"%s\": %s\n", path, strerror(errno));
+                continue;
+            }
+            while (1) {
+                struct dirent* de = readdir(dir);
+                char* name;
+                int len;
+                int baselen;
+                char* base;
+                if (!de) {
+                    if (errno)
+                        fprintf(stderr, "Failed to read entry from directory \"%s\": %s\n", path, strerror(errno));
+                    break;
+                }
+                name = de->d_name;
+                // Look for files ending with .quad.fits
+                len = strlen(name);
+                if (len <= 10)
+                    continue;
+                baselen = len - 10;
+                if (strcmp(name + baselen, ".quad.fits"))
+                    continue;
+                base = malloc(baselen + 1);
+                memcpy(base, name, baselen);
+                base[baselen] = '\0';
+                // FIXME - looking for corresponding .skdt.fits and .ckdt.fits files?
+                printf("Trying to add index \"%s\".\n", base);
+                add_index(backend, base);
+                free(base);
+            }
+        }
+    }
+
 	return 0;
 }
 
