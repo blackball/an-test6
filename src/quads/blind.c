@@ -112,6 +112,7 @@ void blind_run(blind_t* bp) {
 	uint numfields;
 	solver_t* sp = &(bp->solver);
 	int I;
+    int index_options = 0;
 
 	// Write the start file.
 	if (bp->startfname) {
@@ -172,6 +173,9 @@ void blind_run(blind_t* bp) {
 		indexrdls_write_header(bp);
 	}
 
+    if (bp->use_idfile)
+        index_options |= INDEX_USE_IDFILE;
+
 	// Verify any WCS estimates we have.
 	if (pl_size(bp->verify_wcs_list)) {
 		for (I = 0; I < sl_size(bp->indexnames); I++) {
@@ -185,7 +189,7 @@ void blind_run(blind_t* bp) {
 				break;
 
 			fname = sl_get(bp->indexnames, I);
-			index = index_load(fname, 0);
+			index = index_load(fname, index_options);
 			if (!index) 
 				exit( -1);
 			pl_append(sp->indexes, index);
@@ -221,7 +225,7 @@ void blind_run(blind_t* bp) {
 
 			fname = sl_get(bp->indexnames, I);
 			logmsg("\nLoading index %s...\n", fname);
-			index = index_load(fname, 0);
+			index = index_load(fname, index_options);
 			if (!index) {
 				logmsg("\nError loading index %s...\n", fname);
 				exit( -1);
@@ -261,7 +265,7 @@ void blind_run(blind_t* bp) {
 
 			// Load the index...
 			fname = sl_get(bp->indexnames, I);
-			index = index_load(fname, (bp->use_idfile ? INDEX_USE_IDFILE : 0));
+			index = index_load(fname, index_options);
 			if (!index) {
 				exit( -1);
 			}
@@ -543,9 +547,9 @@ static void load_and_parse_wcsfiles(blind_t* bp)
 void blind_log_run_parameters(blind_t* bp)
 {
 	solver_t* sp = &(bp->solver);
+	int i;
 
 	logmsg("fields ");
-	int i;
 	for (i = 0; i < il_size(bp->fieldlist); i++)
 		logmsg("%i ", il_get(bp->fieldlist, i));
 	logmsg("\n");
@@ -795,16 +799,6 @@ static time_t timer_callback(void* user_data) {
 	return 1; // wait 1 second... FIXME config?
 }
 
-/*
-// if verification was specified in pixel units, compute the verification
-// distance on the unit sphere...
-if (bp->verify_pix > 0.0) {
-pixd2 = square(bp->verify_pix) + square(sp->index->index_jitter / mo->scale);
-} else {
-pixd2 = (square(distsq2arcsec(bp->verify_dist2)) + square(sp->index->index_jitter)) / square(mo->scale);
-}
-*/
-
 static void add_blind_params(blind_t* bp, qfits_header* hdr)
 {
 	solver_t* sp = &(bp->solver);
@@ -875,10 +869,14 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		qfits_header* fieldhdr = NULL;
 
 		fieldnum = il_get(bp->fieldlist, fi);
-		if (fieldnum >= nfields) {
+		if (fieldnum > nfields) {
 			logerr("Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			goto cleanup;
 		}
+        if (fieldnum <= 0) {
+            logerr("Field %i is invalid (must be >= 1).\n", fieldnum);
+            goto cleanup;
+        }
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
@@ -913,13 +911,15 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		}
 
 		// Get the field.
-		sp->nfield = xylist_n_entries(bp->xyls, fieldnum);
+        // FIXME: push 1-indexed field numbers into xylist?
+		sp->nfield = xylist_n_entries(bp->xyls, fieldnum - 1);
 		if (sp->nfield == -1) {
 			logerr("Couldn't determine how many objects are in field %i.\n", fieldnum);
 			goto cleanup;
 		}
 		sp->field = realloc(sp->field, 2 * sp->nfield * sizeof(double));
-		if (xylist_read_entries(bp->xyls, fieldnum, 0, sp->nfield, sp->field)) {
+        // FIXME: 1-indexed
+		if (xylist_read_entries(bp->xyls, fieldnum - 1, 0, sp->nfield, sp->field)) {
 			logerr("Failed to read field.\n");
 			goto cleanup;
 		}
@@ -969,7 +969,6 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		} else {
 			logmsg("Solving field %i.\n", fieldnum);
 
-			// push some parameters over from blind
 			sp->distance_from_quad_bonus = TRUE;
 			
 			// The real thing

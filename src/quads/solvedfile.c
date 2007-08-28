@@ -50,6 +50,9 @@ int solvedfile_get(char* fn, int fieldnum) {
 	unsigned char val;
 	off_t end;
 
+    // 1-index field numbers:
+    fieldnum--;
+
 	f = fopen(fn, "rb");
 	if (!f) {
 		// assume it's not solved!
@@ -77,6 +80,7 @@ int solvedfile_get(char* fn, int fieldnum) {
 	return val;
 }
 
+// lastfield = 0 for no limit.
 static il* solvedfile_getall_val(char* fn, int firstfield, int lastfield, int maxfields, int val) {
 	FILE* f;
 	off_t end;
@@ -109,6 +113,9 @@ static il* solvedfile_getall_val(char* fn, int firstfield, int lastfield, int ma
 		il_free(list);
 		return NULL;
 	}
+    // 1-index
+    firstfield--;
+    lastfield--;
 	if (end <= firstfield) {
 		fclose(f);
 		return list;
@@ -122,9 +129,10 @@ static il* solvedfile_getall_val(char* fn, int firstfield, int lastfield, int ma
 		return NULL;
 	}
 
-	for (i=firstfield; i<=lastfield && i < end; i++) {
+	for (i=firstfield; ((lastfield == -1) || (i<=lastfield)) && (i < end); i++) {
 		if (map[i] == val) {
-			il_append(list, i);
+            // 1-index
+			il_append(list, i+1);
 			if (il_size(list) == maxfields)
 				break;
 		}
@@ -137,7 +145,8 @@ static il* solvedfile_getall_val(char* fn, int firstfield, int lastfield, int ma
 		for (i=end; i<=lastfield; i++) {
 			if (il_size(list) == maxfields)
 				break;
-			il_append(list, i);
+            // 1-index
+			il_append(list, i+1);
 		}
 	}
 	return list;
@@ -192,6 +201,10 @@ int solvedfile_set(char* fn, int fieldnum) {
 	int f;
 	unsigned char val;
 	off_t off;
+
+    // 1-index
+    fieldnum--;
+
 	// (file mode 777; umask will modify this, if set).
 	f = open(fn, O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (f == -1) {
