@@ -276,6 +276,8 @@ struct job_t
 	// Contains tan_t structs.
 	bl* verify_wcs;
     bool include_default_scales;
+    char* xcol;
+    char* ycol;
 };
 typedef struct job_t job_t;
 
@@ -318,6 +320,8 @@ static void job_free(job_t* job)
 	il_free(job->depths);
 	il_free(job->fields);
 	bl_free(job->verify_wcs);
+    free(job->xcol);
+    free(job->ycol);
 	free(job);
 }
 
@@ -331,6 +335,10 @@ static void job_print(job_t* job)
 	printf("RDLS file: %s\n", job->rdlsfile);
 	printf("WCS file: %s\n", job->wcsfile);
 	printf("Cancel file: %s\n", job->cancelfile);
+    if (job->xcol)
+        printf("X column: %s\n", job->xcol);
+    if (job->ycol)
+        printf("Y column: %s\n", job->ycol);
 	printf("Time limit: %i sec\n", job->timelimit);
 	printf("CPU limit: %i sec\n", job->cpulimit);
 	printf("Parity: %s\n", (job->parity == PARITY_NORMAL ? "pos" :
@@ -475,6 +483,11 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			WRITE(fout, "ratio_tokeep %g\n", job->odds_tokeep);
 			WRITE(fout, "ratio_tosolve %g\n", job->odds_tosolve);
 			WRITE(fout, "ratio_tobail %g\n", 1e-100);
+
+            if (job->xcol)
+                WRITE(fout, "xcol %s\n", job->xcol);
+            if (job->ycol)
+                WRITE(fout, "ycol %s\n", job->ycol);
 
 			if (job->tweak) {
 				WRITE(fout, "tweak\n");
@@ -621,6 +634,9 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	job->timelimit = qfits_header_getint(hdr, "ANTLIM", job->timelimit);
 	job->cpulimit = qfits_header_getint(hdr, "ANCLIM", job->cpulimit);
     job->include_default_scales = qfits_header_getboolean(hdr, "ANAPPDEF", 0);
+
+	job->xcol = fits_get_dupstring(hdr, "ANXCOL");
+	job->ycol = fits_get_dupstring(hdr, "ANYCOL");
 
 	char *pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
 	if (pstr && !strcmp(pstr, "NEG")) {
@@ -870,17 +886,6 @@ int main(int argc, char** args)
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit( -1);
 	}
-
-    // add the directory containing the config file to the index search path...
-    /*{
-     char* cpy;
-     char* dir;
-     cpy = strdup(configfn);
-     dir = strdup(dirname(cpy));
-     free(cpy);
-     sl_append_nocopy(backend->index_paths, dir);
-     }
-     */
 
 	if (parse_config_file(fconf, backend)) {
 		printf("Failed to parse config file.\n");

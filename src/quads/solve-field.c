@@ -64,28 +64,30 @@ pixels=UxV arcmin
 #include "qfits_error.h"
 
 static struct option long_options[] = {
-	{"help",        no_argument,       0, 'h'},
-	{"width",       required_argument, 0, 'W'},
-	{"height",      required_argument, 0, 'H'},
-	{"scale-low",	required_argument, 0, 'L'},
-	{"scale-high",	required_argument, 0, 'U'},
-	{"scale-units", required_argument, 0, 'u'},
-    {"fields",      required_argument, 0, 'F'},
-	{"depth",       required_argument, 0, 'D'},
-	{"no-tweak",    no_argument,       0, 'T'},
-	{"no-guess-scale", no_argument,    0, 'G'},
-	{"tweak-order", required_argument, 0, 't'},
-	{"dir",         required_argument, 0, 'd'},
+	{"help",           no_argument,       0, 'h'},
+	{"width",          required_argument, 0, 'W'},
+	{"height",         required_argument, 0, 'H'},
+	{"scale-low",	   required_argument, 0, 'L'},
+	{"scale-high",	   required_argument, 0, 'U'},
+	{"scale-units",    required_argument, 0, 'u'},
+    {"fields",         required_argument, 0, 'F'},
+	{"depth",          required_argument, 0, 'D'},
+	{"no-tweak",       no_argument,       0, 'T'},
+	{"no-guess-scale", no_argument,       0, 'G'},
+	{"tweak-order",    required_argument, 0, 't'},
+	{"dir",            required_argument, 0, 'd'},
 	{"backend-config", required_argument, 0, 'c'},
 	{"files-on-stdin", no_argument,       0, 'f'},
 	{"overwrite",      no_argument,       0, 'O'},
-	{"no-plots",    no_argument,       0, 'P'},
-	{"no-fits2fits",    no_argument,       0, '2'},
-	{"temp-dir",    required_argument, 0, 'm'},
+	{"no-plots",       no_argument,       0, 'P'},
+	{"no-fits2fits",   no_argument,       0, '2'},
+	{"temp-dir",       required_argument, 0, 'm'},
+	{"x-column",       required_argument, 0, 'X'},
+	{"y-column",       required_argument, 0, 'Y'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -100,6 +102,8 @@ static void print_help(const char* progname) {
            "  [--fields <min>/<max>]: specify a range of fields (FITS extensions) to solve; inclusive\n"
 	       "  [--width  <number>]: (mostly for xyls inputs): the original image width   (-W)\n"
 	       "  [--height <number>]: (mostly for xyls inputs): the original image height  (-H)\n"
+           "  [--x-column <name>]: for xyls inputs: the name of the FITS column containing the X coordinate of the sources.  (-X)\n"
+           "  [--y-column <name>]: for xyls inputs: the name of the FITS column containing the Y coordinate of the sources.  (-Y)\n"
 		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
 	       "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
@@ -171,6 +175,12 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'X':
+            sl_appendf(augmentxyargs, "--x-column \"%s\"", optarg);
+            break;
+        case 'Y':
+            sl_appendf(augmentxyargs, "--y-column \"%s\"", optarg);
+            break;
         case 'm':
             sl_appendf(augmentxyargs, "--temp-dir \"%s\"", optarg);
             break;

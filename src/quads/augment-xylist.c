@@ -90,34 +90,36 @@
 #include "qfits.h"
 
 static struct option long_options[] = {
-	{"help",		no_argument,	   0, 'h'},
-	{"image",		required_argument, 0, 'i'},
-	{"xylist",		required_argument, 0, 'x'},
-	{"guess-scale", no_argument,	   0, 'g'},
-	{"cancel",		required_argument, 0, 'C'},
-	{"solved",		required_argument, 0, 'S'},
-	{"match",		required_argument, 0, 'M'},
-	{"rdls",		required_argument, 0, 'R'},
-	{"wcs",			required_argument, 0, 'W'},
-	{"pnm",			required_argument, 0, 'P'},
-	{"force-ppm",	no_argument,       0, 'f'},
-	{"width",		required_argument, 0, 'w'},
-	{"height",		required_argument, 0, 'e'},
-	{"scale-low",	required_argument, 0, 'L'},
-	{"scale-high",	required_argument, 0, 'H'},
-	{"scale-units", required_argument, 0, 'u'},
-    {"fields",      required_argument, 0, 'F'},
-	{"depth",		required_argument, 0, 'd'},
-	{"tweak-order", required_argument, 0, 't'},
-	{"out",			required_argument, 0, 'o'},
-	{"no-plot",		no_argument,	   0, 'p'},
-	{"no-tweak",	no_argument,	   0, 'T'},
-	{"no-fits2fits", no_argument,      0, '2'},
-	{"temp-dir",    required_argument, 0, 'm'},
+	{"help",		   no_argument,	      0, 'h'},
+	{"image",		   required_argument, 0, 'i'},
+	{"xylist",		   required_argument, 0, 'x'},
+	{"guess-scale",    no_argument,	      0, 'g'},
+	{"cancel",		   required_argument, 0, 'C'},
+	{"solved",		   required_argument, 0, 'S'},
+	{"match",		   required_argument, 0, 'M'},
+	{"rdls",		   required_argument, 0, 'R'},
+	{"wcs",			   required_argument, 0, 'W'},
+	{"pnm",			   required_argument, 0, 'P'},
+	{"force-ppm",	   no_argument,       0, 'f'},
+	{"width",		   required_argument, 0, 'w'},
+	{"height",		   required_argument, 0, 'e'},
+	{"scale-low",	   required_argument, 0, 'L'},
+	{"scale-high",	   required_argument, 0, 'H'},
+	{"scale-units",    required_argument, 0, 'u'},
+    {"fields",         required_argument, 0, 'F'},
+	{"depth",		   required_argument, 0, 'd'},
+	{"tweak-order",    required_argument, 0, 't'},
+	{"out",			   required_argument, 0, 'o'},
+	{"no-plot",		   no_argument,	      0, 'p'},
+	{"no-tweak",	   no_argument,	      0, 'T'},
+	{"no-fits2fits",   no_argument,       0, '2'},
+	{"temp-dir",       required_argument, 0, 'm'},
+	{"x-column",       required_argument, 0, 'X'},
+	{"y-column",       required_argument, 0, 'Y'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -133,6 +135,8 @@ static void print_help(const char* progname) {
            "  [--force-ppm]: force the PNM file to be a PPM  (-f)\n"
            "  [--width  <int>]: specify the image width  (for xyls inputs)  (-w)\n"
            "  [--height <int>]: specify the image height (for xyls inputs)  (-e)\n"
+           "  [--x-column <name>]: for xyls inputs: the name of the FITS column containing the X coordinate of the sources.  (-X)\n"
+           "  [--y-column <name>]: for xyls inputs: the name of the FITS column containing the Y coordinate of the sources.  (-Y)\n"
 	       "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 	       "     choices:  \"degwidth\"    : width of the image, in degrees\n"
 	       "               \"arcminwidth\" : width of the image, in arcminutes\n"
@@ -250,6 +254,8 @@ int main(int argc, char** args) {
     // contains ranges of fields as pairs of ints.
     il* fields;
     bool nof2f = FALSE;
+    char* xcol = NULL;
+    char* ycol = NULL;
     char* me = args[0];
     char* tempdir = "/tmp";
     // this is just to avoid leaking temp filenames...
@@ -274,6 +280,12 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 'X':
+            xcol = optarg;
+            break;
+        case 'Y':
+            ycol = optarg;
+            break;
         case 'm':
             tempdir = optarg;
             break;
@@ -639,6 +651,13 @@ int main(int argc, char** args) {
         fits_header_add_int(hdr, "IMAGEH", H, "image height");
     }
 	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!", NULL);
+
+    if (xcol) {
+        qfits_header_add(hdr, "ANXCOL", xcol, "Name of column containing X coords", NULL);
+    }
+    if (ycol) {
+        qfits_header_add(hdr, "ANYCOL", xcol, "Name of column containing Y coords", NULL);
+    }
 
 	if (scalelo > 0.0 && scalehi > 0.0) {
 		double appu, appl;
