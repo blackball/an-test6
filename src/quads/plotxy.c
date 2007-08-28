@@ -70,7 +70,7 @@ int main(int argc, char *args[]) {
 	int W = 0, H = 0;
 	int n = 0, N = 0;
 	double xoff = 0.0, yoff = 0.0;
-	int ext = 0;
+	int ext = 1;
 	double rad = 5.0;
 	double lw = 1.0;
 	char shape = 'c';

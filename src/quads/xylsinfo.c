@@ -71,7 +71,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	xy = xylist_get_field(xyls, 0);
+	xy = xylist_get_field(xyls, 1);
 	if (!xy) {
 		fprintf(stderr, "Failed to get XYLS field.\n");
 		exit(-1);

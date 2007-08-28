@@ -38,7 +38,7 @@ void printHelp(char* progname) {
             "   -R rdls-file-template\n"
             "   [-i <first-file>]\n"
             "   [-I <last-file>]\n"
-            "   [-A <first-field>]  (default 0)\n"
+            "   [-A <first-field>]  (default 1)\n"
             "   [-B <last-field>]   (default the largest field encountered)\n"
             "   [-n <negative-fields-rdls>]"
             "   [-f <false-positive-fields-rdls>]\n"
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     rdlist* rdls = NULL;
     int i;
     int correct, incorrect;
-    int firstfield = 0;
+    int firstfield = 1;
     int lastfield = -1;
 
     int nfields;
@@ -211,12 +211,12 @@ int main(int argc, char *argv[]) {
             rdls->xname = "RA";
             rdls->yname = "DEC";
 
-            nfields = rdls->nfields;
+            nfields = rdlist_n_fields(rdls);
             //printf("Read %i fields from rdls file.\n", nfields);
             if ((lastfield != -1) && (nfields > lastfield)) {
                 nfields = lastfield + 1;
             } else {
-                lastfield = nfields - 1;
+                lastfield = nfields;
             }
 
             for (; mfcursors[i]<mf->nrows; mfcursors[i]++) {

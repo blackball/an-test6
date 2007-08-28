@@ -109,7 +109,6 @@ static void check_time_limits(blind_t* bp) {
 }
 
 void blind_run(blind_t* bp) {
-	uint numfields;
 	solver_t* sp = &(bp->solver);
 	int I;
     int index_options = 0;
@@ -145,8 +144,7 @@ void blind_run(blind_t* bp) {
 	}
 	bp->xyls->xname = bp->xcolname;
 	bp->xyls->yname = bp->ycolname;
-	numfields = bp->xyls->nfields;
-	logmsg("got %u fields.\n", numfields);
+	logmsg("got %u fields.\n", xylist_n_fields(bp->xyls));
 
 	// Initialize output files...
 	if (bp->matchfname) {
@@ -860,7 +858,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
 
-	nfields = bp->xyls->nfields;
+	nfields = xylist_n_fields(bp->xyls);
 	sp->field = NULL;
 
 	for (fi = 0; fi < il_size(bp->fieldlist); fi++) {
@@ -873,7 +871,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			logerr("Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			goto cleanup;
 		}
-        if (fieldnum <= 0) {
+        if (fieldnum < 1) {
             logerr("Field %i is invalid (must be >= 1).\n", fieldnum);
             goto cleanup;
         }
@@ -911,15 +909,13 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		}
 
 		// Get the field.
-        // FIXME: push 1-indexed field numbers into xylist?
-		sp->nfield = xylist_n_entries(bp->xyls, fieldnum - 1);
+		sp->nfield = xylist_n_entries(bp->xyls, fieldnum);
 		if (sp->nfield == -1) {
 			logerr("Couldn't determine how many objects are in field %i.\n", fieldnum);
 			goto cleanup;
 		}
 		sp->field = realloc(sp->field, 2 * sp->nfield * sizeof(double));
-        // FIXME: 1-indexed
-		if (xylist_read_entries(bp->xyls, fieldnum - 1, 0, sp->nfield, sp->field)) {
+		if (xylist_read_entries(bp->xyls, fieldnum, 0, sp->nfield, sp->field)) {
 			logerr("Failed to read field.\n");
 			goto cleanup;
 		}

@@ -156,20 +156,20 @@ int main(int argc, char** args) {
 	if (!il_size(fields)) {
 		// add all fields.
 		int NF = rdlist_n_fields(rdls);
-		for (i=0; i<NF; i++)
+		for (i=1; i<=NF; i++)
 			il_append(fields, i);
 	}
 
 	fprintf(stderr, "Processing %i extensions...\n", il_size(fields));
 	for (i=0; i<il_size(fields); i++) {
-		int fieldind = il_get(fields, i);
+		int fieldnum = il_get(fields, i);
 		double* rdvals;
 		int nvals;
 		int j;
 
-		nvals = rdlist_n_entries(rdls, fieldind);
+		nvals = rdlist_n_entries(rdls, fieldnum);
 		rdvals = malloc(2 * nvals * sizeof(double));
-		if (rdlist_read_entries(rdls, fieldind, 0, nvals, rdvals)) {
+		if (rdlist_read_entries(rdls, fieldnum, 0, nvals, rdvals)) {
 			fprintf(stderr, "Failed to read rdls data.\n");
 			exit(-1);
 		}

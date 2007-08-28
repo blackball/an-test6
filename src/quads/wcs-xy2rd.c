@@ -156,7 +156,7 @@ int main(int argc, char** args) {
 	if (!il_size(fields)) {
 		// add all fields.
 		int NF = xylist_n_fields(xyls);
-		for (i=0; i<NF; i++)
+		for (i=1; i<=NF; i++)
 			il_append(fields, i);
 	}
 

@@ -244,15 +244,15 @@ int main(int argc, char *argv[])
 				rdls = dl_new(256);
 				nfields = il_size(fields);
 				if (!nfields) {
-					nfields = rdlsfile->nfields;
+					nfields = rdlist_n_fields(rdlsfile);
 					fprintf(stderr, "Plotting all %i fields.\n", nfields);
 				}
-				for (f=0; f<nfields; f++) {
+				for (f=1; f<=nfields; f++) {
 					int fld;
 					dl* rd;
 					int j, M;
 					if (il_size(fields))
-						fld = il_get(fields, f);
+						fld = il_get(fields, f-1);
 					else
 						fld = f;
 					rd = rdlist_get_field(rdlsfile, fld);

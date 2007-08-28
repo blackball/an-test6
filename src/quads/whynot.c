@@ -293,9 +293,9 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Found %i stars involved in quads (fully contained).\n", il_size(starsinquadsfull));
 
 		// Now find correspondences between index objects and field objects.
-		Nfield = xylist_n_entries(xyls, 0);
+		Nfield = xylist_n_entries(xyls, 1);
 		fieldxy = malloc(Nfield * 2 * sizeof(double));
-		if (xylist_read_entries(xyls, 0, 0, Nfield, fieldxy)) {
+		if (xylist_read_entries(xyls, 1, 0, Nfield, fieldxy)) {
 			fprintf(stderr, "Failed to read xyls entries.\n");
 			exit(-1);
 		}

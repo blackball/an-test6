@@ -98,7 +98,7 @@ int main(int argc, char** args) {
 	}
   */
 
-  for (j=0; j<rdls->nfields; j++) {
+  for (j=1; j<=rdls_n_fields(rdls); j++) {
 	  rd* points;
 
 	  points = rdlist_get_field(rdls, j);

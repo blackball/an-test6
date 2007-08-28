@@ -65,9 +65,6 @@ struct xylist {
 	int xcol;
 	int ycol;
 
-	// buffered reading
-	//bread br;
-
 	// writing:
 	qfits_header* header;
 	FILE* fid;
@@ -94,8 +91,6 @@ xy* xylist_get_field(xylist* ls, unsigned int field);
 qfits_header* xylist_get_field_header(xylist* ls, unsigned int field);
 
 int xylist_n_entries(xylist* ls, unsigned int field);
-
-//double* xylist_read_entry(xylist* ls);
 
 int xylist_read_entries(xylist* ls, unsigned int field,
 						unsigned int offset, unsigned int n,

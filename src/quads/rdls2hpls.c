@@ -52,7 +52,7 @@ int convert_file(char* infn, char* outfn)
 	numfields = rdlist_n_fields(rdls);
 	fprintf(hpf, "NumFields=%i\n", numfields);
 
-	for (j = 0; j < numfields; j++) {
+	for (j=1; j<=numfields; j++) {
 		int first = 1;
 		// Second line and subsequent lines: npoints,ra,dec,ra,dec,...
 		dl* points = rdlist_get_field(rdls, j);
