@@ -836,7 +836,7 @@ function process_data ($vals) {
 				"solved " . $solved_fn . "\n" .
 				"cancel " . $cancel_fn . "\n" .
 				"wcs " . $wcs_fn . "\n" .
-				"fields 0\n" .
+				"fields 1\n" .
 				"sdepth " . $startdepth . "\n" .
 				"depth " . $enddepth . "\n" .
 				"parity " . $parity . "\n" .
