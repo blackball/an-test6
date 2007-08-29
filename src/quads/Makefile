@@ -181,10 +181,6 @@ ngcic-accurate.c: ngcic-accurate.h ngcic-accurate-entries.c
 ngcic-accurate-entries.c: parse-ngcic-accurate.awk ngc2000_pos.txt ic2000_pos.txt
 	cat ngc2000_pos.txt ic2000_pos.txt | awk -f parse-ngcic-accurate.awk > $@
 
-.PHONY: tags
-tags:
-	etags `find . -name "*.h" -o -name "*.c"`
-
 certifiable: certifiable.o histogram.o matchfile.o solvedfile.o \
 		$(UTILS_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
