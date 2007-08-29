@@ -85,7 +85,8 @@ static void update_timeused(solver_t* sp) {
 }
 
 void solver_reset_best_match(solver_t* sp) {
-	sp->best_logodds = -HUGE_VAL;
+    // we don't really care about very bad best matches...
+	sp->best_logodds = 0;
 	memset(&(sp->best_match), 0, sizeof(MatchObj));
 	sp->best_index = NULL;
 	sp->best_index_num = 0;

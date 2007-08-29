@@ -159,6 +159,7 @@ int main(int argc, char** args) {
 	bool overwrite = FALSE;
     bool makeplots = TRUE;
     char* me = args[0];
+    char* tempdir = "/tmp";
 
 	augmentxyargs = sl_new(16);
 	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
@@ -183,6 +184,7 @@ int main(int argc, char** args) {
             break;
         case 'm':
             sl_appendf(augmentxyargs, "--temp-dir \"%s\"", optarg);
+            tempdir = optarg;
             break;
         case '2':
             sl_append(augmentxyargs, "--no-fits2fits");
@@ -348,7 +350,6 @@ int main(int argc, char** args) {
 		axyfn      = sl_appendf(outfiles, "%s.axy",       base);
 		matchfn    = sl_appendf(outfiles, "%s.match",     base);
 		rdlsfn     = sl_appendf(outfiles, "%s.rdls",      base);
-		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
 		wcsfn      = sl_appendf(outfiles, "%s.wcs",       base);
 		objsfn     = sl_appendf(outfiles, "%s-objs.png",  base);
 		redgreenfn = sl_appendf(outfiles, "%s-indx.png",  base);
@@ -361,7 +362,7 @@ int main(int argc, char** args) {
 		free(base);
 		base = NULL;
 
-		// Check for existing output filenames.
+		// Check for (and delete) existing output filenames.
 		nextfile = FALSE;
 		for (i = 0; i < sl_size(outfiles); i++) {
 			char* fn = sl_get(outfiles, i);
@@ -384,6 +385,9 @@ int main(int argc, char** args) {
 			sl_free(outfiles);
 			continue;
 		}
+
+        // Input/Output files whose existence is not an error:
+		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
 
         // Download URL...
         if ((strncasecmp(infile, "http://", 7) == 0) ||
@@ -446,13 +450,8 @@ int main(int argc, char** args) {
 		}
 
 		if (image) {
-			sprintf(tmpfn, "/tmp/tmp.solve-field.XXXXXX");
-			fid = mkstemp(tmpfn);
-			if (fid == -1) {
-				fprintf(stderr, "Failed to create temp file: %s\n", strerror(errno));
-				exit(-1);
-			}
-			ppmfn = sl_append(outfiles, tmpfn);
+            ppmfn = create_temp_file("ppm", tempdir);
+            sl_append_nocopy(outfiles, ppmfn);
 
 			sl_appendf(augmentxyargs, "--pnm \"%s\"", ppmfn);
 			sl_append(augmentxyargs, "--force-ppm");
