@@ -123,7 +123,7 @@ SIMPLEXY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
 SIMPLEXY_SHARED_OBJ := simplexy.o dsigma.o dmedsmooth.o dallpeaks.o dpeaks.o \
 	dobjects.o dselip.o dsmooth.o dcen3x3.o dfind.o radix.o
 
-FIXAXIS_OBJ := fixaxis.o
+FIXAXIS_OBJ := fixaxis.o svn.o
 
 TEST_DFIND_OBJ := dfind.o test_dfind.o
 
