@@ -30,8 +30,34 @@ web:
 	$(MAKE) -C usnob-map/execs
 	$(MAKE) -C ontheweb/execs
 
-tarball:
-	./make-tarball.sh
+RELEASE_VER := 0.1
+RELEASE_DIR := astrometry.net-$(RELEASE_VER)
+RELEASE_SVN	:= svn+ssh://astrometry.net/svn/tags/tarball-$(RELEASE_VER)
+RELEASE_SUBDIRS := cfitsio qfits-an gsl-an an-common libkd quads
+
+release:
+	-rm -R $(RELEASE_DIR)
+	svn export -N $(RELEASE_SVN) $(RELEASE_DIR)
+	for x in $(RELEASE_SUBDIRS); do \
+		svn export $(RELEASE_SVN)/$$x $(RELEASE_DIR)/$$x; \
+	done
+	tar czf $(RELEASE_DIR).tar.gz  $(RELEASE_DIR)
+	tar cjf $(RELEASE_DIR).tar.bz2 $(RELEASE_DIR)
+
+
+SNAPSHOT_VER := $(shell date "+%Y-%m-%d")
+SNAPSHOT_DIR := astrometry.net-$(SNAPSHOT_VER)
+SNAPSHOT_SVN := svn+ssh://astrometry.net/svn/trunk/src
+SNAPSHOT_SUBDIRS := cfitsio qfits-an gsl-an an-common libkd quads
+
+snapshot:
+	-rm -R $(SNAPSHOT_DIR)
+	svn export -N $(SNAPSHOT_SVN) $(SNAPSHOT_DIR)
+	for x in $(SNAPSHOT_SUBDIRS); do \
+		svn export $(SNAPSHOT_SVN)/$$x $(SNAPSHOT_DIR)/$$x; \
+	done
+	tar czf $(SNAPSHOT_DIR).tar.gz  $(SNAPSHOT_DIR)
+	tar cjf $(SNAPSHOT_DIR).tar.bz2 $(SNAPSHOT_DIR)
 
 clean:
 	$(MAKE) -C an-common clean
