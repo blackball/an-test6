@@ -77,6 +77,7 @@ static struct option long_options[] = {
 	{"no-guess-scale", no_argument,       0, 'G'},
 	{"tweak-order",    required_argument, 0, 't'},
 	{"dir",            required_argument, 0, 'd'},
+	{"out",            required_argument, 0, 'o'},
 	{"backend-config", required_argument, 0, 'c'},
 	{"files-on-stdin", no_argument,       0, 'f'},
 	{"overwrite",      no_argument,       0, 'O'},
@@ -90,11 +91,12 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:av";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
 	       "  [--dir <directory>]: place all output files in this directory\n"
+	       "  [--out <directory>]: name the output files with this base name\n"
 	       "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 	       "     choices:  \"degwidth\"    : width of the image, in degrees\n"
 	       "               \"arcminwidth\" : width of the image, in arcminutes\n"
@@ -154,6 +156,7 @@ int main(int argc, char** args) {
 	char* xyls = NULL;
 	char* cmd;
 	int i, f;
+    int inputnum;
 	int rtn;
 	sl* backendargs;
 	const char* errmsg;
@@ -167,6 +170,7 @@ int main(int argc, char** args) {
     char* me = args[0];
     char* tempdir = "/tmp";
     bool verbose = FALSE;
+    char* baseout = NULL;
 
 	augmentxyargs = sl_new(16);
 	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
@@ -187,6 +191,9 @@ int main(int argc, char** args) {
             sl_appendf(augmentxyargs, "--verbose");
             sl_appendf(backendargs, "--verbose");
             verbose = TRUE;
+            break;
+        case 'o':
+            baseout = optarg;
             break;
         case 'X':
             sl_appendf(augmentxyargs, "--x-column \"%s\"", optarg);
@@ -288,6 +295,7 @@ int main(int argc, char** args) {
 	nbeargs = sl_size(backendargs);
 
 	f = optind;
+    inputnum = 0;
 	while (1) {
 		char fnbuf[1024];
 		char* infile = NULL;
@@ -321,6 +329,7 @@ int main(int argc, char** args) {
 			infile = args[f];
 			f++;
 		}
+        inputnum++;
 
         cmdline = sl_new(16);
 
@@ -329,9 +338,12 @@ int main(int argc, char** args) {
 		sl_remove_from(backendargs,  nbeargs);
 
 		// Choose the base path/filename for output files.
-		cpy = strdup(infile);
+        if (baseout)
+            asprintf_safe(&cpy, baseout, inputnum, infile);
+        else
+            cpy = strdup(infile);
 		if (outdir)
-			asprintf(&base, "%s/%s", outdir, basename(cpy));
+			asprintf_safe(&base, "%s/%s", outdir, basename(cpy));
 		else
 			base = strdup(basename(cpy));
 		free(cpy);
