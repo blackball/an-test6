@@ -1,6 +1,20 @@
 Some notes about issues that may be a hassle for those porting our code to other
 environments.
 
+The core parts of the code are mostly platform-neutral, but some of the higher-level
+pieces are Unix-centric.  For example, we assume that "/" is used to separate path
+names, and in some places we use "/bin/sh".  This will make a Windows port unpleasant.
+For this we do not apologize. :)
+
+Everything should work fine on big-endian and small-endian machines.  However, the
+pre-cooked indices we are distributing will only work on small-endian machines (eg Intel).
+If you are interested in running on a big-endian machine, please contact us.
+
+Also, everything should work fine on 64-bit processors, though we have only tested this
+with the gcc compiler.  64-bit processors can happily run indices built by 32-bit
+processors, and vice versa.
+
+
 -we define _GNU_SOURCE in the Makefile, which yields some GNU-specific extensions
 
 -asprintf(), vasprintf() are GNU extensions.
@@ -8,5 +22,4 @@ environments.
 -basename(): although _GNU_SOURCE defines some different behaviour, we do not depend
   on this.  (solve-field.c)
 
--canonicalize_file_name(): a GNU extension meant to address problems with realpath().
 

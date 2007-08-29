@@ -204,6 +204,7 @@ int main(int argc, char** args) {
 		int Nfield;
 		kdtree_t* ftree;
 		int Nleaf = 5;
+        int dimquads;
 
 		indx = pl_get(indexes, i);
 		qidx = pl_get(qidxes, i);
@@ -266,29 +267,29 @@ int main(int argc, char** args) {
 		}
 		fprintf(stderr, "Found %i quads fully contained in the field.\n", il_size(fullquadlist));
 
+        dimquads = quadfile_dimquads(indx->quads);
+
 		// Find the stars that are in quads.
 		starsinquadslist = il_new(16);
 		for (j=0; j<il_size(uniqquadlist); j++) {
-			uint sA, sB, sC, sD;
+            int k;
+			uint stars[dimquads];
 			int quad = il_get(uniqquadlist, j);
-			quadfile_get_starids(indx->quads, quad, &sA, &sB, &sC, &sD);
-			il_insert_unique_ascending(starsinquadslist, sA);
-			il_insert_unique_ascending(starsinquadslist, sB);
-			il_insert_unique_ascending(starsinquadslist, sC);
-			il_insert_unique_ascending(starsinquadslist, sD);
+			quadfile_get_stars(indx->quads, quad, stars);
+            for (k=0; k<dimquads; k++)
+                il_insert_unique_ascending(starsinquadslist, stars[k]);
 		}
 		fprintf(stderr, "Found %i stars involved in quads (partially contained).\n", il_size(starsinquadslist));
 
 		// Find the stars that are in quads that are completely contained.
 		starsinquadsfull = il_new(16);
 		for (j=0; j<il_size(fullquadlist); j++) {
-			uint sA, sB, sC, sD;
+            int k;
+			uint stars[dimquads];
 			int quad = il_get(fullquadlist, j);
-			quadfile_get_starids(indx->quads, quad, &sA, &sB, &sC, &sD);
-			il_insert_unique_ascending(starsinquadsfull, sA);
-			il_insert_unique_ascending(starsinquadsfull, sB);
-			il_insert_unique_ascending(starsinquadsfull, sC);
-			il_insert_unique_ascending(starsinquadsfull, sD);
+			quadfile_get_stars(indx->quads, quad, stars);
+            for (k=0; k<dimquads; k++)
+                il_insert_unique_ascending(starsinquadsfull, stars[k]);
 		}
 		fprintf(stderr, "Found %i stars involved in quads (fully contained).\n", il_size(starsinquadsfull));
 
@@ -376,14 +377,14 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Found %i quads built from stars with correspondencs, fully contained in the field.\n", il_size(corrfullquads));
 
 		for (j=0; j<il_size(corrfullquads); j++) {
-			uint stars[4];
+			uint stars[dimquads];
 			int k;
 			int ind;
 			double px,py;
 			int quad = il_get(corrfullquads, j);
-			quadfile_get_starids(indx->quads, quad, stars+0, stars+1, stars+2, stars+3);
+			quadfile_get_stars(indx->quads, quad, stars);
 			// Gah! map...
-			for (k=0; k<4; k++) {
+			for (k=0; k<dimquads; k++) {
 				ind = il_index_of(starlist, stars[k]);
 				px = dl_get(starxylist, ind*2+0);
 				py = dl_get(starxylist, ind*2+1);

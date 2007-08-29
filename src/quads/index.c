@@ -55,7 +55,7 @@ index_t* index_load(const char* indexname, int flags)
 		return NULL;
 	}
 	free_fn(quadfname);
-	index->index_scale_upper = quadfile_get_index_scale_arcsec(index->quads);
+	index->index_scale_upper = quadfile_get_index_scale_upper_arcsec(index->quads);
 	index->index_scale_lower = quadfile_get_index_scale_lower_arcsec(index->quads);
 	index->indexid = index->quads->indexid;
 	index->healpix = index->quads->healpix;

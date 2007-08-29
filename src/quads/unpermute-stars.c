@@ -180,7 +180,8 @@ int main(int argc, char **args) {
 		idout->healpix = healpix;
 
 	qfout->numstars          = qfin->numstars;
-	qfout->index_scale       = qfin->index_scale;
+	qfout->dimquads          = qfin->dimquads;
+	qfout->index_scale_upper = qfin->index_scale_upper;
 	qfout->index_scale_lower = qfin->index_scale_lower;
 	qfout->indexid           = qfin->indexid;
 
@@ -244,16 +245,19 @@ int main(int argc, char **args) {
 	lastgrass = 0;
 	for (i=0; i<qfin->numquads; i++) {
 		int j;
-		uint stars[4];
+		uint stars[qfin->dimquads];
 		if (i*80/qfin->numquads != lastgrass) {
 			printf(".");
 			fflush(stdout);
 			lastgrass = i*80/qfin->numquads;
 		}
-		quadfile_get_starids(qfin, i, stars, stars+1, stars+2, stars+3);
-		for (j=0; j<4; j++)
+		if (quadfile_get_stars(qfin, i, stars)) {
+			fprintf(stderr, "Failed to read quadfile entry.\n");
+			exit(-1);
+        }
+		for (j=0; j<qfin->dimquads; j++)
 			stars[j] = treein->inverse_perm[stars[j]];
-		if (quadfile_write_quad(qfout, stars[0], stars[1], stars[2], stars[3])) {
+		if (quadfile_write_quad(qfout, stars)) {
 			fprintf(stderr, "Failed to write quadfile entry.\n");
 			exit(-1);
 		}

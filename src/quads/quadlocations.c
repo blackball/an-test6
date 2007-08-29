@@ -68,6 +68,7 @@ int main(int argc, char** args) {
 	pl* outnames;
 	uint** counts;
 	int Nimgs;
+    int dimquads;
 
 	imgsizes = il_new(8);
 	outnames = pl_new(8);
@@ -137,18 +138,19 @@ int main(int argc, char** args) {
 			Nstars = startree_N(skdt);
 		}
 
+        dimquads = quadfile_dimquads(qf);
+
 		printf("Counting stars in quads...\n");
 		starcounts = calloc(sizeof(unsigned char), Nstars);
 		for (i=0; i<qf->numquads; i++) {
-			uint stars[4];
+			uint stars[dimquads];
 			int j;
 			if (!(i % 200000)) {
 				printf(".");
 				fflush(stdout);
 			}
-			quadfile_get_starids(qf, i, stars, stars+1,
-								 stars+2, stars+3);
-			for (j=0; j<4; j++) {
+			quadfile_get_stars(qf, i, stars);
+			for (j=0; j<dimquads; j++) {
 				assert(stars[j] < Nstars);
 				assert(starcounts[stars[j]] < 255);
 				starcounts[stars[j]]++;

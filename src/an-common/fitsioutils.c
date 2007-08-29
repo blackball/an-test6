@@ -490,15 +490,11 @@ int fits_find_column(const qfits_table* table, const char* colname) {
 }
 
 void fits_add_uint_size(qfits_header* header) {
-    char val[8];
-	sprintf(val, "%u", (uint)sizeof(uint));
-	qfits_header_add(header, "UINT_SZ", val, "sizeof(uint)", NULL);
+	fits_header_add_int(header, "UINT_SZ", sizeof(uint), "sizeof(uint)");
 }
 
 void fits_add_double_size(qfits_header* header) {
-    char val[8];
-    sprintf(val, "%u", (uint)sizeof(double));
-	qfits_header_add(header, "DUBL_SZ", val, "sizeof(double)", NULL);
+	fits_header_add_int(header, "DUBL_SZ", sizeof(double), "sizeof(double)");
 }
 
 int fits_check_uint_size(const qfits_header* header) {

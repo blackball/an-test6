@@ -108,6 +108,7 @@ int main(int argc, char** args) {
 
 	for (; optind<argc; optind++) {
 		int Nstars;
+        int dimquads;
 		basename = args[optind];
 		printf("Reading files with basename %s\n", basename);
 
@@ -127,15 +128,17 @@ int main(int argc, char** args) {
             exit(-1);
         }
         Nstars = startree_N(skdt);
-
+        
         if (rdlist_write_new_field(rdls)) {
             fprintf(stderr, "Failed to write new RDLS field header.\n");
             exit(-1);
         }
 
+        dimquads = quadfile_dimquads(qf);
+
 		printf("Reading quads...\n");
 		for (i=0; i<qf->numquads; i++) {
-			uint stars[4];
+			uint stars[dimquads];
             double axyz[3], bxyz[3];
             double midab[3];
             double radec[2];
@@ -143,7 +146,7 @@ int main(int argc, char** args) {
 				printf(".");
 				fflush(stdout);
 			}
-			quadfile_get_starids(qf, i, stars, stars+1, stars+2, stars+3);
+			quadfile_get_stars(qf, i, stars);
             startree_get(skdt, stars[0], axyz);
             startree_get(skdt, stars[1], bxyz);
             star_midpoint(midab, axyz, bxyz);

@@ -20,14 +20,16 @@
 #define QUADFILE_H
 
 #include <sys/types.h>
+#include <stdint.h>
 
 #include "qfits.h"
 
 struct quadfile {
 	unsigned int numquads;
 	unsigned int numstars;
-	// upper bound
-	double index_scale;
+    int dimquads;
+	// upper bound of AB distance of quads in this index
+	double index_scale_upper;
 	// lower bound
 	double index_scale_lower;
 	// unique ID of this index
@@ -40,7 +42,7 @@ struct quadfile {
 	// when reading:
 	void*  mmap_quad;
 	size_t mmap_quad_size;
-	unsigned int*   quadarray;
+	uint32_t* quadarray;
 
 	// when writing:
 	FILE* fid;
@@ -50,17 +52,18 @@ typedef struct quadfile quadfile;
 
 int quadfile_close(quadfile* qf);
 
-void quadfile_get_starids(quadfile* qf, unsigned int quadid,
-						  unsigned int* starA, unsigned int* starB,
-						  unsigned int* starC, unsigned int* starD);
+int quadfile_get_stars(quadfile* qf, unsigned int quadid,
+                       unsigned int* stars);
 
-int quadfile_write_quad(quadfile* qf, unsigned int iA, unsigned int iB, unsigned int iC, unsigned int iD);
+int quadfile_write_quad(quadfile* qf, unsigned int* stars);
+
+int quadfile_dimquads(quadfile* qf);
 
 int quadfile_fix_header(quadfile* qf);
 
 int quadfile_write_header(quadfile* qf);
 
-double quadfile_get_index_scale_arcsec(quadfile* qf);
+double quadfile_get_index_scale_upper_arcsec(quadfile* qf);
 
 double quadfile_get_index_scale_lower_arcsec(quadfile* qf);
 

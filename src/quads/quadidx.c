@@ -103,9 +103,10 @@ int main(int argc, char *argv[]) {
 	quadlist = calloc(quads->numstars, sizeof(il*));
 
 	for (q=0; q<quads->numquads; q++) {
+        // DIMQUADS
 		uint inds[4];
 
-		quadfile_get_starids(quads, q, inds+0, inds+1, inds+2, inds+3);
+		quadfile_get_stars(quads, q, inds);
 
 		// append this quad index to the lists of each of
 		// its four stars.

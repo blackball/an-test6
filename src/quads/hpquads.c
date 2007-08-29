@@ -252,7 +252,7 @@ static void write_quad(codefile* codes, quadfile* quads,
 	}
 
 	codefile_write_code(codes, code[0], code[1], code[2], code[3]);
-	quadfile_write_quad(quads, q->star[0], q->star[1], q->star[2], q->star[3]);
+	quadfile_write_quad(quads, q->star);
 }
 
 struct potential_quad {
@@ -884,7 +884,7 @@ int main(int argc, char** argv) {
     codes->index_scale_lower = sqrt(quad_scale_lower2);
 
     quads->numstars = startree_N(starkd);
-    quads->index_scale       = sqrt(quad_scale_upper2);
+    quads->index_scale_upper = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
 	bigquadlist = bt_new(sizeof(quad), 256);

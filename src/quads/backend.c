@@ -107,7 +107,7 @@ static int get_index_scales(const char* indexname,
 	}
 	free_fn(quadfname);
 	lo = quadfile_get_index_scale_lower_arcsec(quads);
-	hi = quadfile_get_index_scale_arcsec(quads);
+	hi = quadfile_get_index_scale_upper_arcsec(quads);
 	if (losize)
 		*losize = lo;
 	if (hisize)

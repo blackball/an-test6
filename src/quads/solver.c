@@ -720,29 +720,30 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
                             solver_t* solver, bool current_parity)
 {
 	uint jj, thisquadno;
-	uint iA, iB, iC, iD;
 	MatchObj mo;
+    int dimquads = quadfile_dimquads(solver->index->quads);
+	uint star[dimquads];
 
 	for (jj = 0; jj < krez->nres; jj++) {
-		double star[12];
+		double starxyz[dimquads*3];
 		double scale;
 		double arcsecperpix;
 		tan_t wcs;
+        int i;
 
 		solver->nummatches++;
 
 		thisquadno = (uint)krez->inds[jj];
 
-		quadfile_get_starids(solver->index->quads, thisquadno, &iA, &iB, &iC, &iD);
-		startree_get(solver->index->starkd, iA, star + 0*3);
-		startree_get(solver->index->starkd, iB, star + 1*3);
-		startree_get(solver->index->starkd, iC, star + 2*3);
-		startree_get(solver->index->starkd, iD, star + 3*3);
+		quadfile_get_stars(solver->index->quads, thisquadno, star);
+        for (i=0; i<dimquads; i++)
+            startree_get(solver->index->starkd, star[i], starxyz + 3*i);
 
-		debug("        stars [%i %i %i %i]\n", iA, iB, iC, iD);
+        // DIMQUAD
+		debug("        stars [%i %i %i %i]\n", star[0], star[1], star[2], star[3]);
 
 		// compute TAN projection from the matching quad alone.
-		blind_wcs_compute_2(star, field, 4, &wcs, &scale);
+		blind_wcs_compute_2(starxyz, field, dimquads, &wcs, &scale);
 		arcsecperpix = scale * 3600.0;
 
 		// FIXME - should there be scale fudge here?
@@ -770,28 +771,22 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         mo.quad_npeers = krez->nres;
 		mo.timeused = solver->timeused;
 		mo.quadno = thisquadno;
-		mo.star[0] = iA;
-		mo.star[1] = iB;
-		mo.star[2] = iC;
-		mo.star[3] = iD;
+        for (i=0; i<dimquads; i++)
+            mo.star[i] = star[i];
 		mo.field[0] = fA;
 		mo.field[1] = fB;
 		mo.field[2] = fC;
 		mo.field[3] = fD;
 
-		memcpy(mo.quadpix, field, 8 * sizeof(double));
-		memcpy(mo.quadxyz, star, 12 * sizeof(double));
+		memcpy(mo.quadpix, field, 2 * dimquads * sizeof(double));
+		memcpy(mo.quadxyz, starxyz, 3 * dimquads * sizeof(double));
 
 		if (solver->index->id_file) {
-			mo.ids[0] = idfile_get_anid(solver->index->id_file, iA);
-			mo.ids[1] = idfile_get_anid(solver->index->id_file, iB);
-			mo.ids[2] = idfile_get_anid(solver->index->id_file, iC);
-			mo.ids[3] = idfile_get_anid(solver->index->id_file, iD);
+            for (i=0; i<dimquads; i++)
+                mo.ids[i] = idfile_get_anid(solver->index->id_file, star[i]);
 		} else {
-			mo.ids[0] = 0;
-			mo.ids[1] = 0;
-			mo.ids[2] = 0;
-			mo.ids[3] = 0;
+            for (i=0; i<dimquads; i++)
+                mo.ids[i] = 0;
 		}
 
 		solver_transform_corners(solver, &mo);

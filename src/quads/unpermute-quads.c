@@ -134,7 +134,8 @@ int main(int argc, char **args) {
 	quadout->healpix = healpix;
 	quadout->indexid = quadin->indexid;
 	quadout->numstars = quadin->numstars;
-	quadout->index_scale = quadin->index_scale;
+	quadout->dimquads = quadin->dimquads;
+	quadout->index_scale_upper = quadin->index_scale_upper;
 	quadout->index_scale_lower = quadin->index_scale_lower;
 
 	boilerplate_add_fits_headers(quadout->header);
@@ -158,10 +159,13 @@ int main(int argc, char **args) {
 	}
 
 	for (i=0; i<codetree_N(treein); i++) {
-		uint sA, sB, sC, sD;
+		uint stars[quadin->dimquads];
 		int ind = codetree_get_permuted(treein, i);
-		quadfile_get_starids(quadin, ind, &sA, &sB, &sC, &sD);
-		if (quadfile_write_quad(quadout, sA, sB, sC, sD)) {
+		if (quadfile_get_stars(quadin, ind, stars)) {
+			fprintf(stderr, "Failed to read quad entry.\n");
+			exit(-1);
+        }
+		if (quadfile_write_quad(quadout, stars)) {
 			fprintf(stderr, "Failed to write quad entry.\n");
 			exit(-1);
 		}

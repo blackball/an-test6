@@ -78,6 +78,7 @@ int main(int argc, char** args) {
 		int lastgrass = 0;
 		histogram* hist;
 		char fixed_basename[256];
+        int dimquads;
 
 		basename = args[optind];
 		fprintf(stderr, "Reading files with basename %s\n", basename);
@@ -107,11 +108,11 @@ int main(int argc, char** args) {
 		free_fn(fn);
 
 		hist = histogram_new_nbins(qf->index_scale_lower,
-								   qf->index_scale, Nbins);
+								   qf->index_scale_upper, Nbins);
 
 		if (!sumhist)
 			sumhist = histogram_new_nbins(qf->index_scale_lower,
-										  qf->index_scale, Nbins);
+										  qf->index_scale_upper, Nbins);
 		else {
 			if ((sumhist->min != hist->min) ||
 				(sumhist->binsize != hist->binsize))
@@ -120,8 +121,11 @@ int main(int argc, char** args) {
 
 		fprintf(stderr, "Reading %i quads...\n", qf->numquads);
 
+        dimquads = quadfile_dimquads(qf);
+        assert(dimquads >= 2);
+
 		for (i=0; i<qf->numquads; i++) {
-			uint stars[4];
+			uint stars[dimquads];
 			int grass;
 			double xyzA[3];
 			double xyzB[3];
@@ -135,8 +139,7 @@ int main(int argc, char** args) {
 				lastgrass = grass;
 			}
 
-			quadfile_get_starids(qf, i, stars, stars+1,
-								 stars+2, stars+3);
+			quadfile_get_stars(qf, i, stars);
 
 			A = stars[0];
 			B = stars[1];
