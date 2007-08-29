@@ -84,10 +84,12 @@ static struct option long_options[] = {
 	{"temp-dir",       required_argument, 0, 'm'},
 	{"x-column",       required_argument, 0, 'X'},
 	{"y-column",       required_argument, 0, 'Y'},
+    {"sort-column",    required_argument, 0, 's'},
+    {"sort-ascending", no_argument,       0, 'a'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:a";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -104,6 +106,8 @@ static void print_help(const char* progname) {
 	       "  [--height <number>]: (mostly for xyls inputs): the original image height  (-H)\n"
            "  [--x-column <name>]: for xyls inputs: the name of the FITS column containing the X coordinate of the sources.  (-X)\n"
            "  [--y-column <name>]: for xyls inputs: the name of the FITS column containing the Y coordinate of the sources.  (-Y)\n"
+           "  [--sort-column <name>]: for xyls inputs: the name of the FITS column that should be used to sort the sources  (-s)\n"
+           "  [--sort-ascending]: when sorting, sort in ascending (smallest first) order   (-a)\n"
 		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
 	       "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
@@ -284,7 +288,6 @@ int main(int argc, char** args) {
 	f = optind;
 	while (1) {
 		char fnbuf[1024];
-		char tmpfn[1024];
 		char* infile = NULL;
 		bool isxyls;
 		const char* reason;
@@ -297,7 +300,6 @@ int main(int argc, char** args) {
         char* suffix = NULL;
 		sl* outfiles;
 		bool nextfile;
-		int fid;
 		sl* cmdline;
         bool ctrlc = FALSE;
 

@@ -116,10 +116,12 @@ static struct option long_options[] = {
 	{"temp-dir",       required_argument, 0, 'm'},
 	{"x-column",       required_argument, 0, 'X'},
 	{"y-column",       required_argument, 0, 'Y'},
+    {"sort-column",    required_argument, 0, 's'},
+    {"sort-ascending", no_argument,       0, 'a'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:a";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -135,8 +137,10 @@ static void print_help(const char* progname) {
            "  [--force-ppm]: force the PNM file to be a PPM  (-f)\n"
            "  [--width  <int>]: specify the image width  (for xyls inputs)  (-w)\n"
            "  [--height <int>]: specify the image height (for xyls inputs)  (-e)\n"
-           "  [--x-column <name>]: for xyls inputs: the name of the FITS column containing the X coordinate of the sources.  (-X)\n"
-           "  [--y-column <name>]: for xyls inputs: the name of the FITS column containing the Y coordinate of the sources.  (-Y)\n"
+           "  [--x-column <name>]: for xyls inputs: the name of the FITS column containing the X coordinate of the sources  (-X)\n"
+           "  [--y-column <name>]: for xyls inputs: the name of the FITS column containing the Y coordinate of the sources  (-Y)\n"
+           "  [--sort-column <name>]: for xyls inputs: the name of the FITS column that should be used to sort the sources  (-s)\n"
+           "  [--sort-ascending]: when sorting, sort in ascending (smallest first) order   (-a)\n"
 	       "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 	       "     choices:  \"degwidth\"    : width of the image, in degrees\n"
 	       "               \"arcminwidth\" : width of the image, in arcminutes\n"
@@ -154,70 +158,8 @@ static void print_help(const char* progname) {
 		   "\n", progname);
 }
 
-static int parse_depth_string(il* depths, const char* str) {
-    // -10,10-20,20-30,40-
-    while (str && *str) {
-        unsigned int lo, hi;
-        int nread;
-        lo = hi = 0;
-        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
-            sscanf(str, "%*u-%*u%n", &nread);
-        } else if (sscanf(str, "%u-", &lo) == 1) {
-            sscanf(str, "%*u-%n", &nread);
-        } else if (sscanf(str, "-%u", &hi) == 1) {
-            sscanf(str, "-%*u%n", &nread);
-        } else if (sscanf(str, "%u", &hi) == 1) {
-            sscanf(str, "%*u%n", &nread);
-        } else {
-            return -1;
-        }
-        if (lo < 0) {
-            fprintf(stderr, "Depth %i is invalid: must be >= 0.\n", lo);
-            return -1;
-        }
-        if (lo > hi) {
-            fprintf(stderr, "Depth range %i to %i is invalid: max must be >= min!\n", lo, hi);
-            return -1;
-        }
-        il_append(depths, lo);
-        il_append(depths, hi);
-        str += nread;
-        while ((*str == ',') || isspace(*str))
-            str++;
-    }
-    return 0;
-}
-
-static int parse_fields_string(il* fields, const char* str) {
-    // 10,11,20-25,30,40-50
-    while (str && *str) {
-        unsigned int lo, hi;
-        int nread;
-        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
-            sscanf(str, "%*u-%*u%n", &nread);
-        } else if (sscanf(str, "%u", &lo) == 1) {
-            sscanf(str, "%*u%n", &nread);
-            hi = lo;
-        } else {
-            fprintf(stderr, "Failed to parse fragment: \"%s\"\n", str);
-            return -1;
-        }
-        if (lo <= 0) {
-            fprintf(stderr, "Field number %i is invalid: must be >= 1.\n", lo);
-            return -1;
-        }
-        if (lo > hi) {
-            fprintf(stderr, "Field range %i to %i is invalid: max must be >= min!\n", lo, hi);
-            return -1;
-        }
-        il_append(fields, lo);
-        il_append(fields, hi);
-        str += nread;
-        while ((*str == ',') || isspace(*str))
-            str++;
-    }
-    return 0;
-}
+static int parse_depth_string(il* depths, const char* str);
+static int parse_fields_string(il* fields, const char* str);
 
 int main(int argc, char** args) {
 	int c;
@@ -260,6 +202,9 @@ int main(int argc, char** args) {
     char* tempdir = "/tmp";
     // this is just to avoid leaking temp filenames...
     sl* tempfiles;
+    char* sortcol = NULL;
+    bool descending = TRUE;
+    bool dosort = FALSE;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -280,6 +225,12 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 's':
+            sortcol = optarg;
+            break;
+        case 'a':
+            descending = FALSE;
+            break;
         case 'X':
             xcol = optarg;
             break;
@@ -424,7 +375,6 @@ int main(int argc, char** args) {
 		char pnmtype;
 		int maxval;
 		char typestr[256];
-		char* sortedxylsfn;
 
         uncompressedfn = create_temp_file("uncompressed", tempdir);
 		sanitizedfn = create_temp_file("sanitized", tempdir);
@@ -574,30 +524,7 @@ int main(int argc, char** args) {
 		}
         free(cmdstr);
 
-		printf("Running tabsort...\n");
-
-		sortedxylsfn = create_temp_file("sorted", tempdir);
-        sl_append_nocopy(tempfiles, sortedxylsfn);
-
-		// sort the table by FLUX.
-        sl_append_nocopy(cmd, get_path("tabsort", me));
-        sl_appendf(cmd, "-i \"%s\"", xylsfn);
-        sl_appendf(cmd, "-o \"%s\"", sortedxylsfn);
-        sl_append(cmd, "-c FLUX");
-        sl_append(cmd, "-d");
-
-        cmdstr = sl_implode(cmd, " ");
-        sl_remove_all(cmd);
-
-		printf("Command: %s\n", cmdstr);
-		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
-            free(cmdstr);
-            fprintf(stderr, "%s\n", errmsg);
-			fprintf(stderr, "Failed to run tabsort.\n");
-			exit(-1);
-		}
-        free(cmdstr);
-		xylsfn = sortedxylsfn;
+        dosort = TRUE;
 
 	} else {
 		// xylist.
@@ -627,7 +554,43 @@ int main(int argc, char** args) {
             xylsfn = sanexylsfn;
         }
 
+        if (sortcol)
+            dosort = TRUE;
+
 	}
+
+    if (dosort) {
+        char* sortedxylsfn;
+
+		printf("Running tabsort...\n");
+
+        if (!sortcol)
+            sortcol = "FLUX";
+
+		sortedxylsfn = create_temp_file("sorted", tempdir);
+        sl_append_nocopy(tempfiles, sortedxylsfn);
+
+		// sort the table by FLUX.
+        sl_append_nocopy(cmd, get_path("tabsort", me));
+        sl_appendf(cmd, "-i \"%s\"", xylsfn);
+        sl_appendf(cmd, "-o \"%s\"", sortedxylsfn);
+        sl_appendf(cmd, "-c \"%s\"", sortcol);
+        if (descending)
+            sl_append(cmd, "-d");
+
+        cmdstr = sl_implode(cmd, " ");
+        sl_remove_all(cmd);
+
+		printf("Command: %s\n", cmdstr);
+		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
+            free(cmdstr);
+            fprintf(stderr, "%s\n", errmsg);
+			fprintf(stderr, "Failed to run tabsort.\n");
+			exit(-1);
+		}
+        free(cmdstr);
+		xylsfn = sortedxylsfn;
+    }
 
 	// start piling FITS headers in there.
 	hdr = qfits_header_read(xylsfn);
@@ -790,3 +753,69 @@ int main(int argc, char** args) {
 
 	return 0;
 }
+
+static int parse_depth_string(il* depths, const char* str) {
+    // -10,10-20,20-30,40-
+    while (str && *str) {
+        unsigned int lo, hi;
+        int nread;
+        lo = hi = 0;
+        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
+            sscanf(str, "%*u-%*u%n", &nread);
+        } else if (sscanf(str, "%u-", &lo) == 1) {
+            sscanf(str, "%*u-%n", &nread);
+        } else if (sscanf(str, "-%u", &hi) == 1) {
+            sscanf(str, "-%*u%n", &nread);
+        } else if (sscanf(str, "%u", &hi) == 1) {
+            sscanf(str, "%*u%n", &nread);
+        } else {
+            return -1;
+        }
+        if (lo < 0) {
+            fprintf(stderr, "Depth %i is invalid: must be >= 0.\n", lo);
+            return -1;
+        }
+        if (lo > hi) {
+            fprintf(stderr, "Depth range %i to %i is invalid: max must be >= min!\n", lo, hi);
+            return -1;
+        }
+        il_append(depths, lo);
+        il_append(depths, hi);
+        str += nread;
+        while ((*str == ',') || isspace(*str))
+            str++;
+    }
+    return 0;
+}
+
+static int parse_fields_string(il* fields, const char* str) {
+    // 10,11,20-25,30,40-50
+    while (str && *str) {
+        unsigned int lo, hi;
+        int nread;
+        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
+            sscanf(str, "%*u-%*u%n", &nread);
+        } else if (sscanf(str, "%u", &lo) == 1) {
+            sscanf(str, "%*u%n", &nread);
+            hi = lo;
+        } else {
+            fprintf(stderr, "Failed to parse fragment: \"%s\"\n", str);
+            return -1;
+        }
+        if (lo <= 0) {
+            fprintf(stderr, "Field number %i is invalid: must be >= 1.\n", lo);
+            return -1;
+        }
+        if (lo > hi) {
+            fprintf(stderr, "Field range %i to %i is invalid: max must be >= min!\n", lo, hi);
+            return -1;
+        }
+        il_append(fields, lo);
+        il_append(fields, hi);
+        str += nread;
+        while ((*str == ',') || isspace(*str))
+            str++;
+    }
+    return 0;
+}
+
