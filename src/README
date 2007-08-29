@@ -1,6 +1,7 @@
-Research Code Snapshot (August 2007) for Astrometry.net
-=========================================================
-Copyright 2006, 2007 David W. Hogg, Dustin Lang, Keir Mierle and Sam Roweis.
+Astrometry.net code release 0.1
+===============================
+Copyright 2006, 2007 Michael Blanton, David W. Hogg, Dustin Lang, Keir Mierle
+and Sam Roweis.
 
    This code is meant as an accompanyment for an upcoming paper and its main
    purpose is to allow reproduction of the results in that paper.
@@ -13,29 +14,82 @@ Copyright 2006, 2007 David W. Hogg, Dustin Lang, Keir Mierle and Sam Roweis.
 
      * Convert raw USNO and Tycho2 into FITS format for easier use
      * Uniformize, deduplicate, and cut the FITSified catalogs
+     * Build indices from these cuts
+     * Solve the astrometry of images using these indices
+
+   The code includes:
      * A simple but powerful HEALPIX implementation
-     * QFITS library with several modifications
+     * The QFITS library with several modifications
      * libkd, a compact and high-performance kdtree library
 
    In principle, the code in the tarball is sufficient to reproduce our entire
    astrometry system and replicate our blind astrometry results (e.g. on the
-   SDSS fields). However, this requires the entire USNO-B 1.0 catalogue which
-   is about 80GB in size. Unfortunately, we can't distribute our pre-built
-   indexes at this time; contact us for more information. This will change soon
-   and we will redistribute our pre-cooked indexes (about 30GB of data). They
-   are the same indexes used by our online solving system.
+   SDSS fields).  However, this requires the entire USNO-B 1.0 catalogue which
+   is about 80GB in size.  For ease of use, we are distributing our pre-cooked
+   indices (about 30 GB total), which are the same files we're using for our
+   web service.
 
 QUICKSTART
 ----------
 
-   To compile, you will need to get the cairo includes, netpbm and stellarium;
-   $ sudo apt-get install libcairo2-dev libnetpbm10-dev netpbm stellarium-data
+   To compile everything, you will need to get the following development libraries:
+      * cairo
+      * netpbm
+      * png
 
-   Then build the solving system along with plotting extras
-   $ make
-   $ make extra
+   On Ubuntu or Debian-like systems, the following should suffice:
+      $ sudo apt-get install libcairo2-dev libnetpbm10-dev netpbm libpng12-dev
 
-   Configure the backend by editing backend.cfg, and adding the path to the
+   If you don't have and can't get these libraries, you should still be able to
+   compile and use the core parts of the solver, but you will miss out on some
+   eye-candy.
+
+
+   Grab the code:
+      $ wget http://astrometry.net/downloads/astrometry.net-0.1.tar.bz2
+      $ tar xjf astrometry.net-0.1.tar.bz2
+      $ cd astrometry.net-0.1
+
+   Build the solving system:
+      $ make
+
+   If you installed the libraries listed above, build the plotting code:
+      $ make extra
+
+   Next, grab some pre-cooked indices.  Each index is designed to solve images within
+   a narrow range of scales.  The indices designed to solve small (angular size) images
+   are rather large, so you probably only want to grab the indices required for the
+   images you wish to solve.  If you grab extra indices, the solver will run more
+   slowly, but the results should be the same.
+
+   Each index contains a large number of "landmarks" that describe the local relative
+   geometry of sets of four stars ("quads").  Each index contains quads whose diameter
+   is within a narrow range.  You probably want to select indices whose quads are, say,
+   10% to 100% of the sizes of the images you want to solve.
+
+   For example, if you want to solve images from the 
+
+   Index Filename          Range of quad diameters (in arcminutes)
+
+   index-200.tar.bz2        2.0  -  2.8
+   index-201.tar.bz2        2.8  -  4.0
+   index-202.tar.bz2        4.0  -  5.6
+   index-203.tar.bz2        5.6  -  8.0
+   index-204.tar.bz2        8  -   11
+   index-205.tar.bz2       11  -   16
+   index-206.tar.bz2       16  -   22
+   index-207.tar.bz2       22  -   30
+   index-208.tar.bz2       30  -   42
+   index-209.tar.bz2       42  -   60
+   index-210+.tar.bz2      60  - 2000
+
+
+
+
+
+   Gr
+
+   Configure the solver by editing backend.cfg, and adding the path to the
    indexes you have.
    $ cd quads
    $ vim backend.cfg
