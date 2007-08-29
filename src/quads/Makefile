@@ -153,7 +153,7 @@ simplexy: fits2xy
 .PHONY: simplexy
 
 stellarium-constellations.c: grab-stellarium-constellations
-	./grab-stellarium-constellations > $@
+	-./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@
 
 grab-stellarium-constellations: grab-stellarium-constellations.o \
 		boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB)
