@@ -20,10 +20,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <assert.h>
 #include "fitsio.h"
 #include "dimage.h"
-#include "ver.h"
-#include <assert.h>
+#include "svn.h"
 
 void printHelp(char* progname)
 {
@@ -75,12 +75,18 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
 	if (fix) {
+        char str[256];
 		fits_write_history(fptr, 
-			"Edited by astrometry.net's fixaxis",
+			"Edited by Astrometry.net's fixaxis",
 			&status);
-		fits_write_history(fptr, "SVN: " SVNREV, &status);
+        snprintf(str, sizeof(str), "SVN rev: %s", svn_revision());
+		fits_write_history(fptr, str, &status);
 		assert(!status);
-		fits_write_history(fptr, "SVN: " SVNURL, &status);
+        snprintf(str, sizeof(str), "SVN URL: %s", svn_url());
+		fits_write_history(fptr, str, &status);
+		assert(!status);
+        snprintf(str, sizeof(str), "SVN date: %s", svn_date());
+		fits_write_history(fptr, str, &status);
 		assert(!status);
 		fits_write_history(fptr, 
 			"Visit us on the web at http://astrometry.net/",
