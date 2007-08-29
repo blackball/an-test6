@@ -28,18 +28,7 @@ include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.gsl
 
-ifeq ($(MAKECMDGOALS),cairo)
-	include $(COMMON)/makefile.cairo
-endif
-
-# HACK
 include $(COMMON)/makefile.cairo
-ifeq ($(MAKECMDGOALS),plot-constellations)
-	include $(COMMON)/makefile.cairo
-endif
-ifeq ($(MAKECMDGOALS),plotxy)
-	include $(COMMON)/makefile.cairo
-endif
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
