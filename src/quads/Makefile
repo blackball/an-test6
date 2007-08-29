@@ -48,15 +48,13 @@ CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 CFLAGS += $(GSL_INC)
 
-# To get ver.h:
-CFLAGS += -I..
 # For Keir's fancy Python bindings:
 CFLAGS += -fPIC
 
 SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
 
-NETPBM_I :=
-NETPBM_L := -L. -lnetpbm
+NETPBM_INC :=
+NETPBM_LIB := -L. -lnetpbm
 
 PNG_INC := $(shell pkg-config --cflags libpng 2>/dev/null)
 PNG_LIB := $(shell pkg-config --libs libpng 2>/dev/null)
@@ -330,21 +328,21 @@ plotquad.o: plotquad.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
 plotquad: plotquad.o cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
-	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_L)
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB)
 
 plot-constellations.o: plot-constellations.c
-	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_INC) -c -o $@ $<
 
 plot-constellations: plot-constellations.o constellations.o cairoutils.o \
 		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o svn.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_L) $(PNG_LIB)
+	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB)
 
 plotxy.o: plotxy.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
 plotxy: plotxy.o cairoutils.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_L)
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB)
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
