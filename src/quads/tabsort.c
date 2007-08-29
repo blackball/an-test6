@@ -28,7 +28,7 @@
 #include "fitsioutils.h"
 #include "permutedsort.h"
 
-static const char* OPTIONS = "hc:i:o:d";
+static const char* OPTIONS = "hc:i:o:dq";
 
 static void printHelp(char* progname) {
 	printf("%s    -i <input-file>\n"
@@ -94,9 +94,13 @@ int main(int argc, char *argv[]) {
 	int start, size;
 	int descending = 0;
 	unsigned char* buffer;
+    bool verbose = TRUE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'q':
+            verbose = FALSE;
+            break;
         case 'c':
 			colname = optarg;
             break;
@@ -155,7 +159,8 @@ int main(int argc, char *argv[]) {
 	free(buffer);
 
 	nextens = qfits_query_n_ext(infn);
-	printf("Sorting %i extensions.\n", nextens);
+    if (verbose)
+        printf("Sorting %i extensions.\n", nextens);
 	buffer = NULL;
 	for (ext=1; ext<=nextens; ext++) {
 		int c;
@@ -173,7 +178,7 @@ int main(int argc, char *argv[]) {
 		int i;
 
 		if (!qfits_is_table(infn, ext)) {
-			fprintf(stderr, "Extention %i isn't a table. Skipping.\n", ext);
+            fprintf(stderr, "Extention %i isn't a table. Skipping.\n", ext);
 			continue;
 		}
 		table = qfits_table_open(infn, ext);

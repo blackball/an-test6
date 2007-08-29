@@ -21,9 +21,39 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "scriptutils.h"
 #include "ioutils.h"
+
+char* escape_filename(const char* fn) {
+    char* escape = "|&;()<> \t\n\\'\"";
+    int nescape = 0;
+    int len = strlen(fn);
+    int i;
+    char* result;
+    int j;
+
+    for (i=0; i<len; i++) {
+        char* cp = strchr(escape, fn[i]);
+        if (!cp) continue;
+        nescape++;
+    }
+    result = malloc(len + nescape + 1);
+    for (i=0, j=0; i<len; i++, j++) {
+        char* cp = strchr(escape, fn[i]);
+        if (!cp) {
+            result[j] = fn[i];
+        } else {
+            result[j] = '\\';
+            j++;
+            result[j] = fn[i];
+        }
+    }
+    assert(j == (len + nescape));
+    result[j] = '\0';
+    return result;
+}
 
 char* get_path(const char* prog, const char* me) {
     char* cpy;

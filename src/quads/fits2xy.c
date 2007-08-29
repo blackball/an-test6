@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include "an-bool.h"
 #include "fitsio.h"
 #include "dimage.h"
 
@@ -36,7 +37,7 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
-static const char* OPTIONS = "hpOo:";
+static const char* OPTIONS = "hpOo:q";
 
 void printHelp() {
 	fprintf(stderr,
@@ -87,9 +88,13 @@ int main(int argc, char *argv[])
 	int nhdus,maxper,maxsize,halfbox,hdutype,nimgs;
 	float dpsf,plim,dlim,saddle;
 	int overwrite = 0;
+    bool verbose = TRUE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'q':
+            verbose = FALSE;
+            break;
 		case 'p':
 			percentiles = 1;
 			break;
@@ -111,7 +116,8 @@ int main(int argc, char *argv[])
 	}
 
 	infn = argv[optind];
-	fprintf(stderr, "infile=%s\n", infn);
+    if (verbose)
+        fprintf(stderr, "infile=%s\n", infn);
 	if (fits_open_file(&fptr, infn, READONLY, &status)) {
 		fprintf(stderr, "Error reading file %s\n", infn);
 		fits_report_error(stderr, status);
@@ -120,19 +126,22 @@ int main(int argc, char *argv[])
 
 	// Are there multiple HDU's?
 	fits_get_num_hdus(fptr, &nhdus, &status);
-	fprintf(stderr, "nhdus=%d\n", nhdus);
+    if (verbose)
+        fprintf(stderr, "nhdus=%d\n", nhdus);
 
 	if (!outfn) {
 		outfn = outfile;
 		// Create xylist filename (by trimming '.fits')
 		snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", (int) (strlen(infn)-5), infn);
-		fprintf(stderr, "outfile=%s\n",outfile);
+        if (verbose)
+            fprintf(stderr, "outfile=%s\n",outfile);
 	}
 
 	if (overwrite) {
 		struct stat st;		
 		if (stat(outfn, &st) == 0) {
-			fprintf(stderr, "Deleting existing output file \"%s\"...\n", outfn);
+            if (verbose)
+                fprintf(stderr, "Deleting existing output file \"%s\"...\n", outfn);
 			if (unlink(outfn)) {
 				fprintf(stderr, "Failed to delete existing output file \"%s\": %s\n",
 						outfn, strerror(errno));
@@ -210,10 +219,12 @@ int main(int argc, char *argv[])
 
 		nimgs++;
 
-		fprintf(stderr,"Got naxis=%d,na1=%lu,na2=%lu\n", naxis,naxisn[0],naxisn[1]);
+        if (verbose)
+            fprintf(stderr,"Got naxis=%d,na1=%lu,na2=%lu\n", naxis,naxisn[0],naxisn[1]);
 
 		if (naxis > 2) {
-			fprintf(stderr, "NAXIS > 2: processing the first image plane only.\n");
+            if (verbose)
+                fprintf(stderr, "NAXIS > 2: processing the first image plane only.\n");
 		}
 
 		thedata = malloc(naxisn[0] * naxisn[1] * sizeof(float));
@@ -243,7 +254,7 @@ int main(int argc, char *argv[])
 		flux = malloc(maxnpeaks * sizeof(float));
 		simplexy(thedata, naxisn[0], naxisn[1],
 				 dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-				 maxsize, halfbox, &sigma, x, y, flux, &npeaks);
+				 maxsize, halfbox, &sigma, x, y, flux, &npeaks, (verbose?1:0));
 
 		// The FITS standard specifies that the center of the lower
 		// left pixel is 1,1. Store our xylist according to FITS

@@ -220,7 +220,7 @@ int main(int argc, char *args[]) {
         img = calloc(4 * W * H, 1);
     }
 
-	fprintf(stderr, "Image size %i x %i.\n", W, H);
+	//fprintf(stderr, "Image size %i x %i.\n", W, H);
 
 	// Allocate image.
     target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);

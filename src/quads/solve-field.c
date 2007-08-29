@@ -65,6 +65,7 @@ pixels=UxV arcmin
 
 static struct option long_options[] = {
 	{"help",           no_argument,       0, 'h'},
+	{"verbose",        no_argument,       0, 'v'},
 	{"width",          required_argument, 0, 'W'},
 	{"height",         required_argument, 0, 'H'},
 	{"scale-low",	   required_argument, 0, 'L'},
@@ -89,7 +90,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:a";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:av";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -118,6 +119,7 @@ static void print_help(const char* progname) {
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
 	       "  [--files-on-stdin]: read files to solve on stdin, one per line (-f)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
+           "  [--verbose]: be more chatty!\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
@@ -125,7 +127,7 @@ static void print_help(const char* progname) {
 
 static int run_command(const char* cmd, bool* ctrlc) {
 	int rtn;
-	printf("Running command:\n  %s\n", cmd);
+	//printf("Running command:\n  %s\n", cmd);
 	rtn = system(cmd);
 	if (rtn == -1) {
 		fprintf(stderr, "Failed to run command: %s\n", strerror(errno));
@@ -164,6 +166,7 @@ int main(int argc, char** args) {
     bool makeplots = TRUE;
     char* me = args[0];
     char* tempdir = "/tmp";
+    bool verbose = FALSE;
 
 	augmentxyargs = sl_new(16);
 	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
@@ -180,6 +183,11 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'v':
+            sl_appendf(augmentxyargs, "--verbose");
+            sl_appendf(backendargs, "--verbose");
+            verbose = TRUE;
+            break;
         case 'X':
             sl_appendf(augmentxyargs, "--x-column \"%s\"", optarg);
             break;
@@ -261,7 +269,7 @@ int main(int argc, char** args) {
 		rtn = system(cmd);
 		free(cmd);
 		if (rtn == -1) {
-			fprintf(stderr, "Failed to system() mkdir.\n");
+			fprintf(stderr, "Failed to create output directory %s.\n", outdir);
 			exit(-1);
 		}
 		rtn = WEXITSTATUS(rtn);
@@ -269,12 +277,6 @@ int main(int argc, char** args) {
 			fprintf(stderr, "mkdir failed: status %i.\n", rtn);
 			exit(-1);
 		}
-		/*
-		 struct stat st;
-		 if (stat(outdir, &st)) 
-		 if (errno == ENOENT) 
-		 // try to mkdir it.
-		 */
 	}
 
 	if (guess_scale)
@@ -361,8 +363,6 @@ int main(int argc, char** args) {
             downloadfn = sl_appendf(outfiles, "%s-downloaded.%s", base, suffix);
         else
             downloadfn = sl_appendf(outfiles, "%s-downloaded", base);
-		free(base);
-		base = NULL;
 
 		// Check for (and delete) existing output filenames.
 		nextfile = FALSE;
@@ -391,17 +391,27 @@ int main(int argc, char** args) {
         // Input/Output files whose existence is not an error:
 		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
 
+		free(base);
+		base = NULL;
+
         // Download URL...
         if ((strncasecmp(infile, "http://", 7) == 0) ||
             (strncasecmp(infile, "ftp://", 6) == 0)) {
             sl_append(cmdline, "wget");
-            sl_appendf(cmdline, "-O \"%s\"", downloadfn);
-            sl_appendf(cmdline, "\"%s\"", infile);
+            if (!verbose)
+                sl_append(cmdline, "--quiet");
+                //sl_append(cmdline, "--no-verbose");
+            sl_append(cmdline, "-O");
+            sl_append_nocopy(cmdline, escape_filename(downloadfn));
+            sl_append_nocopy(cmdline, escape_filename(infile));
 
             cmd = sl_implode(cmdline, " ");
             sl_remove_all(cmdline);
 
-            printf("Running:\n  %s\n", cmd);
+            if (verbose)
+                printf("Running:\n  %s\n", cmd);
+            else
+                printf("Downloading...\n");
             fflush(NULL);
             if (run_command(cmd, &ctrlc)) {
                 fflush(NULL);
@@ -414,15 +424,18 @@ int main(int argc, char** args) {
             infile = downloadfn;
         }
 
-		printf("Checking if file \"%s\" is xylist or image: ", infile);
+        if (verbose)
+            printf("Checking if file \"%s\" is xylist or image: ", infile);
         fflush(NULL);
         // turn on QFITS error reporting.
         qfits_err_statset(1);
 		isxyls = xylist_is_file_xylist(infile, NULL, NULL, &reason);
-		printf(isxyls ? "xyls\n" : "image\n");
-		if (!isxyls) {
-			printf("  (%s)\n", reason);
-		}
+        if (verbose) {
+            printf(isxyls ? "xyls\n" : "image\n");
+            if (!isxyls) {
+                printf("  (%s)\n", reason);
+            }
+        }
         fflush(NULL);
 
 		if (isxyls) {
@@ -434,9 +447,11 @@ int main(int argc, char** args) {
 		}
 
 		if (image) {
-			sl_appendf(augmentxyargs, "--image \"%s\"", image);
+			sl_append(augmentxyargs, "--image");
+			sl_append_nocopy(augmentxyargs, escape_filename(image));
 		} else {
-			sl_appendf(augmentxyargs, "--xylist \"%s\"", xyls);
+			sl_append(augmentxyargs, "--xylist");
+			sl_append_nocopy(augmentxyargs, escape_filename(xyls));
 			/*
 			 if (!width || !height) {
 			 // Load the xylist and compute the min/max.
@@ -455,18 +470,25 @@ int main(int argc, char** args) {
             ppmfn = create_temp_file("ppm", tempdir);
             sl_append_nocopy(outfiles, ppmfn);
 
-			sl_appendf(augmentxyargs, "--pnm \"%s\"", ppmfn);
+			sl_append(augmentxyargs, "--pnm");
+			sl_append_nocopy(augmentxyargs, escape_filename(ppmfn));
 			sl_append(augmentxyargs, "--force-ppm");
 		}
 
-		sl_appendf(augmentxyargs, "--out \"%s\"", axyfn);
-		sl_appendf(augmentxyargs, "--match \"%s\"", matchfn);
-		sl_appendf(augmentxyargs, "--rdls \"%s\"", rdlsfn);
-		sl_appendf(augmentxyargs, "--solved \"%s\"", solvedfn);
-		sl_appendf(augmentxyargs, "--wcs \"%s\"", wcsfn);
+		sl_append(augmentxyargs, "--out");
+        sl_append_nocopy(augmentxyargs, escape_filename(axyfn));
+		sl_append(augmentxyargs, "--match");
+        sl_append_nocopy(augmentxyargs, escape_filename(matchfn));
+		sl_append(augmentxyargs, "--rdls");
+        sl_append_nocopy(augmentxyargs, escape_filename(rdlsfn));
+		sl_append(augmentxyargs, "--solved");
+        sl_append_nocopy(augmentxyargs, escape_filename(solvedfn));
+		sl_append(augmentxyargs, "--wcs");
+        sl_append_nocopy(augmentxyargs, escape_filename(wcsfn));
 
 		cmd = sl_implode(augmentxyargs, " ");
-		//printf("Running augment-xylist:\n  %s\n", cmd);
+        if (verbose)
+            printf("Running:\n  %s\n", cmd);
         fflush(NULL);
 		if (run_command(cmd, &ctrlc)) {
             fflush(NULL);
@@ -480,9 +502,11 @@ int main(int argc, char** args) {
             // source extraction overlay
             // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
             sl_append_nocopy(cmdline, get_path("plotxy", me));
-            sl_appendf(cmdline, "-i \"%s\"", axyfn);
+            sl_append(cmdline, "-i");
+            sl_append_nocopy(cmdline, escape_filename(axyfn));
             if (image) {
-                sl_appendf(cmdline, "-I \"%s\"", ppmfn);
+                sl_append(cmdline, "-I");
+                sl_append_nocopy(cmdline, escape_filename(ppmfn));
             }
             sl_append(cmdline, "-P");
             sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
@@ -490,15 +514,18 @@ int main(int argc, char** args) {
             sl_append(cmdline, "|");
 
             sl_append_nocopy(cmdline, get_path("plotxy", me));
-            sl_appendf(cmdline, "-i \"%s\"", axyfn);
+            sl_append(cmdline, "-i");
+            sl_append_nocopy(cmdline, escape_filename(axyfn));
             sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
-            sl_appendf(cmdline, "> \"%s\"", objsfn);
+            sl_append(cmdline, ">");
+            sl_append_nocopy(cmdline, escape_filename(objsfn));
 
             cmd = sl_implode(cmdline, " ");
             sl_remove_all(cmdline);
-
-            printf("Running plot command:\n  %s\n", cmd);
+            
+            if (verbose)
+                printf("Running:\n  %s\n", cmd);
             fflush(NULL);
             if (run_command(cmd, &ctrlc)) {
                 fflush(NULL);
@@ -513,9 +540,12 @@ int main(int argc, char** args) {
             free(cmd);
         }
 
-		sl_appendf(backendargs, "\"%s\"", axyfn);
+		sl_append_nocopy(backendargs, escape_filename(axyfn));
 		cmd = sl_implode(backendargs, " ");
-		printf("Running backend:\n  %s\n", cmd);
+        if (verbose)
+            printf("Running:\n  %s\n", cmd);
+        else
+            printf("Solving...\n");
         fflush(NULL);
 		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
             fflush(NULL);
@@ -536,15 +566,16 @@ int main(int argc, char** args) {
 			// index rdls to xyls.
             sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
 			sl_append(cmdline, "-w");
-			sl_append(cmdline, wcsfn);
+			sl_append_nocopy(cmdline, escape_filename(wcsfn));
 			sl_append(cmdline, "-i");
-			sl_append(cmdline, rdlsfn);
+			sl_append_nocopy(cmdline, escape_filename(rdlsfn));
 			sl_append(cmdline, "-o");
-			sl_append(cmdline, indxylsfn);
+			sl_append_nocopy(cmdline, escape_filename(indxylsfn));
 
 			cmd = sl_implode(cmdline, " ");
 			sl_remove_all(cmdline);
-			printf("Running wcs-rd2xy:\n  %s\n", cmd);
+            if (verbose)
+                printf("Running:\n  %s\n", cmd);
             fflush(NULL);
 			if (run_command(cmd, &ctrlc)) {
                 fflush(NULL);
@@ -558,17 +589,17 @@ int main(int argc, char** args) {
                 // sources + index overlay
                 sl_append_nocopy(cmdline, get_path("plotxy", me));
                 sl_append(cmdline, "-i");
-                sl_append(cmdline, axyfn);
+                sl_append_nocopy(cmdline, escape_filename(axyfn));
                 if (image) {
                     sl_append(cmdline, "-I");
-                    sl_append(cmdline, ppmfn);
+                    sl_append_nocopy(cmdline, escape_filename(ppmfn));
                 }
                 sl_append(cmdline, "-P");
                 sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
                 sl_append(cmdline, "|");
                 sl_append_nocopy(cmdline, get_path("plotxy", me));
                 sl_append(cmdline, "-i");
-                sl_append(cmdline, indxylsfn);
+                sl_append_nocopy(cmdline, escape_filename(indxylsfn));
                 sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
 
                 mf = matchfile_open(matchfn);
@@ -594,11 +625,12 @@ int main(int argc, char** args) {
                 matchfile_close(mf);
 			
                 sl_append(cmdline, ">");
-                sl_append(cmdline, redgreenfn);
+                sl_append_nocopy(cmdline, escape_filename(redgreenfn));
 
                 cmd = sl_implode(cmdline, " ");
                 sl_remove_all(cmdline);
-                printf("Running plot command:\n  %s\n", cmd);
+                if (verbose)
+                    printf("Running:\n  %s\n", cmd);
                 fflush(NULL);
                 if (run_command(cmd, &ctrlc)) {
                     fflush(NULL);
@@ -612,17 +644,18 @@ int main(int argc, char** args) {
             if (image && makeplots) {
                 sl_append_nocopy(cmdline, get_path("plot-constellations", me));
 				sl_append(cmdline, "-w");
-				sl_append(cmdline, wcsfn);
+				sl_append_nocopy(cmdline, escape_filename(wcsfn));
 				sl_append(cmdline, "-i");
-				sl_append(cmdline, ppmfn);
+				sl_append_nocopy(cmdline, escape_filename(ppmfn));
 				sl_append(cmdline, "-N");
 				sl_append(cmdline, "-C");
 				sl_append(cmdline, "-o");
-				sl_append(cmdline, ngcfn);
+				sl_append_nocopy(cmdline, escape_filename(ngcfn));
 
 				cmd = sl_implode(cmdline, " ");
 				sl_remove_all(cmdline);
-				printf("Running plot-constellations:\n  %s\n", cmd);
+				if (verbose)
+                    printf("Running:\n  %s\n", cmd);
                 fflush(NULL);
 				if (run_command(cmd, &ctrlc)) {
                     fflush(NULL);

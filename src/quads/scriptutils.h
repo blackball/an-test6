@@ -23,5 +23,6 @@
 
 char* get_path(const char* prog, const char* me);
 char* create_temp_file(char* fn, char* dir);
+char* escape_filename(const char* fn);
 
 #endif

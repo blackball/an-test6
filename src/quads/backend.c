@@ -45,18 +45,18 @@
 
 #include "qfits.h"
 
-static int help_flag;
+static bool verbose = FALSE;
 
 static struct option long_options[] =
     {
-	    // flags
-	    {"help",   no_argument, &help_flag, 1},
-	    {"config", required_argument, 0, 'c'},
-	    {"input",  required_argument, 0, 'i'},
+	    {"help",    no_argument,       0, 'h'},
+        {"verbose", no_argument,       0, 'v'},
+	    {"config",  required_argument, 0, 'c'},
+	    {"input",   required_argument, 0, 'i'},
 	    {0, 0, 0, 0}
     };
 
-static const char* OPTIONS = "hc:i:";
+static const char* OPTIONS = "hc:i:v";
 
 static void print_help(const char* progname)
 {
@@ -96,10 +96,12 @@ static int get_index_scales(const char* indexname,
 	double hi, lo;
 
 	quadfname = mk_quadfn(indexname);
-	printf("Reading quads file %s...\n", quadfname);
+    if (verbose)
+        printf("Reading quads file %s...\n", quadfname);
 	quads = quadfile_open(quadfname, 0);
 	if (!quads) {
-		printf("Couldn't read quads file %s\n", quadfname);
+        if (verbose)
+            printf("Couldn't read quads file %s\n", quadfname);
 		free_fn(quadfname);
 		return -1;
 	}
@@ -110,18 +112,35 @@ static int get_index_scales(const char* indexname,
 		*losize = lo;
 	if (hisize)
 		*hisize = hi;
-	printf("Stars: %i, Quads: %i.\n", quads->numstars, quads->numquads);
-	printf("Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-	       lo / 60.0, hi / 60.0, lo, hi);
+    if (verbose) {
+        printf("Stars: %i, Quads: %i.\n", quads->numstars, quads->numquads);
+        printf("Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+               lo / 60.0, hi / 60.0, lo, hi);
+    }
 	quadfile_close(quads);
 	return 0;
 }
 
-static int add_index(backend_t* backend, char* index)
-{
-	double lo, hi;
+static void add_index(backend_t* backend, char* full_index_path, double lo, double hi) {
 	indexinfo_t ii;
+	ii.indexname = full_index_path;
+	ii.losize = lo;
+	ii.hisize = hi;
+	bl_append(backend->indexinfos, &ii);
+	if (ii.losize < backend->sizesmallest) {
+		backend->sizesmallest = ii.losize;
+		backend->ismallest = bl_size(backend->indexinfos) - 1;
+	}
+	if (ii.hisize > backend->sizebiggest) {
+		backend->sizebiggest = ii.hisize;
+		backend->ibiggest = bl_size(backend->indexinfos) - 1;
+	}
+}
+
+static int find_index(backend_t* backend, char* index)
+{
 	bool found_index = FALSE;
+	double lo, hi;
 	int i = 0;
 	char* full_index_path;
 	for (i=0; i<sl_size(backend->index_paths); i++) {
@@ -138,19 +157,9 @@ static int add_index(backend_t* backend, char* index)
 		printf("Failed to find the index \"%s\".\n", index);
 		return -1;
 	}
-	printf("Found index: %s\n", full_index_path);
-	ii.indexname = full_index_path;
-	ii.losize = lo;
-	ii.hisize = hi;
-	bl_append(backend->indexinfos, &ii);
-	if (ii.losize < backend->sizesmallest) {
-		backend->sizesmallest = ii.losize;
-		backend->ismallest = bl_size(backend->indexinfos) - 1;
-	}
-	if (ii.hisize > backend->sizebiggest) {
-		backend->sizebiggest = ii.hisize;
-		backend->ibiggest = bl_size(backend->indexinfos) - 1;
-	}
+    if (verbose)
+        printf("Found index: %s\n", full_index_path);
+    add_index(backend, full_index_path, lo, hi);
 	return 0;
 }
 
@@ -182,7 +191,7 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			continue;
 
 		if (is_word(line, "index ", &nextword)) {
-			if (add_index(backend, nextword)) {
+			if (find_index(backend, nextword)) {
 				return -1;
 			}
         } else if (is_word(line, "autoindex", &nextword)) {
@@ -215,11 +224,15 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 continue;
             }
             while (1) {
-                struct dirent* de = readdir(dir);
+                struct dirent* de;
                 char* name;
                 int len;
                 int baselen;
                 char* base;
+                char* fullpath;
+                double lo, hi;
+                errno = 0;
+                de = readdir(dir);
                 if (!de) {
                     if (errno)
                         fprintf(stderr, "Failed to read entry from directory \"%s\": %s\n", path, strerror(errno));
@@ -236,9 +249,17 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 base = malloc(baselen + 1);
                 memcpy(base, name, baselen);
                 base[baselen] = '\0';
-                // FIXME - looking for corresponding .skdt.fits and .ckdt.fits files?
-                printf("Trying to add index \"%s\".\n", base);
-                add_index(backend, base);
+                // FIXME - look for corresponding .skdt.fits and .ckdt.fits files?
+                asprintf_safe(&fullpath, "%s/%s", path, base);
+                if (verbose)
+                    printf("Trying to add index \"%s\".\n", fullpath);
+                if (get_index_scales(fullpath, &lo, &hi) == 0) {
+                    add_index(backend, fullpath, lo, hi);
+                } else {
+                    free(fullpath);
+                    if (verbose)
+                        printf("Failed to add index \"%s\".\n", fullpath);
+                }
                 free(base);
             }
         }
@@ -404,6 +425,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 {
 	int i, j, k;
 	bool firsttime = TRUE;
+    if (!verbose)
+        WRITE(fout, "quiet\n");
 	WRITE(fout, "timelimit %i\n", job->timelimit);
 	WRITE(fout, "cpulimit %i\n", job->cpulimit);
     for (i=0;; i++) {
@@ -562,7 +585,8 @@ static int run_blind(job_t* job, backend_t* backend)
 		}
 
 		// Use a "system"-like command to allow fancier "blind" commands.
-		if (execlp("/bin/sh", "/bin/sh", "-c", backend->blind, (char*)NULL)) {
+		if (execlp("/bin/sh", "/bin/sh", "-c", backend->blind, (char*)NULL)) {    
+
 			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
 			_exit( -1);
 		}
@@ -585,7 +609,8 @@ static int run_blind(job_t* job, backend_t* backend)
 		fclose(fpipe);
 
 		// Wait for blind to finish.
-		printf("Waiting for blind to finish (PID %i).\n", (int)pid);
+        if (verbose)
+            printf("Waiting for blind to finish (PID %i).\n", (int)pid);
 		do {
 			if (waitpid(pid, &status, 0) == -1) {
 				fprintf(stderr, "Failed to waitpid() for blind: %s.\n", strerror(errno));
@@ -607,7 +632,8 @@ static int run_blind(job_t* job, backend_t* backend)
 				}
 			}
 		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
-		printf("Blind finished successfully.\n");
+        if (verbose)
+            printf("Blind finished successfully.\n");
 	}
 	return 0;
 }
@@ -811,6 +837,7 @@ int main(int argc, char** args)
 	int i;
 	backend_t* backend;
     char* mydir;
+    bool help = FALSE;
 
 	while (1) {
 		int option_index = 0;
@@ -818,18 +845,12 @@ int main(int argc, char** args)
 		if (c == -1)
 			break;
 		switch (c) {
-		case 0:
-			/* If this option set a flag, do nothing else now. */
-			if (long_options[option_index].flag != 0)
-				break;
-			printf("option %s", long_options[option_index].name);
-			if (optarg)
-				printf(" with arg %s", optarg);
-			printf("\n");
-			break;
 		case 'h':
-			help_flag = 1;
+            help = TRUE;
 			break;
+        case 'v':
+            verbose = TRUE;
+            break;
 		case 'c':
 			configfn = optarg;
 			break;
@@ -846,9 +867,9 @@ int main(int argc, char** args)
 	if (optind == argc) {
 		// Need extra args: filename
 		printf("You must specify a job file.");
-		help_flag = 1;
+		help = TRUE;
 	}
-	if (help_flag) {
+	if (help) {
 		print_help(args[0]);
 		exit(0);
 	}
@@ -883,18 +904,18 @@ int main(int argc, char** args)
     }
 	fconf = fopen(configfn, "r");
 	if (!fconf) {
-		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
+		fprintf(stderr, "Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit( -1);
 	}
 
 	if (parse_config_file(fconf, backend)) {
-		printf("Failed to parse config file.\n");
+		fprintf(stderr, "Failed to parse config file.\n");
 		exit( -1);
 	}
 	fclose(fconf);
 
 	if (!pl_size(backend->indexinfos)) {
-		printf("You must list at least one index in the config file (%s)\n", configfn);
+		fprintf(stderr, "You must list at least one index in the config file (%s)\n", configfn);
 		exit( -1);
 	}
 
@@ -917,13 +938,14 @@ int main(int argc, char** args)
 
 		jobfn = args[i];
 
-        printf("Reading job file \"%s\"...\n", jobfn);
+        if (verbose)
+            printf("Reading job file \"%s\"...\n", jobfn);
         fflush(NULL);
 
 		// Read primary header.
 		hdr = qfits_header_read(jobfn);
 		if (!hdr) {
-			printf("Failed to parse FITS header from file \"%s\".\n", jobfn);
+			fprintf(stderr, "Failed to parse FITS header from file \"%s\".\n", jobfn);
 			exit( -1);
 		}
 		job = parse_job_from_qfits_header(hdr);
@@ -940,11 +962,13 @@ int main(int argc, char** args)
 		}
 		qfits_header_destroy(hdr);
 
-		printf("Running job:\n");
-		job_print(job);
-		printf("\n");
-		printf("Input file for blind:\n\n");
-		job_write_blind_input(job, stdout, backend);
+        if (verbose) {
+            printf("Running job:\n");
+            job_print(job);
+            printf("\n");
+            printf("Input file for blind:\n\n");
+            job_write_blind_input(job, stdout, backend);
+        }
 
 		if (inputfn) {
 			FILE* f = fopen(inputfn, "a");

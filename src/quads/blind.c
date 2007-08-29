@@ -763,7 +763,8 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 	if (mo->logodds >= bp->logratio_tosolve) {
 		bp->nsolves_sofar++;
 		if (bp->nsolves_sofar >= bp->nsolves) {
-			logmsg("Solved field with index %s\n", bp->solver.index->indexname); // FIXME blatent encapsulation violation
+			//logmsg("Solved field with index %s\n", bp->solver.index->indexname); // FIXME blatent encapsulation violation
+			logerr("Field %i: solved with index %s\n", mo->fieldnum, bp->solver.index->indexname); // FIXME blatent encapsulation violation
 			return TRUE;
 		} else {
 			logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
@@ -999,6 +1000,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
 			logmsg("Field %i did not solved (best odds ratio %g (%i match, %i conflict, %i dropout, %i index)).\n",
 			       fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
+            logerr("Field %i: did not solve.\n", fieldnum);
 		}
 
 		if (sp->have_best_match && sp->best_match_solves) {

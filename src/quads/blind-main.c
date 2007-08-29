@@ -67,6 +67,11 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
+        if (bp->quiet)
+            log_init(1);
+        if (bp->verbose)
+            log_init(4);
+
 		if (!blind_parameters_are_sane(bp, sp)) {
 			exit(-1);
 		}
@@ -76,12 +81,14 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Log this run's parameters
-		logmsg("%s params:\n", progname);
-		blind_log_run_parameters(bp);
+        if (!bp->quiet) {
+            logmsg("%s params:\n", progname);
+            blind_log_run_parameters(bp);
+        }
 
 		blind_run(bp);
 
-		if (!bp->silent)
+		if (!bp->quiet)
 			toc();
 
 		blind_restore_logging(bp);
