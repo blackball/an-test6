@@ -35,12 +35,6 @@ LDFLAGS += -lm
 
 CFLAGS := $(CFLAGS_DEF)
 
-# check out:
-#   __attribute__ ((nothrow))
-#   __attribute__ ((nonnull))
-#   -fforce-addr
-#   -fprefetch-loop-arrays
-
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(LIBKD_INC)
@@ -82,23 +76,21 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	startree hpquads codetree unpermute-quads unpermute-stars blind \
-	solvedserver printsolved xylist2fits mergesolved \
-	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable \
-	new-wcs get-wcs backend augment-xylist solve-field
+	solvedserver printsolved xylist2fits mergesolved rdlsinfo xylsinfo \
+	wcsinfo fits-guess-scale an-fitstopnm agreeable new-wcs get-wcs \
+	backend augment-xylist solve-field plotcat wcs-xy2rd wcs-rd2xy \
+	certifiable wcs-annotate get-healpix
 
-PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate \
-	get-healpix whynot quadcenters startree2rdls
+PROSPECTUS := quadidx codeprojections quadlocations quadscales quadsperstar \
+	whynot quadcenters startree2rdls
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
-#whynot
 
 CAIROEXECS := plotquad plotxy plot-constellations
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \
-	codekd.o idfile.o \
-	$(UTIL_OBJS)
+	codekd.o idfile.o $(UTIL_OBJS)
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
 PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
@@ -115,6 +107,9 @@ FIXAXIS_OBJ := fixaxis.o svn.o
 TEST_DFIND_OBJ := dfind.o test_dfind.o
 
 FITS2XY := fits2xy fixaxis test_dfind
+
+INSTALL_EXECS := $(FITS_UTILS) $(PIPELINE) fits2xy fits2fits.py image2pnm.py
+INSTALL_CAIRO_EXECS := $(CAIROEXECS)
 
 ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 	$(PIPELINE_MAIN_OBJ) $(PROSPECTUS_MAIN_OBJ) $(FITS_UTILS_MAIN_OBJ) \
@@ -138,6 +133,24 @@ fitsutils: $(FITS_UTILS)
 
 simplexy: fits2xy
 .PHONY: simplexy
+
+install: $(INSTALL_EXECS)
+	@echo Installing in directory $(INSTALL_DIR)
+	mkdir -p $(INSTALL_DIR)/bin
+	@for x in $(INSTALL_EXECS); do \
+		echo cp $$x $(INSTALL_DIR)/bin; \
+		cp $$x $(INSTALL_DIR)/bin; \
+	done
+	mkdir -p $(INSTALL_DIR)/etc
+	sed "s+add_path /usr/local/astrometry/+add_path $(INSTALL_DIR)/+" < backend.cfg-dist > $(INSTALL_DIR)/etc/backend.cfg
+
+install-extra: $(INSTALL_CAIRO_EXECS)
+	@echo Installing in directory $(INSTALL_DIR)
+	mkdir -p $(INSTALL_DIR)/bin
+	@for x in $(INSTALL_CAIRO_EXECS); do \
+		echo cp $$x $(INSTALL_DIR)/bin; \
+		cp $$x $(INSTALL_DIR)/bin; \
+	done
 
 stellarium-constellations.c: grab-stellarium-constellations
 	-./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@

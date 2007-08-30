@@ -14,21 +14,49 @@
 # along with the Astrometry.net suite ; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-
-# Top-level Makefile: just go into the subdirs and make there.
+#
+# This is where programs and data files will be installed.
+#
+INSTALL_DIR ?= /usr/local/astrometry
+export INSTALL_DIR
 
 all:
 	$(MAKE) -C an-common
 	$(MAKE) -C quads
 
-# Targets that require extra libraries or which are otherwise tricky.
+# Targets that require extra libraries
 extra:
 	$(MAKE) -C an-common
 	$(MAKE) -C quads cairo
 
+# Targets that support the web service
 web:
 	$(MAKE) -C usnob-map/execs
 	$(MAKE) -C ontheweb/execs
+
+install:
+	mkdir -p $(INSTALL_DIR)/data
+	mkdir -p $(INSTALL_DIR)/bin
+	$(MAKE) -C quads install
+	@echo
+	@echo The following command may fail if you don\'t have the cairo, netpbm, and
+	@echo png libraries and headers installed.  You will lose out on some eye-candy
+	@echo but will still be able to solve images.
+	@echo
+	-$(MAKE) -C quads install-extra
+
+install-indices:
+	mkdir -p $(INSTALL_DIR)/data
+	@for x in `ls index-*.tar.bz2`; do \
+		echo Installing $$x in $(INSTALL_DIR)/data...; \
+		echo tar xvjf $$x -C $(INSTALL_DIR)/data; \
+		tar xvjf $$x -C $(INSTALL_DIR)/data; \
+	done
+	@for x in `ls index-*.tar.gz`; do \
+		echo Installing $$x in $(INSTALL_DIR)/data...; \
+		echo tar xvzf $$x -C $(INSTALL_DIR)/data; \
+		tar xvzf $$x -C $(INSTALL_DIR)/data; \
+	done
 
 RELEASE_VER := 0.1
 RELEASE_DIR := astrometry.net-$(RELEASE_VER)
@@ -48,7 +76,7 @@ release:
 SNAPSHOT_VER := $(shell date "+%Y-%m-%d")
 SNAPSHOT_DIR := astrometry.net-$(SNAPSHOT_VER)
 SNAPSHOT_SVN := svn+ssh://astrometry.net/svn/trunk/src
-SNAPSHOT_SUBDIRS := cfitsio qfits-an gsl-an an-common libkd quads
+SNAPSHOT_SUBDIRS := $(RELEASE_SUBDIRS)
 
 snapshot:
 	-rm -R $(SNAPSHOT_DIR)

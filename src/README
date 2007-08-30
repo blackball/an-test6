@@ -56,54 +56,73 @@ QUICKSTART
    If you installed the libraries listed above, build the plotting code:
       $ make extra
 
+   Install it:
+      $ make install
+
+   By default it will be installed in  /usr/local/astrometry .
+   You can override this by either:
+        * editing the top-level Makefile (look for INSTALL_DIR)
+     or * defining INSTALL_DIR on the command-line:
+          $ INSTALL_DIR=/path/to/astrometry make install
+
+   The astrometry solver is composed of several executables.  You may want to add
+   the INSTALL_DIR/bin directory to your path:
+      $ export PATH="$PATH:/usr/local/astrometry/bin"
+
    Next, grab some pre-cooked indices.  Each index is designed to solve images within
    a narrow range of scales.  The indices designed to solve small (angular size) images
-   are rather large, so you probably only want to grab the indices required for the
-   images you wish to solve.  If you grab extra indices, the solver will run more
+   are rather large files, so you probably only want to grab the indices required for
+   the images you wish to solve.  If you grab extra indices, the solver will run more
    slowly, but the results should be the same.
 
-   Each index contains a large number of "landmarks" that describe the local relative
-   geometry of sets of four stars ("quads").  Each index contains quads whose diameter
-   is within a narrow range.  You probably want to select indices whose quads are, say,
-   10% to 100% of the sizes of the images you want to solve.
+   Each index contains a large number of "landmarks" that allow our solver to identify
+   your images.  The landmarks contained in each index have sizes (diameters) within a
+   narrow range.  You probably want to download indices whose quads are, say, 10% to
+   100% of the sizes of the images you want to solve.
 
-   For example, if you want to solve images from the 
+   For example, let's say you have some 1-degree square field of view images.  You
+   should grab indices that contain landmarks of size 0.1 to 1 degree, or 6 to 60
+   arcminutes.  Referring to the table below, you should grab indices 203 through 209.
 
-   Index Filename          Range of quad diameters (in arcminutes)
+   For reference, we used index 202 alone for our SDSS tests.
 
-   index-200.tar.bz2        2.0  -  2.8
-   index-201.tar.bz2        2.8  -  4.0
-   index-202.tar.bz2        4.0  -  5.6
-   index-203.tar.bz2        5.6  -  8.0
-   index-204.tar.bz2        8  -   11
-   index-205.tar.bz2       11  -   16
-   index-206.tar.bz2       16  -   22
-   index-207.tar.bz2       22  -   30
-   index-208.tar.bz2       30  -   42
-   index-209.tar.bz2       42  -   60
-   index-210+.tar.bz2      60  - 2000
+   ----------------------------------------------------------------
+   Index Filename          Range of landmark diameters (arcminutes)
+   ----------------------------------------------------------------
+   index-200.tar.bz2             2.0  -  2.8
+   index-201.tar.bz2             2.8  -  4.0
+   index-202.tar.bz2             4.0  -  5.6
+   index-203.tar.bz2             5.6  -  8.0
+   index-204.tar.bz2             8  -   11
+   index-205.tar.bz2            11  -   16
+   index-206.tar.bz2            16  -   22
+   index-207.tar.bz2            22  -   30
+   index-208.tar.bz2            30  -   42
+   index-209.tar.bz2            42  -   60
+   index-210+.tar.bz2           60  - 2000
+   ---------------------------------------------------------------
 
 
+   Download the indices you need and put them in the top-level (astrometry-0.1)
+   directory.
+
+   Install them:
+      $ make install-indices
+
+   (Or you can extract them into the INSTALL_DIR/data directory by hand.)
 
 
+   Next, you can (optionally) configure the solver by editing the file
+      INSTALL_DIR/etc/backend.cfg
 
-   Gr
 
-   Configure the solver by editing backend.cfg, and adding the path to the
-   indexes you have.
-   $ cd quads
-   $ vim backend.cfg
-   Change the 'add_path' line to point to where your copy of the index is.
-
-   The astrometry solver is composed of many executables, add them to your path:
-   $ export PATH=$PATH:"`pwd`"
-
-   Finally, solve a field
+   Finally, solve a field.
    $ ./solve-field my_field.jpg
 
    That should solve the field, and produce a number of outputs named
    'my_field.*'. The one of interest to most astronomers is my_field.wcs, which is
    a snippet of FITS header which contains a WCS for the image in question.
+
 
 PROBLEMS COMPILING?
 -------------------
@@ -114,30 +133,8 @@ I run a hip 90's era unix derivative and cairo doesn't work.
    plots of the solutions, but the solver should still work. To build the
    solver components minus plotting, run 'make' instead of 'make extra'.
 
-   solve-field will fail when it tries to plot stuff, but it should produce a
-   wcs file and other useful stuff.
-
-I can't find stellarium-data!
-
-   The stellarium-data package is needed for constellations; if for whatever
-   reason the package isn't available, you'll have to get an (old) version of
-   stellarium from the following url:
-   http://sourceforge.net/project/downloading.php?group_id=48857&filename=stellarium-0.7.1.tar.gz
-   and copy 'hipparcos.fab' and 'constellationship.fab' into the quads/ directory
-   of the astrometry sourcebase; i.e.
-   $ tar xzf stellarium-0.7.1.tar.gz
-   $ cd stellarium-0.7.1
-   $ cp data/sky_cultures/western/constellationship.fab <path-to-quads-dir>
-   $ cp data/hipparcos.fab <path-to-quads-dir>
-   where path-to-quads-dir is the whereever you extracted the sources to with
-   quads/ at the end.
-
-   We haven't updated our code to use the new stellarium data files, which is
-   why you need to get an older version.
-
-   If you built the sources, but only then realized you were missing the data
-   files, you'll need to do a make clean before re-trying because of makefile
-   stupidity.
+   solve-field may fail when it tries to plot stuff, but it should produce a
+   WCS file and other useful stuff.
 
 LICENSE
 -------
@@ -146,4 +143,5 @@ LICENSE
 
 CONTACT
 -------
-   Please send inquires/bug reports to code@astrometry.net
+   Please send inquires and bug reports to code@astrometry.net .
+

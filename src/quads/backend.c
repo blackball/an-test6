@@ -61,7 +61,7 @@ static const char* OPTIONS = "hc:i:v";
 static void print_help(const char* progname)
 {
 	printf("Usage:   %s [options] <augmented xylist>\n"
-	       "   [-c <backend config file>]  (default: \"backend.cfg\", first in current directory, then in directory containing the \"backend\" executable)\n"
+	       "   [-c <backend config file>]  (default: \"backend.cfg\" in the directory ../etc/ relative to the directory containing the \"backend\" executable)\n"
 	       "   [-i <blind input filename>]: save the input file used for blind.\n"
 	       "\n", progname);
 }
@@ -828,6 +828,7 @@ void backend_free(backend_t* backend)
 int main(int argc, char** args)
 {
     char* default_configfn = "backend.cfg";
+    char* default_config_path = "../etc";
     char* default_blind_command = "blind";
 
 	int c;
@@ -866,7 +867,7 @@ int main(int argc, char** args)
 
 	if (optind == argc) {
 		// Need extra args: filename
-		printf("You must specify a job file.");
+		printf("You must specify a job file.\n\n");
 		help = TRUE;
 	}
 	if (help) {
@@ -886,12 +887,19 @@ int main(int argc, char** args)
 
 	// Read config file
     if (!configfn) {
-        if (file_exists(default_configfn)) {
-            configfn = default_configfn;
+        char* defaultcf;
+        asprintf_safe(&defaultcf, "%s/%s/%s", mydir, default_config_path, default_configfn);
+        //if (file_exists(default_configfn)) {
+        //configfn = default_configfn;
+        if (file_exists(defaultcf)) {
+            configfn = defaultcf;
         } else {
             // if config file not found in current directory, try the dir containing the
             // backend executable.
             char* tryfn;
+
+            free(defaultcf);
+
             asprintf_safe(&tryfn, "%s/%s", mydir, default_configfn);
             if (!file_exists(tryfn)) {
                 fprintf(stderr, "Couldn't find config file \"%s\".\n", default_configfn);
