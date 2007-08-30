@@ -207,6 +207,7 @@ int main(int argc, char *argv[]) {
 		uint* quads;
 		uint nquads;
 		int k, s;
+		int dimquads = quadfile_dimquads(qfile);
 
 		qidxfile_get_quads(qidx, res->inds[j], &quads, &nquads);
 		totalquads += nquads;
@@ -214,19 +215,19 @@ int main(int argc, char *argv[]) {
 			nquads = totalquads - maxquads;
 		}
 		for (k=0; k<nquads; k++) {
-			uint stars[4];
-			double xyzs[12];
 			double midab[3];
-			double theta[4];
-			int perm[4];
-			quadfile_get_starids(qfile, quads[k], stars+0, stars+1, stars+2, stars+3);
+			uint stars[dimquads];
+			double theta[dimquads];
+			int perm[dimquads];
+			double xyzs[3*dimquads];
+			quadfile_get_stars(qfile, quads[k], stars);
 			for (s=0; s<4; s++)
 				startree_get(skdt, stars[s], xyzs + 3*s);
 
 			star_midpoint(midab, xyzs + 3*0, xyzs + 3*1);
 			// sort the points by angle from the midpoint so that the
 			// polygon doesn't self-intersect.
-			for (s=0; s<4; s++) {
+			for (s=0; s<dimquads; s++) {
 				double x, y;
 				bool ok;
 				ok = star_coords(xyzs + 3*s, midab, &x, &y);
@@ -235,10 +236,10 @@ int main(int argc, char *argv[]) {
 				perm[s] = s;
 			}
 			permuted_sort_set_params(theta, sizeof(double), compare_doubles);
-			permuted_sort(perm, 4);
+			permuted_sort(perm, dimquads);
 
 			printf("  <quad");
-			for (i=0; i<4; i++) {
+			for (i=0; i<dimquads; i++) {
 				double ra, dec;
 				xyzarr2radec(xyzs + 3*perm[i], &ra, &dec);
 				ra  = rad2deg(ra);
