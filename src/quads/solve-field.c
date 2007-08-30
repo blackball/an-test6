@@ -272,23 +272,20 @@ int main(int argc, char** args) {
 	}
 
 	if (outdir) {
-		asprintf(&cmd, "mkdir -p %s", outdir);
-		rtn = system(cmd);
-		free(cmd);
-		if (rtn == -1) {
+        char* escout;
+        escout = escape_filename(outdir);
+		asprintf_safe(&cmd, "mkdir -p %s", escout);
+        free(escout);
+        if (run_command(cmd, NULL)) {
+            free(cmd);
 			fprintf(stderr, "Failed to create output directory %s.\n", outdir);
 			exit(-1);
-		}
-		rtn = WEXITSTATUS(rtn);
-		if (rtn) {
-			fprintf(stderr, "mkdir failed: status %i.\n", rtn);
-			exit(-1);
-		}
+        }
+        free(cmd);
 	}
 
 	if (guess_scale)
 		sl_append(augmentxyargs, "--guess-scale");
-	// pnm?
 
 	// number of low-level and backend args (not specific to a particular file)
 	nllargs = sl_size(augmentxyargs);

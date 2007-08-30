@@ -23,6 +23,7 @@
 #include "healpix.h"
 #include "mathutil.h"
 #include "starutil.h"
+#include "keywords.h"
 
 Const static Inline double mysquare(double d) {
 	return d*d;

@@ -233,6 +233,8 @@ enum twomass_cc_val {
 	TWOMASS_CC_BANDMERGE        // b
 };
 
+int twomass_is_value_null(float val);
+
 int twomass_parse_entry(struct twomass_entry* entry, char* line);
 
 int twomass_cc_flag(unsigned char val, unsigned char flag);

@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 		fits_write_history(fptr, 
 			"Edited by Astrometry.net's fixaxis",
 			&status);
-        snprintf(str, sizeof(str), "SVN rev: %s", svn_revision());
+        snprintf(str, sizeof(str), "SVN rev: %i", svn_revision());
 		fits_write_history(fptr, str, &status);
 		assert(!status);
         snprintf(str, sizeof(str), "SVN URL: %s", svn_url());

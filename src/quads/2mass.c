@@ -22,7 +22,11 @@
 
 #include "2mass.h"
 
-// parses a value that may be null "\N".
+int twomass_is_value_null(float val) {
+    return (!isfinite(val));
+}
+
+// parses a value that may be null (represented by "\N" in the 2MASS data files).
 // expects the value to be followed by "|".
 static int parse_null(char** pcursor, float* dest) {
 	int nchars;

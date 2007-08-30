@@ -15,11 +15,26 @@ with the gcc compiler.  64-bit processors can happily run indices built by 32-bi
 processors, and vice versa.
 
 
--we define _GNU_SOURCE in the Makefile, which yields some GNU-specific extensions
+We define _GNU_SOURCE in the Makefile, which yields some GNU-specific extensions:
 
 -asprintf(), vasprintf() are GNU extensions.
 
 -basename(): although _GNU_SOURCE defines some different behaviour, we do not depend
   on this.  (solve-field.c)
+
+-keywords.h: it should be safe to just #define all these things to empty; they're just
+ syntactic sugar.
+
+
+Some other extensions:
+
+-round / nearbyint.  None of our code is particularly fussy about the details of
+ rounding, so substituting your favourite rounding code should work fine.
+
+-TWOMASS_NULL (NAN) in 2mass.{c,h}: this should be the IEEE NaN value; it is the value
+ written to the FITS file when a 2MASS data file contains a "null" value.
+
+
+
 
 
