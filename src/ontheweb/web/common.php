@@ -246,6 +246,7 @@ function uncompress_file($infile, $outfile, &$suffix) {
 
 	// handle compressed files.
 	$comptype = array("gzip compressed data"  => array(".gz",  "gunzip  -cd %s > %s"),
+                      "compress'd data"       => array(".Z",   "gunzip  -cd %s > %s"),
 					  "bzip2 compressed data" => array(".bz2", "bunzip2 -cd %s > %s"),
 					  "Zip archive data"      => array(".zip", "unzip   -p  %s > %s"),
 					  );
