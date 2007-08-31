@@ -97,7 +97,7 @@ static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:";
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
 	       "  [--dir <directory>]: place all output files in this directory\n"
-	       "  [--out <directory>]: name the output files with this base name\n"
+	       "  [--out <filename>]: name the output files with this base name\n"
 	       "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 	       "     choices:  \"degwidth\"    : width of the image, in degrees\n"
 	       "               \"arcminwidth\" : width of the image, in arcminutes\n"
@@ -113,19 +113,21 @@ static void print_help(const char* progname) {
            "  [--sort-column <name>]: for xyls inputs: the name of the FITS column that should be used to sort the sources  (-s)\n"
            "  [--sort-ascending]: when sorting, sort in ascending (smallest first) order   (-a)\n"
 		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
+	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections.  (-t <#>)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
 	       "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
            "  [--no-plots]: don't create any PNG plots.  (-P)\n"
            "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane.  (-2)\n"
-	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections.  (-t <#>)\n"
 	       "  [--backend-config <filename>]: use this config file for the \"backend\" program.  (-c <file>)\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
-	       "  [--files-on-stdin]: read files to solve on stdin, one per line (-f)\n"
+	       "  [--files-on-stdin]: read filenames to solve on stdin, one per line (-f)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!  (-v)\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
+           "\n"
+           "You can specify http:// or ftp:// URLs instead of filenames.  The \"wget\" program will be used to retrieve the URL.\n"
 	       "\n", progname);
 }
 
@@ -173,6 +175,8 @@ int main(int argc, char** args) {
     char* tempdir = "/tmp";
     bool verbose = FALSE;
     char* baseout = NULL;
+    char* xcol = NULL;
+    char* ycol = NULL;
 
 	augmentxyargs = sl_new(16);
 	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
@@ -203,9 +207,11 @@ int main(int argc, char** args) {
             break;
         case 'X':
             sl_appendf(augmentxyargs, "--x-column \"%s\"", optarg);
+            xcol = optarg;
             break;
         case 'Y':
             sl_appendf(augmentxyargs, "--y-column \"%s\"", optarg);
+            ycol = optarg;
             break;
         case 'm':
             sl_appendf(augmentxyargs, "--temp-dir \"%s\"", optarg);
@@ -410,8 +416,9 @@ int main(int argc, char** args) {
 		base = NULL;
 
         // Download URL...
-        if ((strncasecmp(infile, "http://", 7) == 0) ||
-            (strncasecmp(infile, "ftp://", 6) == 0)) {
+        if (!file_exists(infile) &&
+            ((strncasecmp(infile, "http://", 7) == 0) ||
+             (strncasecmp(infile, "ftp://", 6) == 0))) {
             sl_append(cmdline, "wget");
             if (!verbose)
                 sl_append(cmdline, "--quiet");
@@ -444,7 +451,7 @@ int main(int argc, char** args) {
         fflush(NULL);
         // turn on QFITS error reporting.
         qfits_err_statset(1);
-		isxyls = xylist_is_file_xylist(infile, NULL, NULL, &reason);
+		isxyls = xylist_is_file_xylist(infile, xcol, ycol, &reason);
         if (verbose) {
             printf(isxyls ? "xyls\n" : "image\n");
             if (!isxyls) {
