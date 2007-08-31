@@ -21,9 +21,11 @@
 #ifndef ASTROMETRY_KEYWORDS_H
 #define ASTROMETRY_KEYWORDS_H
 
+#include <features.h>
+
 #define ATTRIB_FORMAT(style,fmt,start) __attribute__ ((format(style,fmt,start)))
 
-#if __GNUC__ >= 3
+#if __GNUC_PREREQ(3, 0)
 
 //# define Inline inline __attribute__ ((always_inline))
 # define Inline        inline
@@ -39,7 +41,14 @@
 # define likely(x)        __builtin_expect (!!(x), 1)
 # define unlikely(x)      __builtin_expect (!!(x), 0)
 # define Noinline         __attribute__ ((noinline))
+
+// warn_unused_result is new in gcc-3.4
+#if __GNUC_PREREQ(3, 4)
 # define WarnUnusedResult __attribute__ ((warn_unused_result))
+#else
+# define WarnUnusedResult
+#endif
+
 #else
 
 # define Inline
