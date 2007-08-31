@@ -427,8 +427,10 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 	bool firsttime = TRUE;
     if (!verbose)
         WRITE(fout, "quiet\n");
-	WRITE(fout, "timelimit %i\n", job->timelimit);
-	WRITE(fout, "cpulimit %i\n", job->cpulimit);
+    if (job->timelimit)
+        WRITE(fout, "timelimit %i\n", job->timelimit);
+    if (job->cpulimit)
+        WRITE(fout, "cpulimit %i\n", job->cpulimit);
     for (i=0;; i++) {
 		int startobj = 0, endobj = 0;
         // if no depths were specified, run through once with the defaults.

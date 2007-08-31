@@ -207,6 +207,13 @@ void solver_transform_corners(solver_t* solver, MatchObj* mo) {
 	// center and radius...
 	star_midpoint(mo->center, mo->sMin, mo->sMax);
 	mo->radius = sqrt(distsq(mo->center, mo->sMin, 3));
+
+    assert(isfinite(mo->radius));
+    assert(isfinite(mo->sMin[0]));
+    assert(isfinite(mo->sMax[0]));
+    assert(isfinite(mo->sMinMax[0]));
+    assert(isfinite(mo->sMaxMin[0]));
+    assert(isfinite(mo->center[0]));
 }
 
 void solver_compute_quad_range(solver_t* sp, index_t* index,

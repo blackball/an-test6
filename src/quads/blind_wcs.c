@@ -92,6 +92,10 @@ void blind_wcs_compute_2(double* starxyz,
 		for (j=0; j<2; j++)
 			for (k=0; k<2; k++)
 				cov[j*2 + k] += p[i*2 + k] * f[i*2 + j];
+
+	for (i=0; i<4; i++)
+        assert(isfinite(cov[i]));
+
 	// -run SVD
 	{
 		double* pcov[] = { cov, cov+2 };
@@ -102,6 +106,11 @@ void blind_wcs_compute_2(double* starxyz,
 		tol = 1e-30;
 		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
 	}
+	for (i=0; i<4; i++)
+        assert(isfinite(U[i]));
+	for (i=0; i<4; i++)
+        assert(isfinite(V[i]));
+
 	// -compute rotation matrix R = V U'
 	for (i=0; i<4; i++)
 		R[i] = 0.0;
@@ -109,6 +118,9 @@ void blind_wcs_compute_2(double* starxyz,
 		for (j=0; j<2; j++)
 			for (k=0; k<2; k++)
 				R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
+    
+	for (i=0; i<4; i++)
+        assert(isfinite(R[i]));
 
 	// -compute scale: make the variances equal.
 	{
@@ -133,6 +145,11 @@ void blind_wcs_compute_2(double* starxyz,
 	tan->cd[0][1] = R[3] * scale; // CD1_2
 	tan->cd[1][0] = R[0] * scale; // CD2_1
 	tan->cd[1][1] = R[1] * scale; // CD2_2
+
+    assert(isfinite(tan->cd[0][0]));
+    assert(isfinite(tan->cd[0][1]));
+    assert(isfinite(tan->cd[1][0]));
+    assert(isfinite(tan->cd[1][1]));
 
 	/*
 	 * Did I add pcm in the right direction?
