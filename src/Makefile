@@ -69,8 +69,9 @@ release:
 	for x in $(RELEASE_SUBDIRS); do \
 		svn export $(RELEASE_SVN)/$$x $(RELEASE_DIR)/$$x; \
 	done
-	tar czf $(RELEASE_DIR).tar.gz  $(RELEASE_DIR)
-	tar cjf $(RELEASE_DIR).tar.bz2 $(RELEASE_DIR)
+	tar cf $(RELEASE_DIR).tar $(RELEASE_DIR)
+	gzip --best -c $(RELEASE_DIR).tar > $(RELEASE_DIR).tar.gz
+	bzip2 --best $(RELEASE_DIR).tar
 
 
 SNAPSHOT_VER := $(shell date "+%Y-%m-%d")
@@ -84,8 +85,9 @@ snapshot:
 	for x in $(SNAPSHOT_SUBDIRS); do \
 		svn export $(SNAPSHOT_SVN)/$$x $(SNAPSHOT_DIR)/$$x; \
 	done
-	tar czf $(SNAPSHOT_DIR).tar.gz  $(SNAPSHOT_DIR)
-	tar cjf $(SNAPSHOT_DIR).tar.bz2 $(SNAPSHOT_DIR)
+	tar cf $(SNAPSHOT_DIR).tar $(SNAPSHOT_DIR)
+	gzip --best -c $(SNAPSHOT_DIR).tar > $(SNAPSHOT_DIR).tar.gz
+	bzip2 --best $(SNAPSHOT_DIR).tar
 
 clean:
 	$(MAKE) -C an-common clean
