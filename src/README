@@ -116,12 +116,105 @@ QUICKSTART
       INSTALL_DIR/etc/backend.cfg
 
 
-   Finally, solve a field.
-   $ ./solve-field my_field.jpg
 
-   That should solve the field, and produce a number of outputs named
-   'my_field.*'. The one of interest to most astronomers is my_field.wcs, which is
-   a snippet of FITS header which contains a WCS for the image in question.
+   Finally, solve some fields.
+
+   (If you didn't build the plotting commands, add "--no-plots" to the command
+    lines below.)
+
+   If you have the netpbm tools installed (eg, jpegtopnm):
+
+     If you have any of indices 200 to 203:
+        $ solve-field --depth 0-20 --overwrite demo/sdss.jpg
+
+     If you have any of indices 203 to 205:
+        $ solve-field --depth 0-30 -overwrite demo/apod1.jpg
+
+     If you have any of indices 206 to 211:
+        $ solve-field --depth 0-20,20-40 --overwrite --scale-low 1 demo/apod2.jpg
+
+     If you have any of indices 210 to 214:
+        $ solve-field --depth 0-20,20-30,30-50,50-60 --overwrite --scale-low 1 demo/apod3.jpg
+
+     If you have any of indices 213 to 218:
+        $ solve-field --depth 0-20,20-40,40-50 --overwrite --scale-low 10 demo/apod4.jpg
+
+     If you have index 219:
+        $ solve-field --depth 0-70 --overwrite --scale-low 30 demo/apod5.jpg
+
+
+   If you don't have the netpbm tools, do this instead:
+
+     If you have any of indices 200 to 203:
+        $ solve-field --depth 0-20 --overwrite demo/sdss.xyls
+
+     If you have any of indices 203 to 205:
+        $ solve-field --depth 0-30 --overwrite demo/apod1.xyls
+
+     If you have any of indices 206 to 211:
+        $ solve-field --depth 0-20,20-40 --overwrite --scale-low 1 demo/apod2.xyls
+
+     If you have any of indices 210 to 214:
+        $ solve-field --depth 0-20,20-30,30-50,50-60 --overwrite --scale-low 1 demo/apod3.xyls
+
+     If you have any of indices 213 to 218:
+        $ solve-field --depth 0-20,20-40,40-50 --overwrite --scale-low 10 demo/apod4.xyls
+
+     If you have index 219:
+        $ solve-field --depth 0-70 --overwrite --scale-low 30 demo/apod5.xyls
+
+
+   Each of these commands should solve the field and produce a number of output
+   files:
+       sdss-ngc.png : an annotation of the image.
+       sdss.wcs : a FITS WCS header for the solution.
+       sdss-objs.png : a plot of the sources (stars) we extracted from the image.
+       sdss-indx.png : sources (red), plus stars from the index (green), plus the
+                       landmark ("quad") used to solve the image.
+       sdss-indx.xyls : a FITS BINTABLE with the pixel locations of stars from the index.
+       sdss.rdls : a FITS BINTABLE with the RA,Dec of sources we extracted from the image.
+       sdss.axy : a FITS BINTABLE of the sources we extracted, plus headers that
+                  describe the job (how the image is going to be solved).
+       sdss.solved : contains binary 1 if the field solved.
+       sdss.match : a FITS BINTABLE describing the quad match that solved the image.
+
+
+
+SOLVE-FIELDS ARGUMENTS
+----------------------
+
+   There are a few command-line arguments to solve-fields that are very important
+   in determining how quickly it runs:
+
+
+   *Scale of the image: if you provide bounds (lower and upper limits) on the size
+    of the image you are trying to solve, solving can be much faster.  In the last
+    examples above, for example, we specified that the field is at least 30 degrees
+    wide: this means that we don't need to search for matches in the indices that
+    contain only tiny landmarks.
+
+    Eg, to specify that the image is between 1 and 2 degrees wide:
+      solve-field --scale-units degwidth --scale-low 1 --scale-high 2
+
+    If you know the pixel scale instead:
+      solve-field --scale-units arcsecperpix --scale-low 0.386 --scale-high 0.406
+
+
+   *Depth.  The solver works by looking at sources in your image, starting with the
+    brightest.  It searches for all "landmarks" that can be built from the N brightest
+    stars before considering star N+1.  When using several indices, it can be much
+    faster to search for many landmarks in one index before switching to the next one.
+    This flag lets you control when the solver switches between indices.  It also lets
+    you control how much effort the solver puts in before giving up - by default it
+    looks at all the sources in your image, and this can take a ridiculously long time
+    for many images.
+
+    Eg, to first look at sources 0-20 in all indices, then sources 20-30 in all indices,
+    then 30-40:
+       solve-field --depth 0-20,20-30,30-40
+    or solve-field --depth 0-20 --depth 20-30 --depth 30-40
+
+    Note that sources are numbered starting at zero.  Yes, we're computer science geeks.
 
 
 PROBLEMS COMPILING?
