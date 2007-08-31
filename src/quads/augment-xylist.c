@@ -19,50 +19,6 @@
 /**
  * Accepts an xylist and command-line options, and produces an augmented
  * xylist.
-
- augment-xylist --guess-scale --image mypic.fits --scale-low 2 \
- --scale-high 4 --scale-units degwide --tweak-order 4 --out mypic.axy
-
- augment-xylist --xylist sdss.fits --scale-low 0.38 --scale-high 0.41 \
- --scale-units arcsecperpix --fields 1-9999 --noplots --nordls \
- --out sdss.axy
-
- * IMAGEW - Image width.
- * IMAGEH - Image height.
- * ANRUN - the "Go" button. 
-
- * ANPOSERR - Field positional error, in pixels.
- * ANSOLVED - Output filename for solved file.
- * ANMATCH - Output filename for match file.
- * ANRDLS - Output filename for index RDLS file.
- * ANWCS - Output filename for WCS file.
- * ANCANCEL - Input filename - if this file exists, the job is cancelled.
- * ANTLIM - Wall-clock time limit, in seconds
- * ANCLIM - CPU time limit, in seconds
- * ANPARITY - "BOTH", "POS", "NEG" (default "BOTH")
- * ANTWEAK - FITS Boolean ie 'T' or 'F' (default 'T')
- * ANTWEAKO - Tweak order.
- * ANAPPL# - Lower bound on scale (in arcseconds per pixel)
- * ANAPPU# - Upper bound on scale (in arcseconds per pixel)
- * ANDPL#/ANDPU# - The range of depths (field objects) to examine
- * ANFDL#/ANFDU# - Add fields to be solved, specified in inclusive table HDU ranges starting from 1. The ANFD'''L'''/ANFD'''U''' stands for Upper and Lower. Defaults to all HDU's, but if a single ANFD[LU]# is specified, then only the fields explicitly listed are used. Multiple ANFD[LU]#'s can be present and the solved field are the union of the specified ranges. Only valid in the primary header.
- * ANFD#### - Add single fields to be solved. Only valid in the primary header.
- * ANODDSPR - Odds ratio required before to printing a solution.
- * ANODDSKP - Odds ratio required before to keep a solution.
- * ANODDSSL - Odds ratio required before to consider a solution solved.
- * ANIMFRAC - Fraction of the rectangular image that the field actually occupies (eg for round fields). Real in (0, 1], default 1.
- * ANCTOL - Code tolerance.
- * ANDISTR - Distractor fraction.
-
- * ANW#PIX1 CRPIX1
- * ANW#PIX2 CRPIX2
- * ANW#VAL1 CRVAL1
- * ANW#VAL2 CRVAL2
- * ANW#CD11 CD1_1
- * ANW#CD12 CD1_2
- * ANW#CD21 CD2_1
- * ANW#CD22 CD2_2 
-
  */
 
 #include <stdio.h>
@@ -119,10 +75,11 @@ static struct option long_options[] = {
 	{"y-column",       required_argument, 0, 'Y'},
     {"sort-column",    required_argument, 0, 's'},
     {"sort-ascending", no_argument,       0, 'a'},
+    {"keep-xylist",    required_argument, 0, 'k'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:av";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -157,6 +114,7 @@ static void print_help(const char* progname) {
            "  [--no-plots]: don't create any PNG plots  (-p)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!\n"
+           "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
 		   "\n", progname);
 }
 
@@ -211,6 +169,7 @@ int main(int argc, char** args) {
     bool descending = TRUE;
     bool dosort = FALSE;
     bool verbose = FALSE;
+    char* keep_xylist = NULL;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -233,6 +192,9 @@ int main(int argc, char** args) {
 			break;
         case 'v':
             verbose = TRUE;
+            break;
+        case 'k':
+            keep_xylist = optarg;
             break;
         case 's':
             sortcol = optarg;
@@ -587,11 +549,18 @@ int main(int argc, char** args) {
 		// xylist.
 		// if --xylist is given:
 		//	 -fits2fits.py sanitize
+        if (sortcol)
+            dosort = TRUE;
+
         if (!nof2f) {
             char* sanexylsfn;
 
-            sanexylsfn = create_temp_file("sanexyls", tempdir);
-            sl_append_nocopy(tempfiles, sanexylsfn);
+            if (keep_xylist && !dosort) {
+                sanexylsfn = keep_xylist;
+            } else {
+                sanexylsfn = create_temp_file("sanexyls", tempdir);
+                sl_append_nocopy(tempfiles, sanexylsfn);
+            }
 
             sl_append_nocopy(cmd, get_path("fits2fits.py", me));
             append_file(cmd, xylsfn);
@@ -612,9 +581,6 @@ int main(int argc, char** args) {
             xylsfn = sanexylsfn;
         }
 
-        if (sortcol)
-            dosort = TRUE;
-
 	}
 
     if (dosort) {
@@ -623,8 +589,12 @@ int main(int argc, char** args) {
         if (!sortcol)
             sortcol = "FLUX";
 
-		sortedxylsfn = create_temp_file("sorted", tempdir);
-        sl_append_nocopy(tempfiles, sortedxylsfn);
+        if (keep_xylist) {
+            sortedxylsfn = keep_xylist;
+        } else {
+            sortedxylsfn = create_temp_file("sorted", tempdir);
+            sl_append_nocopy(tempfiles, sortedxylsfn);
+        }
 
 		// sort the table by FLUX.
         sl_append_nocopy(cmd, get_path("tabsort", me));

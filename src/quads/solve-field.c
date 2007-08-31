@@ -88,10 +88,11 @@ static struct option long_options[] = {
 	{"y-column",       required_argument, 0, 'Y'},
     {"sort-column",    required_argument, 0, 's'},
     {"sort-ascending", no_argument,       0, 'a'},
+    {"keep-xylist",    required_argument, 0, 'k'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -121,7 +122,8 @@ static void print_help(const char* progname) {
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
 	       "  [--files-on-stdin]: read files to solve on stdin, one per line (-f)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
-           "  [--verbose]: be more chatty!\n"
+           "  [--verbose]: be more chatty!  (-v)\n"
+           "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
@@ -188,9 +190,13 @@ int main(int argc, char** args) {
 			help = TRUE;
 			break;
         case 'v':
-            sl_appendf(augmentxyargs, "--verbose");
-            sl_appendf(backendargs, "--verbose");
+            sl_append(augmentxyargs, "--verbose");
+            sl_append(backendargs, "--verbose");
             verbose = TRUE;
+            break;
+        case 'k':
+            sl_append(augmentxyargs, "--keep-xylist");
+            sl_append_nocopy(augmentxyargs, escape_filename(optarg));
             break;
         case 'o':
             baseout = optarg;
