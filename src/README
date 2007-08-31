@@ -184,7 +184,6 @@ QUICKSTART
 
 SOLVE-FIELDS ARGUMENTS
 ----------------------
-
    There are a few command-line arguments to solve-fields that are very important
    in determining how quickly it runs:
 
@@ -282,9 +281,9 @@ SOURCE EXTRACTION USING SEXTRACTOR
 
    After running SExtractor on your image, you can feed the resulting file straight to
    solve-field:
+      solve-field out.xyls --x-column X_IMAGE --y-column Y_IMAGE --sort-column MAG_ISO
+                  --sort-ascending --overwrite --width 496 --height 340
 
-
-     
 
 WORKAROUNDS
 -----------
