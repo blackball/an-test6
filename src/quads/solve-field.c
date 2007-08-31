@@ -213,6 +213,12 @@ int main(int argc, char** args) {
             sl_appendf(augmentxyargs, "--y-column \"%s\"", optarg);
             ycol = optarg;
             break;
+        case 's':
+            sl_appendf(augmentxyargs, "--sort-column \"%s\"", optarg);
+            break;
+        case 'a':
+            sl_append(augmentxyargs, "--sort-ascending");
+            break;
         case 'm':
             sl_appendf(augmentxyargs, "--temp-dir \"%s\"", optarg);
             tempdir = optarg;
@@ -530,6 +536,14 @@ int main(int argc, char** args) {
                 sl_append(cmdline, "-I");
                 sl_append_nocopy(cmdline, escape_filename(ppmfn));
             }
+            if (xcol) {
+                sl_append(cmdline, "-X");
+                sl_append_nocopy(cmdline, escape_filename(xcol));
+            }
+            if (ycol) {
+                sl_append(cmdline, "-Y");
+                sl_append_nocopy(cmdline, escape_filename(ycol));
+            }
             sl_append(cmdline, "-P");
             sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
             
@@ -538,6 +552,14 @@ int main(int argc, char** args) {
             sl_append_nocopy(cmdline, get_path("plotxy", me));
             sl_append(cmdline, "-i");
             sl_append_nocopy(cmdline, escape_filename(axyfn));
+            if (xcol) {
+                sl_append(cmdline, "-X");
+                sl_append_nocopy(cmdline, escape_filename(xcol));
+            }
+            if (ycol) {
+                sl_append(cmdline, "-Y");
+                sl_append_nocopy(cmdline, escape_filename(ycol));
+            }
             sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
             sl_append(cmdline, ">");
@@ -615,6 +637,14 @@ int main(int argc, char** args) {
                 if (image) {
                     sl_append(cmdline, "-I");
                     sl_append_nocopy(cmdline, escape_filename(ppmfn));
+                }
+                if (xcol) {
+                    sl_append(cmdline, "-X");
+                    sl_append_nocopy(cmdline, escape_filename(xcol));
+                }
+                if (ycol) {
+                    sl_append(cmdline, "-Y");
+                    sl_append_nocopy(cmdline, escape_filename(ycol));
                 }
                 sl_append(cmdline, "-P");
                 sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");

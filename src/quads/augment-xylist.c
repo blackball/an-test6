@@ -650,7 +650,7 @@ int main(int argc, char** args) {
         qfits_header_add(hdr, "ANXCOL", xcol, "Name of column containing X coords", NULL);
     }
     if (ycol) {
-        qfits_header_add(hdr, "ANYCOL", xcol, "Name of column containing Y coords", NULL);
+        qfits_header_add(hdr, "ANYCOL", ycol, "Name of column containing Y coords", NULL);
     }
 
 	if (scalelo > 0.0 && scalehi > 0.0) {
