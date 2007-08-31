@@ -19,6 +19,7 @@
 #ifndef _TWEAK_INTERNAL_H
 #define _TWEAK_INTERNAL_H
 
+#include "an-bool.h"
 #include "kdtree.h"
 #include "bl.h"
 #include "sip.h"
@@ -118,6 +119,8 @@ typedef struct tweak_s {
 	// Weighted or unweighted fit?
 	int weighted_fit;
 
+    bool verbose;
+    bool quiet;
 } tweak_t;
 
 tweak_t* tweak_new();

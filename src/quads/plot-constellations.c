@@ -47,7 +47,7 @@
 #include "constellations.h"
 #include "brightstars.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cj";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjv";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -64,6 +64,7 @@ void print_help(char* progname) {
 		   "   [-b <number-of-bright-stars>]: just plot the <N> brightest stars\n"
 		   "   [-c]: only plot bright stars that have common names.\n"
 		   "   [-j]: if a bright star has a common name, only print that\n"
+           "   [-v]: be verbose\n"
            "\n", progname);
 }
 
@@ -114,7 +115,7 @@ int main(int argc, char** args) {
 	bool common_only = FALSE;
 	bool print_common_only = FALSE;
 	int Nbright = 0;
-
+    bool verbose = FALSE;
 	double ra, dec, px, py;
 	int i, N;
 
@@ -123,6 +124,9 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+        case 'v':
+            verbose = TRUE;
+            break;
 		case 'j':
 			print_common_only = TRUE;
 			break;
@@ -215,9 +219,11 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
-    fprintf(stderr, "Trying to parse SIP/TAN header from %s...\n", wcsfn);
+    if (verbose)
+        fprintf(stderr, "Trying to parse SIP/TAN header from %s...\n", wcsfn);
     if (sip_read_header(hdr, &sip)) {
-        fprintf(stderr, "Got SIP header.\n");
+        if (verbose)
+            fprintf(stderr, "Got SIP header.\n");
     } else {
         fprintf(stderr, "Failed to parse SIP/TAN header from %s.\n", wcsfn);
         exit(-1);
@@ -238,7 +244,8 @@ int main(int argc, char** args) {
     if (constell) {
 		N = constellations_n();
 
-		fprintf(stderr, "Checking %i constellations.\n", N);
+		if (verbose)
+            fprintf(stderr, "Checking %i constellations.\n", N);
 		for (c=0; c<N; c++) {
 			const char* shortname;
 			const char* longname;
@@ -319,7 +326,7 @@ int main(int argc, char** args) {
 			longname = constellations_get_longname(c);
 			assert(shortname && longname);
 
-			fprintf(stderr, "%s at (%g, %g)\n", longname, px, py);
+			if (verbose) fprintf(stderr, "%s at (%g, %g)\n", longname, px, py);
 
 			if (Ninbounds == Nunique) {
 				printf("The constellation %s (%s)\n", longname, shortname);
@@ -371,7 +378,7 @@ int main(int argc, char** args) {
 			}
 			il_free(lines);
         }
-        fprintf(stderr, "done constellations.\n");
+        if (verbose) fprintf(stderr, "done constellations.\n");
     }
 
     if (NGC) {
@@ -490,7 +497,7 @@ int main(int argc, char** args) {
 				text = strdup(bs->name);
 
 			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
-			fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
+			if (verbose) fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
 
 			if (bs->common_name && strlen(bs->common_name))
 				printf("The star %s (%s)\n", bs->common_name, bs->name);

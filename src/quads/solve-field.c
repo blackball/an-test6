@@ -89,10 +89,11 @@ static struct option long_options[] = {
     {"sort-column",    required_argument, 0, 's'},
     {"sort-ascending", no_argument,       0, 'a'},
     {"keep-xylist",    required_argument, 0, 'k'},
+	{"solved-in",      required_argument, 0, 'I'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -124,6 +125,7 @@ static void print_help(const char* progname) {
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!  (-v)\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
+           "  [--solved-in <filename>]: input filename for solved file  (-I)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
            "\n"
@@ -177,6 +179,7 @@ int main(int argc, char** args) {
     char* baseout = NULL;
     char* xcol = NULL;
     char* ycol = NULL;
+    char* solvedin = NULL;
 
 	augmentxyargs = sl_new(16);
 	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
@@ -197,6 +200,11 @@ int main(int argc, char** args) {
             sl_append(augmentxyargs, "--verbose");
             sl_append(backendargs, "--verbose");
             verbose = TRUE;
+            break;
+        case 'I':
+            sl_append(augmentxyargs, "--solved-in");
+            sl_append_nocopy(augmentxyargs, escape_filename(optarg));
+            solvedin = optarg;
             break;
         case 'k':
             sl_append(augmentxyargs, "--keep-xylist");
@@ -391,6 +399,13 @@ int main(int argc, char** args) {
         else
             downloadfn = sl_appendf(outfiles, "%s-downloaded", base);
 
+		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
+        if (solvedin && !strcmp(solvedfn, solvedin)) {
+            // solved input and output files are the same: don't delete the input!
+            sl_pop(outfiles);
+            // MEMLEAK (small memleak here)
+        }
+
 		// Check for (and delete) existing output filenames.
 		nextfile = FALSE;
 		for (i = 0; i < sl_size(outfiles); i++) {
@@ -414,9 +429,6 @@ int main(int argc, char** args) {
 			sl_free(outfiles);
 			continue;
 		}
-
-        // Input/Output files whose existence is not an error:
-		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
 
 		free(base);
 		base = NULL;
@@ -602,13 +614,15 @@ int main(int argc, char** args) {
 
 		if (!file_exists(solvedfn)) {
 			// boo hoo.
-			printf("Field didn't solve.\n");
+			//printf("Field didn't solve.\n");
 		} else {
 			matchfile* mf;
 			MatchObj* mo;
 
 			// index rdls to xyls.
             sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
+            if (!verbose)
+                sl_append(cmdline, "-q");
 			sl_append(cmdline, "-w");
 			sl_append_nocopy(cmdline, escape_filename(wcsfn));
 			sl_append(cmdline, "-i");
@@ -694,7 +708,11 @@ int main(int argc, char** args) {
             }
 
             if (image && makeplots) {
+                sl* lines;
+
                 sl_append_nocopy(cmdline, get_path("plot-constellations", me));
+                if (verbose)
+                    sl_append(cmdline, "-v");
 				sl_append(cmdline, "-w");
 				sl_append_nocopy(cmdline, escape_filename(wcsfn));
 				sl_append(cmdline, "-i");
@@ -709,13 +727,22 @@ int main(int argc, char** args) {
 				if (verbose)
                     printf("Running:\n  %s\n", cmd);
                 fflush(NULL);
-				if (run_command(cmd, &ctrlc)) {
+                if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
                     fflush(NULL);
-                    fprintf(stderr, "plot-constellations %s; exiting.\n",
-                            (ctrlc ? "was cancelled" : "failed"));
+                    fprintf(stderr, "plot-constellations failed: %s\n", errmsg);
+                    fprintf(stderr, "exiting.\n");
                     exit(-1);
                 }
 				free(cmd);
+                if (lines && sl_size(lines)) {
+                    int i;
+                    printf("Your field contains:\n");
+                    for (i=0; i<sl_size(lines); i++) {
+                        printf("  %s\n", sl_get(lines, i));
+                    }
+                }
+                if (lines)
+                    sl_free(lines);
 			}
 
 			// create field rdls?

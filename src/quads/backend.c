@@ -276,6 +276,7 @@ struct job_t
 	bool run;
 	double poserr;
 	char* solvedfile;
+	char* solvedinfile;
 	char* matchfile;
 	char* rdlsfile;
 	char* wcsfile;
@@ -333,6 +334,7 @@ static void job_free(job_t* job)
 	if (!job)
 		return ;
 	free(job->solvedfile);
+	free(job->solvedinfile);
 	free(job->matchfile);
 	free(job->rdlsfile);
 	free(job->wcsfile);
@@ -352,6 +354,8 @@ static void job_print(job_t* job)
 	printf("Image size: %g x %g\n", job->imagew, job->imageh);
 	printf("Positional error: %g pix\n", job->poserr);
 	printf("Solved file: %s\n", job->solvedfile);
+    if (job->solvedinfile)
+        printf("Solved input file: %s\n", job->solvedinfile);
 	printf("Match file: %s\n", job->matchfile);
 	printf("RDLS file: %s\n", job->rdlsfile);
 	printf("WCS file: %s\n", job->wcsfile);
@@ -524,6 +528,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			WRITE(fout, "field %s\n", job->fieldfile);
 			if (job->solvedfile)
 				WRITE(fout, "solved %s\n", job->solvedfile);
+			if (job->solvedinfile)
+				WRITE(fout, "solved_in %s\n", job->solvedinfile);
 			if (job->matchfile)
 				WRITE(fout, "match %s\n", job->matchfile);
 			if (job->rdlsfile) {
@@ -655,6 +661,7 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	job->run = qfits_header_getboolean(hdr, "ANRUN", 0);
 	job->poserr = qfits_header_getdouble(hdr, "ANPOSERR", job->poserr);
 	job->solvedfile = fits_get_dupstring(hdr, "ANSOLVED");
+	job->solvedinfile = fits_get_dupstring(hdr, "ANSOLVIN");
 	job->matchfile = fits_get_dupstring(hdr, "ANMATCH");
 	job->rdlsfile = fits_get_dupstring(hdr, "ANRDLS");
 	job->wcsfile = fits_get_dupstring(hdr, "ANWCS");

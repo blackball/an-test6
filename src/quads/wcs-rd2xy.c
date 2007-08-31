@@ -30,7 +30,7 @@
 #include "rdlist.h"
 #include "boilerplate.h"
 
-const char* OPTIONS = "hi:o:w:f:X:Y:t";
+const char* OPTIONS = "hi:o:w:f:X:Y:tq";
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
@@ -41,6 +41,7 @@ void print_help(char* progname) {
 		   "  [-f <rdls field index>] (default: all)\n"
 		   "  [-X <x-column-name> -Y <y-column-name>]\n"
 		   "  [-t]: just use TAN projection, even if SIP extension exists.\n"
+           "  [-q]: quiet\n"
 		   "\n", progname);
 }
 
@@ -55,6 +56,7 @@ int main(int argc, char** args) {
 	char* xcol = NULL;
 	char* ycol = NULL;
 	bool forcetan = FALSE;
+    bool verbose = TRUE;
 
 	bool hassip = FALSE;
 	xylist* xyls = NULL;
@@ -71,6 +73,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+        case 'q':
+            verbose = FALSE;
+            break;
 		case 't':
 			forcetan = TRUE;
 			break;
@@ -113,18 +118,23 @@ int main(int argc, char** args) {
 	}
 
 	if (!forcetan) {
-		fprintf(stderr, "Trying to parse SIP header from %s...\n", wcsfn);
+		if (verbose)
+            printf("Trying to parse SIP header from %s...\n", wcsfn);
 		if (sip_read_header(hdr, &sip)) {
-			fprintf(stderr, "Got SIP header.\n");
+			if (verbose)
+                printf("Got SIP header.\n");
 			hassip = TRUE;
 		} else {
-			fprintf(stderr, "Failed to parse SIP header from %s.\n", wcsfn);
+			if (verbose) 
+                printf("Failed to parse SIP header from %s.\n", wcsfn);
 		}
 	}
 	if (!hassip) {
-		fprintf(stderr, "Trying to parse TAN header from %s...\n", wcsfn);
+		if (verbose)
+            printf("Trying to parse TAN header from %s...\n", wcsfn);
 		if (tan_read_header(hdr, &(sip.wcstan))) {
-			fprintf(stderr, "Got TAN header.\n");
+			if (verbose)
+                printf("Got TAN header.\n");
 		} else {
 			fprintf(stderr, "Failed to parse TAN header from %s.\n", wcsfn);
 			exit(-1);
@@ -160,7 +170,8 @@ int main(int argc, char** args) {
 			il_append(fields, i);
 	}
 
-	fprintf(stderr, "Processing %i extensions...\n", il_size(fields));
+	if (verbose)
+        printf("Processing %i extensions...\n", il_size(fields));
 	for (i=0; i<il_size(fields); i++) {
 		int fieldnum = il_get(fields, i);
 		double* rdvals;
@@ -220,7 +231,8 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to close RDLS file.\n");
 	}
 
-	fprintf(stderr, "Done!\n");
+	if (verbose)
+        printf("Done!\n");
 
 	return 0;
 }

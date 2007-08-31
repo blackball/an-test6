@@ -33,6 +33,7 @@
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
 #include "mathutil.h"
+#include "log.h"
 
 // TODO:
 //
@@ -162,12 +163,12 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	ys = themaxind / hsz; // where is this best index in x,y space?
 	xs = themaxind % hsz;
 
-	printf("xshsz = %d, yshsz=%d\n", xs, ys); // FIXME logging
+	logverb("xshsz = %d, yshsz=%d\n", xs, ys);
 
 	*yshift = ((double)(themaxind / hsz) / (double)hsz) * (maxdy - mindy) + mindy;
 	*xshift = ((double)(themaxind % hsz) / (double)hsz) * (maxdx - mindx) + mindx;
-	printf("get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
-	printf("get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
+	logverb("get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
+	logverb("get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
 
 	/*
 	  static char c = '1';
@@ -248,7 +249,7 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 	swcs = wcs_shift(t->sip, t->xs, t->ys); // apply shift
 	sip_free(t->sip);
 	t->sip = swcs;
-	printf("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
+	logverb("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
 	return NULL;
 }
 
@@ -730,11 +731,11 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 		t->weight = dl_new(600);
 	t->included = il_new(600);
 
-	printf("search radius = %g arcsec / %g arcmin / %g deg\n",
-	        rad2arcsec(jitter), rad2arcmin(jitter), rad2deg(jitter));
-
 	dist = rad2dist(jitter);
-	printf("distance on the unit sphere: %g\n", dist);
+
+	logverb("search radius = %g arcsec / %g arcmin / %g deg\n",
+	        rad2arcsec(jitter), rad2arcmin(jitter), rad2deg(jitter));
+	logverb("distance on the unit sphere: %g\n", dist);
 
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
@@ -750,7 +751,7 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 	free(data_image);
 	free(data_ref);
 
-	printf("correspondences=%d\n", dl_size(t->dist2));
+	logmsg("correspondences=%d\n", dl_size(t->dist2));
 
 	// find objs with multiple correspondences.
 	/*{
@@ -817,7 +818,7 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 	// can't actually find the correct astrometry.
 	radius_factor = 1.3;
 	kq = kdtree_rangesearch(kd, xyz, radius * radius * radius_factor);
-	printf("Did range search got %u stars\n", kq->nres);
+	logmsg("Range search found %u stars\n", kq->nres);
 
 	// No stars? That's bad. Run away.
 	if (!kq->nres)
@@ -941,7 +942,7 @@ void invert_sip_polynomial(tweak_t* t)
 
 	// Number of grid points to use:
 	ngrid = 10 * (inv_sip_order + 1);
-	printf("tweak inversion using %u gridpoints\n", ngrid);
+	logverb("tweak inversion using %u gridpoints\n", ngrid);
 
 	// We only compute the upper triangle polynomial terms, and we exclude the
 	// 0,0 element.
@@ -1064,7 +1065,7 @@ void invert_sip_polynomial(tweak_t* t)
 		}
 		if (M > 0)
 			rmsB = sqrt(rmsB / (double)(M*2));
-		printf("gsl rms                = %g\n", rmsB);
+		logverb("gsl rms                = %g\n", rmsB);
 
 		gsl_vector_free(tau);
 		gsl_vector_free(resid1);
@@ -1107,10 +1108,10 @@ void invert_sip_polynomial(tweak_t* t)
 		sumdu /= (ngrid*ngrid);
 		sumdv /= (ngrid*ngrid);
 		fflush(stderr);
-		printf("RMS error of inverting a distortion (at the grid points):\n");
-		printf("  du: %g\n", sqrt(sumdu));
-		printf("  dv: %g\n", sqrt(sumdu));
-		printf("  dist: %g\n", sqrt(sumdu + sumdv));
+		logverb("RMS error of inverting a distortion (at the grid points):\n");
+		logverb("  du: %g\n", sqrt(sumdu));
+		logverb("  dv: %g\n", sqrt(sumdu));
+		logverb("  dist: %g\n", sqrt(sumdu + sumdv));
 		fflush(stdout);
 
 		sumdu = 0;
@@ -1128,10 +1129,10 @@ void invert_sip_polynomial(tweak_t* t)
 		fflush(stderr);
 		sumdu /= Z;
 		sumdv /= Z;
-		printf("RMS error of inverting a distortion (at random points):\n");
-		printf("  du: %g\n", sqrt(sumdu));
-		printf("  dv: %g\n", sqrt(sumdu));
-		printf("  dist: %g\n", sqrt(sumdu + sumdv));
+		logverb("RMS error of inverting a distortion (at random points):\n");
+		logverb("  du: %g\n", sqrt(sumdu));
+		logverb("  dv: %g\n", sqrt(sumdu));
+		logverb("  dist: %g\n", sqrt(sumdu + sumdv));
 		fflush(stdout);
 	}
 
@@ -1204,13 +1205,14 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	assert(x2);
 
 	//printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
-	printf("do_sip_tweak starting.\n");
-	sip_print_to(t->sip, stdout);
+	logverb("do_sip_tweak starting.\n");
+    if (t->verbose)
+        sip_print_to(t->sip, stdout);
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
-	printf("RMS error of correspondences: %g arcsec\n",
+	logverb("RMS error of correspondences: %g arcsec\n",
 		   correspondences_rms_arcsec(t, 0));
-	printf("Weighted RMS error of correspondences: %g arcsec\n",
+	logmsg("Weighted RMS error of correspondences: %g arcsec\n",
 		   correspondences_rms_arcsec(t, 1));
 
 	/*
@@ -1378,7 +1380,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	assert(i == M - 1);
 
 	if (t->weighted_fit)
-		printf("Total weight: %g\n", totalweight);
+		logmsg("Total weight: %g\n", totalweight);
 
 	// Solve the equation.
 	{
@@ -1410,7 +1412,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		}
 		if (M > 0)
 			rmsB = sqrt(rmsB / (double)(M*2));
-		printf("gsl rms                = %g\n", rmsB);
+		logverb("gsl rms                = %g\n", rmsB);
 
 		gsl_vector_free(tau);
 		gsl_vector_free(resid1);
@@ -1489,9 +1491,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	//printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
 	//printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
 
-	printf("sx = %g, sy = %g\n", sx, sy);
-	printf("sU = %g, sV = %g\n", sU, sV);
-	printf("su = %g, sv = %g\n", su, sv);
+	logverb("sx = %g, sy = %g\n", sx, sy);
+	logverb("sU = %g, sV = %g\n", sU, sV);
+	logverb("su = %g, sv = %g\n", su, sv);
 
 	/*
 	  printf("Before applying shift:\n");
@@ -1512,8 +1514,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	  t->sip->wcstan.crpix[1] -= sv;
 	*/
 
-	printf("After applying shift:\n");
-	sip_print_to(t->sip, stdout);
+	logverb("After applying shift:\n");
+    if (t->verbose)
+        sip_print_to(t->sip, stdout);
 
 	/*
 	  printf("shiftxun=%le, shiftyun=%le\n", sU, sV);
@@ -1537,9 +1540,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	  //	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 	  */
 
-	printf("RMS error of correspondences: %g arcsec\n",
-		   correspondences_rms_arcsec(t, 0));
-	printf("Weighted RMS error of correspondences: %g arcsec\n",
+	logverb("RMS error of correspondences: %g arcsec\n",
+            correspondences_rms_arcsec(t, 0));
+	logmsg("Weighted RMS error of correspondences: %g arcsec\n",
 		   correspondences_rms_arcsec(t, 1));
 
 
@@ -1751,7 +1754,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
-		printf("Satisfying TWEAK_HAS_IMAGE_AD\n");
+		logverb("Satisfying TWEAK_HAS_IMAGE_AD\n");
 
 		// Convert to ra dec
 		assert(!t->a);
@@ -1770,8 +1773,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XYZ);
 
 		// FIXME
-		printf("Satisfying TWEAK_HAS_REF_AD\n");
-		printf("FIXME!\n");
+		logverb("Satisfying TWEAK_HAS_REF_AD\n");
+		logerr("FIXME!\n");
 
 		done(TWEAK_HAS_REF_AD);
 	}
@@ -1782,7 +1785,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		//tweak_clear_ref_xy(t);
 
-		printf("Satisfying TWEAK_HAS_REF_XY\n");
+		logverb("Satisfying TWEAK_HAS_REF_XY\n");
 		assert(t->state & TWEAK_HAS_REF_AD);
 		assert(t->n_ref);
 		assert(!t->x_ref);
@@ -1803,12 +1806,12 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_AD_BAR_AND_R) {
 		ensure(TWEAK_HAS_IMAGE_AD);
 
-		printf("Satisfying TWEAK_HAS_AD_BAR_AND_R\n");
+		logverb("Satisfying TWEAK_HAS_AD_BAR_AND_R\n");
 
 		assert(t->state & TWEAK_HAS_IMAGE_AD);
 		get_center_and_radius(t->a, t->d, t->n,
 		                      &t->a_bar, &t->d_bar, &t->radius);
-		printf("a_bar=%lf [deg], d_bar=%lf [deg], radius=%lf [arcmin]\n",
+		logverb("a_bar=%lf [deg], d_bar=%lf [deg], radius=%lf [arcmin]\n",
 		        t->a_bar, t->d_bar, rad2arcmin(t->radius));
 
 		done(TWEAK_HAS_AD_BAR_AND_R);
@@ -1818,7 +1821,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		int i;
 		ensure(TWEAK_HAS_IMAGE_AD);
 
-		printf("Satisfying TWEAK_HAS_IMAGE_XYZ\n");
+		logverb("Satisfying TWEAK_HAS_IMAGE_XYZ\n");
 		assert(!t->xyz);
 
 		t->xyz = malloc(3 * t->n * sizeof(double));
@@ -1831,15 +1834,15 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_REF_XYZ) {
 		if (t->state & TWEAK_HAS_HEALPIX_PATH) {
 			ensure(TWEAK_HAS_AD_BAR_AND_R);
-			printf("Satisfying TWEAK_HAS_REF_XYZ\n");
+			logverb("Satisfying TWEAK_HAS_REF_XYZ\n");
 			get_reference_stars(t);
 		} else if (t->state & TWEAK_HAS_REF_AD) {
 			tweak_ref_find_xyz_from_ad(t);
 		} else {
 			ensure(TWEAK_HAS_REF_AD);
 
-			printf("Satisfying TWEAK_HAS_REF_XYZ\n");
-			printf("FIXME!\n");
+			logverb("Satisfying TWEAK_HAS_REF_XYZ\n");
+			logerr("FIXME!\n");
 
 			// try a conversion
 			assert(0);
@@ -1852,7 +1855,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XY);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
-		printf("Satisfying TWEAK_HAS_COARSLY_SHIFTED\n");
+		logverb("Satisfying TWEAK_HAS_COARSLY_SHIFTED\n");
 
 		get_dydx_range(t->x, t->y, t->n,
 		               t->x_ref, t->y_ref, t->n_ref,
@@ -1870,7 +1873,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_COARSLY_SHIFTED);
 
-		printf("Satisfying TWEAK_HAS_FINELY_SHIFTED\n");
+		logverb("Satisfying TWEAK_HAS_FINELY_SHIFTED\n");
 
 		// Shrink size of hough box
 		do_entire_shift_operation(t, 0.3);
@@ -1885,7 +1888,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_FINELY_SHIFTED);
 
-		printf("Satisfying TWEAK_HAS_REALLY_FINELY_SHIFTED\n");
+		logverb("Satisfying TWEAK_HAS_REALLY_FINELY_SHIFTED\n");
 
 		// Shrink size of hough box
 		do_entire_shift_operation(t, 0.03);
@@ -1899,7 +1902,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XYZ);
 		ensure(TWEAK_HAS_IMAGE_XYZ);
 
-		printf("Satisfying TWEAK_HAS_CORRESPONDENCES\n");
+		logverb("Satisfying TWEAK_HAS_CORRESPONDENCES\n");
 
 		t->jitterd2 = arcsec2distsq(t->jitter);
 		find_correspondences(t, 6.0 * arcsec2rad(t->jitter));
@@ -1915,7 +1918,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_CORRESPONDENCES);
 
-		printf("Satisfying TWEAK_HAS_LINEAR_CD\n");
+		logverb("Satisfying TWEAK_HAS_LINEAR_CD\n");
 
 		do_sip_tweak(t);
 
@@ -1931,7 +1934,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		done(TWEAK_HAS_RUN_RANSAC_OPT);
 	}
 
-	printf("die for dependence: ");
+	logerr("die for dependence: ");
 	tweak_print_the_state(flag);
 	printf("\n");
 	assert(0);

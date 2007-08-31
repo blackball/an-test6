@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 		}
 
         if (bp->quiet)
-            log_init(1);
+            log_init(2);
         if (bp->verbose)
             log_init(4);
 

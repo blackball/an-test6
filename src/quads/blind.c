@@ -477,14 +477,14 @@ int blind_is_run_obsolete(blind_t* bp, solver_t* sp) {
 	// solved before doing a bunch of work and spewing tons of output.
 	if ((il_size(bp->fieldlist) == 1) && (bp->solved_in)) {
 		if (solvedfile_get(bp->solved_in, il_get(bp->fieldlist, 0))) {
-			logmsg("Field %i is already solved.\n", il_get(bp->fieldlist, 0));
+			logerr("Field %i is already solved.\n", il_get(bp->fieldlist, 0));
 			return 1;
 		}
 	}
 	// Early check to see if this job was cancelled.
 	if (bp->cancelfname) {
 		if (file_exists(bp->cancelfname)) {
-			logmsg("Run cancelled.\n");
+			logerr("Run cancelled.\n");
 			return 1;
 		}
 	}
@@ -632,6 +632,11 @@ static sip_t* tweak(blind_t* bp, MatchObj* mo, startree* starkd) {
 	logmsg("Tweaking!\n");
 
 	twee = tweak_new();
+    if (bp->verbose)
+        twee->verbose = TRUE;
+    if (bp->quiet)
+        twee->quiet = TRUE;
+
 	if (bp->verify_dist2 > 0.0)
 		twee->jitter = distsq2arcsec(bp->verify_dist2);
 	else {
@@ -694,19 +699,19 @@ static sip_t* tweak(blind_t* bp, MatchObj* mo, startree* starkd) {
 		int order;
 		int k;
 		for (order = 1; order <= MAX(1, bp->tweak_aborder); order++) {
-			printf("\n");
-			printf("--------------------------------\n");
-			printf("Order %i\n", order);
-			printf("--------------------------------\n");
+			logmsg("\n");
+			logmsg("--------------------------------\n");
+			logmsg("Order %i\n", order);
+			logmsg("--------------------------------\n");
 
 			twee->sip->a_order = twee->sip->b_order = order;
 			twee->sip->ap_order = twee->sip->bp_order = order;
 			tweak_go_to(twee, TWEAK_HAS_CORRESPONDENCES);
 
 			for (k = 0; k < 5; k++) {
-				printf("\n");
-				printf("--------------------------------\n");
-				printf("Iterating tweak: order %i, step %i\n", order, k);
+				logmsg("\n");
+				logmsg("--------------------------------\n");
+				logmsg("Iterating tweak: order %i, step %i\n", order, k);
 				twee->state &= ~TWEAK_HAS_LINEAR_CD;
 				tweak_go_to(twee, TWEAK_HAS_LINEAR_CD);
 				tweak_clear_correspondences(twee);
@@ -782,17 +787,17 @@ static time_t timer_callback(void* user_data) {
 
 	// check if the field has already been solved...
 	if (bp->solved_in && solvedfile_get(bp->solved_in, bp->fieldnum)) {
-		fprintf(stderr, "  field %u: file \"%s\" indicates that the field has been solved.\n",
+		logmsg("  field %u: file \"%s\" indicates that the field has been solved.\n",
 				bp->fieldnum, bp->solved_in);
 		return 0;
 	}
 	if (bp->solvedserver && solvedclient_get(bp->fieldid, bp->fieldnum)) {
-		fprintf(stderr, "  field %u: field solved; aborting.\n", bp->fieldnum);
+		logmsg("  field %u: field solved; aborting.\n", bp->fieldnum);
 		return 0;
 	}
 	if (bp->cancelfname && file_exists(bp->cancelfname)) {
 		bp->cancelled = TRUE;
-		fprintf(stderr, "File \"%s\" exists: cancelling.\n", bp->cancelfname);
+		logmsg("File \"%s\" exists: cancelling.\n", bp->cancelfname);
 		return 0;
 	}
 	return 1; // wait 1 second... FIXME config?
@@ -994,20 +999,11 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			logerr("Failed to fix the matchfile header for field %i.\n", fieldnum);
 		}
 
-		if (sp->have_best_match && !sp->best_match_solves) {
-			MatchObj* bestmo = &(sp->best_match);
-			int Nmin = MIN(bestmo->nindex, bestmo->nfield);
-			int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
-			logmsg("Field %i did not solved (best odds ratio %g (%i match, %i conflict, %i dropout, %i index)).\n",
-			       fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
-            logerr("Field %i: did not solve.\n", fieldnum);
-		}
-
 		if (sp->have_best_match && sp->best_match_solves) {
 			MatchObj* bestmo = &(sp->best_match);
 			sip_t* sip = NULL;
 			// Field solved!
-			logmsg("Field %i solved: ", fieldnum);
+			//logerr("Field %i solved: ", fieldnum);
 			print_match(bp, bestmo);
 			logmsg("Pixel scale: %g arcsec/pix.\n", bestmo->scale);
 
@@ -1150,7 +1146,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 		} else {
 			// Field unsolved.
-			logmsg("Field %i is unsolved.\n", fieldnum);
+			logerr("Field %i did not solve (index %s).\n", fieldnum, bp->solver.index->indexname);
 			if (sp->have_best_match) {
 				logmsg("Best match encountered: ");
 				print_match(bp, &(sp->best_match));

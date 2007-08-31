@@ -53,6 +53,7 @@ static struct option long_options[] = {
 	{"guess-scale",    no_argument,	      0, 'g'},
 	{"cancel",		   required_argument, 0, 'C'},
 	{"solved",		   required_argument, 0, 'S'},
+	{"solved-in",      required_argument, 0, 'I'},
 	{"match",		   required_argument, 0, 'M'},
 	{"rdls",		   required_argument, 0, 'R'},
 	{"wcs",			   required_argument, 0, 'W'},
@@ -79,7 +80,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -88,6 +89,7 @@ static void print_help(const char* progname) {
 	       "  [--guess-scale]: try to guess the image scale from the FITS headers  (-g)\n"
            "  [--cancel <filename>]: filename whose creation signals the process to stop  (-C)\n"
            "  [--solved <filename>]: output filename for solved file  (-S)\n"
+           "  [--solved-in <filename>]: input filename for solved file  (-I)\n"
            "  [--match  <filename>]: output filename for match file   (-M)\n"
            "  [--rdls   <filename>]: output filename for RDLS file    (-R)\n"
            "  [--wcs    <filename>]: output filename for WCS file     (-W)\n"
@@ -170,6 +172,7 @@ int main(int argc, char** args) {
     bool dosort = FALSE;
     bool verbose = FALSE;
     char* keep_xylist = NULL;
+    char* solvedin = NULL;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -192,6 +195,9 @@ int main(int argc, char** args) {
 			break;
         case 'v':
             verbose = TRUE;
+            break;
+        case 'I':
+            solvedin = optarg;
             break;
         case 'k':
             keep_xylist = optarg;
@@ -692,6 +698,8 @@ int main(int argc, char** args) {
 
 	if (solvedfile)
 		qfits_header_add(hdr, "ANSOLVED", solvedfile, "output filename", NULL);
+	if (solvedin)
+		qfits_header_add(hdr, "ANSOLVIN", solvedin, "input filename", NULL);
 	if (cancelfile)
 		qfits_header_add(hdr, "ANCANCEL", cancelfile, "output filename", NULL);
 	if (matchfile)
