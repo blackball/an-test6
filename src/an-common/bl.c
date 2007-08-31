@@ -1517,11 +1517,11 @@ sl* sl_new(int blocksize) {
 	return lst;
 }
 
-void sl_init(sl* list, int blocksize) {
+void sl_init2(sl* list, int blocksize) {
 	pl_init(list, blocksize);
 }
 
-void sl_free(sl* list) {
+void sl_free2(sl* list) {
 	int i;
 	if (!list) return;
 	for (i=0; i<sl_size(list); i++)

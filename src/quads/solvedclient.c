@@ -26,11 +26,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <assert.h>
 
 #include "solvedclient.h"
 #include "bl.h"
 
-static struct sockaddr_in serveraddr = {0, 0, {0}};
+static int serveraddr_initialized = 0;
+static struct sockaddr_in serveraddr;
 static FILE* fserver = NULL;
 
 int solvedclient_set_server(char* addr) {
@@ -61,6 +63,10 @@ int solvedclient_set_server(char* addr) {
 		fprintf(stderr, "Solved server \"%s\" not found: %s.\n", buf, hstrerror(h_errno));
 		return -1;
 	}
+    if (!serveraddr_initialized) {
+        memset(&serveraddr, 0, sizeof(serveraddr));
+        serveraddr_initialized = 1;
+    }
 	memcpy(&(serveraddr.sin_addr), he->h_addr, he->h_length);
 	port = atoi(ind+1);
 	serveraddr.sin_family = AF_INET;
@@ -83,6 +89,7 @@ static int connect_to_server() {
 		fprintf(stderr, "Failed to fdopen socket: %s\n", strerror(errno));
 		return -1;
 	}
+    assert(serveraddr_initialized);
 	if (connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr))) {
 		fprintf(stderr, "Couldn't connect to server: %s\n", strerror(errno));
 		if (fclose(fserver))

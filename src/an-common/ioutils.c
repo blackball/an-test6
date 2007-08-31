@@ -234,7 +234,7 @@ sl* fid_get_lines(FILE* fid, bool include_newlines) {
 		if (!line) {
 			// error.
 			fprintf(stderr, "fid_get_lines: failed to read a line.\n");
-			sl_free(list);
+			sl_free2(list);
 			return NULL;
 		}
 		sl_append_nocopy(list, line);

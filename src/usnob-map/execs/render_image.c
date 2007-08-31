@@ -89,6 +89,7 @@ int render_image(unsigned char* img, render_args_t* args) {
 			uchar* pix;
 			ra = pixel2ra(i, args);
 			dec = pixel2dec(j, args);
+			pix = pixel(i, j, img, args);
 			if (!sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey)) {
 				// transparent.
 				pix[3] = 0;
@@ -96,7 +97,6 @@ int render_image(unsigned char* img, render_args_t* args) {
 			}
 			pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
 			pppy = lround(imagey-1);
-			pix = pixel(i, j, img, args);
 			if (pppx >= 0 && pppx < imw &&
 				pppy >= 0 && pppy < imh) {
 				// nearest neighbour. bilinear is for weenies.

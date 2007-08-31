@@ -426,7 +426,7 @@ int main(int argc, char** args) {
 			}
 		}
 		if (nextfile) {
-			sl_free(outfiles);
+			sl_free2(outfiles);
 			continue;
 		}
 
@@ -742,7 +742,7 @@ int main(int argc, char** args) {
                     }
                 }
                 if (lines)
-                    sl_free(lines);
+                    sl_free2(lines);
 			}
 
 			// create field rdls?
@@ -750,12 +750,12 @@ int main(int argc, char** args) {
 
         fflush(NULL);
 
-        sl_free(cmdline);
-		sl_free(outfiles);
+        sl_free2(cmdline);
+		sl_free2(outfiles);
 	}
 
-	sl_free(augmentxyargs);
-	sl_free(backendargs);
+	sl_free2(augmentxyargs);
+	sl_free2(backendargs);
 
 	return 0;
 }

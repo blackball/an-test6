@@ -175,7 +175,7 @@ int main(int argc, char** args) {
 		free_fn(qidxfn);
 		pl_append(qidxes, qidx);
 	}
-	sl_free(indexnames);
+	sl_free2(indexnames);
 
 	// Find field center and radius.
 	sip_pixelxy2xyzarr(&sip, W/2, H/2, xyzcenter);

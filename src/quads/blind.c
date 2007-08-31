@@ -596,8 +596,8 @@ void blind_log_run_parameters(blind_t* bp)
 
 void blind_cleanup(blind_t* bp) {
 	il_free(bp->fieldlist);
-	sl_free(bp->indexnames);
-	sl_free(bp->verify_wcsfiles);
+	sl_free2(bp->indexnames);
+	sl_free2(bp->verify_wcsfiles);
 	bl_free(bp->verify_wcs_list);
 
 	free(bp->cancelfname);

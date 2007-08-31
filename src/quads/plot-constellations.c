@@ -432,7 +432,7 @@ int main(int argc, char** args) {
 					sl_appendf(str, " / %s", sl_get(names, n));
                 }
             }
-            sl_free(names);
+            sl_free2(names);
 			text = sl_implode(str, "");
 
 			printf("%s\n", text);
@@ -440,7 +440,7 @@ int main(int argc, char** args) {
             cairo_move_to(cairo, px + label_offset, py + dy);
             cairo_show_text(cairo, text);
 			free(text);
-			sl_free(str);
+			sl_free2(str);
 
             pixsize = ngc->size * 60.0 / imscale;
             cairo_move_to(cairo, px + pixsize/2.0, py);

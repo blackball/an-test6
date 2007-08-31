@@ -401,7 +401,7 @@ int main(int argc, char** args) {
 			if (!strcmp("fits", sl_get(lines, i)))
 				isfits = TRUE;
 		}
-		sl_free(lines);
+		sl_free2(lines);
 
 		// Get image W, H, depth.
         sl_append(cmd, "pnmfile");
@@ -435,7 +435,7 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
 			exit(-1);
 		}
-		sl_free(lines);
+		sl_free2(lines);
 
 		if (isfits) {
 			fitsimgfn = sanitizedfn;
@@ -470,7 +470,7 @@ int main(int argc, char** args) {
 					}
 				}
 
-				sl_free(lines);
+				sl_free2(lines);
 
 			}
 
@@ -784,8 +784,8 @@ int main(int argc, char** args) {
 
     il_free(depths);
     il_free(fields);
-    sl_free(cmd);
-    sl_free(tempfiles);
+    sl_free2(cmd);
+    sl_free2(tempfiles);
 
 	fclose(fout);
 	qfits_header_destroy(hdr);

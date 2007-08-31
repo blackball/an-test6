@@ -54,11 +54,11 @@ ANUTILS_DEPS :=
 
 ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
 ifndef NO_QFITS
-ANUTILS_OBJ := $(ANUTILS_OBJ) fitsioutils.o sip_qfits.o
+ANUTILS_OBJ += fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
 endif
 ifndef NO_KDTREE
-ANUTILS_OBJ := $(ANUTILS_OBJ) dualtree.o dualtree_rangesearch.o
+ANUTILS_OBJ += dualtree.o dualtree_rangesearch.o
 endif
 
 # Things that it depends on but which aren't linked in
@@ -66,7 +66,7 @@ ANFILES_DEPS :=
 
 ANFILES_OBJ := 
 ifndef NO_QFITS
-ANFILES_OBJ := $(ANFILES_OBJ) starkd.o rdlist.o xylist.o an_catalog.o \
+ANFILES_OBJ += starkd.o rdlist.o xylist.o an_catalog.o \
 	qidxfile.o quadfile.o
 ANFILES_DEPS += $(QFITS_LIB)
 endif

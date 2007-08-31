@@ -235,9 +235,24 @@ void   dl_print(dl* list);
 */
 typedef bl sl;
 sl*    sl_new(int blocksize);
-void   sl_init(sl* list, int blocksize);
+
+/*
+ The functions:
+   sl_init()
+   sl_free()
+   sl_add()
+   sl_find()
+ are defined by BSD, where they live in libc.
+
+ We therefore avoid these names, which breaks the principle of least surprise, but
+ makes life a bit easier.
+ */
+
+void   sl_init2(sl* list, int blocksize);
+
 // free this list and all the strings it contains.
-void   sl_free(sl* list);
+void   sl_free2(sl* list);
+
 // just free the list structure, not the strings in it.
 void   sl_free_nonrecursive(sl* list);
 int    sl_size(sl* list);

@@ -162,7 +162,7 @@ int main(int argc, char** args) {
 		if (names) {
 			for (n=0; n<sl_size(names); n++)
 				printf(" / %s", sl_get(names, n));
-			sl_free(names);
+			sl_free2(names);
 		}
 		if (pix)
 			printf(" near pixel (%i, %i)\n", (int)round(x), (int)round(y));
