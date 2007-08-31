@@ -44,6 +44,8 @@ QUICKSTART
    compile and use the core parts of the solver, but you will miss out on some
    eye-candy.
 
+   We also use some Python code in some cases; if you can't install a Python
+   interpreter, see the Workarounds section below.
 
    Grab the code:
       $ wget http://astrometry.net/downloads/astrometry.net-0.1.tar.bz2
@@ -215,6 +217,96 @@ SOLVE-FIELDS ARGUMENTS
     or solve-field --depth 0-20 --depth 20-30 --depth 30-40
 
     Note that sources are numbered starting at zero.  Yes, we're computer science geeks.
+
+
+XYLISTS
+-------
+   The solve-field program accepts either images or "xylists" (xyls), which are just
+   FITS BINTABLE files which contain two columns (float or double (E or D) format)
+   which list the pixel coordinates of sources (stars, etc) in the image.
+
+   To specify the column names (eg, "XIMAGE" and "YIMAGE"):
+      solve-field --x-column XIMAGE --y-column YIMAGE
+
+   Our solver assumes that the sources are listed in order of brightness, with the
+   brightest sources first.  If your files aren't sorted, you can specify a column by
+   which the file should be sorted.
+      solve-field --sort-column FLUX
+
+   By default it sorts with the largest value first (so it works correctly if the
+   column contains FLUX values), but you can reverse that by:
+      solve-field --sort-ascending --sort-column MAG
+
+   When using xylists, you should also specify the original width and height of the
+   image, in pixels:
+      solve-field --width 2000 --height 1500
+
+   Alternatively, if the FITS header contains "IMAGEW" and "IMAGEH" keys, these will be
+   used.
+
+   The solver can deal with multi-extension xylists; indeed, this is a convenient way
+   to solve a large number of fields at once.  You can tell it which extensions it
+   should solve by:
+      solve-field --fields 1-100,120,130-200
+
+   (Ranges of fields are inclusive, and the first FITS extension is 1, as per the FITS
+    standard.)
+
+   Unfortunately, the plotting code isn't smart about handling multiple fields, so
+   if you're using multi-extension xylists you probably want to turn off plotting:
+      solve-field --no-plots
+
+
+SOURCE EXTRACTION USING SEXTRACTOR
+----------------------------------
+   http://terapix.iap.fr/rubrique.php?id_rubrique=91/
+
+   The "Source Extractor" aka "SExtractor" program by Emmanuel Bertin can be used to do
+   source extraction if you don't want to (or can't) use our own bundled "fits2xy"
+   program.
+
+   You can use the following configuration entries to produce an "xylist" which can be
+   fed to solve-field:
+
+   CATALOG_TYPE     FITS_1.0
+   # this is the output filename:
+   CATALOG_NAME     out.xyls
+   PARAMETERS_NAME  xylist.param
+
+   In the file "xylist.param", include:
+
+   X_IMAGE
+   Y_IMAGE
+   MAG_ISO
+   # or MAG_ISOCOR or MAG_AUTO
+
+   After running SExtractor on your image, you can feed the resulting file straight to
+   solve-field:
+
+
+     
+
+WORKAROUNDS
+-----------
+
+   No python
+   ---------
+   There are two places we use python: handling images, and filtering FITS files.
+
+   You can avoid the image-handling code by doing source extraction yourself; see the
+   "No netpbm" section below.
+
+   You can avoid filtering FITS files by using the "--no-fits2fits" option to
+   solve-field.
+
+   No netpbm
+   ---------
+   We use the netpbm tools (jpegtopnm, pnmtofits, etc) to convert from all sorts of
+   image formats to PNM and FITS.
+
+   If you don't have these programs installed, you must do source extraction yourself
+   and use "xylists" rather than images as the input to solve-field.  See SEXTRACTOR
+   and XYLIST sections above.
 
 
 PROBLEMS COMPILING?
