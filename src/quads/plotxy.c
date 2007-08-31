@@ -28,7 +28,7 @@
 #include "boilerplate.h"
 #include "cairoutils.h"
 
-#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:"
+#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:X:Y:"
 
 static void printHelp(char* progname) {
     int i;
@@ -41,6 +41,8 @@ static void printHelp(char* progname) {
 		   "  [-H <height>  ]   Height of output image (default: data-dependent).\n"
 		   "  [-x <x-offset>]   X offset: position of the bottom-left pixel.\n"
 		   "  [-y <y-offset>]   Y offset: position of the bottom-left pixel.\n"
+		   "  [-X <x-column-name>] X column: name of the FITS column.\n"
+		   "  [-Y <y-column-name>] Y column: name of the FITS column.\n"
 		   "  [-n <first-obj>]  First object to plot (default: 0).\n"
 		   "  [-N <num-objs>]   Number of objects to plot (default: all).\n"
 		   "  [-r <radius>]     Size of markers to plot (default: 5.0).\n"
@@ -84,6 +86,8 @@ int main(int argc, char *args[]) {
 	cairo_t* cairo;
 	cairo_surface_t* target;
     float r=1.0, g=1.0, b=1.0;
+    char* xcol = NULL;
+    char* ycol = NULL;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
@@ -92,6 +96,12 @@ int main(int argc, char *args[]) {
                 fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
                 exit(-1);
             }
+            break;
+        case 'X':
+            xcol = optarg;
+            break;
+        case 'Y':
+            ycol = optarg;
             break;
         case 'P':
             pngformat = FALSE;
@@ -162,6 +172,10 @@ int main(int argc, char *args[]) {
 		fprintf(stderr, "Failed to open xylist from file %s.\n", fname);
 		exit(-1);
 	}
+    if (xcol)
+        xyls->xname = xcol;
+    if (ycol)
+        xyls->yname = ycol;
 
 	// Find number of entries in xylist.
 	Nxy = xylist_n_entries(xyls, ext);
