@@ -450,6 +450,7 @@ static void* worker_start_routine(void* arg) {
  */
 static void start_worker(char* path) {
 	pthread_attr_t attribs;
+	pthread_t* wthread;
 	pthread_mutex_lock(&condmutex);
 	while (workers_running == nworkers) {
 		// wait for a worker to finish...
@@ -466,7 +467,7 @@ static void start_worker(char* path) {
 		loggit("Failed to set pthread attributes.\n");
 	}
 
-	pthread_t* wthread = calloc(1, sizeof(pthread_t));
+	wthread = calloc(1, sizeof(pthread_t));
 	if (!wthread) {
 		loggit("Failed to allocate pthread_t for a worker.\n");
 		exit(-1);

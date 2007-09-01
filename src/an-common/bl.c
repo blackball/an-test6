@@ -1502,7 +1502,7 @@ void dl_print(dl* list) {
 	for (n=list->head; n; n=n->next) {
 		printf("[ ");
 		for (i=0; i<n->N; i++)
-			printf("%lf, ", NODE_DOUBLEDATA(n)[i]);
+			printf("%g, ", NODE_DOUBLEDATA(n)[i]);
 		printf("] ");
 	}
 }
