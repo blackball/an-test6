@@ -25,7 +25,15 @@
 
 #define ATTRIB_FORMAT(style,fmt,start) __attribute__ ((format(style,fmt,start)))
 
-#if defined __GNUC__ && __GNUC_PREREQ (3, 0)
+// this snippet borrowed from GNU libc features.h:
+#if defined __GNUC__
+# define GNUC_PREREQ(maj, min) \
+         ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#else
+# define GNUC_PREREQ(maj, min) 0
+#endif
+
+#if GNUC_PREREQ (3, 0)
 
 //# define Inline inline __attribute__ ((always_inline))
 # define Inline        inline
@@ -42,7 +50,7 @@
 # define Noinline         __attribute__ ((noinline))
 
 // warn_unused_result is new in gcc-3.4
-#if __GNUC_PREREQ (3, 4)
+#if GNUC_PREREQ (3, 4)
 # define Must_check       __attribute__ ((warn_unused_result))
 # define WarnUnusedResult __attribute__ ((warn_unused_result))
 #else

@@ -91,12 +91,12 @@ snapshot:
 
 clean:
 	$(MAKE) -C an-common clean
-	$(MAKE) -C cfitsio clean
+	-$(MAKE) -C cfitsio clean
 	$(MAKE) -C qfits-an clean
 	$(MAKE) -C gsl-an clean
 	$(MAKE) -C libkd clean
 	$(MAKE) -C quads clean
-	$(MAKE) -C usnob-map/execs clean
+	-$(MAKE) -C usnob-map/execs clean
 
 TAGS:
 	etags -I `find . -name "*.c" -o -name "*.h"`
