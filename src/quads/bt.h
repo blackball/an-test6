@@ -46,7 +46,8 @@ struct bt_branch {
 	// AVL balance
 	signed char balance;
 
-	struct bt_node* children[2];
+	//struct bt_node* children[2];
+	union bt_node* children[2];
 
 	// the leftmost leaf node in this subtree.
 	bt_leaf* firstleaf;
@@ -56,13 +57,20 @@ struct bt_branch {
 };
 typedef struct bt_branch bt_branch;
 
-struct bt_node {
-	union {
-		bt_leaf leaf;
-		bt_branch branch;
-	};
+/*
+  struct bt_node {
+  union {
+  bt_leaf leaf;
+  bt_branch branch;
+  };
+  };
+  typedef struct bt_node bt_node;
+*/
+union bt_node {
+	bt_leaf leaf;
+	bt_branch branch;
 };
-typedef struct bt_node bt_node;
+typedef union bt_node bt_node;
 
 struct bt {
 	bt_node* root;

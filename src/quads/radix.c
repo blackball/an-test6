@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <features.h>
 
 // ------------------------------------------------------------------------------------------------
 // ---- Basic types
@@ -34,7 +35,12 @@ const uint32 ct = 65536;
 //		need http://msdn.microsoft.com/vstudio/downloads/ppack/default.asp
 //		or recent VC to use this
 
+// __builtin_prefetch is new in gcc-3.1
+#if defined __GNUC__ && __GNUC_PREREQ (3, 1)
 #define PREFETCH 1
+#else
+#define PREFETCH 0
+#endif
 
 #if PREFETCH
 //#include <xmmintrin.h>	// for prefetch

@@ -27,8 +27,7 @@
 #include "qfits.h"
 #include "fitsioutils.h"
 #include "ioutils.h"
-
-#define Inline inline
+#include "keywords.h"
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define IS_LITTLE_ENDIAN 1

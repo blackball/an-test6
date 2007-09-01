@@ -82,6 +82,7 @@ int dpeaks(float *image,
         int *mask = NULL;
         int *fullxcen = NULL;
         int *fullycen = NULL;
+		struct dpeaks_cmp_data_s cmpdata;
 
 	/* 1. smooth image */
 	smooth = (float *) malloc(sizeof(float) * nx * ny);
@@ -120,7 +121,6 @@ int dpeaks(float *image,
 	indx = (int *) malloc(sizeof(int) * (*npeaks));
 	for (i = 0;i < (*npeaks);i++)
 		indx[i] = i;
-        struct dpeaks_cmp_data_s cmpdata;
         cmpdata.peaks = peaks;
         cmpdata.smooth = smooth;
 	qsort_r((void *) indx, (size_t)(*npeaks), sizeof(int), &cmpdata, dpeaks_compare);

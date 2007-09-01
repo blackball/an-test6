@@ -41,7 +41,7 @@ ifeq ($(MACHINE), i686)
 # gcc 3.1: "pentium4"
 	TEST_OPTION := -march=pentium4
 	TEST_FAIL_OPTION := -march=i686
-	FLAGS_DEF += $(shell ($(CC) $(TEST_OPTION) -c -o /dev/null -x c - < /dev/null > /dev/null 2>&1 && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
+	FLAGS_DEF += $(shell ($(CC) $(TEST_OPTION) -c -o /dev/null -x c - < /dev/null > /dev/null 2>/dev/null && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
 else
 	K8 := $(shell $(CC) -dM -E - < /dev/null | grep "\#define __tune_k8__ 1")
 	ifneq ($(K8),)
@@ -64,7 +64,10 @@ endif
 # speedy!
 FLAGS_DEF += -O3
 FLAGS_DEF += -fomit-frame-pointer
-FLAGS_DEF += -fno-math-errno -fno-trapping-math
+
+TEST_OPTION := -fno-math-errno -fno-trapping-math
+FLAGS_DEF += $(shell $(CC) $(TEST_OPTION) -c -x c -o /dev/null - < /dev/null > /dev/null 2> /dev/null && echo "$(TEST_OPTION)")
+
 
 # debuggy!
 #FLAGS_DEF += -O0

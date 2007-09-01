@@ -383,6 +383,7 @@ void solver_run(solver_t* solver)
 	double usertime, systime;
 	time_t next_timer_callback_time = time(NULL) + 1;
 	pquad* pquads;
+	uint num_indexes;
 
 	get_resource_stats(&usertime, &systime, NULL);
 	solver->starttime = usertime + systime;
@@ -395,249 +396,251 @@ void solver_run(solver_t* solver)
 	if (solver->startobj >= numxy)
 		return ;
 
-	uint num_indexes = bl_size(solver->indexes);
-	double minAB2s[num_indexes];
-	double maxAB2s[num_indexes];
-	solver->minminAB2 = HUGE_VAL;
-	solver->maxmaxAB2 = -HUGE_VAL;
-	for (i = 0; i < num_indexes; i++) {
-		double minAB, maxAB;
-		index_t* index = pl_get(solver->indexes, i);
-		// The limits on the size of quads, in field coordinates (pixels),
-		// Derived from index_scale_* and funits_*.
-		solver_compute_quad_range(solver, index, &minAB, &maxAB);
-		minAB2s[i] = square(minAB);
-		maxAB2s[i] = square(maxAB);
-		solver->minminAB2 = MIN(solver->minminAB2, minAB2s[i]);
-		solver->maxmaxAB2 = MAX(solver->maxmaxAB2, maxAB2s[i]);
+	num_indexes = bl_size(solver->indexes);
+	{
+		double minAB2s[num_indexes];
+		double maxAB2s[num_indexes];
+		solver->minminAB2 = HUGE_VAL;
+		solver->maxmaxAB2 = -HUGE_VAL;
+		for (i = 0; i < num_indexes; i++) {
+			double minAB, maxAB;
+			index_t* index = pl_get(solver->indexes, i);
+			// The limits on the size of quads, in field coordinates (pixels),
+			// Derived from index_scale_* and funits_*.
+			solver_compute_quad_range(solver, index, &minAB, &maxAB);
+			minAB2s[i] = square(minAB);
+			maxAB2s[i] = square(maxAB);
+			solver->minminAB2 = MIN(solver->minminAB2, minAB2s[i]);
+			solver->maxmaxAB2 = MAX(solver->maxmaxAB2, maxAB2s[i]);
 
-		if (index->cx_less_than_dx) {
-			solver->cxdx_margin = 1.5 * solver->codetol;
-			// FIXME die horribly if the indexes have differing cx_less_than_dx
+			if (index->cx_less_than_dx) {
+				solver->cxdx_margin = 1.5 * solver->codetol;
+				// FIXME die horribly if the indexes have differing cx_less_than_dx
+			}
 		}
-	}
-	logmsg("Quad scale range: [%g, %g] pixels\n", sqrt(solver->minminAB2), sqrt(solver->maxmaxAB2));
+		logmsg("Quad scale range: [%g, %g] pixels\n", sqrt(solver->minminAB2), sqrt(solver->maxmaxAB2));
 
-	pquads = calloc(numxy * numxy, sizeof(pquad));
+		pquads = calloc(numxy * numxy, sizeof(pquad));
 
-	/* We maintain an array of "potential quads" (pquad) structs, where
-	 * each struct corresponds to one choice of stars A and B; the struct
-	 * at index (B * numxy + A) hold information about quads that could be
-	 * created using stars A,B.
-	 *
-	 * (We only use above-diagonal elements of this 2D array because * A<B.)
-	 *
-	 * For each AB pair, we cache the scale and the rotation parameters,
-	 * and we keep an array "inbox" of length "numxy" of booleans, that say
-	 * whether that star is eligible to be star C or D of a quad with AB at
-	 * the corners.  (Obviously A and B can't).
-	 *
-	 * The "ninbox" parameter is somewhat misnamed - it says that "inbox"
-	 * in the range [0, ninbox) have been initialized. */
+		/* We maintain an array of "potential quads" (pquad) structs, where
+		 * each struct corresponds to one choice of stars A and B; the struct
+		 * at index (B * numxy + A) hold information about quads that could be
+		 * created using stars A,B.
+		 *
+		 * (We only use above-diagonal elements of this 2D array because * A<B.)
+		 *
+		 * For each AB pair, we cache the scale and the rotation parameters,
+		 * and we keep an array "inbox" of length "numxy" of booleans, that say
+		 * whether that star is eligible to be star C or D of a quad with AB at
+		 * the corners.  (Obviously A and B can't).
+		 *
+		 * The "ninbox" parameter is somewhat misnamed - it says that "inbox"
+		 * in the range [0, ninbox) have been initialized. */
 
-	/* (See explanatory paragraph below) If "solver->startobj" isn't zero,
-	 * then we need to initialize the triangle of "pquads" up to
-	 * A=startobj-2,B=startobj-1. */
-	if (solver->startobj) {
-		debug("startobj > 0; priming pquad arrays.\n");
-		for (iB = 0; iB < solver->startobj; iB++) {
-			for (iA = 0; iA < iB; iA++) {
+		/* (See explanatory paragraph below) If "solver->startobj" isn't zero,
+		 * then we need to initialize the triangle of "pquads" up to
+		 * A=startobj-2,B=startobj-1. */
+		if (solver->startobj) {
+			debug("startobj > 0; priming pquad arrays.\n");
+			for (iB = 0; iB < solver->startobj; iB++) {
+				for (iA = 0; iA < iB; iA++) {
+					pquad* pq = pquads + iB * numxy + iA;
+					pq->iA = iA;
+					pq->iB = iB;
+					debug("trying A=%i, B=%i\n", iA, iB);
+					check_scale(pq, solver);
+					if (!pq->scale_ok) {
+						debug("  bad scale for A=%i, B=%i\n", iA, iB);
+						continue;
+					}
+					pq->xy = malloc(numxy * 2 * sizeof(double));
+					pq->inbox = malloc(numxy * sizeof(bool));
+					memset(pq->inbox, TRUE, solver->startobj);
+					pq->ninbox = solver->startobj;
+					pq->inbox[iA] = FALSE;
+					pq->inbox[iB] = FALSE;
+					check_inbox(pq, 0, solver);
+					debug("  inbox(A=%i, B=%i): ", iA, iB);
+					print_inbox(pq);
+				}
+			}
+		}
+
+		/* Each time through the "for" loop below, we consider a new star
+		 * ("newpoint").  First, we try building all quads that have the new
+		 * star on the diagonal (star B).  Then, we try building all quads that
+		 * have the star not on the diagonal (star D).
+         * 
+		 * For each AB pair, we have a "potential_quad" or "pquad" struct.
+		 * This caches the computation we need to do: deciding whether the
+		 * scale is acceptable, computing the transformation to code
+		 * coordinates, and deciding which C,D stars are in the circle.
+         * 
+		 * We keep the invariants that iA < iB and iC < iD.  The A<->B and
+		 * C<->D permutations will be tried in try_all_codes. */
+
+		for (newpoint = solver->startobj; newpoint < numxy; newpoint++) {
+			double ABCDpix[8];
+
+			debug("Trying newpoint=%i\n", newpoint);
+
+			// Give our caller a chance to cancel us midway. The callback
+			// returns how long to wait before calling again.
+			if (solver->timer_callback) {
+				time_t delay;
+				if (time(NULL) > next_timer_callback_time) {
+					delay = solver->timer_callback(solver->userdata);
+					if (delay == 0) // Canceled
+						break;
+					next_timer_callback_time += delay;
+				}
+			}
+
+			solver->last_examined_object = newpoint;
+			// quads with the new star on the diagonal:
+			iB = newpoint;
+			setx(ABCDpix, 1, field_getx(solver, iB));
+			sety(ABCDpix, 1, field_gety(solver, iB));
+			debug("Trying quads with B=%i\n", newpoint);
+			for (iA = 0; iA < newpoint; iA++) {
+				// initialize the "pquad" struct for this AB combo.
 				pquad* pq = pquads + iB * numxy + iA;
 				pq->iA = iA;
 				pq->iB = iB;
-				debug("trying A=%i, B=%i\n", iA, iB);
+				debug("  trying A=%i, B=%i\n", iA, iB);
 				check_scale(pq, solver);
 				if (!pq->scale_ok) {
-					debug("  bad scale for A=%i, B=%i\n", iA, iB);
+					debug("    bad scale for A=%i, B=%i\n", iA, iB);
 					continue;
 				}
-				pq->xy = malloc(numxy * 2 * sizeof(double));
+				// initialize the "inbox" array:
 				pq->inbox = malloc(numxy * sizeof(bool));
-				memset(pq->inbox, TRUE, solver->startobj);
-				pq->ninbox = solver->startobj;
+				pq->xy = malloc(numxy * 2 * sizeof(double));
+				// -try all stars up to "newpoint"...
+				memset(pq->inbox, TRUE, newpoint + 1);
+				pq->ninbox = newpoint + 1;
+				// -except A and B.
 				pq->inbox[iA] = FALSE;
 				pq->inbox[iB] = FALSE;
 				check_inbox(pq, 0, solver);
-				debug("  inbox(A=%i, B=%i): ", iA, iB);
+				debug("    inbox(A=%i, B=%i): ", iA, iB);
 				print_inbox(pq);
-			}
-		}
-	}
 
-	/* Each time through the "for" loop below, we consider a new star
-	 * ("newpoint").  First, we try building all quads that have the new
-	 * star on the diagonal (star B).  Then, we try building all quads that
-	 * have the star not on the diagonal (star D).
-         * 
-	 * For each AB pair, we have a "potential_quad" or "pquad" struct.
-	 * This caches the computation we need to do: deciding whether the
-	 * scale is acceptable, computing the transformation to code
-	 * coordinates, and deciding which C,D stars are in the circle.
-         * 
-	 * We keep the invariants that iA < iB and iC < iD.  The A<->B and
-	 * C<->D permutations will be tried in try_all_codes. */
-
-	for (newpoint = solver->startobj; newpoint < numxy; newpoint++) {
-		double ABCDpix[8];
-
-		debug("Trying newpoint=%i\n", newpoint);
-
-		// Give our caller a chance to cancel us midway. The callback
-		// returns how long to wait before calling again.
-		if (solver->timer_callback) {
-			time_t delay;
-			if (time(NULL) > next_timer_callback_time) {
-				delay = solver->timer_callback(solver->userdata);
-				if (delay == 0) // Canceled
-					break;
-				next_timer_callback_time += delay;
-			}
-		}
-
-		solver->last_examined_object = newpoint;
-		// quads with the new star on the diagonal:
-		iB = newpoint;
-		setx(ABCDpix, 1, field_getx(solver, iB));
-		sety(ABCDpix, 1, field_gety(solver, iB));
-		debug("Trying quads with B=%i\n", newpoint);
-		for (iA = 0; iA < newpoint; iA++) {
-			// initialize the "pquad" struct for this AB combo.
-			pquad* pq = pquads + iB * numxy + iA;
-			pq->iA = iA;
-			pq->iB = iB;
-			debug("  trying A=%i, B=%i\n", iA, iB);
-			check_scale(pq, solver);
-			if (!pq->scale_ok) {
-				debug("    bad scale for A=%i, B=%i\n", iA, iB);
-				continue;
-			}
-			// initialize the "inbox" array:
-			pq->inbox = malloc(numxy * sizeof(bool));
-			pq->xy = malloc(numxy * 2 * sizeof(double));
-			// -try all stars up to "newpoint"...
-			memset(pq->inbox, TRUE, newpoint + 1);
-			pq->ninbox = newpoint + 1;
-			// -except A and B.
-			pq->inbox[iA] = FALSE;
-			pq->inbox[iB] = FALSE;
-			check_inbox(pq, 0, solver);
-			debug("    inbox(A=%i, B=%i): ", iA, iB);
-			print_inbox(pq);
-
-			setx(ABCDpix, 0, field_getx(solver, iA));
-			sety(ABCDpix, 0, field_gety(solver, iA));
-
-			for (i = 0; i < num_indexes; i++) {
-				index_t* index = solver->index = pl_get(solver->indexes, i);
-				solver->index_num = i;
-				if ((pq->scale < minAB2s[i]) ||
-				        (pq->scale > maxAB2s[i]))
-					continue;
-				solver->index = index;
-
-				for (iC = 0; iC < newpoint; iC++) {
-					double cx, cy, dx, dy;
-					if (!pq->inbox[iC])
-						continue;
-					setx(ABCDpix, 2, field_getx(solver, iC));
-					sety(ABCDpix, 2, field_gety(solver, iC));
-					cx = getx(pq->xy, iC);
-					cy = gety(pq->xy, iC);
-					for (iD = iC + 1; iD < newpoint; iD++) {
-						if (!pq->inbox[iD])
-							continue;
-						setx(ABCDpix, 3, field_getx(solver, iD));
-						sety(ABCDpix, 3, field_gety(solver, iD));
-						dx = getx(pq->xy, iD);
-						dy = gety(pq->xy, iD);
-						solver->numtries++;
-						debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-
-						try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
-						if (solver->quit_now)
-							break;
-					}
-				}
-				if (solver->quit_now)
-					break;
-			}
-		}
-
-		if (solver->quit_now)
-			break;
-
-		// quads with the new star not on the diagonal:
-		iD = newpoint;
-		setx(ABCDpix, 3, field_getx(solver, iD));
-		sety(ABCDpix, 3, field_gety(solver, iD));
-		debug("Trying quads with D=%i\n", newpoint);
-		for (iA = 0; iA < newpoint; iA++) {
-			for (iB = iA + 1; iB < newpoint; iB++) {
-				double cx, cy, dx, dy;
-				// grab the "pquad" for this AB combo
-				pquad* pq = pquads + iB * numxy + iA;
-				if (!pq->scale_ok) {
-					debug("  bad scale for A=%i, B=%i\n", iA, iB);
-					continue;
-				}
-				// test if this D is in the box:
-				pq->inbox[iD] = TRUE;
-				pq->ninbox = iD + 1;
-				check_inbox(pq, iD, solver);
-				if (!pq->inbox[iD]) {
-					debug("  D is not in the box for A=%i, B=%i\n", iA, iB);
-					continue;
-				}
-				debug("  D is in the box for A=%i, B=%i\n", iA, iB);
 				setx(ABCDpix, 0, field_getx(solver, iA));
 				sety(ABCDpix, 0, field_gety(solver, iA));
-				setx(ABCDpix, 1, field_getx(solver, iB));
-				sety(ABCDpix, 1, field_gety(solver, iB));
-				dx = getx(pq->xy, iD);
-				dy = gety(pq->xy, iD);
 
-				for (i = 0; i < pl_size(solver->indexes); i++) {
+				for (i = 0; i < num_indexes; i++) {
 					index_t* index = solver->index = pl_get(solver->indexes, i);
 					solver->index_num = i;
 					if ((pq->scale < minAB2s[i]) ||
-					        (pq->scale > maxAB2s[i]))
+				        (pq->scale > maxAB2s[i]))
 						continue;
 					solver->index = index;
 
 					for (iC = 0; iC < newpoint; iC++) {
+						double cx, cy, dx, dy;
 						if (!pq->inbox[iC])
 							continue;
 						setx(ABCDpix, 2, field_getx(solver, iC));
 						sety(ABCDpix, 2, field_gety(solver, iC));
 						cx = getx(pq->xy, iC);
 						cy = gety(pq->xy, iC);
-						solver->numtries++;
-						debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-						try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
-						if (solver->quit_now)
-							break;
+						for (iD = iC + 1; iD < newpoint; iD++) {
+							if (!pq->inbox[iD])
+								continue;
+							setx(ABCDpix, 3, field_getx(solver, iD));
+							sety(ABCDpix, 3, field_gety(solver, iD));
+							dx = getx(pq->xy, iD);
+							dy = gety(pq->xy, iD);
+							solver->numtries++;
+							debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
+
+							try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
+							if (solver->quit_now)
+								break;
+						}
 					}
 					if (solver->quit_now)
 						break;
 				}
 			}
-		}
 
-		logmsg("object %u of %u: %i quads tried, %i matched.\n",
-					 newpoint + 1, numxy, solver->numtries, solver->nummatches);
+			if (solver->quit_now)
+				break;
 
-		if ((solver->maxquads && (solver->numtries >= solver->maxquads))
+			// quads with the new star not on the diagonal:
+			iD = newpoint;
+			setx(ABCDpix, 3, field_getx(solver, iD));
+			sety(ABCDpix, 3, field_gety(solver, iD));
+			debug("Trying quads with D=%i\n", newpoint);
+			for (iA = 0; iA < newpoint; iA++) {
+				for (iB = iA + 1; iB < newpoint; iB++) {
+					double cx, cy, dx, dy;
+					// grab the "pquad" for this AB combo
+					pquad* pq = pquads + iB * numxy + iA;
+					if (!pq->scale_ok) {
+						debug("  bad scale for A=%i, B=%i\n", iA, iB);
+						continue;
+					}
+					// test if this D is in the box:
+					pq->inbox[iD] = TRUE;
+					pq->ninbox = iD + 1;
+					check_inbox(pq, iD, solver);
+					if (!pq->inbox[iD]) {
+						debug("  D is not in the box for A=%i, B=%i\n", iA, iB);
+						continue;
+					}
+					debug("  D is in the box for A=%i, B=%i\n", iA, iB);
+					setx(ABCDpix, 0, field_getx(solver, iA));
+					sety(ABCDpix, 0, field_gety(solver, iA));
+					setx(ABCDpix, 1, field_getx(solver, iB));
+					sety(ABCDpix, 1, field_gety(solver, iB));
+					dx = getx(pq->xy, iD);
+					dy = gety(pq->xy, iD);
+
+					for (i = 0; i < pl_size(solver->indexes); i++) {
+						index_t* index = solver->index = pl_get(solver->indexes, i);
+						solver->index_num = i;
+						if ((pq->scale < minAB2s[i]) ||
+					        (pq->scale > maxAB2s[i]))
+							continue;
+						solver->index = index;
+
+						for (iC = 0; iC < newpoint; iC++) {
+							if (!pq->inbox[iC])
+								continue;
+							setx(ABCDpix, 2, field_getx(solver, iC));
+							sety(ABCDpix, 2, field_gety(solver, iC));
+							cx = getx(pq->xy, iC);
+							cy = gety(pq->xy, iC);
+							solver->numtries++;
+							debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
+							try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
+							if (solver->quit_now)
+								break;
+						}
+						if (solver->quit_now)
+							break;
+					}
+				}
+			}
+
+			logmsg("object %u of %u: %i quads tried, %i matched.\n",
+				   newpoint + 1, numxy, solver->numtries, solver->nummatches);
+
+			if ((solver->maxquads && (solver->numtries >= solver->maxquads))
 				|| (solver->maxmatches && (solver->nummatches >= solver->maxmatches))
 				|| solver->quit_now)
-			break;
-	}
+				break;
+		}
 
-	for (i = 0; i < (numxy*numxy); i++) {
-		pquad* pq = pquads + i;
-		free(pq->inbox);
-		free(pq->xy);
+		for (i = 0; i < (numxy*numxy); i++) {
+			pquad* pq = pquads + i;
+			free(pq->inbox);
+			free(pq->xy);
+		}
+		free(pquads);
 	}
-	free(pquads);
 }
 
 static inline void set_xy(double* dest, int destind, double* src, int srcind)
@@ -677,8 +680,6 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
 	              KD_OPTIONS_NO_RESIZE_RESULTS;
 
-	update_timeused(solver);
-
 	double thequeries[4][4] = {
 		{   Cx,    Cy,    Dx,    Dy}, 
 		{1.-Cx, 1.-Cy, 1.-Dx, 1.-Dy}, 
@@ -693,6 +694,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 		{A,B,D,C},
 		{B,A,D,C}
 	};
+
+	update_timeused(solver);
 
 	for (i=0; i<4; i++) {
 		if ((!solver->index->cx_less_than_dx) ||
@@ -813,6 +816,7 @@ void solver_inject_match(solver_t* solver, MatchObj* mo) {
 static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 {
 	double match_distance_in_pixels2;
+	bool bail;
 
 	mo->indexid = sp->index->indexid;
 	mo->healpix = sp->index->healpix;
@@ -845,7 +849,7 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 	update_timeused(sp);
 	mo->timeused = sp->timeused;
 
-	bool bail = sp->record_match_callback(mo, sp->userdata);
+	bail = sp->record_match_callback(mo, sp->userdata);
 
 	if (bail) {
 		sp->best_match_solves = TRUE;

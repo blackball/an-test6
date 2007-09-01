@@ -43,13 +43,14 @@ int dobjects(float *image,
 {
 	int i, j, ip, jp, ist, ind, jst, jnd;
 	float limit, sigma;
+	int* mask;
 
 	dsmooth(image, nx, ny, dpsf, smooth);
 
 	dsigma(smooth, nx, ny, (int)(10*dpsf), &sigma);
 	limit = sigma * plim;
 
-	int* mask = (int *) malloc(nx * ny * sizeof(int));
+	mask = (int *) malloc(nx * ny * sizeof(int));
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
 			mask[i + j*nx] = 0;

@@ -650,6 +650,8 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 {
 	double dnil = -HUGE_VAL;
 	job_t* job = job_new();
+	char *pstr;
+	int n;
 
 	job->imagew = qfits_header_getdouble(hdr, "IMAGEW", dnil);
 	job->imageh = qfits_header_getdouble(hdr, "IMAGEH", dnil);
@@ -673,7 +675,7 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	job->xcol = fits_get_dupstring(hdr, "ANXCOL");
 	job->ycol = fits_get_dupstring(hdr, "ANYCOL");
 
-	char *pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
+	pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
 	if (pstr && !strcmp(pstr, "NEG")) {
 		job->parity = PARITY_FLIP;
 	} else if (pstr && !strcmp(pstr, "POS")) {
@@ -681,7 +683,7 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	}
 	job->tweak = qfits_header_getboolean(hdr, "ANTWEAK", job->tweak);
 	job->tweakorder = qfits_header_getint(hdr, "ANTWEAKO", job->tweakorder);
-	int n = 1;
+	n = 1;
 	while (1) {
 		char key[64];
 		double lo, hi;

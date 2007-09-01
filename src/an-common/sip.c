@@ -268,8 +268,8 @@ void sip_print_to(sip_t* sip, FILE* f) {
    double det,pixsc;
 
 	fprintf(f,"SIP Structure:\n");
-	fprintf(f,"  crval=(%lf, %lf)\n", sip->wcstan.crval[0], sip->wcstan.crval[1]);
-	fprintf(f,"  crpix=(%lf, %lf)\n", sip->wcstan.crpix[0], sip->wcstan.crpix[1]);
+	fprintf(f,"  crval=(%g, %g)\n", sip->wcstan.crval[0], sip->wcstan.crval[1]);
+	fprintf(f,"  crpix=(%g, %g)\n", sip->wcstan.crpix[0], sip->wcstan.crpix[1]);
 	fprintf(f,"  CD = ( %12.5g   %12.5g )\n", sip->wcstan.cd[0][0], sip->wcstan.cd[0][1]);
 	fprintf(f,"       ( %12.5g   %12.5g )\n", sip->wcstan.cd[1][0], sip->wcstan.cd[1][1]);
 
@@ -299,8 +299,8 @@ void sip_print_to(sip_t* sip, FILE* f) {
 
 	det = sip_det_cd(sip);
 	pixsc = 3600*sqrt(fabs(det));
-	fprintf(f,"  det(CD)=%le\n", det);
-	fprintf(f,"  sqrt(det(CD))=%le [arcsec]\n", pixsc);
+	fprintf(f,"  det(CD)=%g\n", det);
+	fprintf(f,"  sqrt(det(CD))=%g [arcsec]\n", pixsc);
 	//fprintf(f,"\n");
 }
 

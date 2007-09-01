@@ -40,11 +40,12 @@ int dsmooth(float *image,
 {
 	int i, j, npix, half, ip, jp, ist, jst, isto, jsto, ind, jnd, ioff, joff;
 	float invvar, total, scale, dx, dy;
+	float* kernel;
 
 	/* make kernel */
 	npix = 2 * ((int) ceilf(3. * sigma)) + 1;
 	half = npix / 2;
-	float* kernel =  malloc(npix * npix * sizeof(float));
+	kernel =  malloc(npix * npix * sizeof(float));
 	invvar = 1. / sigma / sigma;
 	for (i = 0;i < npix;i++)
 		for (j = 0;j < npix;j++) {

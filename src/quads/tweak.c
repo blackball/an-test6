@@ -167,8 +167,8 @@ void get_shift(double* ximg, double* yimg, int nimg,
 
 	*yshift = ((double)(themaxind / hsz) / (double)hsz) * (maxdy - mindy) + mindy;
 	*xshift = ((double)(themaxind % hsz) / (double)hsz) * (maxdx - mindx) + mindx;
-	logverb("get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
-	logverb("get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
+	logverb("get_shift: mindx=%g, maxdx=%g, mindy=%g, maxdy=%g\n", mindx, maxdx, mindy, maxdy);
+	logverb("get_shift: xs=%g, ys=%g\n", *xshift, *yshift);
 
 	/*
 	  static char c = '1';
@@ -249,7 +249,7 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 	swcs = wcs_shift(t->sip, t->xs, t->ys); // apply shift
 	sip_free(t->sip);
 	t->sip = swcs;
-	logverb("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
+	logverb("xshift=%g, yshift=%g\n", t->xs, t->ys);
 	return NULL;
 }
 
@@ -271,28 +271,28 @@ tweak_t* tweak_new()
 void tweak_print4_fp(FILE* f, double x, double y,
                      double z, double w)
 {
-	fprintf(f, "%.15le ", x);
-	fprintf(f, "%.15le ", y);
-	fprintf(f, "%.15le ", z);
-	fprintf(f, "%.15le ", w);
+	fprintf(f, "%.15g ", x);
+	fprintf(f, "%.15g ", y);
+	fprintf(f, "%.15g ", z);
+	fprintf(f, "%.15g ", w);
 	fprintf(f, "\n");
 }
 
 void tweak_print5_fp(FILE* f, double x, double y,
                      double z, double w, double u)
 {
-	fprintf(f, "%.15le ", x);
-	fprintf(f, "%.15le ", y);
-	fprintf(f, "%.15le ", z);
-	fprintf(f, "%.15le ", w);
-	fprintf(f, "%.15le ", u);
+	fprintf(f, "%.15g ", x);
+	fprintf(f, "%.15g ", y);
+	fprintf(f, "%.15g ", z);
+	fprintf(f, "%.15g ", w);
+	fprintf(f, "%.15g ", u);
 	fprintf(f, "\n");
 }
 
 void tweak_print2_fp(FILE* f, double x, double y)
 {
-	fprintf(f, "%.15le ", x);
-	fprintf(f, "%.15le ", y);
+	fprintf(f, "%.15g ", x);
+	fprintf(f, "%.15g ", y);
 	fprintf(f, "\n");
 }
 
@@ -684,7 +684,7 @@ void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 	//	double dx = t->x[image_ind] - t->x_ref[ref_ind];
 	//	double dy = t->y[image_ind] - t->y_ref[ref_ind];
 
-	//	fprintf(stderr,"found new one!: dx=%lf, dy=%lf, dist=%lf\n", dx,dy,sqrt(dx*dx+dy*dy));
+	//	fprintf(stderr,"found new one!: dx=%g, dy=%g, dist=%g\n", dx,dy,sqrt(dx*dx+dy*dy));
 	il_append(t->image, image_ind);
 	il_append(t->ref, ref_ind);
 	dl_append(t->dist2, dist2);
@@ -1002,17 +1002,17 @@ void invert_sip_polynomial(tweak_t* t)
 		maxu = dblmax(maxu, t->x[i] - t->sip->wcstan.crpix[0]);
 		maxv = dblmax(maxv, t->y[i] - t->sip->wcstan.crpix[1]);
 	}
-	//printf("maxu=%lf, minu=%lf\n", maxu, minu);
-	//printf("maxv=%lf, minv=%lf\n", maxv, minv);
+	//printf("maxu=%g, minu=%g\n", maxu, minu);
+	//printf("maxv=%g, minv=%g\n", maxv, minv);
 
 	// Sample grid locations.
 	i = 0;
 	for (gu = 0; gu < ngrid; gu++) {
 		for (gv = 0; gv < ngrid; gv++) {
+			double fuv, guv;
 			// Calculate grid position in original image pixels
 			u = (gu * (maxu - minu) / ngrid) + minu; // now in pixels
 			v = (gv * (maxv - minv) / ngrid) + minv;  // now in pixels
-			double fuv, guv;
 			// compute U=u+f(u,v) and V=v+g(u,v)
 			sip_calc_distortion(t->sip, u, v, &U, &V);
 			fuv = U - u;
@@ -1095,10 +1095,10 @@ void invert_sip_polynomial(tweak_t* t)
 
 		for (gu = 0; gu < ngrid; gu++) {
 			for (gv = 0; gv < ngrid; gv++) {
+				double newu, newv;
 				// Calculate grid position in original image pixels
 				u = (gu * (maxu - minu) / ngrid) + minu;
 				v = (gv * (maxv - minv) / ngrid) + minv;
-				double newu, newv;
 				sip_calc_distortion(t->sip, u, v, &U, &V);
 				sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
 				sumdu += square(u - newu);
@@ -1118,9 +1118,9 @@ void invert_sip_polynomial(tweak_t* t)
 		sumdv = 0;
 		Z = 1000;
 		for (i=0; i<Z; i++) {
+			double newu, newv;
 			u = uniform_sample(minu, maxu);
 			v = uniform_sample(minv, maxv);
-			double newu, newv;
 			sip_calc_distortion(t->sip, u, v, &U, &V);
 			sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
 			sumdu += square(u - newu);
@@ -1204,11 +1204,11 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	assert(x1);
 	assert(x2);
 
-	//printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
+	//printf("sqerr=%g [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
 	logverb("do_sip_tweak starting.\n");
     if (t->verbose)
         sip_print_to(t->sip, stdout);
-	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
+	//	fprintf(stderr,"sqerrxy=%g\n", figure_of_merit2(t));
 
 	logverb("RMS error of correspondences: %g arcsec\n",
 		   correspondences_rms_arcsec(t, 0));
@@ -1519,9 +1519,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
         sip_print_to(t->sip, stdout);
 
 	/*
-	  printf("shiftxun=%le, shiftyun=%le\n", sU, sV);
-	  printf("shiftx=%le, shifty=%le\n", su, sv);
-	  printf("sqerr=%le\n", figure_of_merit(t,NULL,NULL));
+	  printf("shiftxun=%g, shiftyun=%g\n", sU, sV);
+	  printf("shiftx=%g, shifty=%g\n", su, sv);
+	  printf("sqerr=%g\n", figure_of_merit(t,NULL,NULL));
 	*/
 
 	// this data is now wrong
@@ -1535,9 +1535,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 
 	/*
 	  printf("+++++++++++++++++++++++++++++++++++++\n");
-	  printf("RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t,NULL,NULL) / stride));
+	  printf("RMS=%g [arcsec on sky]\n", sqrt(figure_of_merit(t,NULL,NULL) / stride));
 	  printf("+++++++++++///////////+++++++++++++++\n");
-	  //	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
+	  //	fprintf(stderr,"sqerrxy=%g\n", figure_of_merit2(t));
 	  */
 
 	logverb("RMS error of correspondences: %g arcsec\n",
@@ -1603,36 +1603,42 @@ void do_ransac(tweak_t* t)
 	int maxiter = 500;
 
 	sip_t wcs_try, wcs_best;
-	memcpy(&wcs_try, t->sip, sizeof(sip_t));
-	memcpy(&wcs_best, t->sip, sizeof(sip_t));
 
 	double besterr = 100000000000000.;
 	int sorder = t->sip->a_order;
 	int num_free_coeffs = sorder*(sorder+1) + 4 + 2; // CD and CRVAL
 	int min_data_points = num_free_coeffs/2 + 5;
+	int set_size;
+	il* maybeinliers;
+	il* used_ref_sources;
+	il* used_image_sources;
+	int i;
+
 //	min_data_points *= 2;
 //	min_data_points *= 2;
+	memcpy(&wcs_try, t->sip, sizeof(sip_t));
+	memcpy(&wcs_best, t->sip, sizeof(sip_t));
 	printf("/--------------------\n");
 	printf("&&&&&&&&&&& mindatapts=%d\n", min_data_points);
 	printf("\\-------------------\n");
-	int set_size = il_size(t->image);
+	set_size = il_size(t->image);
 	assert( il_size(t->image) == il_size(t->ref) );
-	il* maybeinliers = il_new(30);
+	maybeinliers = il_new(30);
 //	il* alsoinliers = il_new(4);
 
 	// we need to prevent pairing any reference star to multiple image
 	// stars, or multiple reference stars to single image stars
-	il* used_ref_sources = il_new(t->n_ref);
-	il* used_image_sources = il_new(t->n);
+	used_ref_sources = il_new(t->n_ref);
+	used_image_sources = il_new(t->n);
 
-	int i;
 	for (i=0; i<t->n_ref; i++) 
 		il_append(used_ref_sources, 0);
 	for (i=0; i<t->n; i++) 
 		il_append(used_image_sources, 0);
 
 	while (iterations++ < maxiter) {
-//		assert(t->ref);
+		double thiserr;
+		//		assert(t->ref);
 		printf("++++++++++ ITERATION %d\n", iterations);
 
 		// select n random pairs to use for the fit
@@ -1675,7 +1681,7 @@ void do_ransac(tweak_t* t)
 		tweak_go_to(t, TWEAK_HAS_IMAGE_XYZ);
 
 		// rms arcsec
-		double thiserr = sqrt(figure_of_merit(t,NULL,NULL) / il_size(t->ref));
+		thiserr = sqrt(figure_of_merit(t,NULL,NULL) / il_size(t->ref));
 		if (thiserr < besterr) {
 			besterr = thiserr;
 			tweak_dump_ascii(t);
@@ -1718,10 +1724,10 @@ void do_ransac(tweak_t* t)
 			if (t->err < besterr) {
 				memcpy(&wcs_best, t->sip, sizeof(sip_t));
 				besterr = t->err;
-				printf("new best error %le\n", besterr);
+				printf("new best error %g\n", besterr);
 			}
 		}
-		printf("error=%le besterror=%le\n", t->err, besterr);
+		printf("error=%g besterror=%g\n", t->err, besterr);
 		*/
 	}
 	printf("==============================\n");
@@ -1811,7 +1817,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		assert(t->state & TWEAK_HAS_IMAGE_AD);
 		get_center_and_radius(t->a, t->d, t->n,
 		                      &t->a_bar, &t->d_bar, &t->radius);
-		logverb("a_bar=%lf [deg], d_bar=%lf [deg], radius=%lf [arcmin]\n",
+		logverb("a_bar=%g [deg], d_bar=%g [deg], radius=%g [arcmin]\n",
 		        t->a_bar, t->d_bar, rad2arcmin(t->radius));
 
 		done(TWEAK_HAS_AD_BAR_AND_R);
