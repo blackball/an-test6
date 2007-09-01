@@ -129,7 +129,7 @@ static void print_help(const char* progname) {
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
            "\n"
-           "You can specify http:// or ftp:// URLs instead of filenames.  The \"wget\" program will be used to retrieve the URL.\n"
+           "You can specify http:// or ftp:// URLs instead of filenames.  The \"wget\" or \"curl\" program will be used to retrieve the URL.\n"
 	       "\n", progname);
 }
 
@@ -180,6 +180,7 @@ int main(int argc, char** args) {
     char* xcol = NULL;
     char* ycol = NULL;
     char* solvedin = NULL;
+	bool usecurl = TRUE;
 
 	augmentxyargs = sl_new(16);
 	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
@@ -437,11 +438,18 @@ int main(int argc, char** args) {
         if (!file_exists(infile) &&
             ((strncasecmp(infile, "http://", 7) == 0) ||
              (strncasecmp(infile, "ftp://", 6) == 0))) {
-            sl_append(cmdline, "wget");
-            if (!verbose)
-                sl_append(cmdline, "--quiet");
+			if (usecurl) {
+				sl_append(cmdline, "curl");
+				if (!verbose)
+					sl_append(cmdline, "--silent");
+				sl_append(cmdline, "--output");
+			} else {
+				sl_append(cmdline, "wget");
+				if (!verbose)
+					sl_append(cmdline, "--quiet");
                 //sl_append(cmdline, "--no-verbose");
-            sl_append(cmdline, "-O");
+				sl_append(cmdline, "-O");
+			}
             sl_append_nocopy(cmdline, escape_filename(downloadfn));
             sl_append_nocopy(cmdline, escape_filename(infile));
 
