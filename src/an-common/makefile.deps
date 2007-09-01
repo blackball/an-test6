@@ -32,7 +32,6 @@ TEST_FAIL_OPTION := "\>"
 DEP_OUT := $(shell ($(CC) $(DEP_ARGS) -E -x c -MF out.dep - < /dev/null > /dev/null 2>&1 && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
 
 %.dep : %.c
-	@echo DEP_ARGS: \"$(DEP_ARGS)\"
 	$(CC) $(DEP_ARGS) $< $(DEP_OUT) $@
 
 ifneq ($(MAKECMDGOALS),clean)
