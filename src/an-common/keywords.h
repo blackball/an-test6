@@ -21,8 +21,6 @@
 #ifndef ASTROMETRY_KEYWORDS_H
 #define ASTROMETRY_KEYWORDS_H
 
-#include <features.h>
-
 #define ATTRIB_FORMAT(style,fmt,start) __attribute__ ((format(style,fmt,start)))
 
 // this snippet borrowed from GNU libc features.h:
