@@ -77,20 +77,21 @@ QUICKSTART
    the images you wish to solve.  If you grab extra indices, the solver will run more
    slowly, but the results should be the same.
 
-   Each index contains a large number of "landmarks" that allow our solver to identify
-   your images.  The landmarks contained in each index have sizes (diameters) within a
-   narrow range.  You probably want to download indices whose quads are, say, 10% to
-   100% of the sizes of the images you want to solve.
+   Each index contains a large number of "skymarks" (landmarks for the sky) that
+   allow our solver to identify your images.  The landmarks contained in each index
+   have sizes (diameters) within a narrow range.  You probably want to download
+   indices whose quads are, say, 10% to 100% of the sizes of the images you want to
+   solve.
 
    For example, let's say you have some 1-degree square field of view images.  You
-   should grab indices that contain landmarks of size 0.1 to 1 degree, or 6 to 60
+   should grab indices that contain skymarks of size 0.1 to 1 degree, or 6 to 60
    arcminutes.  Referring to the table below, you should grab indices 203 through 209.
 
    For reference, we used index 202 alone for our SDSS tests.
 
-   ----------------------------------------------------------------
-   Index Filename          Range of landmark diameters (arcminutes)
-   ----------------------------------------------------------------
+   ---------------------------------------------------------------
+   Index Filename          Range of skymark diameters (arcminutes)
+   ---------------------------------------------------------------
    index-200.tar.bz2             2.0  -  2.8
    index-201.tar.bz2             2.8  -  4.0
    index-202.tar.bz2             4.0  -  5.6
@@ -102,7 +103,7 @@ QUICKSTART
    index-208.tar.bz2            30  -   42
    index-209.tar.bz2            42  -   60
    index-210+.tar.bz2           60  - 2000
-   ---------------------------------------------------------------
+   --------------------------------------------------------------
 
 
    Download the indices you need and put them in the top-level (astrometry-0.1)
@@ -172,7 +173,7 @@ QUICKSTART
        sdss.wcs : a FITS WCS header for the solution.
        sdss-objs.png : a plot of the sources (stars) we extracted from the image.
        sdss-indx.png : sources (red), plus stars from the index (green), plus the
-                       landmark ("quad") used to solve the image.
+                       skymark ("quad") used to solve the image.
        sdss-indx.xyls : a FITS BINTABLE with the pixel locations of stars from the index.
        sdss.rdls : a FITS BINTABLE with the RA,Dec of sources we extracted from the image.
        sdss.axy : a FITS BINTABLE of the sources we extracted, plus headers that
@@ -192,7 +193,7 @@ SOLVE-FIELDS ARGUMENTS
     of the image you are trying to solve, solving can be much faster.  In the last
     examples above, for example, we specified that the field is at least 30 degrees
     wide: this means that we don't need to search for matches in the indices that
-    contain only tiny landmarks.
+    contain only tiny skymarks.
 
     Eg, to specify that the image is between 1 and 2 degrees wide:
       solve-field --scale-units degwidth --scale-low 1 --scale-high 2
@@ -202,9 +203,9 @@ SOLVE-FIELDS ARGUMENTS
 
 
    *Depth.  The solver works by looking at sources in your image, starting with the
-    brightest.  It searches for all "landmarks" that can be built from the N brightest
+    brightest.  It searches for all "skymarks" that can be built from the N brightest
     stars before considering star N+1.  When using several indices, it can be much
-    faster to search for many landmarks in one index before switching to the next one.
+    faster to search for many skymarks in one index before switching to the next one.
     This flag lets you control when the solver switches between indices.  It also lets
     you control how much effort the solver puts in before giving up - by default it
     looks at all the sources in your image, and this can take a ridiculously long time
