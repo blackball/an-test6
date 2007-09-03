@@ -1,0 +1,46 @@
+How to get the data files required to run the Astrometry.net solver
+===================================================================
+
+Preamble
+--------
+One of the goals of the Astrometry.net project is to "organize, annotate
+and make searchable all the world's astronomical information."
+
+We have put a lot of effort into building our solver, and we want to
+distribute the source code and the data files that make it tick. Our
+project is all about making data accessible, and if we want to become
+a central part of astronomical data processing and storage, then our
+system must be transparent.  Also, by releasing our source code we hope to
+unleash the creative power of our users, who will adapt and extend it to
+their own purposes, doing things we haven't even thought about.
+
+We want our code to be open.  However, we want to avoid a situation where
+people use our code in ways that don't lead to data becoming more accessible.
+
+Our code is distributed under the GPL, so we cannot impose additional
+conditions on its use or distribution.  However, we are also distributing
+data files that are required to run the solver, so we are applying
+conditions on the distribution of these files.
+
+(DWH: should we mention that it's possible to create your own indices using
+the code included in the tarball [except for Barron/Stumm cleaning code] plus
+the original USNOB and TYCHO-2 data.)
+
+Conditions
+----------
+Astrometry.net are making available a set of data files ("indices") under
+the following conditions:
+
+1. If the indices are used to provide a web service, then each web page that
+makes use of the results must include the following text:
+  "This service uses the Astrometry.net solver.  For more details visit
+   http://astrometry.net ."
+
+2. If the indices are used to provide a web service, then any astronomical
+images solved using the indices must be made available to the Astrometry.net
+project, and to any other interested party.  The image files may be made
+accessible by providing a list of URLs, or by sending physical media.
+
+3. Redistribution of the indices is not permitted.
+
+
