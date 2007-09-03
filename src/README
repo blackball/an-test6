@@ -78,7 +78,7 @@ QUICKSTART
    slowly, but the results should be the same.
 
    Each index contains a large number of "skymarks" (landmarks for the sky) that
-   allow our solver to identify your images.  The landmarks contained in each index
+   allow our solver to identify your images.  The skymarks contained in each index
    have sizes (diameters) within a narrow range.  You probably want to download
    indices whose quads are, say, 10% to 100% of the sizes of the images you want to
    solve.
