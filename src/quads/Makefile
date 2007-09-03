@@ -97,7 +97,7 @@ PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
 FITS_UTILS_MAIN_OBJ := $(addsuffix .o,$(FITS_UTILS))
 
 SIMPLEXY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
-	dselip.o dsigma.o dsmooth.o fits2xy.o simplexy.o radix.o qsort_reentrant.o
+	dselip.o dsigma.o dsmooth.o image2xy.o simplexy.o radix.o qsort_reentrant.o
 
 SIMPLEXY_SHARED_OBJ := simplexy.o dsigma.o dmedsmooth.o dallpeaks.o dpeaks.o \
 	dobjects.o dselip.o dsmooth.o dcen3x3.o dfind.o radix.o
@@ -106,9 +106,9 @@ FIXAXIS_OBJ := fixaxis.o svn.o
 
 TEST_DFIND_OBJ := dfind.o test_dfind.o
 
-FITS2XY := fits2xy fixaxis test_dfind
+IMAGE2XY := image2xy fixaxis test_dfind
 
-INSTALL_EXECS := $(FITS_UTILS) $(PIPELINE) fits2xy fits2fits.py image2pnm.py
+INSTALL_EXECS := $(FITS_UTILS) $(PIPELINE) image2xy fits2fits.py image2pnm.py
 INSTALL_CAIRO_EXECS := $(CAIROEXECS)
 
 ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
@@ -118,7 +118,7 @@ ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) \
-	$(PIPELINE) $(PROSPECTUS) $(FITS2XY) $(FITS_UTILS) fitsverify
+	$(PIPELINE) $(PROSPECTUS) $(IMAGE2XY) $(FITS_UTILS) fitsverify
 
 cairo: $(CAIROEXECS)
 
@@ -131,7 +131,7 @@ prospectus_progs: $(PROSPECTUS)
 .PHONY: fitsutils
 fitsutils: $(FITS_UTILS)
 
-simplexy: fits2xy
+simplexy: image2xy
 .PHONY: simplexy
 
 install: $(INSTALL_EXECS)
@@ -160,7 +160,7 @@ grab-stellarium-constellations: grab-stellarium-constellations.o \
 
 test_dfind: $(TEST_DFIND_OBJ)
 
-fits2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
+image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
 
 fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
 
@@ -391,5 +391,5 @@ allclean: clean
 
 clean:
 	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \
-		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ) $(FITS2XY)
+		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ) $(IMAGE2XY)
 

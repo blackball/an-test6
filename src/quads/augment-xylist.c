@@ -341,7 +341,7 @@ int main(int argc, char** args) {
 		//	 -run image2pnm.py
 		//	 -if it's a FITS image, keep the original (well, sanitized version)
 		//	 -otherwise, run ppmtopgm (if necessary) and pnmtofits.
-		//	 -run fits2xy to generate xylist
+		//	 -run image2xy to generate xylist
 		char *uncompressedfn;
 		char *sanitizedfn;
 		char *pnmfn;				
@@ -523,12 +523,12 @@ int main(int argc, char** args) {
 
         printf("Extracting sources...\n");
         if (verbose)
-            printf("Running fits2xy...\n");
+            printf("Running image2xy...\n");
 
 		xylsfn = create_temp_file("xyls", tempdir);
         sl_append_nocopy(tempfiles, xylsfn);
 
-        sl_append_nocopy(cmd, get_path("fits2xy", me));
+        sl_append_nocopy(cmd, get_path("image2xy", me));
         sl_append(cmd, "-O");
         sl_append(cmd, "-o");
         append_file(cmd, xylsfn);
@@ -544,7 +544,7 @@ int main(int argc, char** args) {
 		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
             free(cmdstr);
             fprintf(stderr, "%s\n", errmsg);
-			fprintf(stderr, "Failed to run fits2xy.\n");
+			fprintf(stderr, "Failed to run image2xy.\n");
 			exit(-1);
 		}
         free(cmdstr);
