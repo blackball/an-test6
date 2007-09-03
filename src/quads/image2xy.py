@@ -16,7 +16,7 @@
 
 """
 NAME:
-      fits2xy
+      image2xy
 
 PURPOSE:
       Extract sources from a FITS file
@@ -35,7 +35,7 @@ OPTIONAL OUTPUTS:
 COMMENTS:
 
 MODIFICATION HISTORY:
-       K. Mierle, 2007-Jan - Initial version based on fits2xy.c
+       K. Mierle, 2007-Jan - Initial version based on image2xy.c
        Hogg, 2007-May - simplexy options change
 """
 
@@ -90,7 +90,7 @@ def source_extract(image_data, srcext=None):
     h.add_comment('The X and Y points are specified assuming 1,1 is ')
     h.add_comment('the center of the leftmost bottom pixel of the ')
     h.add_comment('image in accordance with the FITS standard.')
-    h.add_comment('Extracted by fits2xy.py')
+    h.add_comment('Extracted by image2xy.py')
     h.add_comment('on %s %s' % (time.ctime(), time.tzname[0]))
     cards = tbhdu.header.ascardlist()
     cards['TTYPE1'].comment = 'X coordinate'
@@ -121,7 +121,7 @@ def extract(fitsfile):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "Usage: fits2xy.py image.fits"
+        print "Usage: image2xy.py image.fits"
     else:
         infile = sys.argv[1]
         fitsfile = pyfits.open(infile)

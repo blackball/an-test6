@@ -41,7 +41,7 @@ static const char* OPTIONS = "hpOo:q";
 
 void printHelp() {
 	fprintf(stderr,
-			"Usage: fits2xy [options] fitsname.fits \n"
+			"Usage: image2xy [options] fitsname.fits \n"
 			"\n"
 			"Read a FITS file, find objects, and write out \n"
 			"X, Y, FLUX to   fitsname.xy.fits .\n"
@@ -50,9 +50,9 @@ void printHelp() {
 			"   [-p]  compute image percentiles.\n"
 			"   [-o <output-filename>]  write XYlist to given filename.\n"
 			"\n"
-			"   fits2xy 'file.fits[1]'   - process first extension.\n"
-			"   fits2xy 'file.fits[2]'   - process second extension \n"
-			"   fits2xy file.fits+2      - same as above \n"
+			"   image2xy 'file.fits[1]'   - process first extension.\n"
+			"   image2xy 'file.fits[2]'   - process second extension \n"
+			"   image2xy file.fits+2      - same as above \n"
 			"\n");
 }
 
@@ -168,14 +168,14 @@ int main(int argc, char *argv[])
 	maxper = 1000;    /* maximum number of peaks per object */
 	maxsize = 1000;   /* maximum size for extended objects */
 	halfbox = 100;    /* half-width for sliding sky median box */
-	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "fits2xy Assumed gaussian psf width", &status);
-	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "fits2xy Significance to keep", &status);
-	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "fits2xy Closest two peaks can be", &status);
-	fits_write_key(ofptr, TFLOAT, "SADDLE", &saddle, "fits2xy Saddle difference (in sig)", &status);
-	fits_write_key(ofptr, TINT, "MAXPER", &maxper, "fits2xy Max num of peaks per object", &status);
-	fits_write_key(ofptr, TINT, "MAXPEAKS", &maxnpeaks, "fits2xy Max num of peaks total", &status);
-	fits_write_key(ofptr, TINT, "MAXSIZE", &maxsize, "fits2xy Max size for extended objects", &status);
-	fits_write_key(ofptr, TINT, "HALFBOX", &halfbox, "fits2xy Half-size for sliding sky window", &status);
+	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "image2xy Assumed gaussian psf width", &status);
+	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "image2xy Significance to keep", &status);
+	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "image2xy Closest two peaks can be", &status);
+	fits_write_key(ofptr, TFLOAT, "SADDLE", &saddle, "image2xy Saddle difference (in sig)", &status);
+	fits_write_key(ofptr, TINT, "MAXPER", &maxper, "image2xy Max num of peaks per object", &status);
+	fits_write_key(ofptr, TINT, "MAXPEAKS", &maxnpeaks, "image2xy Max num of peaks total", &status);
+	fits_write_key(ofptr, TINT, "MAXSIZE", &maxsize, "image2xy Max size for extended objects", &status);
+	fits_write_key(ofptr, TINT, "HALFBOX", &halfbox, "image2xy Half-size for sliding sky window", &status);
 
 	fits_write_history(ofptr, 
 		"Created by astrometry.net's simplexy v1.0.4rc2 alpha-3+4",
