@@ -54,6 +54,24 @@ SERVICES PROVIDED HEREUNDER."
 #define PutMesg    5 /* add a new message to the stack */
 #define PutMark    6 /* add a marker to the stack */
 
+int fits_translate_pixkeyword(
+      char *inrec,        /* I - input string */
+      char *outrec,       /* O - output converted string, or */
+                          /*     a null string if input does not  */
+                          /*     match any of the patterns */
+      char *patterns[][2],/* I - pointer to input / output string */
+                          /*     templates */
+      int npat,           /* I - number of templates passed */
+      int naxis,          /* I - number of columns to be binned */
+      int *colnum,       /* I - numbers of the columns to be binned */
+      int *pat_num,       /* O - matched pattern number (0 based) or -1 */
+      int *i,
+      int *j,
+      int *n,
+      int *m,
+      int *l,
+      int *status);        /* IO - error status */
+
 /*--------------------------------------------------------------------------*/
 float ffvers(float *version)  /* IO - version number */
 /*

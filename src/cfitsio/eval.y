@@ -3233,7 +3233,7 @@ double qselect_median_dbl(double arr[], int n)
  */
 double angsep_calc(double ra1, double dec1, double ra2, double dec2)
 {
-  double cd;
+	//double cd;
   static double deg = 0;
   double a, sdec, sra;
   

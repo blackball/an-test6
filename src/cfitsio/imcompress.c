@@ -862,8 +862,6 @@ int imcomp_compress_tile (fitsfile *outfptr,
     short *cbuf;	/* compressed data */
     short *sbuff;
     unsigned short *usbuff;
-    int *intbuff;
-    unsigned int *uintbuff;
     int clen;		/* size of cbuf */
     int flag = 1; /* true by default; only = 0 if float data couldn't be quantized */
     int iminval = 0, imaxval = 0;  /* min and max quantized integers */
@@ -1628,12 +1626,9 @@ int fits_write_compressed_img(fitsfile *fptr,   /* I - FITS file pointer     */
     long rowdim[MAX_COMPRESS_DIM], offset[MAX_COMPRESS_DIM],ntemp;
     long fpixel[MAX_COMPRESS_DIM], lpixel[MAX_COMPRESS_DIM];
     int ii, i5, i4, i3, i2, i1, i0, ndim, irow, pixlen, tilenul;
-    int anynull, tstatus, buffpixsiz;
-    long totpix;
+    int tstatus, buffpixsiz;
     void *buffer;
     char *bnullarray = 0, card[FLEN_CARD];
-    float floatnull = 0.;
-    double doublenull = 0.;
 
     if (*status > 0) 
         return(*status);
