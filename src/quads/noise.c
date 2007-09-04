@@ -21,6 +21,7 @@
 */
 
 #include <math.h>
+#include <assert.h>
 
 #include "noise.h"
 #include "mathutil.h"
@@ -74,30 +75,40 @@ void sample_star_in_ring(double* center,
 
 void add_star_noise(const double* real, double noisestd, double* noisy) {
 	double va[3], vb[3];
-	double mag, angle, mag1, mag2;
+	//double mag, angle;
+    double mag1, mag2;
 	int i;
 
 	tan_vectors(real, va, vb);
-	// magnitude of noise
-	mag = gaussian_sample(0.0, noisestd);
-	// direction
-	angle = uniform_sample(0.0, 2.0*M_PI);
-	// magnitude in the two tangential directions:
-	mag1 = mag * sin(angle);
-	mag2 = mag * cos(angle);
+    /*
+     // magnitude of noise
+     mag = gaussian_sample(0.0, noisestd);
+     // direction
+     angle = uniform_sample(0.0, 2.0*M_PI);
+     // magnitude in the two tangential directions:
+     mag1 = mag * sin(angle);
+     mag2 = mag * cos(angle);
+     */
+    mag1 = gaussian_sample(0.0, noisestd);
+    mag2 = gaussian_sample(0.0, noisestd);
 	for (i=0; i<3; i++)
 		noisy[i] = real[i] + mag1 * va[i] + mag2 * vb[i];
 	normalize_3(noisy);
 }
 
 void add_field_noise(const double* real, double noisestd, double* noisy) {
-	double mag, angle, mag1, mag2;
-	// magnitude of noise
-	mag = gaussian_sample(0.0, noisestd);
-	// direction
-	angle = uniform_sample(0.0, 2.0*M_PI);
-	mag1 = mag * sin(angle);
-	mag2 = mag * cos(angle);
+	//double mag, angle;
+    double mag1, mag2;
+    /*
+     // magnitude of noise
+     mag = gaussian_sample(0.0, noisestd);
+     // direction
+     angle = uniform_sample(0.0, 2.0*M_PI);
+     mag1 = mag * sin(angle);
+     mag2 = mag * cos(angle);
+     */
+    mag1 = gaussian_sample(0.0, noisestd);
+    mag2 = gaussian_sample(0.0, noisestd);
 	noisy[0] = real[0] + mag1;
 	noisy[1] = real[1] + mag2;
 }
@@ -112,22 +123,24 @@ void compute_star_code(double* A, double* B, double* C, double* D,
 	double costheta, sintheta;
 	double Dx, Dy;
 	double ADx, ADy;
+    bool ok = TRUE;
 
 	star_midpoint(midAB, A, B);
-	star_coords(A, midAB, &Ax, &Ay);
-	star_coords(B, midAB, &Bx, &By);
+	ok &= star_coords(A, midAB, &Ax, &Ay);
+	ok &= star_coords(B, midAB, &Bx, &By);
 	ABx = Bx - Ax;
 	ABy = By - Ay;
 	scale = (ABx * ABx) + (ABy * ABy);
 	invscale = 1.0 / scale;
 	costheta = (ABy + ABx) * invscale;
 	sintheta = (ABy - ABx) * invscale;
-	star_coords(C, midAB, &Dx, &Dy);
+	ok &= star_coords(C, midAB, &Dx, &Dy);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
 	code[0] =  ADx * costheta + ADy * sintheta;
 	code[1] = -ADx * sintheta + ADy * costheta;
-	star_coords(D, midAB, &Dx, &Dy);
+	ok &= star_coords(D, midAB, &Dx, &Dy);
+    assert(ok);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
 	code[2] =  ADx * costheta + ADy * sintheta;

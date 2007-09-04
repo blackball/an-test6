@@ -26,21 +26,26 @@
  */
 #include <math.h>
 #include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "starutil.h"
 #include "mathutil.h"
 #include "noise.h"
 
-const char* OPTIONS = "e:n:ma:";
+const char* OPTIONS = "e:n:ma:ri:s:";
 
 int main(int argc, char** args) {
 	int argchar;
 
-	double ABangle = 4.5; // arcminutes
+    //double fwhm = 1.0 / (2.0 * sqrt(2.0 * log(2.0)));
+
+	double ABangle = 4.0; // arcminutes
 	double pixscale = 0.396; // arcsec/pixel
 	//	double pixscale = 0.05; // Hubble
-	double noise = 1; // pixels
-	double indexjitter = 1.0; // arcsec
+	double pixnoise = 1; // pixels, stddev
+	double indexjitter = 1.0; // arcsec, stddev
 	double noisedist;
 
 	double realA[3];
@@ -64,13 +69,20 @@ int main(int argc, char** args) {
 	dl* codedists;
 	dl* noises;
 
+    int real = FALSE;
+
 	noises = dl_new(16);
+
+    srand((unsigned int)time(NULL));
 
 	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'i':
+            indexjitter = atof(optarg);
+            break;
 		case 'e':
-			noise = atof(optarg);
-			dl_append(noises, noise);
+			pixnoise = atof(optarg);
+			dl_append(noises, pixnoise);
 			break;
 		case 'm':
 			matlab = TRUE;
@@ -81,6 +93,12 @@ int main(int argc, char** args) {
 		case 'a':
 			ABangle = atof(optarg);
 			break;
+        case 'r':
+            real = TRUE;
+            break;
+        case 's':
+            pixscale = atof(optarg);
+            break;
 		}
 
 	// A
@@ -89,34 +107,30 @@ int main(int argc, char** args) {
 	radec2xyzarr(ra, dec, realA);
 
 	// B
-	ra = deg2rad(ABangle / 60.0);
+	ra = arcmin2rad(ABangle);
 	dec = 0.0;
 	radec2xyzarr(ra, dec, realB);
 
-	if (matlab) {
-		printf("realcode=[];\n");
-		printf("code    =[];\n");
+	if (matlab && real) {
+		printf("icode=[];\n");
+		printf("fcode=[];\n");
 	}
 
-	printf("quadsize=%g;\n", ABangle);
-	printf("noise=[];\n");
+    printf("pixscale=%g;\n", pixscale);
+ 	printf("quadsize=%g;\n", ABangle);
 	printf("codemean=[];\n");
 	printf("codestd=[];\n");
-
 	printf("pixerrs=[];\n");
+    printf("indexnoise=%g;\n", indexjitter);
 
 	if (dl_size(noises) == 0)
-		dl_append(noises, noise);
+		dl_append(noises, pixnoise);
 
 	for (k=0; k<dl_size(noises); k++) {
+        double mean, std;
 
-		noise = dl_get(noises, k);
-		printf("pixerrs(%i)=%g;\n", k+1, noise);
-		noisedist = sqrt(arcsec2distsq(indexjitter));
-
-		/*
-		  noise = hypot(indexjitter, noise * pixscale);
-		*/
+		pixnoise = dl_get(noises, k);
+		noisedist = arcsec2dist(indexjitter);
 
 		codedelta = dl_new(256);
 		codedists = dl_new(256);
@@ -127,6 +141,7 @@ int main(int argc, char** args) {
 			double icode[4];
 			double field[8];
 			int i;
+            bool ok = TRUE;
 
 			star_midpoint(midAB, realA, realB);
 
@@ -149,32 +164,31 @@ int main(int argc, char** args) {
 			//compute_star_code(realA, realB, realC, realD, realcode);
 
 			// project to field coords
-			star_coords(realA, midAB, field+0, field+1);
-			star_coords(realB, midAB, field+2, field+3);
-			star_coords(realC, midAB, field+4, field+5);
-			star_coords(realD, midAB, field+6, field+7);
+			ok &= star_coords(realA, midAB, field+0, field+1);
+			ok &= star_coords(realB, midAB, field+2, field+3);
+			ok &= star_coords(realC, midAB, field+4, field+5);
+			ok &= star_coords(realD, midAB, field+6, field+7);
+            assert(ok);
 			// scale to pixels.
 			for (i=0; i<8; i++)
 				field[i] = rad2arcsec(field[i]) / pixscale;
 
 			// add field noise
-			add_field_noise(field+0, noise, field+0);
-			add_field_noise(field+2, noise, field+2);
-			add_field_noise(field+4, noise, field+4);
-			add_field_noise(field+6, noise, field+6);
+			add_field_noise(field+0, pixnoise, field+0);
+			add_field_noise(field+2, pixnoise, field+2);
+			add_field_noise(field+4, pixnoise, field+4);
+			add_field_noise(field+6, pixnoise, field+6);
 
 			compute_field_code(field+0, field+2, field+4, field+6, fcode, NULL);
 
-			/*
-			  if (matlab) {
-			  double ra = atan2(A[1],A[0]);
-			  printf("A(%i,:)=[%g,%g];\n", j+1, rad2arcsec(ra), rad2arcsec(z2dec(A[2])));
-			  printf("realcode(%i,:)=[%g,%g,%g,%g];\n", j+1,
-			  realcode[0], realcode[1], realcode[2], realcode[3]);
-			  printf("code(%i,:)    =[%g,%g,%g,%g];\n", j+1,
-			  code[0], code[1], code[2], code[3]);
-			  }
-			*/
+            if (matlab && real) {
+                //double ra = atan2(A[1],A[0]);
+                //printf("A(%i,:)=[%g,%g];\n", j+1, rad2arcsec(ra), rad2arcsec(z2dec(A[2])));
+                printf("icode(%i,:)=[%g,%g,%g,%g];\n", j+1,
+                       icode[0], icode[1], icode[2], icode[3]);
+                printf("fcode(%i,:)=[%g,%g,%g,%g];\n", j+1,
+                       fcode[0], fcode[1], fcode[2], fcode[3]);
+            }
 
 			/*
 			  for (i=0; i<4; i++)
@@ -184,29 +198,26 @@ int main(int argc, char** args) {
 			dl_append(codedists, sqrt(distsq(icode, fcode, 4)));
 		}
 
-		{
-			double mean, std;
-			mean = 0.0;
-			for (j=0; j<dl_size(codedists); j++)
-				mean += dl_get(codedists, j);
-			mean /= (double)dl_size(codedists);
-			std = 0.0;
-			for (j=0; j<dl_size(codedists); j++)
-				std += square(dl_get(codedists, j) - mean);
-			std /= ((double)dl_size(codedists) - 1);
-			std = sqrt(std);
+        if (matlab) {
+            printf("codedists%i=[", k+1);
+            for (j=0; j<dl_size(codedists); j++)
+                printf("%g,", dl_get(codedists, j));
+            printf("];\n");
+        }
 
-			if (matlab) {
-				printf("codedists%i=[", k+1);
-				for (j=0; j<dl_size(codedists); j++)
-					printf("%g,", dl_get(codedists, j));
-				printf("];\n");
-			}
+        mean = 0.0;
+        for (j=0; j<dl_size(codedists); j++)
+            mean += dl_get(codedists, j);
+        mean /= (double)dl_size(codedists);
+        std = 0.0;
+        for (j=0; j<dl_size(codedists); j++)
+            std += square(dl_get(codedists, j) - mean);
+        std /= ((double)dl_size(codedists) - 1);
+        std = sqrt(std);
 
-			printf("noise(%i)=%g; %%arcsec\n", k+1, noise);
-			printf("codemean(%i)=%g;\n", k+1, mean);
-			printf("codestd(%i)=%g;\n", k+1, std);
-		}
+		printf("pixerrs(%i)=%g;\n", k+1, pixnoise);
+        printf("codemean(%i)=%g;\n", k+1, mean);
+        printf("codestd(%i)=%g;\n", k+1, std);
 
 		dl_free(codedelta);
 		dl_free(codedists);
