@@ -742,7 +742,7 @@ extern int ffwrap (void );
 #endif
 #endif
 
-    static void ffunput (int c,char *buf_ptr  );
+//static void ffunput (int c,char *buf_ptr  );
     
 #ifndef fftext_ptr
 static void ff_flex_strncpy (char *,ffconst char *,int );
@@ -1620,6 +1620,7 @@ static int ff_get_next_buffer (void)
 	return ff_is_jam ? 0 : ff_current_state;
 }
 
+#if 0
     static void ffunput (int c, register char * ff_bp )
 {
 	register char *ff_cp;
@@ -1656,6 +1657,7 @@ static int ff_get_next_buffer (void)
 	(ff_hold_char) = *ff_cp;
 	(ff_c_buf_p) = ff_cp;
 }
+#endif
 
 #ifndef FF_NO_INPUT
 #ifdef __cplusplus
