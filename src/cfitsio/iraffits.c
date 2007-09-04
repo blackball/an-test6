@@ -288,7 +288,7 @@ static int irafrdimage (
     FILE *fd;
     char *bang;
     int nax = 1, naxis1 = 1, naxis2 = 1, naxis3 = 1, naxis4 = 1, npaxis1 = 1, npaxis2;
-    int bitpix, bytepix, i;
+    int bitpix=0, bytepix, i;
     char *fitsheader, *image;
     int nbr, nbimage, nbaxis, nbl, nbx, nbdiff;
     char *pixheader;

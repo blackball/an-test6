@@ -951,6 +951,7 @@ int parse_data( long    totalrows,     /* I - Total rows to be processed     */
 {
     int status, constant=0, anyNullThisTime=0;
     long jj, kk, idx, remain, ntodo;
+	int ijj;
     Node *result;
     iteratorCol * outcol;
 
@@ -1002,8 +1003,9 @@ int parse_data( long    totalrows,     /* I - Total rows to be processed     */
                 jnull = (LONGLONG) gParse.pixFilter->blank;
           }
           else {
-             ffgknjj( outcol->fptr, "TNULL", outcol->colnum,
-                        1, &jnull, (int*)&jj, &status );
+			 ffgknjj( outcol->fptr, "TNULL", outcol->colnum,
+                        1, &jnull, &ijj, &status );
+			 jj = ijj; // grr
 
              if( status==BAD_INTKEY ) {
                 /*  Probably ASCII table with text TNULL keyword  */
@@ -1016,7 +1018,7 @@ int parse_data( long    totalrows,     /* I - Total rows to be processed     */
           }
           repeat = outcol->repeat;
           if (DEBUG_PIXFILTER)
-            printf("using null value %ld\n", jnull);
+            printf("using null value %ld\n", (long int)jnull);
        } else {
 
           Data = userInfo->dataPtr;
@@ -2183,7 +2185,7 @@ static int find_column( char *colName, void *itslval )
 {
    FFSTYPE *thelval = (FFSTYPE*)itslval;
    int col_cnt, status;
-   int colnum, typecode, type;
+   int colnum, typecode, type=-1;
    long repeat, width;
    fitsfile *fptr;
    char temp[80];

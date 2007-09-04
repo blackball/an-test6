@@ -997,9 +997,13 @@ int imcomp_compress_tile (fitsfile *outfptr,
 #if BYTESWAPPED
                ffswap4(idata, tilelen); /* reverse order of bytes */
 #endif
+			   {
+				   size_t buffsize;
                 compress2mem_from_mem((char *) idata, tilelen * sizeof(int),
-                 (char **) &cbuf, (size_t *) &clen, realloc, 
+                 (char **) &cbuf, &buffsize, realloc, 
                  &gzip_nelem, status);
+				clen = buffsize;
+			   }
 
 	        /* Write the compressed byte stream. */
                 ffpclb(outfptr, (outfptr->Fptr)->cn_compressed, row, 1,
@@ -1619,7 +1623,8 @@ int fits_img_decompress (fitsfile *infptr, /* image (bintable) to uncompress */
     LONGLONG fpixel[MAX_COMPRESS_DIM], lpixel[MAX_COMPRESS_DIM];
     long inc[MAX_COMPRESS_DIM], naxes[MAX_COMPRESS_DIM];
     long imgsize, memsize;
-    float *nulladdr, fnulval;
+    float fnulval;
+	void *nulladdr;
     double dnulval;
     char card[FLEN_CARD];
 
@@ -1768,7 +1773,7 @@ int fits_img_decompress (fitsfile *infptr, /* image (bintable) to uncompress */
         /* In the case of double images we must check for NaNs  */
         nullcheck = 1;
         dnulval = DOUBLENULLVALUE;
-        nulladdr = (float *) &dnulval;
+        nulladdr = &dnulval;
         datatype = TDOUBLE;
         byte_per_pix = sizeof(double);
     }
@@ -1826,7 +1831,8 @@ int fits_decompress_img (fitsfile *infptr, /* image (bintable) to uncompress */
     LONGLONG fpixel[MAX_COMPRESS_DIM], lpixel[MAX_COMPRESS_DIM];
     long inc[MAX_COMPRESS_DIM];
     long imgsize, memsize;
-    float *nulladdr, fnulval;
+    float fnulval;
+	void *nulladdr;
     double dnulval;
 
     if (*status > 0)
@@ -1893,7 +1899,7 @@ int fits_decompress_img (fitsfile *infptr, /* image (bintable) to uncompress */
         /* In the case of double images we must check for NaNs  */
         nullcheck = 1;
         dnulval = DOUBLENULLVALUE;
-        nulladdr = (float *) &dnulval;
+        nulladdr = &dnulval;
         datatype = TDOUBLE;
         byte_per_pix = sizeof(double);
     }
@@ -2909,7 +2915,7 @@ int imcomp_decompress_tile (fitsfile *infptr,
 /* This routine decompresses one tile of the image */
 {
     int *idata = 0;          /* uncompressed integer data */
-    LONGLONG *lldata;
+    LONGLONG *lldata = NULL;
     size_t idatalen, tilebytesize;
     int ii, tnull;        /* value in the data which represents nulls */
     unsigned char *cbuf = 0; /* compressed data */
@@ -3190,14 +3196,17 @@ int imcomp_decompress_tile (fitsfile *infptr,
 
         /* uncompress the data */
         idatalen = tilelen * sizeof(int);
-        if (uncompress2mem_from_mem ((char *)cbuf, nelem,
-             (char **) &idata, &idatalen, realloc, &tilebytesize, status))
-        {
-            ffpmsg("uncompress2mem_from_mem returned with an error");
-            free(idata);
-            free (cbuf);
-            return (*status);
-        }
+		{
+			char* cdata = (char*)idata;
+			if (uncompress2mem_from_mem ((char *)cbuf, nelem,
+										 &cdata, &idatalen, realloc, &tilebytesize, status))
+				{
+					ffpmsg("uncompress2mem_from_mem returned with an error");
+					free(idata);
+					free (cbuf);
+					return (*status);
+				}
+		}
 
 #if BYTESWAPPED
          ffswap4(idata, tilelen); /* reverse order of bytes */

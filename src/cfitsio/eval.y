@@ -3911,7 +3911,7 @@ static void Do_Func( Node *this )
 	       for (irow=0; irow<row; irow++) {
 		  long *p = mptr;
 		  int nelem1 = nelem;
-		  int count = 0;
+		  //int count = 0;
 
 		  while ( nelem1-- ) { 
 		    if (*uptr == 0) {
@@ -4857,7 +4857,7 @@ static void Do_Deref( Node *this )
 	       if( this->type==STRING )
 		 this->value.undef[row] = theVar->value.undef[row];
 	       else if( this->type==BITSTR ) 
-		 this->value.undef;  /* Dummy - BITSTRs do not have undefs */
+			   {}//this->value.undef;  /* Dummy - BITSTRs do not have undefs */
 	       else 
 		 this->value.undef[row] = theVar->value.undef[elem];
 
@@ -4951,7 +4951,7 @@ static void Do_Deref( Node *this )
 	       if( this->type==STRING )
 		 this->value.undef[row] = theVar->value.undef[row];
 	       else if( this->type==BITSTR ) 
-		 this->value.undef;  /* Dummy - BITSTRs do not have undefs */
+			   {} //this->value.undef;  /* Dummy - BITSTRs do not have undefs */
 	       else 
 		 this->value.undef[row] = theVar->value.undef[elem];
 
