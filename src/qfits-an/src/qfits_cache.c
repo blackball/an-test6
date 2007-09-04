@@ -115,7 +115,10 @@ static int qfits_cache_init = 0 ;
 static void qfits_cache_activate(void);
 static int qfits_is_cached(const char * filename);
 static int qfits_cache_add(const char * name);
+
+#if QFITS_CACHE_DEBUG
 static void qfits_cache_dump(void) ;
+#endif
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -713,6 +716,7 @@ static int qfits_cache_add(const char * filename)
     return qfits_cache_last ;
 }
 
+#if QFITS_CACHE_DEBUG
 static void qfits_cache_dump(void)
 {
     int i, j ;
@@ -751,6 +755,7 @@ static void qfits_cache_dump(void)
     }
     return ;
 }
+#endif
 
 /*----------------------------------------------------------------------------*/
 /**

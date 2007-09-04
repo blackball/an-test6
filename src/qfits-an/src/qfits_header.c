@@ -134,7 +134,7 @@ typedef enum _keytype_ {
 static keytuple * keytuple_new(const char *, const char *, const char *, 
         const char *);
 static void keytuple_del(keytuple *);
-static void keytuple_dmp(const keytuple *);
+//static void keytuple_dmp(const keytuple *);
 static keytype keytuple_type(const char *);
 static int qfits_header_makeline(char *, const keytuple *, int) ;
 
@@ -1004,6 +1004,7 @@ static void keytuple_del(keytuple * k)
   purposes only.
  */
 /*----------------------------------------------------------------------------*/
+/*
 static void keytuple_dmp(const keytuple * k)
 {
     if (!k) return ;
@@ -1014,6 +1015,7 @@ static void keytuple_dmp(const keytuple * k)
     printf("\n");
     return ;
 }
+*/
 
 /*----------------------------------------------------------------------------*/
 /**

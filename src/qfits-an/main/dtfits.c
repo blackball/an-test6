@@ -272,6 +272,7 @@ static int dump_extension_bin(
     /* GET THE FIELDS SIZES */
     col_sizes = calloc(tdesc->nc, sizeof(int)) ;
     for (i=0 ; i<tdesc->nc ; i++) {
+		size = 0;
         col = tdesc->col + i ;
         col_sizes[i] = (int)strlen(col->tlabel) ;
         switch(col->atom_type) {
@@ -471,6 +472,7 @@ static int dump_extension_ascii(
     /* GET THE FIELDS SIZES */
     col_sizes = calloc(tdesc->nc, sizeof(int)) ;
     for (i=0 ; i<tdesc->nc ; i++) {
+		size = 0;
         col = tdesc->col + i ;
         col_sizes[i] = (int)strlen(col->tlabel) ;
         switch(col->atom_type) {
