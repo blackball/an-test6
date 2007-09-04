@@ -26,7 +26,7 @@ and Sam Roweis.
    astrometry system and replicate our blind astrometry results (e.g. on the
    SDSS fields).  However, this requires the entire USNO-B 1.0 catalogue which
    is about 80GB in size.  For ease of use, we are distributing our pre-cooked
-   indices (about 30 GB total), which are the same files we're using for our
+   indices (about 25 GB total), which are the same files we're using for our
    web service.
 
 QUICKSTART
@@ -71,11 +71,14 @@ QUICKSTART
    the INSTALL_DIR/bin directory to your path:
       $ export PATH="$PATH:/usr/local/astrometry/bin"
 
-   Next, grab some pre-cooked indices.  Each index is designed to solve images within
-   a narrow range of scales.  The indices designed to solve small (angular size) images
-   are rather large files, so you probably only want to grab the indices required for
-   the images you wish to solve.  If you grab extra indices, the solver will run more
-   slowly, but the results should be the same.
+   Next, grab some pre-cooked indices.  See the file GETTING-INDICES for details
+   about how to do this.
+
+   Each index is designed to solve images within a narrow range of scales.  The
+   indices designed to solve small (angular size) images are rather large files,
+   so you probably only want to grab the indices required for the images you 
+   wish to solve.  If you grab extra indices, the solver will run more slowly,
+   but the results should be the same.
 
    Each index contains a large number of "skymarks" (landmarks for the sky) that
    allow our solver to identify your images.  The skymarks contained in each index
@@ -90,21 +93,21 @@ QUICKSTART
    For reference, we used index 202 alone for our SDSS tests.
 
    ---------------------------------------------------------------
-   Index Filename          Range of skymark diameters (arcminutes)
+   Index Filename          Range of skymark diameters    File Size
+                                 (arcminutes)              (MB)
    ---------------------------------------------------------------
-   index-200.tar.bz2             2.0  -  2.8
-   index-201.tar.bz2             2.8  -  4.0
-   index-202.tar.bz2             4.0  -  5.6
-   index-203.tar.bz2             5.6  -  8.0
-   index-204.tar.bz2             8  -   11
-   index-205.tar.bz2            11  -   16
-   index-206.tar.bz2            16  -   22
-   index-207.tar.bz2            22  -   30
-   index-208.tar.bz2            30  -   42
-   index-209.tar.bz2            42  -   60
-   index-210+.tar.bz2           60  - 2000
+   index-210+.tar.bz2           60  - 2000                    29
+   index-209.tar.bz2            42  -   60                    30
+   index-208.tar.bz2            30  -   42                    61
+   index-207.tar.bz2            22  -   30                   125
+   index-206.tar.bz2            16  -   22                   255
+   index-205.tar.bz2            11  -   16                   526
+   index-204.tar.bz2             8  -   11                 1,023
+   index-203.tar.bz2             5.6  -  8.0               2,089
+   index-202.tar.bz2             4.0  -  5.6               4,260
+   index-201.tar.bz2             2.8  -  4.0               5,878
+   index-200.tar.bz2             2.0  -  2.8              10,058
    --------------------------------------------------------------
-
 
    Download the indices you need and put them in the top-level (astrometry-0.1)
    directory.
@@ -189,7 +192,7 @@ SOLVE-FIELDS ARGUMENTS
    in determining how quickly it runs:
 
 
-   *Scale of the image: if you provide bounds (lower and upper limits) on the size
+  * Scale of the image: if you provide bounds (lower and upper limits) on the size
     of the image you are trying to solve, solving can be much faster.  In the last
     examples above, for example, we specified that the field is at least 30 degrees
     wide: this means that we don't need to search for matches in the indices that
@@ -202,7 +205,7 @@ SOLVE-FIELDS ARGUMENTS
       solve-field --scale-units arcsecperpix --scale-low 0.386 --scale-high 0.406
 
 
-   *Depth.  The solver works by looking at sources in your image, starting with the
+  * Depth.  The solver works by looking at sources in your image, starting with the
     brightest.  It searches for all "skymarks" that can be built from the N brightest
     stars before considering star N+1.  When using several indices, it can be much
     faster to search for many skymarks in one index before switching to the next one.
