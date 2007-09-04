@@ -1,5 +1,83 @@
                    Log of Changes Made to CFITSIO
 		   
+Version 3.06 - 27 August 2007
+
+   - modified the imcopy.c utility program (to tile-compress images)
+     so that it writes the default EXTNAME = 'COMPRESSED_IMAGE'
+     keyword in the compressed images, to preserve the behavior of
+     earlier versions of imcopy.
+
+   - modified the angsep function in the FITS calculator (in eval.y)
+     to use haversines, instead of the 'law of cosines', to provide
+     more precision at small angles (< 0.1 arcsec).
+
+Version 3.05 -  July 2007 (internal release only)
+
+   - extensive changes to imcompress.c to fully support implicit data
+     type conversion when reading and writing arrays of data to FITS
+     images, where the data type of the array is not the same as the
+     data type of the FITS image.  This includes support for null pixels,
+     and data scaling via the BSCALE and BZERO keywords.
+
+   - rewrote the fits_read_tbl_coord routine in wcssub.c, that gets the 
+     standard set of WCS keywords appropriate to a pair of columns in a
+     table, to better support the full set of officially approved WCS keywords.  
+     
+   - made significant changes to histo.c, which creates an image by binning
+     columns of a table, to better translate the WCS keywords in the table
+     header into the WCS keywords that are appropriate for an image HDU.
+
+   - modified imcompress.c so that when pixels are written to a 
+     tile-compressed image, the appropriate BSCALE and BZERO values of
+     that image are applied.  This fixes a bug in which writing to
+     an unsigned integer datatype image (with BZERO = 32768) was not
+     done correctly.
+     
+Version 3.04 - 3 April 2007
+
+   - The various table calculator routines (fits_select_rows, etc.) implicitly
+     assumed that the input table has not been modified immediately prior to
+     the call.   To cover cases where the table has been modified a call to 
+     ffrdef has been added to ffprs.  IN UNUSUAL CASES THIS CHANGE COULD 
+     CAUSE CFITSIO TO BEHAVE DIFFERENTLY THAN IN PREVIOUS VERSIONS.  For
+     example, opening a FITS table with this column-editing virtual file
+     expression:
+         myfile.fits[3][col A==X; B = sqrt(X)]
+     no longer works, because the X column does not exist when the 
+     sqrt expression is evaluated.  The correct expression in this case is
+         myfile.fits[3][col A==X; B = sqrt(A)]
+     
+   - modified putkey.c to support USHORT_IMG when calling fits_create_img
+     to create a signed byte datatype image.
+     
+   - enhanced the column histrogramming function to propagate any TCn_k and
+     TPn_k keywords in the table header to the corresponding CDi_j and PCi_j 
+     keywords in the image header.
+     
+   - enhanced the random, randomn, and randomp functions in the lexical
+     parser to take a vector column name argument to specify the length
+     of the vector of random numbers that should be generated (provided by
+     Craig Markwardt, GSFC)
+
+   - enhanced the ffmcrd routine (to modify an existing header card) to
+     support long string keywords so that any CONTINUE keywords associated
+     with the previous keyword will be deleted.
+
+   - modified the ffgtbp routine to recognize the TDIMn keyword for 
+     ASCII string columns in a binary table.  The first dimension is
+     taken to be the size of a unit string.   (The TFORMn = 'rAw'
+     syntax may also be used to specify the unit string size).
+     
+   - in fits_img_decompress, the fits_get_img_param function was called
+     with an invalid dimension size, which caused a fatal error on at
+     least 1 platform.
+
+   - in ffopentest, set the status value before returning in case of error.
+   
+   - in the drvrnet.c file, the string terminators needed to be changed
+     from "\n" to "\r\n" to support the strict interpretation of the
+     http and ftp standard that is enforced by some newer web servers.
+
 Version 3.03 - 11 December 2006
 
   New Routine

@@ -392,7 +392,8 @@ int ffopentest(double version,   /* I - CFITSIO version number, from the    */
 	printf("   Version used to build the CFITSIO library   = %f\n",CFITSIO_VERSION);
 	printf("   Version included by the application program = %f\n",version);
 	
-	return(FILE_NOT_OPENED);
+        *status = FILE_NOT_OPENED;
+	return(*status);
     }
 
     /* now call the normal file open routine */
@@ -1134,7 +1135,7 @@ move2hdu:
 
        /* Create the histogram primary array and open it as the current fptr */
        /* This will close the table that was used to create the histogram. */
-       ffhist(fptr, outfile, imagetype, haxis, colname, minin, maxin,
+       ffhist2(fptr, outfile, imagetype, haxis, colname, minin, maxin,
               binsizein, minname, maxname, binname,
               weight, wtcol, recip, rowselect, status);
 
