@@ -32,7 +32,7 @@ and Sam Roweis.
 QUICKSTART
 ----------
 
-   To compile everything, you will need to get the following development libraries:
+   To compile everything, you will need gcc and the following libraries:
       * cairo
       * netpbm
       * png
@@ -70,6 +70,7 @@ QUICKSTART
    The astrometry solver is composed of several executables.  You may want to add
    the INSTALL_DIR/bin directory to your path:
       $ export PATH="$PATH:/usr/local/astrometry/bin"
+
 
    Next, grab some pre-cooked indices.  See the file GETTING-INDICES for details
    about how to do this.
@@ -265,7 +266,7 @@ SOURCE EXTRACTION USING SEXTRACTOR
    http://terapix.iap.fr/rubrique.php?id_rubrique=91/
 
    The "Source Extractor" aka "SExtractor" program by Emmanuel Bertin can be used to do
-   source extraction if you don't want to (or can't) use our own bundled "fits2xy"
+   source extraction if you don't want to (or can't) use our own bundled "image2xy"
    program.
 
    You can use the following configuration entries to produce an "xylist" which can be
@@ -326,8 +327,11 @@ I run a hip 90's era unix derivative and cairo doesn't work.
 
 LICENSE
 -------
-   The Astrometry.net suite is free software licensed under the GNU GPL,
+   The Astrometry.net code suite is free software licensed under the GNU GPL,
    version 2.  See the file LICENSE for the full terms of the GNU GPL.
+
+   The index files come with their own license conditions.  See the file
+   GETTING-INDICES for details.
 
 CONTACT
 -------
