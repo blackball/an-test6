@@ -56,24 +56,30 @@ typedef unsigned char uchar;
 #define arcmin2rad(a) ((a)*(double)PIl/10800.0)
 #define rad2arcsec(r) (648000.0*(r)/(double)PIl)
 #define arcsec2rad(a) ((a)*(double)PIl/648000.0)
-#define radec2x(r,d) (cos(d)*cos(r)) // r,d in radians
-#define radec2y(r,d) (cos(d)*sin(r)) // r,d in radians
-#define radec2z(r,d) (sin(d))        // d in radians
-#define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
-#define z2dec(z) (asin(z)) // result in radians
+
+// RA,Dec in radians:
+#define radec2x(r,d) (cos(d)*cos(r))
+#define radec2y(r,d) (cos(d)*sin(r))
+#define radec2z(r,d) (sin(d))
+#define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x)))
+#define z2dec(z) (asin(z))
 
 double mag2flux(double mag);
 
+// RA,Dec in radians:
 inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
-inline void radecdeg2xyz(double ra, double dec, double* x, double* y, double* z);
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec);
 inline void xyzarr2radec(const double* xyz, double *ra, double *dec);
+inline void radec2xyzarr(double ra, double dec, double* xyz);
+inline void radec2xyzarrmany(double *ra, double *dec, double* xyz, int n);
+
+// RA,Dec in degrees:
+inline void radecdeg2xyz(double ra, double dec, double* x, double* y, double* z);
 inline void xyzarr2radecdeg(const double* xyz, double *ra, double *dec);
 inline void xyzarr2radecdegarr(double* xyz, double *radec);
-inline void radec2xyzarr(double ra, double dec, double* xyz);
 inline void radecdeg2xyzarr(double ra, double dec, double* xyz);
-inline void radec2xyzarrmany(double *ra, double *dec, double* xyz, int n);
 inline void radecdeg2xyzarrmany(double *ra, double *dec, double* xyz, int n);
+
 
 inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy);
 
