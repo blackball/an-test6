@@ -502,9 +502,6 @@ void solver_run(solver_t* solver)
 		 * This caches the computation we need to do: deciding whether the
 		 * scale is acceptable, computing the transformation to code
 		 * coordinates, and deciding which C,D stars are in the circle.
-         * 
-		 * We keep the invariants that field[A] < field[B] and field[C] < field[D].
-         * The A<->B and C<->D permutations will be tried in try_all_codes.
 		 */
 		for (newpoint = solver->startobj; newpoint < numxy; newpoint++) {
 
@@ -599,8 +596,8 @@ void solver_run(solver_t* solver)
 				goto quitnow;
 
 			// Now try building quads with the new star not on the diagonal:
-			field[D] = newpoint;
-			debug("Trying quads with D=%i\n", newpoint);
+			field[C] = newpoint;
+			debug("Trying quads with C=%i\n", newpoint);
 			for (field[A] = 0; field[A] < newpoint; field[A]++) {
 				for (field[B] = field[A] + 1; field[B] < newpoint; field[B]++) {
 					// grab the "pquad" for this AB combo
@@ -609,15 +606,15 @@ void solver_run(solver_t* solver)
 						debug("  bad scale for A=%i, B=%i\n", field[A], field[B]);
 						continue;
 					}
-					// test if this D is in the box:
-					pq->inbox[field[D]] = TRUE;
-					pq->ninbox = field[D] + 1;
-					check_inbox(pq, field[D], solver);
-					if (!pq->inbox[field[D]]) {
-						debug("  D is not in the box for A=%i, B=%i\n", field[A], field[B]);
+					// test if this C is in the box:
+					pq->inbox[field[C]] = TRUE;
+					pq->ninbox = field[C] + 1;
+					check_inbox(pq, field[C], solver);
+					if (!pq->inbox[field[C]]) {
+						debug("  C is not in the box for A=%i, B=%i\n", field[A], field[B]);
 						continue;
 					}
-					debug("  D is in the box for A=%i, B=%i\n", field[A], field[B]);
+					debug("  C is in the box for A=%i, B=%i\n", field[A], field[B]);
 
                     solver->rel_field_noise2 = pq->rel_field_noise2;
 
@@ -636,8 +633,8 @@ void solver_run(solver_t* solver)
 
                         tol2 = get_tolerance(solver);
 
-						for (field[C] = 0; field[C] < newpoint; field[C]++) {
-							if (!pq->inbox[field[C]])
+						for (field[D] = 0; field[D] < newpoint; field[D]++) {
+							if (!pq->inbox[field[D]])
 								continue;
 							try_all_codes(pq, field, dimquads, solver, tol2);
 							if (solver->quit_now)
