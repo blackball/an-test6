@@ -45,6 +45,9 @@
 #include "kdtree.h"
 #undef KD_DIM
 
+static const int A = 0, B = 1, C = 2, D = 3;
+static const int CX = 0, CY = 1, DX = 2, DY = 3;
+
 static void find_field_boundaries(solver_t* solver);
 
 static inline double getx(const double* d, uint ind)
@@ -255,7 +258,7 @@ void solver_compute_quad_range(solver_t* sp, index_t* index,
 struct potential_quad
 {
 	bool scale_ok;
-	int iA, iB;
+	int fieldA, fieldB;
 	// distance-squared between A and B, in pixels^2.
 	double scale;
 	double costheta, sintheta;
@@ -267,18 +270,19 @@ struct potential_quad
 };
 typedef struct potential_quad pquad;
 
-static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
-		uint iA, uint iB, uint iC, uint iD,
-		double *ABCDpix, solver_t* solver);
+static void try_all_codes(pquad* pq,
+                          double* code, int dimcode,
+                          uint* fieldstars, int dimquad,
+                          double *ABCDpix, solver_t* solver, double tol2);
 
-static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
-		uint iA, uint iB, uint iC, uint iD,
-		double *ABCDpix, solver_t* solver,
-		bool current_parity);
+static void try_all_codes_2(double* code, int dimcode,
+                            uint* fieldstars, int dimquad,
+                            double *ABCDpix, solver_t* solver,
+                            bool current_parity, double tol2);
 
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
-		uint fA, uint fB, uint fC, uint fD,
-		solver_t* solver, bool current_parity);
+                            uint* fstars, int dimquads,
+                            solver_t* solver, bool current_parity);
 
 static int solver_handle_hit(solver_t* sp, MatchObj* mo);
 
@@ -286,8 +290,8 @@ static void check_scale(pquad* pq, solver_t* solver)
 {
 	double Ax, Ay, Bx, By, dx, dy;
 
-	field_getxy(solver, pq->iA, &Ax, &Ay);
-	field_getxy(solver, pq->iB, &Bx, &By);
+	field_getxy(solver, pq->fieldA, &Ax, &Ay);
+	field_getxy(solver, pq->fieldB, &Bx, &By);
 	dx = Bx - Ax;
 	dy = By - Ay;
 	pq->scale = dx * dx + dy * dy;
@@ -308,7 +312,7 @@ static void check_inbox(pquad* pq, int start, solver_t* solver)
 {
 	int i;
 	double Ax, Ay;
-	field_getxy(solver, pq->iA, &Ax, &Ay);
+	field_getxy(solver, pq->fieldA, &Ax, &Ay);
 	// check which C, D points are inside the circle.
 	for (i = start; i < pq->ninbox; i++) {
 		double r;
@@ -381,15 +385,31 @@ void solver_free_field(solver_t* solver) {
 	verify_field_free(solver->vf);
 }
 
+static double get_tolerance(solver_t* solver) {
+    double maxtol2 = square(solver->codetol);
+    double tol2;
+    /*
+     tol2 = (2*3.5)^2 * ((sp->verify_pix^2 / pq->scale) + (sp->index->index_jitter / sp->index->index_scale_lower)^2)
+     = (7^2) * (pq->rel_field_noise2 + sp->rel_index_noise2)
+     */
+    tol2 = 49.0 * (solver->rel_field_noise2 + solver->rel_index_noise2);
+    //printf("code tolerance %g.\n", sqrt(tol2));
+    if (tol2 > maxtol2)
+        tol2 = maxtol2;
+    return tol2;
+}
+
 // The real deal-- this is what makes it all happen
 void solver_run(solver_t* solver)
 {
-	uint numxy, iA, iB, iC, iD, newpoint;
+	uint numxy, newpoint;
 	int i;
 	double usertime, systime;
 	time_t next_timer_callback_time = time(NULL) + 1;
 	pquad* pquads;
 	uint num_indexes;
+    double tol2;
+    uint field[4];
 
 	get_resource_stats(&usertime, &systime, NULL);
 	solver->starttime = usertime + systime;
@@ -451,25 +471,25 @@ void solver_run(solver_t* solver)
 		 * A=startobj-2,B=startobj-1. */
 		if (solver->startobj) {
 			debug("startobj > 0; priming pquad arrays.\n");
-			for (iB = 0; iB < solver->startobj; iB++) {
-				for (iA = 0; iA < iB; iA++) {
-					pquad* pq = pquads + iB * numxy + iA;
-					pq->iA = iA;
-					pq->iB = iB;
-					debug("trying A=%i, B=%i\n", iA, iB);
+			for (field[B] = 0; field[B] < solver->startobj; field[B]++) {
+				for (field[A] = 0; field[A] < field[B]; field[A]++) {
+					pquad* pq = pquads + field[B] * numxy + field[A];
+					pq->fieldA = field[A];
+					pq->fieldB = field[B];
+					debug("trying A=%i, B=%i\n", field[A], field[B]);
 					check_scale(pq, solver);
 					if (!pq->scale_ok) {
-						debug("  bad scale for A=%i, B=%i\n", iA, iB);
+						debug("  bad scale for A=%i, B=%i\n", field[A], field[B]);
 						continue;
 					}
 					pq->xy = malloc(numxy * 2 * sizeof(double));
 					pq->inbox = malloc(numxy * sizeof(bool));
 					memset(pq->inbox, TRUE, solver->startobj);
 					pq->ninbox = solver->startobj;
-					pq->inbox[iA] = FALSE;
-					pq->inbox[iB] = FALSE;
+					pq->inbox[field[A]] = FALSE;
+					pq->inbox[field[B]] = FALSE;
 					check_inbox(pq, 0, solver);
-					debug("  inbox(A=%i, B=%i): ", iA, iB);
+					debug("  inbox(A=%i, B=%i): ", field[A], field[B]);
 					print_inbox(pq);
 				}
 			}
@@ -485,11 +505,12 @@ void solver_run(solver_t* solver)
 		 * scale is acceptable, computing the transformation to code
 		 * coordinates, and deciding which C,D stars are in the circle.
          * 
-		 * We keep the invariants that iA < iB and iC < iD.  The A<->B and
-		 * C<->D permutations will be tried in try_all_codes.
+		 * We keep the invariants that field[A] < field[B] and field[C] < field[D].
+         * The A<->B and C<->D permutations will be tried in try_all_codes.
 		 */
 		for (newpoint = solver->startobj; newpoint < numxy; newpoint++) {
 			double ABCDpix[8];
+            double code[4];
 
 			debug("Trying newpoint=%i\n", newpoint);
 
@@ -507,19 +528,21 @@ void solver_run(solver_t* solver)
 
 			solver->last_examined_object = newpoint;
 			// quads with the new star on the diagonal:
-			iB = newpoint;
-			setx(ABCDpix, 1, field_getx(solver, iB));
-			sety(ABCDpix, 1, field_gety(solver, iB));
+			field[B] = newpoint;
+			setx(ABCDpix, B, field_getx(solver, field[B]));
+			sety(ABCDpix, B, field_gety(solver, field[B]));
 			debug("Trying quads with B=%i\n", newpoint);
-			for (iA = 0; iA < newpoint; iA++) {
+	
+            // first do an index-independent scale check...
+            for (field[A] = 0; field[A] < newpoint; field[A]++) {
 				// initialize the "pquad" struct for this AB combo.
-				pquad* pq = pquads + iB * numxy + iA;
-				pq->iA = iA;
-				pq->iB = iB;
-				debug("  trying A=%i, B=%i\n", iA, iB);
+				pquad* pq = pquads + field[B] * numxy + field[A];
+				pq->fieldA = field[A];
+				pq->fieldB = field[B];
+				debug("  trying A=%i, B=%i\n", field[A], field[B]);
 				check_scale(pq, solver);
 				if (!pq->scale_ok) {
-					debug("    bad scale for A=%i, B=%i\n", iA, iB);
+					debug("    bad scale for A=%i, B=%i\n", field[A], field[B]);
 					continue;
 				}
 				// initialize the "inbox" array:
@@ -530,44 +553,55 @@ void solver_run(solver_t* solver)
 				memset(pq->inbox, TRUE, newpoint + 1);
 				pq->ninbox = newpoint + 1;
 				// -except A and B.
-				pq->inbox[iA] = FALSE;
-				pq->inbox[iB] = FALSE;
+				pq->inbox[field[A]] = FALSE;
+				pq->inbox[field[B]] = FALSE;
 				check_inbox(pq, 0, solver);
-				debug("    inbox(A=%i, B=%i): ", iA, iB);
+				debug("    inbox(A=%i, B=%i): ", field[A], field[B]);
 				print_inbox(pq);
+            }
 
-				setx(ABCDpix, 0, field_getx(solver, iA));
-				sety(ABCDpix, 0, field_gety(solver, iA));
+            // Now iterate through the different indices
+            for (i = 0; i < num_indexes; i++) {
+                index_t* index = solver->index = pl_get(solver->indexes, i);
 
-				for (i = 0; i < num_indexes; i++) {
-					index_t* index = solver->index = pl_get(solver->indexes, i);
-					solver->index_num = i;
-					if ((pq->scale < minAB2s[i]) ||
-				        (pq->scale > maxAB2s[i]))
+                solver->index_num = i;
+                solver->index = index;
+                solver->rel_index_noise2 = square(index->index_jitter / index->index_scale_lower);
+
+                for (field[A] = 0; field[A] < newpoint; field[A]++) {
+                    // initialize the "pquad" struct for this AB combo.
+                    pquad* pq = pquads + field[B] * numxy + field[A];
+					if (!pq->scale_ok)
 						continue;
-					solver->index = index;
-					solver->rel_index_noise2 = square(index->index_jitter / index->index_scale_lower);
+                    if ((pq->scale < minAB2s[i]) ||
+                        (pq->scale > maxAB2s[i]))
+                        continue;
 
-					// Now look at all pairs of C, D stars (subject to iC < iD)
-					for (iC = 0; iC < newpoint; iC++) {
-						double cx, cy, dx, dy;
-						if (!pq->inbox[iC])
+                    setx(ABCDpix, A, field_getx(solver, field[A]));
+                    sety(ABCDpix, A, field_gety(solver, field[A]));
+
+                    // set code tolerance for this index and AB pair...
+                    solver->rel_field_noise2 = pq->rel_field_noise2;
+                    tol2 = get_tolerance(solver);
+
+					// Now look at all pairs of C, D stars (subject to field[C] < field[D])
+					for (field[C] = 0; field[C] < newpoint; field[C]++) {
+						if (!pq->inbox[field[C]])
 							continue;
-						setx(ABCDpix, 2, field_getx(solver, iC));
-						sety(ABCDpix, 2, field_gety(solver, iC));
-						cx = getx(pq->xy, iC);
-						cy = gety(pq->xy, iC);
-						for (iD = iC + 1; iD < newpoint; iD++) {
-							if (!pq->inbox[iD])
+						setx(ABCDpix, C, field_getx(solver, field[C]));
+						sety(ABCDpix, C, field_gety(solver, field[C]));
+                        code[CX] = getx(pq->xy, field[C]);
+						code[CY] = gety(pq->xy, field[C]);
+						for (field[D] = field[C] + 1; field[D] < newpoint; field[D]++) {
+							if (!pq->inbox[field[D]])
 								continue;
-							setx(ABCDpix, 3, field_getx(solver, iD));
-							sety(ABCDpix, 3, field_gety(solver, iD));
-							dx = getx(pq->xy, iD);
-							dy = gety(pq->xy, iD);
+							setx(ABCDpix, D, field_getx(solver, field[D]));
+							sety(ABCDpix, D, field_gety(solver, field[D]));
+							code[DX] = getx(pq->xy, field[D]);
+							code[DY] = gety(pq->xy, field[D]);
 							solver->numtries++;
-							debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-							solver->rel_field_noise2 = pq->rel_field_noise2;
-							try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
+							debug("    trying quad [%i %i %i %i]\n", field[A], field[B], field[C], field[D]);
+							try_all_codes(pq, code, 4, field, 4, ABCDpix, solver, tol2);
 							if (solver->quit_now)
 								goto quitnow;
 						}
@@ -581,34 +615,35 @@ void solver_run(solver_t* solver)
 				goto quitnow;
 
 			// Now try building quads with the new star not on the diagonal:
-			iD = newpoint;
-			setx(ABCDpix, 3, field_getx(solver, iD));
-			sety(ABCDpix, 3, field_gety(solver, iD));
+			field[D] = newpoint;
+			setx(ABCDpix, D, field_getx(solver, field[D]));
+			sety(ABCDpix, D, field_gety(solver, field[D]));
 			debug("Trying quads with D=%i\n", newpoint);
-			for (iA = 0; iA < newpoint; iA++) {
-				for (iB = iA + 1; iB < newpoint; iB++) {
-					double cx, cy, dx, dy;
+			for (field[A] = 0; field[A] < newpoint; field[A]++) {
+				for (field[B] = field[A] + 1; field[B] < newpoint; field[B]++) {
 					// grab the "pquad" for this AB combo
-					pquad* pq = pquads + iB * numxy + iA;
+					pquad* pq = pquads + field[B] * numxy + field[A];
 					if (!pq->scale_ok) {
-						debug("  bad scale for A=%i, B=%i\n", iA, iB);
+						debug("  bad scale for A=%i, B=%i\n", field[A], field[B]);
 						continue;
 					}
 					// test if this D is in the box:
-					pq->inbox[iD] = TRUE;
-					pq->ninbox = iD + 1;
-					check_inbox(pq, iD, solver);
-					if (!pq->inbox[iD]) {
-						debug("  D is not in the box for A=%i, B=%i\n", iA, iB);
+					pq->inbox[field[D]] = TRUE;
+					pq->ninbox = field[D] + 1;
+					check_inbox(pq, field[D], solver);
+					if (!pq->inbox[field[D]]) {
+						debug("  D is not in the box for A=%i, B=%i\n", field[A], field[B]);
 						continue;
 					}
-					debug("  D is in the box for A=%i, B=%i\n", iA, iB);
-					setx(ABCDpix, 0, field_getx(solver, iA));
-					sety(ABCDpix, 0, field_gety(solver, iA));
-					setx(ABCDpix, 1, field_getx(solver, iB));
-					sety(ABCDpix, 1, field_gety(solver, iB));
-					dx = getx(pq->xy, iD);
-					dy = gety(pq->xy, iD);
+					debug("  D is in the box for A=%i, B=%i\n", field[A], field[B]);
+					setx(ABCDpix, A, field_getx(solver, field[A]));
+					sety(ABCDpix, A, field_gety(solver, field[A]));
+					setx(ABCDpix, B, field_getx(solver, field[B]));
+					sety(ABCDpix, B, field_gety(solver, field[B]));
+					code[DX] = getx(pq->xy, field[D]);
+					code[DY] = gety(pq->xy, field[D]);
+
+                    solver->rel_field_noise2 = pq->rel_field_noise2;
 
 					for (i = 0; i < pl_size(solver->indexes); i++) {
 						index_t* index = solver->index = pl_get(solver->indexes, i);
@@ -619,17 +654,18 @@ void solver_run(solver_t* solver)
 						solver->index = index;
 						solver->rel_index_noise2 = square(index->index_jitter / index->index_scale_lower);
 
-						for (iC = 0; iC < newpoint; iC++) {
-							if (!pq->inbox[iC])
+                        tol2 = get_tolerance(solver);
+
+						for (field[C] = 0; field[C] < newpoint; field[C]++) {
+							if (!pq->inbox[field[C]])
 								continue;
-							setx(ABCDpix, 2, field_getx(solver, iC));
-							sety(ABCDpix, 2, field_gety(solver, iC));
-							cx = getx(pq->xy, iC);
-							cy = gety(pq->xy, iC);
+							setx(ABCDpix, C, field_getx(solver, field[C]));
+							sety(ABCDpix, C, field_gety(solver, field[C]));
+							code[CX] = getx(pq->xy, field[C]);
+							code[CY] = gety(pq->xy, field[C]);
 							solver->numtries++;
-							debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-							solver->rel_field_noise2 = pq->rel_field_noise2;
-							try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
+							debug("  trying quad [%i %i %i %i]\n", field[A], field[B], field[C], field[D]);
+							try_all_codes(pq, code, 4, field, 4, ABCDpix, solver, tol2);
 							if (solver->quit_now)
 								goto quitnow;
 						}
@@ -664,45 +700,52 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind)
 	sety(dest, destind, gety(src, srcind));
 }
 
-static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
-                          uint iA, uint iB, uint iC, uint iD,
-                          double *ABCDpix, solver_t* solver)
+static void try_all_codes(pquad* pq,
+                          double* code, int dimcode,
+                          uint* fieldstars, int dimquad,
+                          double *ABCDpix, solver_t* solver, double tol2)
 {
-	debug("    code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+	debug("    code=[%g,%g,%g,%g].\n", code[CX], code[CY], code[DX], code[DY]);
 
 	if (solver->parity == PARITY_NORMAL ||
 	        solver->parity == PARITY_BOTH) {
-		debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
-		try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, solver, FALSE);
+		debug("    trying normal parity: code=[%g,%g,%g,%g].\n", code[CX], code[CY], code[DX], code[DY]);
+		try_all_codes_2(code, dimcode, fieldstars, dimquad, ABCDpix, solver, FALSE, tol2);
 	}
 	if (solver->parity == PARITY_FLIP ||
 	        solver->parity == PARITY_BOTH) {
-		debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
-		try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, solver, TRUE);
+        double swapcode[dimcode];
+        int i;
+        debug("    code=[%g,%g,%g,%g].\n", code[CY], code[CX], code[DY], code[DX]);
+
+        // swap CX <-> CY, DX <-> DY.
+        for (i=0; i<dimcode/2; i++) {
+            swapcode[2*i+0] = code[2*i+1];
+            swapcode[2*i+1] = code[2*i+0];
+        }
+		try_all_codes_2(swapcode, dimcode, fieldstars, dimquad, ABCDpix, solver, TRUE, tol2);
 	}
 }
 
-static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
-                            uint iA, uint iB, uint iC, uint iD,
+static void try_all_codes_2(double* code, int dimcode,
+                            uint* fieldstars, int dimquad,
                             double *ABCDpix, solver_t* solver,
-                            bool current_parity)
+                            bool current_parity, double tol2)
 {
 	int i,j;
 	kdtree_qres_t* result = NULL;
-	double maxtol2 = square(solver->codetol);
-	double tol2;
 	double inorder[8];
-	int A = 0, B = 1, C = 2, D = 3;
+    uint fstars[4];
 	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
 	              KD_OPTIONS_NO_RESIZE_RESULTS;
 
 	double thequeries[4][4] = {
-		{   Cx,    Cy,    Dx,    Dy}, 
-		{1.-Cx, 1.-Cy, 1.-Dx, 1.-Dy}, 
-		{   Dx,    Dy,    Cx,    Cy}, 
-		{1.-Dx, 1.-Dy, 1.-Cx, 1.-Cy}
+		{   code[CX],    code[CY],    code[DX],    code[DY]}, 
+		{1.-code[CX], 1.-code[CY], 1.-code[DX], 1.-code[DY]}, 
+		{   code[DX],    code[DY],    code[CX],    code[CY]}, 
+		{1.-code[DX], 1.-code[DY], 1.-code[CX], 1.-code[CY]}
 	};
-	int inds[4] = {iA, iB, iC, iD};
+
 	// maps 0-3 to our current permutation for this iteration
 	int perm[4][4] = {
 		{A,B,C,D},
@@ -711,15 +754,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 		{B,A,D,C}
 	};
 
-	/*
-	  tol2 = 3.5^2 * ((sp->verify_pix^2 / pq->scale) + (sp->index->index_jitter / sp->index->index_scale_lower)^2)
-	       = 3.5^2 * (pq->rel_field_noise2 + sp->rel_index_noise2)
-	 */
-	tol2 = 3.5 * 3.5 * (solver->rel_field_noise2 + solver->rel_index_noise2);
-	if (tol2 > maxtol2)
-		tol2 = maxtol2;
-
-	//tol2 = maxtol2;
+    assert(dimcode == 4);
+    assert(dimquad == 4);
 
 	update_timeused(solver);
 
@@ -731,16 +767,17 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 			for (j=0; j<4; j++)
 				set_xy(inorder, j, ABCDpix, perm[i][j]);
 
+			for (j=0; j<4; j++)
+                fstars[j] = fieldstars[perm[i][j]];
+
 			result = kdtree_rangesearch_options_reuse(solver->index->codekd->tree, result, thequeries[i], tol2, options);
 
 			debug("      trying ABCD = [%i %i %i %i]: %i results.\n",
-					inds[perm[i][A]], inds[perm[i][B]], inds[perm[i][C]], inds[perm[i][D]],
-					result->nres);
+                  fstars[A], fstars[B], fstars[C], fstars[D], result->nres);
 
 			if (result->nres)
-				resolve_matches(result, thequeries[i], inorder,
-						inds[perm[i][A]], inds[perm[i][B]], inds[perm[i][C]], inds[perm[i][D]],
-						solver, current_parity);
+				resolve_matches(result, thequeries[i], inorder, fstars, dimquad, solver, current_parity);
+                                
 			if (solver->quit_now)
 				goto quit_now;
 		} else
@@ -753,12 +790,12 @@ quit_now:
 
 // "field" contains the xy pixel coordinates of stars A,B,C,D.
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
-                            uint fA, uint fB, uint fC, uint fD,
+                            uint* fieldstars, int dimquads,
                             solver_t* solver, bool current_parity)
 {
 	uint jj, thisquadno;
 	MatchObj mo;
-    int dimquads = quadfile_dimquads(solver->index->quads);
+    //int dimquads = quadfile_dimquads(solver->index->quads);
 	uint star[dimquads];
 
 	for (jj = 0; jj < krez->nres; jj++) {
@@ -776,7 +813,6 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         for (i=0; i<dimquads; i++)
             startree_get(solver->index->starkd, star[i], starxyz + 3*i);
 
-        // DIMQUAD
 		debug("        stars [%i %i %i %i]\n", star[0], star[1], star[2], star[3]);
 
 		// compute TAN projection from the matching quad alone.
@@ -810,10 +846,8 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		mo.quadno = thisquadno;
         for (i=0; i<dimquads; i++)
             mo.star[i] = star[i];
-		mo.field[0] = fA;
-		mo.field[1] = fB;
-		mo.field[2] = fC;
-		mo.field[3] = fD;
+        for (i=0; i<dimquads; i++)
+            mo.field[i] = fieldstars[i];
 
 		memcpy(mo.quadpix, field, 2 * dimquads * sizeof(double));
 		memcpy(mo.quadxyz, starxyz, 3 * dimquads * sizeof(double));

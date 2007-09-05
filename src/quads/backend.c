@@ -77,8 +77,8 @@ typedef struct indexinfo indexinfo_t;
 struct backend {
 	bl* indexinfos;
 	sl* index_paths;
-	int ibiggest;
-	int ismallest;
+	il* ibiggest;
+	il* ismallest;
 	double sizesmallest;
 	double sizebiggest;
 	bool inparallel;
@@ -129,11 +129,17 @@ static void add_index(backend_t* backend, char* full_index_path, double lo, doub
 	bl_append(backend->indexinfos, &ii);
 	if (ii.losize < backend->sizesmallest) {
 		backend->sizesmallest = ii.losize;
-		backend->ismallest = bl_size(backend->indexinfos) - 1;
-	}
+        bl_remove_all(backend->ismallest);
+		il_append(backend->ismallest, bl_size(backend->indexinfos) - 1);
+	} else if (ii.losize == backend->sizesmallest) {
+		il_append(backend->ismallest, bl_size(backend->indexinfos) - 1);
+    }
 	if (ii.hisize > backend->sizebiggest) {
 		backend->sizebiggest = ii.hisize;
-		backend->ibiggest = bl_size(backend->indexinfos) - 1;
+        bl_remove_all(backend->ibiggest);
+		il_append(backend->ibiggest, bl_size(backend->indexinfos) - 1);
+	} else if (ii.hisize == backend->sizebiggest) {
+		il_append(backend->ibiggest, bl_size(backend->indexinfos) - 1);
 	}
 }
 
@@ -478,18 +484,22 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 				WRITE(fout, "index %s\n", ii->indexname);
 				nused++;
 			}
-			// Use the smallest or largest index if no other one fits.
+			// Use the (list of) smallest or largest indices if no other one fits.
 			if (!nused) {
-				indexinfo_t* ii = NULL;
-				if (fmin > backend->sizebiggest) {
-					ii = bl_access(backend->indexinfos, backend->ibiggest);
-				} else if (fmax < backend->sizesmallest) {
-					ii = bl_access(backend->indexinfos, backend->ismallest);
-				} else {
-					assert(0);
-				}
-				WRITE(fout, "index %s\n", ii->indexname);
-			}
+                il* list;
+                if (fmin > backend->sizebiggest) {
+                    list = backend->ibiggest;
+                } else if (fmax < backend->sizesmallest) {
+                    list = backend->ismallest;
+                } else {
+                    assert(0);
+                }
+                for (k=0; k<il_size(list); k++) {
+                    indexinfo_t* ii;
+                    ii = bl_access(backend->indexinfos, il_get(list, k));
+                    WRITE(fout, "index %s\n", ii->indexname);
+                }
+            }
 			if (backend->inparallel)
 				WRITE(fout, "indexes_inparallel\n");
 
@@ -813,6 +823,8 @@ backend_t* backend_new()
 	backend_t* backend = calloc(1, sizeof(backend_t));
 	backend->indexinfos = bl_new(16, sizeof(indexinfo_t));
 	backend->index_paths = sl_new(10);
+	backend->ismallest = il_new(4);
+	backend->ibiggest = il_new(4);
 	backend->sizesmallest = HUGE_VAL;
 	backend->sizebiggest = -HUGE_VAL;
 
@@ -832,6 +844,12 @@ void backend_free(backend_t* backend)
 		}
 		bl_free(backend->indexinfos);
 	}
+    if (backend->ismallest)
+        il_free(backend->ismallest);
+    if (backend->ibiggest)
+        il_free(backend->ibiggest);
+    if (backend->index_paths)
+        sl_free2(backend->index_paths);
 	if (backend->blind)
 		free(backend->blind);
 }
