@@ -256,8 +256,11 @@ struct potential_quad
 {
 	bool scale_ok;
 	int iA, iB;
+	// distance-squared between A and B, in pixels^2.
 	double scale;
 	double costheta, sintheta;
+	// (field pixel noise / quad scale in pixels)^2
+	double rel_field_noise2;
 	bool* inbox;
 	int ninbox;
 	double* xy;
@@ -295,6 +298,9 @@ static void check_scale(pquad* pq, solver_t* solver)
 	}
 	pq->costheta = (dy + dx) / pq->scale;
 	pq->sintheta = (dy - dx) / pq->scale;
+
+	pq->rel_field_noise2 = (solver->verify_pix * solver->verify_pix) / pq->scale;
+
 	pq->scale_ok = TRUE;
 }
 
@@ -390,11 +396,11 @@ void solver_run(solver_t* solver)
 
 	numxy = solver->nfield;
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
-		return ;
+		return;
 	if (solver->endobj && (numxy > solver->endobj))
 		numxy = solver->endobj;
 	if (solver->startobj >= numxy)
-		return ;
+		return;
 
 	num_indexes = bl_size(solver->indexes);
 	{
@@ -405,7 +411,7 @@ void solver_run(solver_t* solver)
 		for (i = 0; i < num_indexes; i++) {
 			double minAB, maxAB;
 			index_t* index = pl_get(solver->indexes, i);
-			// The limits on the size of quads, in field coordinates (pixels),
+			// The limits on the size of quads that we try to match, in pixels.
 			// Derived from index_scale_* and funits_*.
 			solver_compute_quad_range(solver, index, &minAB, &maxAB);
 			minAB2s[i] = square(minAB);
@@ -424,18 +430,21 @@ void solver_run(solver_t* solver)
 
 		/* We maintain an array of "potential quads" (pquad) structs, where
 		 * each struct corresponds to one choice of stars A and B; the struct
-		 * at index (B * numxy + A) hold information about quads that could be
+		 * at index (B * numxy + A) holds information about quads that could be
 		 * created using stars A,B.
 		 *
-		 * (We only use above-diagonal elements of this 2D array because * A<B.)
+		 * (We only use the above-diagonal elements of this 2D array because
+		 * A<B.)
 		 *
 		 * For each AB pair, we cache the scale and the rotation parameters,
-		 * and we keep an array "inbox" of length "numxy" of booleans, that say
-		 * whether that star is eligible to be star C or D of a quad with AB at
-		 * the corners.  (Obviously A and B can't).
+		 * and we keep an array "inbox" of length "numxy" of booleans, one for
+		 * each star, which say whether that star is eligible to be star C or D
+		 * of a quad with AB at the corners.  (Obviously A and B aren't
+		 * eligible).
 		 *
 		 * The "ninbox" parameter is somewhat misnamed - it says that "inbox"
-		 * in the range [0, ninbox) have been initialized. */
+		 * elements in the range [0, ninbox) have been initialized.
+		 */
 
 		/* (See explanatory paragraph below) If "solver->startobj" isn't zero,
 		 * then we need to initialize the triangle of "pquads" up to
@@ -477,8 +486,8 @@ void solver_run(solver_t* solver)
 		 * coordinates, and deciding which C,D stars are in the circle.
          * 
 		 * We keep the invariants that iA < iB and iC < iD.  The A<->B and
-		 * C<->D permutations will be tried in try_all_codes. */
-
+		 * C<->D permutations will be tried in try_all_codes.
+		 */
 		for (newpoint = solver->startobj; newpoint < numxy; newpoint++) {
 			double ABCDpix[8];
 
@@ -517,6 +526,7 @@ void solver_run(solver_t* solver)
 				pq->inbox = malloc(numxy * sizeof(bool));
 				pq->xy = malloc(numxy * 2 * sizeof(double));
 				// -try all stars up to "newpoint"...
+				assert(sizeof(bool) == 1);
 				memset(pq->inbox, TRUE, newpoint + 1);
 				pq->ninbox = newpoint + 1;
 				// -except A and B.
@@ -536,7 +546,9 @@ void solver_run(solver_t* solver)
 				        (pq->scale > maxAB2s[i]))
 						continue;
 					solver->index = index;
+					solver->rel_index_noise2 = square(index->index_jitter / index->index_scale_lower);
 
+					// Now look at all pairs of C, D stars (subject to iC < iD)
 					for (iC = 0; iC < newpoint; iC++) {
 						double cx, cy, dx, dy;
 						if (!pq->inbox[iC])
@@ -554,21 +566,21 @@ void solver_run(solver_t* solver)
 							dy = gety(pq->xy, iD);
 							solver->numtries++;
 							debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-
+							solver->rel_field_noise2 = pq->rel_field_noise2;
 							try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
 							if (solver->quit_now)
-								break;
+								goto quitnow;
 						}
 					}
 					if (solver->quit_now)
-						break;
+						goto quitnow;
 				}
 			}
 
 			if (solver->quit_now)
-				break;
+				goto quitnow;
 
-			// quads with the new star not on the diagonal:
+			// Now try building quads with the new star not on the diagonal:
 			iD = newpoint;
 			setx(ABCDpix, 3, field_getx(solver, iD));
 			sety(ABCDpix, 3, field_gety(solver, iD));
@@ -605,6 +617,7 @@ void solver_run(solver_t* solver)
 					        (pq->scale > maxAB2s[i]))
 							continue;
 						solver->index = index;
+						solver->rel_index_noise2 = square(index->index_jitter / index->index_scale_lower);
 
 						for (iC = 0; iC < newpoint; iC++) {
 							if (!pq->inbox[iC])
@@ -615,12 +628,13 @@ void solver_run(solver_t* solver)
 							cy = gety(pq->xy, iC);
 							solver->numtries++;
 							debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
+							solver->rel_field_noise2 = pq->rel_field_noise2;
 							try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, solver);
 							if (solver->quit_now)
-								break;
+								goto quitnow;
 						}
 						if (solver->quit_now)
-							break;
+							goto quitnow;
 					}
 				}
 			}
@@ -634,6 +648,7 @@ void solver_run(solver_t* solver)
 				break;
 		}
 
+	quitnow:
 		for (i = 0; i < (numxy*numxy); i++) {
 			pquad* pq = pquads + i;
 			free(pq->inbox);
@@ -674,7 +689,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 {
 	int i,j;
 	kdtree_qres_t* result = NULL;
-	double tol = square(solver->codetol);
+	double maxtol2 = square(solver->codetol);
+	double tol2;
 	double inorder[8];
 	int A = 0, B = 1, C = 2, D = 3;
 	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
@@ -695,16 +711,27 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 		{B,A,D,C}
 	};
 
+	/*
+	  tol2 = 3.5^2 * ((sp->verify_pix^2 / pq->scale) + (sp->index->index_jitter / sp->index->index_scale_lower)^2)
+	       = 3.5^2 * (pq->rel_field_noise2 + sp->rel_index_noise2)
+	 */
+	tol2 = 3.5 * 3.5 * (solver->rel_field_noise2 + solver->rel_index_noise2);
+	if (tol2 > maxtol2)
+		tol2 = maxtol2;
+
+	//tol2 = maxtol2;
+
 	update_timeused(solver);
 
 	for (i=0; i<4; i++) {
+
 		if ((!solver->index->cx_less_than_dx) ||
 				(thequeries[i][0] <= (thequeries[i][2] + solver->cxdx_margin))) {
 
 			for (j=0; j<4; j++)
 				set_xy(inorder, j, ABCDpix, perm[i][j]);
 
-			result = kdtree_rangesearch_options_reuse(solver->index->codekd->tree, result, thequeries[i], tol, options);
+			result = kdtree_rangesearch_options_reuse(solver->index->codekd->tree, result, thequeries[i], tol2, options);
 
 			debug("      trying ABCD = [%i %i %i %i]: %i results.\n",
 					inds[perm[i][A]], inds[perm[i][B]], inds[perm[i][C]], inds[perm[i][D]],

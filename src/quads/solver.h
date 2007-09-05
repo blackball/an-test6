@@ -142,6 +142,13 @@ struct solver_t {
 	double minminAB2;
 	double maxmaxAB2;
 
+	// The relative noise of the current index, squared:
+	// square( index->index_jitter / index->index_scale_lower )
+	double rel_index_noise2;
+
+	// The relative noise of the current quad, squared:
+	double rel_field_noise2;
+
 	// Field limits, in pixels.
 	double field_minx, field_maxx, field_miny, field_maxy;
 	// Distance in pixels across the diagonal of the field

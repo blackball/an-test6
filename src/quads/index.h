@@ -17,10 +17,10 @@
  * A loaded index
  */
 struct index_s {
-	// name of the current index.
+	// Name of the current index.
 	const char *indexname;
 
-	// unique id for this index.
+	// Unique id for this index.
 	int indexid;
 	int healpix;
 
@@ -35,9 +35,10 @@ struct index_s {
 
 	// Does the index have the CIRCLE header - (codes live in the circle, not the box)?
 	bool circle;
+	// Does the index have the CX <= DX property
 	bool cx_less_than_dx;
 
-	// Limits of the size of quads in the index.
+	// Limits of the size of quads in the index, in arcseconds.
 	double index_scale_upper;
 	double index_scale_lower;
 };
