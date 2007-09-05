@@ -598,6 +598,7 @@ void solver_run(solver_t* solver)
                     tol2 = get_tolerance(solver);
 
 					// Now look at all pairs of C, D stars (subject to field[C] < field[D])
+                    // ("dimquads - 2" because we've set stars A and B at this point)
                     move_pegs(pq, field+C, dimquads-2, 0, newpoint, field, dimquads, solver, tol2);
                     if (solver->quit_now)
                         goto quitnow;
@@ -609,6 +610,7 @@ void solver_run(solver_t* solver)
 
 			// Now try building quads with the new star not on the diagonal:
 			field[C] = newpoint;
+            // (in this loop field[C] > field[D])
 			debug("Trying quads with C=%i\n", newpoint);
 			for (field[A] = 0; field[A] < newpoint; field[A]++) {
 				for (field[B] = field[A] + 1; field[B] < newpoint; field[B]++) {
@@ -645,6 +647,7 @@ void solver_run(solver_t* solver)
 
                         tol2 = get_tolerance(solver);
 
+                        // ("dimquads - 3" because we've set stars A, B, and C at this point)
                         move_pegs(pq, field+D, dimquads-3, 0, newpoint, field, dimquads, solver, tol2);
                         if (solver->quit_now)
                             goto quitnow;
