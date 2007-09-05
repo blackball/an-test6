@@ -397,6 +397,28 @@ static double get_tolerance(solver_t* solver) {
     return tol2;
 }
 
+static void move_pegs(pquad* pq, uint* field,
+                      int npegs, int peg, uint fieldtop,
+                      uint* basefield, int dimquad,
+                      solver_t* solver, double tol2) {
+    uint bottom;
+
+    bottom = (peg ? field[peg-1]+1 : 0);
+
+    for (field[peg]=bottom; field[peg]<fieldtop; field[peg]++) {
+        if (!pq->inbox[field[peg]])
+            continue;
+        if (solver->quit_now)
+            return;
+
+        if (peg == npegs-1) {
+            try_all_codes(pq, basefield, dimquad, solver, tol2);
+        } else {
+            move_pegs(pq, field, npegs, peg+1, fieldtop, basefield, dimquad, solver, tol2);
+        }
+    }
+}
+
 // The real deal-- this is what makes it all happen
 void solver_run(solver_t* solver)
 {
@@ -576,19 +598,9 @@ void solver_run(solver_t* solver)
                     tol2 = get_tolerance(solver);
 
 					// Now look at all pairs of C, D stars (subject to field[C] < field[D])
-					for (field[C] = 0; field[C] < newpoint; field[C]++) {
-						if (!pq->inbox[field[C]])
-							continue;
-						for (field[D] = field[C] + 1; field[D] < newpoint; field[D]++) {
-							if (!pq->inbox[field[D]])
-								continue;
-							try_all_codes(pq, field, dimquads, solver, tol2);
-							if (solver->quit_now)
-								goto quitnow;
-						}
-					}
-					if (solver->quit_now)
-						goto quitnow;
+                    move_pegs(pq, field+C, dimquads-2, 0, newpoint, field, dimquads, solver, tol2);
+                    if (solver->quit_now)
+                        goto quitnow;
 				}
 			}
 
@@ -633,15 +645,9 @@ void solver_run(solver_t* solver)
 
                         tol2 = get_tolerance(solver);
 
-						for (field[D] = 0; field[D] < newpoint; field[D]++) {
-							if (!pq->inbox[field[D]])
-								continue;
-							try_all_codes(pq, field, dimquads, solver, tol2);
-							if (solver->quit_now)
-								goto quitnow;
-						}
-						if (solver->quit_now)
-							goto quitnow;
+                        move_pegs(pq, field+D, dimquads-3, 0, newpoint, field, dimquads, solver, tol2);
+                        if (solver->quit_now)
+                            goto quitnow;
 					}
 				}
 			}
