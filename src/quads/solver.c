@@ -585,8 +585,6 @@ void solver_run(solver_t* solver)
 						for (field[D] = field[C] + 1; field[D] < newpoint; field[D]++) {
 							if (!pq->inbox[field[D]])
 								continue;
-							solver->numtries++;
-							debug("    trying quad [%i %i %i %i]\n", field[A], field[B], field[C], field[D]);
 							try_all_codes(pq, field, dimquads, solver, tol2);
 							if (solver->quit_now)
 								goto quitnow;
@@ -641,8 +639,6 @@ void solver_run(solver_t* solver)
 						for (field[C] = 0; field[C] < newpoint; field[C]++) {
 							if (!pq->inbox[field[C]])
 								continue;
-							solver->numtries++;
-							debug("  trying quad [%i %i %i %i]\n", field[A], field[B], field[C], field[D]);
 							try_all_codes(pq, field, dimquads, solver, tol2);
 							if (solver->quit_now)
 								goto quitnow;
@@ -687,6 +683,9 @@ static void try_all_codes(pquad* pq,
     double code[dimcode];
     double swapcode[dimcode];
     int i;
+
+    solver->numtries++;
+    debug("  trying quad [%i %i %i %i]\n", fieldstars[A], fieldstars[B], fieldstars[C], fieldstars[D]);
 
     for (i=0; i<dimcode/2; i++) {
         code[2*i  ] = getx(pq->xy, fieldstars[C+i]);
