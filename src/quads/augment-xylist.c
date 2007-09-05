@@ -136,7 +136,7 @@ int main(int argc, char** args) {
 	char* xylsfn = NULL;
     sl* cmd;
     char* cmdstr;
-	int W, H;
+	int W = 0, H = 0;
 	double scalelo = 0.0, scalehi = 0.0;
 	char* scaleunits = NULL;
 	qfits_header* hdr;
@@ -173,6 +173,7 @@ int main(int argc, char** args) {
     bool verbose = FALSE;
     char* keep_xylist = NULL;
     char* solvedin = NULL;
+    bool addwh = TRUE;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -322,13 +323,6 @@ int main(int argc, char** args) {
 		help_flag = 1;
 		rtn = -1;
 	}
-	/*
-	  if (xylsfn && !(W && H)) {
-	  printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
-	  help_flag = 1;
-	  rtn = -1;
-	  }
-	*/
 	if (help_flag) {
 		print_help(args[0]);
 		exit(rtn);
@@ -555,6 +549,7 @@ int main(int argc, char** args) {
 		// xylist.
 		// if --xylist is given:
 		//	 -fits2fits.py sanitize
+
         if (sortcol)
             dosort = TRUE;
 
@@ -639,14 +634,24 @@ int main(int argc, char** args) {
 	orig_nheaders = hdr->n;
 
     if (!(W && H)) {
-        // If an xylist was given, look for existing IMAGEW, IMAGEH headers.  Otherwise die.
+        // Look for existing IMAGEW and IMAGEH in primary header.
         W = qfits_header_getint(hdr, "IMAGEW", 0);
         H = qfits_header_getint(hdr, "IMAGEH", 0);
+        if (W && H) {
+            addwh = FALSE;
+        } else {
+            // Look for IMAGEW and IMAGEH headers in first extension, else bail.
+            qfits_header* hdr2 = qfits_header_readext(xylsfn, 1);
+            W = qfits_header_getint(hdr2, "IMAGEW", 0);
+            H = qfits_header_getint(hdr2, "IMAGEH", 0);
+            qfits_header_destroy(hdr2);
+        }
         if (!(W && H)) {
             fprintf(stderr, "Error: image width and height must be specified for XYLS inputs.\n");
             exit(-1);
         }
-    } else {
+    }
+    if (addwh) {
         fits_header_add_int(hdr, "IMAGEW", W, "image width");
         fits_header_add_int(hdr, "IMAGEH", H, "image height");
     }
