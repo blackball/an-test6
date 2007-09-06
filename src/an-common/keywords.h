@@ -39,7 +39,6 @@
 # define Const            __attribute__ ((const))
 # define Noreturn         __attribute__ ((noreturn))
 # define Malloc           __attribute__ ((malloc))
-# define Deprecated       __attribute__ ((deprecated))
 # define Used             __attribute__ ((used))
 # define Unused           __attribute__ ((unused))
 # define Packed           __attribute__ ((packed))
@@ -47,7 +46,14 @@
 # define unlikely(x)      __builtin_expect (!!(x), 0)
 # define Noinline         __attribute__ ((noinline))
 
-// warn_unused_result is new in gcc-3.4
+// new in gcc-3.1:
+#if GNUC_PREREQ (3, 1)
+# define Deprecated       __attribute__ ((deprecated))
+#else
+# define Deprecated
+#endif
+
+// new in gcc-3.4:
 #if GNUC_PREREQ (3, 4)
 # define Must_check       __attribute__ ((warn_unused_result))
 # define WarnUnusedResult __attribute__ ((warn_unused_result))
