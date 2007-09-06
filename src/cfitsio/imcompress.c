@@ -1119,11 +1119,11 @@ int imcomp_compress_tile (fitsfile *outfptr,
 #endif
 			   {
 				   size_t buffsize;
-                   char* buf = cbuf;
+                   char* buf = (char*)cbuf;
                    compress2mem_from_mem((char *) idata, tilelen * sizeof(int),
                                          &buf, &buffsize, realloc, 
                  &gzip_nelem, status);
-                   cbuf = buf;
+                   cbuf = (short*)buf;
 				clen = buffsize;
 			   }
 
