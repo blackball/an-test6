@@ -58,7 +58,7 @@ install-indices:
 		tar xvzf $$x -C $(INSTALL_DIR)/data; \
 	done
 
-RELEASE_VER := 0.0.3
+RELEASE_VER := 0.0.4
 RELEASE_DIR := astrometry.net-$(RELEASE_VER)
 RELEASE_SVN	:= svn+ssh://astrometry.net/svn/tags/tarball-$(RELEASE_VER)
 RELEASE_SUBDIRS := cfitsio qfits-an gsl-an an-common libkd quads demo
