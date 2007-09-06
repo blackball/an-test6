@@ -171,7 +171,11 @@ static int find_index(backend_t* backend, char* index)
 
 static int parse_config_file(FILE* fconf, backend_t* backend)
 {
+    sl* indices = sl_new(16);
     bool auto_index = FALSE;
+    int i;
+    int rtn = 0;
+
 	while (1) {
 		char buffer[10240];
 		char* nextword;
@@ -180,7 +184,8 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			if (feof(fconf))
 				break;
 			printf("Failed to read a line from the config file: %s\n", strerror(errno));
-			return -1;
+            rtn = -1;
+            goto done;
 		}
 		line = buffer;
 		// strip off newline
@@ -197,9 +202,9 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			continue;
 
 		if (is_word(line, "index ", &nextword)) {
-			if (find_index(backend, nextword)) {
-				return -1;
-			}
+            // don't try to find the index yet - because search paths may be
+            // added later.
+            sl_append(indices, nextword);
         } else if (is_word(line, "autoindex", &nextword)) {
             auto_index = TRUE;
         } else if (is_word(line, "blind ", &nextword)) {
@@ -215,16 +220,27 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			sl_append(backend->index_paths, nextword);
 		} else {
 			printf("Didn't understand this config file line: \"%s\"\n", line);
-			return -1; // unknown config line is a firing offense
+			// unknown config line is a firing offense
+            rtn = -1;
+            goto done;
 		}
 	}
 
+    for (i=0; i<sl_size(indices); i++) {
+        char* ind = sl_get(indices, i);
+        if (find_index(backend, ind)) {
+            rtn = -1;
+            goto done;
+        }
+    }
+
     if (auto_index) {
         // Search the paths specified and add any indexes that are found.
-        int i;
         for (i=0; i<sl_size(backend->index_paths); i++) {
             char* path = sl_get(backend->index_paths, i);
             DIR* dir = opendir(path);
+            sl* trybases = sl_new(16);
+            int j;
             if (!dir) {
                 fprintf(stderr, "Failed to open directory \"%s\": %s\n", path, strerror(errno));
                 continue;
@@ -235,8 +251,6 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 int len;
                 int baselen;
                 char* base;
-                char* fullpath;
-                double lo, hi;
                 errno = 0;
                 de = readdir(dir);
                 if (!de) {
@@ -255,6 +269,16 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 base = malloc(baselen + 1);
                 memcpy(base, name, baselen);
                 base[baselen] = '\0';
+
+                sl_insert_sorted(trybases, base);
+                free(base);
+            }
+            //for (j=0; j<sl_size(trybases); j++) {
+            // reverse-sort
+            for (j=sl_size(trybases)-1; j>=0; j--) {
+                char* base = sl_get(trybases, j);
+                char* fullpath;
+                double lo, hi;
                 // FIXME - look for corresponding .skdt.fits and .ckdt.fits files?
                 asprintf_safe(&fullpath, "%s/%s", path, base);
                 if (verbose)
@@ -266,12 +290,14 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                     if (verbose)
                         printf("Failed to add index \"%s\".\n", fullpath);
                 }
-                free(base);
             }
+            sl_free2(trybases);
         }
     }
 
-	return 0;
+ done:
+    sl_free2(indices);
+	return rtn;
 }
 
 struct job_t
