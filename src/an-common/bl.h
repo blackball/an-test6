@@ -194,7 +194,7 @@ void  pl_copy(pl* list, int start, int length, void** dest);
 pl*   pl_dup(pl* list);
 void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
-int   pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2));
+int   pl_insert_sorted(pl* list, const void* data, int (*compare)(const void* v1, const void* v2));
 void  pl_sort(pl* list, int (*compare)(const void* v1, const void* v2));
 void  pl_remove(pl* list, int ind);
 void  pl_remove_index_range(pl* list, int start, int length);
@@ -274,6 +274,12 @@ char*  sl_insert(sl* list, int indx, const char* str);
 // frees all the strings and removes them from the list.
 void   sl_remove_all(sl* list);
 
+// inserts the string; doesn't copy it.
+void   sl_insert_sorted_nocopy(sl* list, const char* string);
+
+// inserts a copy of the string; returns the newly-allocated string.
+char* sl_insert_sorted(sl* list, const char* string);
+
 void sl_remove_index_range(sl* list, int start, int length);
 
 // remove all elements starting from "start" to the end of the list.
@@ -291,5 +297,10 @@ char*  sl_implode(sl* list, const char* join);
 char*
 ATTRIB_FORMAT(printf,2,3)
 sl_appendf(sl* list, const char* format, ...);
+
+// Inserts the (newly-allocated) formatted string and returns it.
+char*
+ATTRIB_FORMAT(printf,2,3)
+sl_insert_sortedf(sl* list, const char* format, ...);
 
 #endif

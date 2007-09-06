@@ -1296,7 +1296,7 @@ void  pl_remove_index_range(pl* list, int start, int length) {
 	bl_remove_index_range(list, start, length);
 }
 
-int pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2)) {
+int pl_insert_sorted(pl* list, const void* data, int (*compare)(const void* v1, const void* v2)) {
 	// we don't just call bl_insert_sorted because then we end up passing
 	// "void**" rather than "void*" args to the compare function, which 
 	// violates the principle of least surprise.
@@ -1673,4 +1673,31 @@ char* sl_appendf(sl* list, const char* format, ...) {
 	sl_append_nocopy(list, str);
     va_end(lst);
 	return str;
+}
+
+char* sl_insert_sortedf(sl* list, const char* format, ...) {
+    va_list lst;
+	char* str;
+    va_start(lst, format);
+    if (vasprintf(&str, format, lst) == -1)
+		return NULL;
+	sl_insert_sorted_nocopy(list, str);
+    va_end(lst);
+	return str;
+}
+
+int bl_compare_strings_ascending(const void* v1, const void* v2) {
+    const char* str1 = v1;
+    const char* str2 = v2;
+    return strcoll(str1, str2);
+}
+
+void sl_insert_sorted_nocopy(sl* list, const char* string) {
+    pl_insert_sorted(list, string, bl_compare_strings_ascending);
+}
+
+char* sl_insert_sorted(sl* list, const char* string) {
+    char* copy = strdup(string);
+    pl_insert_sorted(list, copy, bl_compare_strings_ascending);
+    return copy;
 }
