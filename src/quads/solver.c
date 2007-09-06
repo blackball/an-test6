@@ -384,37 +384,60 @@ void solver_free_field(solver_t* solver) {
 }
 
 static double get_tolerance(solver_t* solver) {
-    double maxtol2 = square(solver->codetol);
-    double tol2;
+    return square(solver->codetol);
     /*
-     tol2 = (2*3.5)^2 * ((sp->verify_pix^2 / pq->scale) + (sp->index->index_jitter / sp->index->index_scale_lower)^2)
-     = (7^2) * (pq->rel_field_noise2 + sp->rel_index_noise2)
+     double maxtol2 = square(solver->codetol);
+     double tol2;
+     tol2 = 49.0 * (solver->rel_field_noise2 + solver->rel_index_noise2);
+     //printf("code tolerance %g.\n", sqrt(tol2));
+     if (tol2 > maxtol2)
+     tol2 = maxtol2;
+     return tol2;
      */
-    tol2 = 49.0 * (solver->rel_field_noise2 + solver->rel_index_noise2);
-    //printf("code tolerance %g.\n", sqrt(tol2));
-    if (tol2 > maxtol2)
-        tol2 = maxtol2;
-    return tol2;
 }
 
-static void move_pegs(pquad* pq, uint* field,
-                      int npegs, int peg, uint fieldtop,
-                      uint* basefield, int dimquad,
+/*
+ A somewhat tricky recursive function: stars A and B have already been chosen,
+ so the code coordinate system has been fixed, and we've already determined
+ which other stars will create valid codes (ie, are in the "box").  Now we
+ want to build features using all sets of valid stars (without permutations).
+
+ pq - data associated with the AB pair.
+ field - the array of field star numbers
+ fieldoffset - offset into the field array where we should add the first star
+ n_to_add - number of stars to add
+ adding - the star we're currently adding; in [0, n_to_add).
+ fieldtop - the maximum field star number to build quads out of.
+ dimquad, solver, tol2 - passed to try_all_codes.
+ */
+static void add_stars(pquad* pq, uint* field, int fieldoffset,
+                      int n_to_add, int adding, uint fieldtop,
+                      int dimquad,
                       solver_t* solver, double tol2) {
     uint bottom;
+    uint* f = field + fieldoffset;
+    // When we're adding the first star, we start from index zero.
+    // When we're adding subsequent stars, we start from the previous value
+    // plus one, to avoid adding permutations.
+    bottom = (adding ? f[adding-1] + 1 : 0);
 
-    bottom = (peg ? field[peg-1]+1 : 0);
-
-    for (field[peg]=bottom; field[peg]<fieldtop; field[peg]++) {
-        if (!pq->inbox[field[peg]])
+    // It looks funny that we're using f[adding] as a loop variable, but
+    // it's required because try_all_codes needs to know which field stars
+    // were used to create the quad.
+    for (f[adding]=bottom; f[adding]<fieldtop; f[adding]++) {
+        if (!pq->inbox[f[adding]])
             continue;
         if (solver->quit_now)
             return;
 
-        if (peg == npegs-1) {
-            try_all_codes(pq, basefield, dimquad, solver, tol2);
+        // If we've hit the end of the recursion (we're adding the last star),
+        // call try_all_codes to try the quad we've built.
+        if (adding == n_to_add-1) {
+            try_all_codes(pq, field, dimquad, solver, tol2);
         } else {
-            move_pegs(pq, field, npegs, peg+1, fieldtop, basefield, dimquad, solver, tol2);
+            // Else recurse.
+            add_stars(pq, field, fieldoffset, n_to_add, adding+1,
+                      fieldtop, dimquad, solver, tol2);
         }
     }
 }
@@ -599,7 +622,7 @@ void solver_run(solver_t* solver)
 
 					// Now look at all pairs of C, D stars (subject to field[C] < field[D])
                     // ("dimquads - 2" because we've set stars A and B at this point)
-                    move_pegs(pq, field+C, dimquads-2, 0, newpoint, field, dimquads, solver, tol2);
+                    add_stars(pq, field, C, dimquads-2, 0, newpoint, dimquads, solver, tol2);
                     if (solver->quit_now)
                         goto quitnow;
 				}
@@ -648,7 +671,7 @@ void solver_run(solver_t* solver)
                         tol2 = get_tolerance(solver);
 
                         // ("dimquads - 3" because we've set stars A, B, and C at this point)
-                        move_pegs(pq, field+D, dimquads-3, 0, newpoint, field, dimquads, solver, tol2);
+                        add_stars(pq, field, D, dimquads-3, 0, newpoint, dimquads, solver, tol2);
                         if (solver->quit_now)
                             goto quitnow;
 					}
