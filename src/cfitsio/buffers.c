@@ -1000,7 +1000,7 @@ int ffgi4b(fitsfile *fptr,  /* I - FITS file pointer                        */
     }
 
 #if BYTESWAPPED
-    ffswap4(values, nvals);    /* reverse order of bytes in each value */
+    ffswapi32(values, nvals);    /* reverse order of bytes in each value */
 #endif
 
     return(*status);
@@ -1048,7 +1048,7 @@ int ffgi8b(fitsfile *fptr,  /* I - FITS file pointer                        */
     }
 
 #if BYTESWAPPED
-    ffswap8((double *) values, nvals); /* reverse bytes in each value */
+    ffswap8(values, nvals); /* reverse bytes in each value */
 #endif
 
     return(*status);
@@ -1117,7 +1117,7 @@ int ffgr4b(fitsfile *fptr,  /* I - FITS file pointer                        */
     }
 
 #elif BYTESWAPPED
-    ffswap4((INT32BIT *)values, nvals);  /* reverse order of bytes in values */
+    ffswap4(values, nvals);  /* reverse order of bytes in values */
 #endif
 
     return(*status);
@@ -1182,7 +1182,7 @@ int ffgr8b(fitsfile *fptr,  /* I - FITS file pointer                        */
     }
 
 #elif BYTESWAPPED
-    ffswap8(values, nvals);   /* reverse order of bytes in each value */
+    ffswapdouble(values, nvals);   /* reverse order of bytes in each value */
 #endif
 
     return(*status);
@@ -1318,7 +1318,7 @@ int ffpi4b(fitsfile *fptr, /* I - FITS file pointer                         */
 */
 {
 #if BYTESWAPPED
-    ffswap4(values, nvals);    /* reverse order of bytes in each value */
+    ffswapi32(values, nvals);    /* reverse order of bytes in each value */
 #endif
 
     if (incre == 4)      /* write all the values at once (contiguous bytes) */
@@ -1350,7 +1350,7 @@ int ffpi8b(fitsfile *fptr, /* I - FITS file pointer                         */
 */
 {
 #if BYTESWAPPED
-    ffswap8((double *) values, nvals);    /* reverse bytes in each value */
+    ffswap8(values, nvals);    /* reverse bytes in each value */
 #endif
 
     if (incre == 8)      /* write all the values at once (contiguous bytes) */
@@ -1390,7 +1390,7 @@ int ffpr4b(fitsfile *fptr, /* I - FITS file pointer                         */
     ffswap2( (short *) values, nvals * 2);  /* swap pairs of bytes */
 
 #elif BYTESWAPPED
-    ffswap4((INT32BIT *) values, nvals); /* reverse order of bytes in values */
+    ffswap4(values, nvals); /* reverse order of bytes in values */
 #endif
 
     if (incre == 4)      /* write all the values at once (contiguous bytes) */
@@ -1430,7 +1430,7 @@ int ffpr8b(fitsfile *fptr, /* I - FITS file pointer                         */
     ffswap2( (short *) values, nvals * 4);  /* swap pairs of bytes */
 
 #elif BYTESWAPPED
-    ffswap8(values, nvals); /* reverse order of bytes in each value */
+    ffswapdouble(values, nvals); /* reverse order of bytes in each value */
 #endif
 
     if (incre == 8)      /* write all the values at once (contiguous bytes) */

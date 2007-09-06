@@ -981,12 +981,12 @@ int mem_rawfile_open(char *filename, int rwmode, int *hdl)
       }
       else if (datatype == LONG_IMG || datatype == FLOAT_IMG)
       {
-        ffswap4( (INT32BIT *) ptr, nvals);
+        ffswap4(ptr, nvals);
       }
 
       else if (datatype == DOUBLE_IMG)
       {
-        ffswap8( (double *) ptr, nvals);
+        ffswap8(ptr, nvals);
       }
     }
 

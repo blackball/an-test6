@@ -195,14 +195,14 @@ int ffpclu( fitsfile *fptr,  /* I - FITS file pointer                       */
       {
          i4null = (INT32BIT) tnull;
 #if BYTESWAPPED
-         ffswap4(&i4null, 1); /* reverse order of bytes */
+         ffswapi32(&i4null, 1); /* reverse order of bytes */
 #endif
       }
       else
       {
          i8null = tnull;
 #if BYTESWAPPED
-         ffswap4( (INT32BIT*) (&i8null), 2); /* reverse order of bytes */
+         ffswap8(&i8null, 1); /* reverse order of bytes */
 #endif
       }
     }
@@ -437,14 +437,14 @@ int ffpcluc( fitsfile *fptr,  /* I - FITS file pointer                       */
       {
          i4null = (INT32BIT) tnull;
 #if BYTESWAPPED
-         ffswap4(&i4null, 1); /* reverse order of bytes */
+         ffswapi32(&i4null, 1); /* reverse order of bytes */
 #endif
       }
       else
       {
          i8null = tnull;
 #if BYTESWAPPED
-         ffswap4( (INT32BIT*) &i8null, 2); /* reverse order of bytes */
+         ffswap8(&i8null, 1); /* reverse order of bytes */
 #endif
       }
     }

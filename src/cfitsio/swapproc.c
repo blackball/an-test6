@@ -34,8 +34,7 @@ void ffswap2(short *svalues,  /* IO - pointer to shorts to be swapped       */
     }
     return;
 }
-/*--------------------------------------------------------------------------*/
-void ffswap4(INT32BIT *ivalues,  /* IO - pointer to floats to be swapped    */
+void ffswapi32(INT32BIT *ivalues,  /* IO - pointer to floats to be swapped    */
                  long nvals)     /* I  - number of floats to be swapped     */
 /*
   swap the bytes in the input 4-byte integer: ( 0 1 2 3 -> 3 2 1 0 )
@@ -63,7 +62,18 @@ void ffswap4(INT32BIT *ivalues,  /* IO - pointer to floats to be swapped    */
     return;
 }
 /*--------------------------------------------------------------------------*/
-void ffswap8(double *dvalues,  /* IO - pointer to doubles to be swapped     */
+void ffswap4(void *ivalues,  /* IO - pointer to floats to be swapped    */
+                 long nvals)     /* I  - number of floats to be swapped     */
+{
+    ffswapi32((INT32BIT*)ivalues, nvals);
+}
+
+void ffswapdouble(double *values, long nvalues) {
+    ffswap8(values, nvalues);
+}
+
+/*--------------------------------------------------------------------------*/
+void ffswap8(void *dvalues,  /* IO - pointer to 8-byte values to be swapped     */
              long nvals)       /* I  - number of doubles to be swapped      */
 /*
   swap the bytes in the input doubles: ( 01234567  -> 76543210 )

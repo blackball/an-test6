@@ -2207,7 +2207,7 @@ then values of 'n' less than or equal to n_value will match.
 
 {
     int i1 = 0, j1 = 0, val = 0;
-    int fac, nval, mval, lval;
+    int fac, nval=0, mval=0, lval=0;
     char a = ' ';
     char oldp = ' ';
     char c, s;

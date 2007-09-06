@@ -1115,13 +1115,15 @@ int imcomp_compress_tile (fitsfile *outfptr,
         {
 
 #if BYTESWAPPED
-               ffswap4(idata, tilelen); /* reverse order of bytes */
+            ffswapi32(idata, tilelen); /* reverse order of bytes */
 #endif
 			   {
 				   size_t buffsize;
-                compress2mem_from_mem((char *) idata, tilelen * sizeof(int),
-                 (char **) &cbuf, &buffsize, realloc, 
+                   char* buf = cbuf;
+                   compress2mem_from_mem((char *) idata, tilelen * sizeof(int),
+                                         &buf, &buffsize, realloc, 
                  &gzip_nelem, status);
+                   cbuf = buf;
 				clen = buffsize;
 			   }
 
@@ -3711,7 +3713,7 @@ int imcomp_decompress_tile (fitsfile *infptr,
 		}
 
 #if BYTESWAPPED
-         ffswap4(idata, tilelen); /* reverse order of bytes */
+         ffswapi32(idata, tilelen); /* reverse order of bytes */
 #endif
 
         if (idatalen != tilebytesize)
