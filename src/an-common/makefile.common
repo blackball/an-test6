@@ -92,6 +92,9 @@ CFLAGS_DEF += -D_GNU_SOURCE
 # What functions were and weren't inlined?
 #CFLAGS_DEF += -Winline
 
+# Print header files that are included
+#CFLAGS_DEF += -H
+
 LDFLAGS_DEF := $(FLAGS_DEF)
 
 
