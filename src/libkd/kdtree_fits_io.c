@@ -25,7 +25,6 @@
 #include <sys/mman.h>
 
 #include "kdtree_fits_io.h"
-#include "starutil.h"
 #include "fitsioutils.h"
 #include "kdtree_internal.h"
 #include "qfits.h"
