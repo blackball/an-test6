@@ -292,6 +292,7 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 }
             }
             sl_free2(trybases);
+            closedir(dir);
         }
     }
 
@@ -863,6 +864,8 @@ backend_t* backend_new()
 void backend_free(backend_t* backend)
 {
 	int i;
+    if (!backend)
+        return;
 	if (backend->indexinfos) {
 		for (i = 0; i < bl_size(backend->indexinfos); i++) {
 			indexinfo_t* ii = bl_access(backend->indexinfos, i);
@@ -878,6 +881,7 @@ void backend_free(backend_t* backend)
         sl_free2(backend->index_paths);
 	if (backend->blind)
 		free(backend->blind);
+    free(backend);
 }
 
 int main(int argc, char** args)
@@ -894,6 +898,7 @@ int main(int argc, char** args)
 	backend_t* backend;
     char* mydir;
     bool help = FALSE;
+    sl* strings = sl_new(4);
 
 	while (1) {
 		int option_index = 0;
@@ -936,7 +941,7 @@ int main(int argc, char** args)
     {
         char* me;
         me = strdup(args[0]);
-        mydir = strdup(dirname(me));
+        mydir = sl_append(strings, dirname(me));
         free(me);
     }
 
@@ -952,17 +957,14 @@ int main(int argc, char** args)
             // if config file not found in current directory, try the dir containing the
             // backend executable.
             char* tryfn;
-
             free(defaultcf);
-
-            asprintf_safe(&tryfn, "%s/%s", mydir, default_configfn);
+            tryfn = sl_appendf(strings, "%s/%s", mydir, default_configfn);
             if (!file_exists(tryfn)) {
                 fprintf(stderr, "Couldn't find config file \"%s\".\n", default_configfn);
                 fprintf(stderr, "(tried %s, %s)\n", default_configfn, tryfn);
                 exit(-1);
             }
             configfn = tryfn;
-            // MEMLEAK: tryfn
         }
     }
 	fconf = fopen(configfn, "r");
@@ -1056,7 +1058,7 @@ int main(int argc, char** args)
 	}
 
 	backend_free(backend);
-    free(mydir);
+    sl_free2(strings);
 
 	exit(0);
 }

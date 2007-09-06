@@ -789,6 +789,7 @@ int main(int argc, char** args) {
 		fclose(fin);
 	}
 
+    dl_free(scales);
     il_free(depths);
     il_free(fields);
     sl_free2(cmd);
