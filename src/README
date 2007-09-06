@@ -135,7 +135,7 @@ QUICKSTART
         $ solve-field --depth 0-20 --overwrite demo/sdss.jpg
 
      If you have any of indices 203 to 205:
-        $ solve-field --depth 0-30 -overwrite demo/apod1.jpg
+        $ solve-field --depth 0-30 --overwrite --out apod1 http://antwrp.gsfc.nasa.gov/apod/image/0302/ngc2264_croman_c3.jpg 
 
      If you have any of indices 206 to 211:
         $ solve-field --depth 0-20,20-40 --overwrite --scale-low 1 demo/apod2.jpg
