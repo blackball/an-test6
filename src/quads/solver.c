@@ -47,6 +47,7 @@
 #undef KD_DIM
 
 #if TESTING
+#define DEBUGSOLVER 1
 #define TRY_ALL_CODES test_try_all_codes
 void test_try_all_codes(pquad* pq,
                         uint* fieldstars, int dimquad,
@@ -650,6 +651,8 @@ void solver_run(solver_t* solver)
 						continue;
 					}
 					debug("  C is in the box for A=%i, B=%i\n", field[A], field[B]);
+                    debug("    box now:");
+					print_inbox(pq);
 
                     solver->rel_field_noise2 = pq->rel_field_noise2;
 

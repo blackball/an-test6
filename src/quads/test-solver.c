@@ -23,6 +23,7 @@
 #include "solver.h"
 #include "index.h"
 #include "pquad.h"
+#include "log.h"
 
 int compare_ints_ascending(const void* v1, const void* v2) {
     int i1 = *(int*)v1;
@@ -52,6 +53,7 @@ void test_try_all_codes(pquad* pq,
                         solver_t* solver, double tol2) {
     uint sorted[dimquad];
     int i;
+    fflush(NULL);
     printf("test_try_all_codes: [");
     for (i=0; i<dimquad; i++) {
         printf("%s%i", (i?" ":""), fieldstars[i]);
@@ -68,28 +70,48 @@ void test_try_all_codes(pquad* pq,
         printf("%s%i", (i?" ":""), sorted[i]);
     }
     printf("]\n");
+    fflush(NULL);
 
     bl_append(quadlist, sorted);
     
 }
 
 void test1() {
-    double field[12];
+    double field[14];
     int i=0;
     solver_t* solver;
     index_t index;
     uint wanted[][4] = { { 0,1,3,4 },
                          { 0,2,3,4 },
                          { 1,2,3,4 },
+                         { 2,5,0,1 },
+                         { 2,5,0,3 },
+                         { 2,5,0,4 },
                          { 2,5,1,3 },
                          { 2,5,1,4 },
                          { 2,5,3,4 },
                          { 0,1,3,5 },
                          { 0,1,4,5 },
-                         { 0,2,3,5 },
-                         { 0,2,4,5 },
-                         { 0,3,4,5 },
+                         { 0,6,4,5 },
+                         { 1,6,4,5 },
+                         { 2,6,0,1 },
+                         { 2,6,0,3 },
+                         { 2,6,0,4 },
+                         { 2,6,0,5 },
+                         { 2,6,1,3 },
+                         { 2,6,1,4 },
+                         { 2,6,1,5 },
+                         { 2,6,3,4 },
+                         { 2,6,3,5 },
+                         { 2,6,4,5 },
+                         { 3,6,0,1 },
+                         { 3,6,0,4 },
+                         { 3,6,0,5 },
+                         { 3,6,1,4 },
+                         { 3,6,1,5 },
+                         { 3,6,4,5 },
     };
+
 
     // star0 A: (0,0)
     field[i++] = 0.0;
@@ -150,7 +172,18 @@ void test1() {
     bl_free(quadlist);
 }
 
-int main() {
+char* OPTIONS = "v";
+
+int main(int argc, char** args) {
+    int argchar;
+
+	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
+		switch (argchar) {
+        case 'v':
+            log_init(LOG_ALL+1);
+            break;
+        }
+
     test1();
     return 0;
 }
