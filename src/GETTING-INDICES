@@ -47,7 +47,7 @@ the following conditions:
  * PUBLIC SERVICES MUST BE OPEN: If the indices are used in a system
    which provides a public web  service, then any astronomical images
    solved using the indices (alone or in conjunction with other data)
-   must be made available to to any other interested party including
+   must be made available to any other interested party including
    the Astrometry.net team. The  image files may be made accessible by
    providing a list of URLs, by granting network access to a source
    control repository or database, or by giving access to or sending
