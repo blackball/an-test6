@@ -39,11 +39,22 @@
 #include "blind_wcs.h"
 #include "keywords.h"
 #include "log.h"
+#include "pquad.h"
 
 #include "kdtree.h"
 #define KD_DIM 4
 #include "kdtree.h"
 #undef KD_DIM
+
+#if TESTING
+#define TRY_ALL_CODES test_try_all_codes
+void test_try_all_codes(pquad* pq,
+                        uint* fieldstars, int dimquad,
+                        solver_t* solver, double tol2);
+#else
+#define TRY_ALL_CODES try_all_codes
+#endif
+
 
 static const int A = 0, B = 1, C = 2, D = 3;
 static const int CX = 0, CY = 1, DX = 2, DY = 3;
@@ -97,18 +108,20 @@ void solver_reset_best_match(solver_t* sp) {
 	sp->have_best_match = FALSE;
 }
 
-void solver_init(solver_t* sp)
-{
-	memset(sp, 0, sizeof(solver_t));
-	sp->index = NULL;
-	sp->indexes = pl_new(16);
-	sp->num_verified = 0;
-	sp->field_minx = sp->field_maxx = 0.0;
-	sp->field_miny = sp->field_maxy = 0.0;
-	sp->parity = DEFAULT_PARITY;
-	sp->codetol = DEFAULT_CODE_TOL;
-	sp->record_match_callback = NULL;
-}
+/*
+ void solver_init(solver_t* sp)
+ {
+ memset(sp, 0, sizeof(solver_t));
+ sp->index = NULL;
+ sp->indexes = pl_new(16);
+ sp->num_verified = 0;
+ sp->field_minx = sp->field_maxx = 0.0;
+ sp->field_miny = sp->field_maxy = 0.0;
+ sp->parity = DEFAULT_PARITY;
+ sp->codetol = DEFAULT_CODE_TOL;
+ sp->record_match_callback = NULL;
+ }
+ */
 
 /*
   Reorder the field stars by placing a grid over the field, sorting by
@@ -254,21 +267,6 @@ void solver_compute_quad_range(solver_t* sp, index_t* index,
 		//logmsg("Set maxAB to %g\n", *maxAB);
 	}
 }
-
-struct potential_quad
-{
-	bool scale_ok;
-	int fieldA, fieldB;
-	// distance-squared between A and B, in pixels^2.
-	double scale;
-	double costheta, sintheta;
-	// (field pixel noise / quad scale in pixels)^2
-	double rel_field_noise2;
-	bool* inbox;
-	int ninbox;
-	double* xy;
-};
-typedef struct potential_quad pquad;
 
 static void try_all_codes(pquad* pq,
                           uint* fieldstars, int dimquad,
@@ -433,7 +431,7 @@ static void add_stars(pquad* pq, uint* field, int fieldoffset,
         // If we've hit the end of the recursion (we're adding the last star),
         // call try_all_codes to try the quad we've built.
         if (adding == n_to_add-1) {
-            try_all_codes(pq, field, dimquad, solver, tol2);
+            TRY_ALL_CODES(pq, field, dimquad, solver, tol2);
         } else {
             // Else recurse.
             add_stars(pq, field, fieldoffset, n_to_add, adding+1,
@@ -949,4 +947,10 @@ void solver_set_default_values(solver_t* solver) {
 	solver->logratio_bail_threshold = log(1e-100);
 	solver->parity = DEFAULT_PARITY;
 	solver->codetol = DEFAULT_CODE_TOL;
+}
+
+void solver_free(solver_t* solver) {
+    if (!solver) return;
+    pl_free(solver->indexes);
+    free(solver);
 }

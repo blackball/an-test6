@@ -158,6 +158,16 @@ stellarium-constellations.c: grab-stellarium-constellations
 grab-stellarium-constellations: grab-stellarium-constellations.o \
 		boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB)
 
+test-solver: test-solver.o solver_test.o idfile.o blind_wcs.o verify.o log.o \
+		matchfile.o tic.o svd.o \
+		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+NODEP_OBJS += solver_test.o
+ALL_OBJ += test-solver.o
+
+solver_test.o: solver.c
+	$(CC) $(CFLAGS) -DTESTING=1 -o $@ -c $<
+
 test_dfind: $(TEST_DFIND_OBJ)
 
 image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
@@ -392,4 +402,5 @@ allclean: clean
 clean:
 	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \
 		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ) $(IMAGE2XY)
+		$(NODEP_OBJS)
 
