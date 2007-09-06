@@ -65,11 +65,19 @@ QUICKSTART
    You can override this by either:
         * editing the top-level Makefile (look for INSTALL_DIR)
      or * defining INSTALL_DIR on the command-line:
-          $ INSTALL_DIR=/path/to/astrometry make install
+           For bash shell:
+             $ export INSTALL_DIR=/path/to/astrometry
+             $ make install
+           For tcsh shell:
+             $ setenv INSTALL_DIR /path/to/astrometry
+             $ make install
 
    The astrometry solver is composed of several executables.  You may want to add
    the INSTALL_DIR/bin directory to your path:
-      $ export PATH="$PATH:/usr/local/astrometry/bin"
+      For bash shell:
+        $ export PATH="$PATH:/usr/local/astrometry/bin"
+      For tcsh shell:
+        $ setenv PATH "$PATH:/usr/local/astrometry/bin"
 
 
    Next, grab some pre-cooked indices.  See the file GETTING-INDICES for details
