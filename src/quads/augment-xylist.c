@@ -564,6 +564,8 @@ int main(int argc, char** args) {
             }
 
             sl_append_nocopy(cmd, get_path("fits2fits.py", me));
+            if (verbose)
+                sl_append(cmd, "--verbose");
             append_file(cmd, xylsfn);
             append_file(cmd, sanexylsfn);
 

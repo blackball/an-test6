@@ -59,7 +59,10 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2f
     if (typeinfo == fitstype) and (not no_fits2fits):
         assert sanitized != infile
         new_infile = sanitized
-        cmd = 'fits2fits.py %s %s' % (shell_escape(infile), shell_escape(new_infile))
+        cmd = 'fits2fits.py '
+        if not quiet:
+            cmd += '--verbose '
+        cmd += '%s %s' % (shell_escape(infile), shell_escape(new_infile))
         if mydir:
             # add path...
             cmd = mydir + cmd
