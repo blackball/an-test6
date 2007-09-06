@@ -5,17 +5,23 @@ import sys
 import re
 
 if __name__ == '__main__':
-	if len(sys.argv) != 3:
-		print "Usage: fits2fits.py input.fits output.fits"
+	if (len(sys.argv) == 3):
+		infile = sys.argv[1]
+		outfile = sys.argv[2]
+		verbose = False
+	elif (len(sys.argv) == 4) and (sys.argv[1] == '--verbose'):
+		verbose = True
+		infile = sys.argv[2]
+		outfile = sys.argv[3]
+	else:
+		print "Usage: fits2fits.py [--verbose] input.fits output.fits"
 		sys.exit()
-
-	infile = sys.argv[1]
-	outfile = sys.argv[2]
 
 	# Read input file.
 	fitsin = pyfits.open(infile)
 	# Print out info about input file.
-	fitsin.info()
+	if verbose:
+		fitsin.info()
 
 	# Create output list of HDUs
 	fitsout = pyfits.HDUList()
@@ -32,7 +38,8 @@ if __name__ == '__main__':
 			# new keyword:
 			cnew = pat.sub('_', c)
 			if (c != cnew):
-				print "Replacing illegal keyword ", c, " by ", cnew
+				if verbose:
+					print "Replacing illegal keyword ", c, " by ", cnew
 				# add the new header card
 				hdr.update(cnew, cards[c].value, cards[c].comment, after=c)
 				# remove the old one.
@@ -44,14 +51,16 @@ if __name__ == '__main__':
 		fitsout.append(fitsin[i])
 
 	# Describe output file we're about to write...
-	print 'Outputting:'
-	fitsout.info()
+	if verbose:
+		print 'Outputting:'
+		fitsout.info()
 
 	try:
 		fitsout.writeto(outfile)
 	except IOError:
 		# File probably exists
-		print 'File %s appears to already exist; deleting!' % outfile
+		if verbose:
+			print 'File %s appears to already exist; deleting!' % outfile
 		os.unlink(outfile)
 		fitsout.writeto(outfile)
 	except VerifyError:
