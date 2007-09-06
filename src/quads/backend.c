@@ -42,6 +42,7 @@
 #include "solver.h"
 #include "math.h"
 #include "fitsioutils.h"
+#include "scriptutils.h"
 
 #include "qfits.h"
 
@@ -79,6 +80,7 @@ struct backend {
 	sl* index_paths;
 	il* ibiggest;
 	il* ismallest;
+    il* default_depths;
 	double sizesmallest;
 	double sizebiggest;
 	bool inparallel;
@@ -216,6 +218,12 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			backend->minwidth = atof(nextword);
 		} else if (is_word(line, "maxwidth ", &nextword)) {
 			backend->maxwidth = atof(nextword);
+		} else if (is_word(line, "depths ", &nextword)) {
+            //
+            if (parse_positive_range_string(backend->default_depths, nextword, 0, 0, "Depth")) {
+                rtn = -1;
+                goto done;
+            }
 		} else if (is_word(line, "add_path ", &nextword)) {
 			sl_append(backend->index_paths, nextword);
 		} else {
@@ -461,6 +469,8 @@ do {\
 static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 {
 	int i, j, k;
+    il* depths;
+
 	bool firsttime = TRUE;
     if (!verbose)
         WRITE(fout, "quiet\n");
@@ -468,17 +478,15 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
         WRITE(fout, "timelimit %i\n", job->timelimit);
     if (job->cpulimit)
         WRITE(fout, "cpulimit %i\n", job->cpulimit);
-    for (i=0;; i++) {
-		int startobj = 0, endobj = 0;
-        // if no depths were specified, run through once with the defaults.
-        if (!il_size(job->depths) && i > 0)
-            break;
-        if (il_size(job->depths)) {
-            if (i >= il_size(job->depths)/2)
-                break;
-            startobj = il_get(job->depths, 2*i);
-            endobj = il_get(job->depths, 2*i + 1);
-        }
+
+    if (il_size(job->depths))
+        depths = job->depths;
+    else
+        depths = backend->default_depths;
+
+    for (i=0; i<il_size(depths)/2; i++) {
+		int startobj = il_get(depths, i*2);
+        int endobj = il_get(depths, i*2+1);
 
 		for (j = 0; j < dl_size(job->scales) / 2; j++) {
 			double fmin, fmax;
@@ -994,6 +1002,16 @@ int main(int argc, char** args)
         char* blindcmd;
         asprintf_safe(&blindcmd, "%s/%s", mydir, default_blind_command);
         backend->blind = blindcmd;
+    }
+
+    if (!il_size(backend->default_depths)) {
+        int step = 10;
+        int max = 200;
+        int i;
+        for (i=0; i<max; i+=step) {
+            il_append(backend->default_depths, i);
+            il_append(backend->default_depths, i+step);
+        }
     }
 
 	for (i = optind; i < argc; i++) {

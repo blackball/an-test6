@@ -802,37 +802,7 @@ int main(int argc, char** args) {
 }
 
 static int parse_depth_string(il* depths, const char* str) {
-    // -10,10-20,20-30,40-
-    while (str && *str) {
-        unsigned int lo, hi;
-        int nread;
-        lo = hi = 0;
-        if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
-            sscanf(str, "%*u-%*u%n", &nread);
-        } else if (sscanf(str, "%u-", &lo) == 1) {
-            sscanf(str, "%*u-%n", &nread);
-        } else if (sscanf(str, "-%u", &hi) == 1) {
-            sscanf(str, "-%*u%n", &nread);
-        } else if (sscanf(str, "%u", &hi) == 1) {
-            sscanf(str, "%*u%n", &nread);
-        } else {
-            return -1;
-        }
-        if (lo < 0) {
-            fprintf(stderr, "Depth %i is invalid: must be >= 0.\n", lo);
-            return -1;
-        }
-        if (lo > hi) {
-            fprintf(stderr, "Depth range %i to %i is invalid: max must be >= min!\n", lo, hi);
-            return -1;
-        }
-        il_append(depths, lo);
-        il_append(depths, hi);
-        str += nread;
-        while ((*str == ',') || isspace(*str))
-            str++;
-    }
-    return 0;
+    return parse_positive_range_string(depths, str, 0, 0, "Depth");
 }
 
 static int parse_fields_string(il* fields, const char* str) {

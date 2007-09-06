@@ -25,4 +25,8 @@ char* get_path(const char* prog, const char* me);
 char* create_temp_file(char* fn, char* dir);
 char* escape_filename(const char* fn);
 
+int parse_positive_range_string(il* depths, const char* str,
+                                int default_low, int default_high,
+                                const char* valuename);
+
 #endif
