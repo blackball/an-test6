@@ -295,7 +295,7 @@ static void check_scale(pquad* pq, solver_t* solver)
 	if ((pq->scale < solver->minminAB2) ||
 			(pq->scale > solver->maxmaxAB2)) {
 		pq->scale_ok = FALSE;
-		return ;
+		return;
 	}
 	pq->costheta = (dy + dx) / pq->scale;
 	pq->sintheta = (dy - dx) / pq->scale;
@@ -426,7 +426,7 @@ static void add_stars(pquad* pq, uint* field, int fieldoffset,
     for (f[adding]=bottom; f[adding]<fieldtop; f[adding]++) {
         if (!pq->inbox[f[adding]])
             continue;
-        if (solver->quit_now)
+        if (unlikely(solver->quit_now))
             return;
 
         // If we've hit the end of the recursion (we're adding the last star),
@@ -709,7 +709,6 @@ static void try_all_codes(pquad* pq,
                           solver_t* solver, double tol2)
 {
     int dimcode = (dimquad - 2) * 2;
-	//debug("    code=[%g,%g,%g,%g].\n", code[CX], code[CY], code[DX], code[DY]);
     double code[dimcode];
     double swapcode[dimcode];
     int i;
@@ -724,19 +723,18 @@ static void try_all_codes(pquad* pq,
 
 	if (solver->parity == PARITY_NORMAL ||
 	        solver->parity == PARITY_BOTH) {
-		//debug("    trying normal parity: code=[%g,%g,%g,%g].\n", code[CX], code[CY], code[DX], code[DY]);
+		debug("    trying normal parity: code=[%g,%g,%g,%g].\n", code[CX], code[CY], code[DX], code[DY]);
 		try_all_codes_2(fieldstars, dimquad, code, solver, FALSE, tol2);
 	}
 	if (solver->parity == PARITY_FLIP ||
 	        solver->parity == PARITY_BOTH) {
         int i;
-        //debug("    code=[%g,%g,%g,%g].\n", code[CY], code[CX], code[DY], code[DX]);
-
         // swap CX <-> CY, DX <-> DY.
         for (i=0; i<dimcode/2; i++) {
             swapcode[2*i+0] = code[2*i+1];
             swapcode[2*i+1] = code[2*i+0];
         }
+		debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", swapcode[CX], swapcode[CY], swapcode[DX], swapcode[DY]);
 		try_all_codes_2(fieldstars, dimquad, swapcode, solver, TRUE, tol2);
 	}
 }
@@ -790,7 +788,7 @@ static void try_all_codes_2(uint* fieldstars, int dimquad,
 			if (result->nres)
 				resolve_matches(result, thequeries[i], inorder, fstars, dimquad, solver, current_parity);
                                 
-			if (solver->quit_now)
+			if (unlikely(solver->quit_now))
 				goto quit_now;
 		} else
 			solver->num_cxdx_skipped++;
@@ -876,8 +874,8 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		if (solver_handle_hit(solver, &mo))
 			solver->quit_now = TRUE;
 
-		if (solver->quit_now)
-			return ;
+		if (unlikely(solver->quit_now))
+			return;
 	}
 }
 
@@ -901,9 +899,8 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 	           sp->logratio_bail_threshold, sp->distance_from_quad_bonus);
 	mo->nverified = sp->num_verified++;
 
-	if (mo->logodds >= sp->best_logodds) {
+	if (mo->logodds >= sp->best_logodds)
 		sp->best_logodds = mo->logodds;
-	}
 
 	if (!sp->have_best_match || (mo->logodds > sp->best_match.logodds)) {
 		logmsg("Got a new best match: logodds %g.\n", mo->logodds);
@@ -914,9 +911,8 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 		sp->best_index_num = sp->index_num;
 	}
 
-	if (mo->logodds < sp->logratio_record_threshold) {
+	if (mo->logodds < sp->logratio_record_threshold)
 		return FALSE;
-	}
 
 	update_timeused(sp);
 	mo->timeused = sp->timeused;

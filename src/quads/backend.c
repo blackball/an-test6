@@ -219,10 +219,21 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 		} else if (is_word(line, "maxwidth ", &nextword)) {
 			backend->maxwidth = atof(nextword);
 		} else if (is_word(line, "depths ", &nextword)) {
+            int i;
             //
             if (parse_positive_range_string(backend->default_depths, nextword, 0, 0, "Depth")) {
                 rtn = -1;
                 goto done;
+            }
+            for (i=0; i<il_size(backend->default_depths)/2; i++) {
+                int lo, hi;
+                lo = il_get(backend->default_depths, 2*i);
+                hi = il_get(backend->default_depths, 2*i+1);
+                if ((lo == hi) && (2*i+2 < il_size(backend->default_depths))) {
+                    // "hi" = the next "lo" - 1
+                    hi = il_get(backend->default_depths, 2*i+2) - 1;
+                    il_set(backend->default_depths, 2*i+1, hi);
+                }
             }
 		} else if (is_word(line, "add_path ", &nextword)) {
 			sl_append(backend->index_paths, nextword);
@@ -470,6 +481,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 {
 	int i, j, k;
     il* depths;
+    il* nolimit;
 
 	bool firsttime = TRUE;
     if (!verbose)
@@ -479,14 +491,27 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
     if (job->cpulimit)
         WRITE(fout, "cpulimit %i\n", job->cpulimit);
 
+    nolimit = il_new(4);
+    il_append(nolimit, 0);
+    il_append(nolimit, 0);
+
     if (il_size(job->depths))
         depths = job->depths;
-    else
-        depths = backend->default_depths;
+    else {
+        if (backend->inparallel)
+            depths = nolimit;
+        else
+            depths = backend->default_depths;
+    }
 
     for (i=0; i<il_size(depths)/2; i++) {
 		int startobj = il_get(depths, i*2);
         int endobj = il_get(depths, i*2+1);
+
+        // make depth ranges be inclusive.
+        if (startobj || endobj) {
+            endobj++;
+        }
 
 		for (j = 0; j < dl_size(job->scales) / 2; j++) {
 			double fmin, fmax;
@@ -602,6 +627,9 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 		}
 
 	}
+
+    il_free(nolimit);
+
 	return 0;
 }
 
@@ -860,6 +888,7 @@ backend_t* backend_new()
 	backend->index_paths = sl_new(10);
 	backend->ismallest = il_new(4);
 	backend->ibiggest = il_new(4);
+	backend->default_depths = il_new(4);
 	backend->sizesmallest = HUGE_VAL;
 	backend->sizebiggest = -HUGE_VAL;
 
@@ -885,6 +914,8 @@ void backend_free(backend_t* backend)
         il_free(backend->ismallest);
     if (backend->ibiggest)
         il_free(backend->ibiggest);
+    if (backend->default_depths)
+        il_free(backend->default_depths);
     if (backend->index_paths)
         sl_free2(backend->index_paths);
 	if (backend->blind)

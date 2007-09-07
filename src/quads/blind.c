@@ -1146,7 +1146,10 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 		} else {
 			// Field unsolved.
-			logerr("Field %i did not solve (index %s).\n", fieldnum, bp->solver.index->indexname);
+            if (bp->solver.index && bp->solver.index->indexname)
+                logerr("Field %i did not solve (index %s).\n", fieldnum, bp->solver.index->indexname);
+            else
+                logerr("Field %i did not solve.\n", fieldnum);
 			if (sp->have_best_match) {
 				logmsg("Best match encountered: ");
 				print_match(bp, &(sp->best_match));

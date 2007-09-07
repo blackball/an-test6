@@ -100,12 +100,13 @@ int parse_positive_range_string(il* depths, const char* str,
         int check_range = 1;
         unsigned int lo, hi;
         int nread;
+        char div[2];
         lo = default_low;
         hi = default_high;
         if (sscanf(str, "%u-%u", &lo, &hi) == 2) {
             sscanf(str, "%*u-%*u%n", &nread);
-        } else if (sscanf(str, "%u-", &lo) == 1) {
-            sscanf(str, "%*u-%n", &nread);
+        } else if (sscanf(str, "%u%1[-]", &lo, div) == 2) {
+            sscanf(str, "%*u%*1[-]%n", &nread);
             check_range = 0;
         } else if (sscanf(str, "-%u", &hi) == 1) {
             sscanf(str, "-%*u%n", &nread);
