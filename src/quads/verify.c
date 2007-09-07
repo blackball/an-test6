@@ -170,9 +170,6 @@ void verify_hit(startree* skdt,
 	double bestlogodds;
 	int bestnmatch, bestnnomatch, bestnconflict;
 
-	// FIXME - the value 1.5 is simulation-based.
-	//double gamma2 = square(1.5);
-
 	int Nmin;
 
 	double crvalxyz[3];

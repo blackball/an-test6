@@ -35,7 +35,8 @@ const char* svn_date() {
 		Like-we-should-call-it-svnlsd.  (That last one was an inside joke.)
         I saw a poster once - it had a dog with a thought bubble that said,
         "Whoever said that dogs shouldn't take LSD definitely wasn't a dog on LSD."
-        Hahahaha.  It was a dopey-looking golden retriever.
+        Hahahaha.  It was a dopey-looking golden retriever.  But then, aren't all
+       golden retrievers fairly dopey looking?
 	*/
 	const char* datestr = "$Date$";
 	// (I want to trim off the first seven and last two characters.)
