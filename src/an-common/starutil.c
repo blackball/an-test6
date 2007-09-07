@@ -193,7 +193,62 @@ Const inline double dist2rad(double dist) {
 }
 
 
+// RA in degrees to Mercator X coordinate [0, 1).
+inline double ra2mercx(double ra) {
+    double mx = ra / 360.0;
+    if (mx < 0.0 || mx > 1.0) {
+        mx = fmod(mx, 1.0);
+        if (mx < 0.0)
+            mx += 1.0;
+    }
+    return mx;
+}
 
+// Dec in degrees to Mercator Y coordinate [0, 1).
+inline double dec2mercy(double dec) {
+	return 0.5 + (asinh(tan(deg2rad(dec))) / (2.0 * M_PI));
+}
+
+// RA in degrees to H:M:S
+inline void ra2hms(double ra, int* h, int* m, double* s) {
+    double rem;
+    ra = fmod(ra, 360.0);
+    if (ra < 0.0)
+        ra += 360.0;
+    rem = ra / 15.0;
+    *h = floor(rem);
+    // remaining (fractional) hours
+    rem -= *h;
+    // -> minutes
+    rem *= 60.0;
+    *m = floor(rem);
+    // remaining (fractional) minutes
+    rem -= *m;
+    // -> seconds
+    rem *= 60.0;
+    *s = rem;
+}
+
+// Dec in degrees to D:M:S
+inline void dec2dms(double dec, int* d, int* m, double* s) {
+    double rem;
+    double flr;
+    int sign;
+    sign = (dec >= 0.0) ? 1 : -1;
+    dec *= sign;
+    flr = floor(dec);
+    *d = sign * flr;
+    // remaining degrees:
+    rem = dec - flr;
+    // -> minutes
+    rem *= 60.0;
+    *m = floor(rem);
+    // remaining (fractional) minutes
+    rem -= *m;
+    // -> seconds
+    rem *= 60.0;
+    *s = rem;
+}
 
 /* computes the 2D coordinates (x,y) (in units of a celestial sphere of radius 1)
    that star s would have in a TANGENTIAL PROJECTION defined by (centred at) star r.

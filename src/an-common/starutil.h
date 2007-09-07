@@ -81,6 +81,16 @@ inline void radecdeg2xyzarr(double ra, double dec, double* xyz);
 inline void radecdeg2xyzarrmany(double *ra, double *dec, double* xyz, int n);
 
 
+// RA in degrees to Mercator X coordinate [0, 1).
+inline double ra2mercx(double ra);
+// Dec in degrees to Mercator Y coordinate [0, 1).
+inline double dec2mercy(double dec);
+
+// RA in degrees to H:M:S
+inline void ra2hms(double ra, int* h, int* m, double* s);
+// Dec in degrees to D:M:S
+inline void dec2dms(double dec, int* d, int* m, double* s);
+
 inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy);
 
 inline void project_equal_area(double x, double y, double z, double* projx, double* projy);
