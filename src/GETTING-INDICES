@@ -19,7 +19,7 @@ about.
 
 We want our code to be open.  However, we want to avoid a situation in
 which people use our code in ways that don't lead to data becoming
-more accessible. So we're trying to encourage universal data
+more accessible.  We're trying to encourage universal data
 availability by attaching some conditions to our data files.
 
 Our code is distributed under the GPL, and we won't impose additional
@@ -49,7 +49,7 @@ the following conditions:
    which provides a public web service, then any astronomical images
    solved using the indices (alone or in conjunction with other data)
    must be made available to any other interested party including the
-   Astrometry.net team. The image files may be made accessible by
+   Astrometry.net team.  The image files may be made accessible by
    providing a list of URLs, by granting network access to a source
    control repository or database, or by giving access to or sending
    physical media.
@@ -58,13 +58,13 @@ the following conditions:
    research grant proposals or other scientific or academic
    publications, the Astrometry.net project must be properly cited and
    acknowledged.  The paper to cite is the Lang et al paper on our
-   bibliography page http://astrometry.net/biblio.html . The
+   bibliography page http://astrometry.net/biblio.html .  The
    acknowledgement text is "This research made use of tools provided
    by Astrometry.net."
 
  * NO REDISTRIBUTION: Redistribution, copying, posting, mirroring, or
    hosting copies of the indices or information sufficient to obtain
-   the indices is not permitted. In other words, the only legitimate
+   the indices is not permitted.  In other words, the only legitimate
    way for someone to have the indices is for them to have obtained
    them from us directly.
 
