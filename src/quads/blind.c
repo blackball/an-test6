@@ -768,8 +768,13 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 	if (mo->logodds >= bp->logratio_tosolve) {
 		bp->nsolves_sofar++;
 		if (bp->nsolves_sofar >= bp->nsolves) {
-			//logmsg("Solved field with index %s\n", bp->solver.index->indexname); // FIXME blatent encapsulation violation
-			logerr("Field %i: solved with index %s\n", mo->fieldnum, bp->solver.index->indexname); // FIXME blatent encapsulation violation
+            char* copy;
+            char* base;
+            copy = strdup(bp->solver.index->indexname);
+            base = strdup(basename(copy));
+            free(copy);
+			logerr("Field %i: solved with index %s.\n", mo->fieldnum, base);
+            free(base);
 			return TRUE;
 		} else {
 			logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
@@ -1146,10 +1151,20 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 		} else {
 			// Field unsolved.
-            if (bp->solver.index && bp->solver.index->indexname)
-                logerr("Field %i did not solve (index %s).\n", fieldnum, bp->solver.index->indexname);
-            else
-                logerr("Field %i did not solve.\n", fieldnum);
+            logerr("Field %i did not solve", fieldnum);
+            if (bp->solver.index && bp->solver.index->indexname) {
+                char* copy;
+                char* base;
+                copy = strdup(bp->solver.index->indexname);
+                base = strdup(basename(copy));
+                free(copy);
+                logerr(" (index %s", base);
+                free(base);
+                if (bp->solver.endobj)
+                    logerr(", field objects %i-%i", bp->solver.startobj+1, bp->solver.endobj);
+                logerr(")");
+            }
+            logerr(".\n");
 			if (sp->have_best_match) {
 				logmsg("Best match encountered: ");
 				print_match(bp, &(sp->best_match));

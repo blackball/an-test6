@@ -482,8 +482,13 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 	int i, j, k;
     il* depths;
     il* nolimit;
-
+    double app_min_default;
+    double app_max_default;
 	bool firsttime = TRUE;
+
+    app_min_default = deg2arcsec(backend->minwidth) / job->imagew;
+    app_max_default = deg2arcsec(backend->maxwidth) / job->imagew;
+
     if (!verbose)
         WRITE(fout, "quiet\n");
     if (job->timelimit)
@@ -524,8 +529,12 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			// arcsec per pixel range
 			app_min = dl_get(job->scales, j * 2);
 			app_max = dl_get(job->scales, j * 2 + 1);
-			WRITE(fout, "fieldunits_lower %g\n", app_min);
-			WRITE(fout, "fieldunits_upper %g\n", app_max);
+            if (app_min == 0.0)
+                app_min = app_min_default;
+            WRITE(fout, "fieldunits_lower %g\n", app_min);
+            if (app_max == 0.0)
+                app_max = app_max_default;
+            WRITE(fout, "fieldunits_upper %g\n", app_max);
 
 			WRITE(fout, "fieldw %g\n", job->imagew);
 			WRITE(fout, "fieldh %g\n", job->imageh);
@@ -762,16 +771,20 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 		double lo, hi;
 		sprintf(key, "ANAPPL%i", n);
 		lo = qfits_header_getdouble(hdr, key, dnil);
-		if (lo == dnil)
-			break;
 		sprintf(key, "ANAPPU%i", n);
 		hi = qfits_header_getdouble(hdr, key, dnil);
-		if (hi == dnil)
+		if ((hi == dnil) && (lo == dnil))
 			break;
-        if ((lo <= 0) || (lo > hi)) {
-            fprintf(stderr, "Scale range %g to %g is invalid: min must be >= 0, max must be >= min.\n", lo, hi);
-            goto bailout;
+        if ((lo != dnil) && (hi != dnil)) {
+            if ((lo < 0) || (lo > hi)) {
+                fprintf(stderr, "Scale range %g to %g is invalid: min must be >= 0, max must be >= min.\n", lo, hi);
+                goto bailout;
+            }
         }
+        if (hi == dnil)
+            hi = 0.0;
+        if (lo == dnil)
+            lo = 0.0;
 		dl_append(job->scales, lo);
 		dl_append(job->scales, hi);
 		n++;

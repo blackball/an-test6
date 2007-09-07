@@ -666,11 +666,9 @@ int main(int argc, char** args) {
         qfits_header_add(hdr, "ANYCOL", ycol, "Name of column containing Y coords", NULL);
     }
 
-	if (scalelo > 0.0 && scalehi > 0.0) {
+	if ((scalelo > 0.0) || (scalehi > 0.0)) {
 		double appu, appl;
-		if (!scaleunits)
-			scaleunits = "degwide";
-		if (!strcasecmp(scaleunits, "degwidth")) {
+		if (!scaleunits || !strcasecmp(scaleunits, "degwidth")) {
 			appl = deg2arcsec(scalelo) / (double)W;
 			appu = deg2arcsec(scalehi) / (double)W;
 		} else if (!strcasecmp(scaleunits, "arcminwidth")) {
@@ -692,10 +690,16 @@ int main(int argc, char** args) {
 	}
 	for (i=0; i<dl_size(scales)/2; i++) {
 		char key[64];
-		sprintf(key, "ANAPPL%i", i+1);
-		fits_header_add_double(hdr, key, dl_get(scales, i*2), "scale: arcsec/pixel min");
-		sprintf(key, "ANAPPU%i", i+1);
-		fits_header_add_double(hdr, key, dl_get(scales, i*2+1), "scale: arcsec/pixel max");
+        double lo = dl_get(scales, 2*i);
+        double hi = dl_get(scales, 2*i + 1);
+        if (lo > 0.0) {
+            sprintf(key, "ANAPPL%i", i+1);
+            fits_header_add_double(hdr, key, lo, "scale: arcsec/pixel min");
+        }
+        if (hi > 0.0) {
+            sprintf(key, "ANAPPU%i", i+1);
+            fits_header_add_double(hdr, key, hi, "scale: arcsec/pixel max");
+        }
 	}
 
 	qfits_header_add(hdr, "ANTWEAK", (tweak ? "T" : "F"), (tweak ? "Tweak: yes please!" : "Tweak: no, thanks."), NULL);

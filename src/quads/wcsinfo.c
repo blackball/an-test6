@@ -21,8 +21,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "sip.h"
 #include "sip_qfits.h"
@@ -38,18 +38,6 @@ void printHelp(char* progname) {
 			"\n", progname);
 }
 
-static double ra2mercx(double ra) {
-	return ra / 360.0;
-}
-static double dec2mercy(double dec) {
-	return 0.5 + (asinh(tan(deg2rad(dec))) / (2.0 * M_PI));
-}
-
-/*
-  #define min(a,b) (((a)<(b))?(a):(b))
-  #define max(a,b) (((a)>(b))?(a):(b))
-*/
-
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -59,10 +47,15 @@ int main(int argc, char** args) {
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
 	sip_t wcs;
-	int imw, imh;
+	double imw, imh;
 	qfits_header* wcshead = NULL;
 	double rac, decc;
 	double det, T, A, parity, orient;
+    int rah, ram, decd, decm;
+    double ras, decs;
+    char* units;
+    double pixscale;
+    double fldw, fldh;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -92,12 +85,15 @@ int main(int argc, char** args) {
 		return -1;
 	}
 
-	imw = qfits_header_getint(wcshead, "IMAGEW", -1);
-	imh = qfits_header_getint(wcshead, "IMAGEH", -1);
-	if ((imw == -1) || (imh == -1)) {
+	imw = qfits_header_getdouble(wcshead, "IMAGEW", -1.0);
+	imh = qfits_header_getdouble(wcshead, "IMAGEH", -1.0);
+	if ((imw == -1.0) || (imh == -1.0)) {
 		fprintf(stderr, "failed to find IMAGE{W,H} in WCS file.\n");
 		return -1;
 	}
+
+    printf("imagew %.12g\n", imw);
+    printf("imageh %.12g\n", imh);
 
 	printf("cd11 %.12g\n", wcs.wcstan.cd[0][0]);
 	printf("cd12 %.12g\n", wcs.wcstan.cd[0][1]);
@@ -106,9 +102,10 @@ int main(int argc, char** args) {
 
 	det = sip_det_cd(&wcs);
 	parity = (det >= 0 ? 1.0 : -1.0);
+    pixscale = sip_pixel_scale(&wcs);
 	printf("det %.12g\n", det);
 	printf("parity %i\n", (int)parity);
-	printf("pixscale %.12g\n", 3600.0 * sqrt(fabs(det)));
+	printf("pixscale %.12g\n", pixscale);
 
 	T = parity * wcs.wcstan.cd[0][0] + wcs.wcstan.cd[1][1];
 	A = parity * wcs.wcstan.cd[1][0] - wcs.wcstan.cd[0][1];
@@ -120,9 +117,36 @@ int main(int argc, char** args) {
 	printf("ra_center %.12g\n", rac);
 	printf("dec_center %.12g\n", decc);
 
+    ra2hms(rac, &rah, &ram, &ras);
+    dec2dms(decc, &decd, &decm, &decs);
+    printf("ra_center_h %i\n", rah);
+    printf("ra_center_m %i\n", ram);
+    printf("ra_center_s %.12g\n", ras);
+    printf("ra_center_hms %02i:%02i:%2.3g\n", rah, ram, ras);
+    printf("dec_center_d %i\n", decd);
+    printf("dec_center_m %i\n", decm);
+    printf("dec_center_s %.12g\n", decs);
+    printf("dec_center_dms %+02i:%02i:%2.3g\n", decd, decm, decs);
+
 	// mercator
 	printf("ra_center_merc %.8g\n", ra2mercx(rac));
 	printf("dec_center_merc %.8g\n", dec2mercy(decc));
+
+    fldw = imw * pixscale;
+    fldh = imh * pixscale;
+    units = "arcseconds";
+    if (MIN(fldw, fldh) > 3600.0) {
+        fldw /= 3600.0;
+        fldh /= 3600.0;
+        units = "degrees";
+    } else if (MIN(fldw, fldh) > 60.0) {
+        fldw /= 60.0;
+        fldh /= 60.0;
+        units = "arcminutes";
+    }
+    printf("fieldw %.4g\n", fldw);
+    printf("fieldh %.4g\n", fldh);
+    printf("fieldunits %s\n", units);
 
 	qfits_header_destroy(wcshead);
 

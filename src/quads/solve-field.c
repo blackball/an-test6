@@ -626,6 +626,7 @@ int main(int argc, char** args) {
 		} else {
 			matchfile* mf;
 			MatchObj* mo;
+            sl* lines;
 
 			// index rdls to xyls.
             sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
@@ -650,6 +651,73 @@ int main(int argc, char** args) {
 				exit(-1);
             }
 			free(cmd);
+
+
+            sl_append_nocopy(cmdline, get_path("wcsinfo", me));
+            sl_append(cmdline, escape_filename(wcsfn));
+
+			cmd = sl_implode(cmdline, " ");
+			sl_remove_all(cmdline);
+            if (verbose)
+                printf("Running:\n  %s\n", cmd);
+            fflush(NULL);
+            if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+                fflush(NULL);
+                fprintf(stderr, "wcsinfo failed: %s\n", errmsg);
+                fprintf(stderr, "exiting.\n");
+                exit(-1);
+            }
+			free(cmd);
+
+            if (lines) {
+                int i;
+                char* parity;
+                double rac, decc;
+                char* rahms=NULL;
+                char* decdms=NULL;
+                double fieldw, fieldh;
+                char* fieldunits = NULL;
+
+                for (i=0; i<sl_size(lines); i++) {
+                    char* line;
+                    char* nextword;
+                    line = sl_get(lines, i);
+                    if (is_word(line, "parity ", &nextword)) {
+                        if (nextword[0] == '1') {
+                            parity = "flipped";
+                        } else {
+                            parity = "normal";
+                        }
+                    } else if (is_word(line, "ra_center ", &nextword)) {
+                        rac = atof(nextword);
+                    } else if (is_word(line, "dec_center ", &nextword)) {
+                        decc = atof(nextword);
+                    } else if (is_word(line, "ra_center_hms ", &nextword)) {
+                        rahms = strdup(nextword);
+                    } else if (is_word(line, "dec_center_dms ", &nextword)) {
+                        decdms = strdup(nextword);
+                    } else if (is_word(line, "fieldw ", &nextword)) {
+                        fieldw = atof(nextword);
+                    } else if (is_word(line, "fieldh ", &nextword)) {
+                        fieldh = atof(nextword);
+                    } else if (is_word(line, "fieldunits ", &nextword)) {
+                        fieldunits = strdup(nextword);
+                    }
+                }
+
+                printf("Field center: (RA,Dec) = (%.4g, %.4g) deg.\n", rac, decc);
+                printf("Field center: (RA H:M:S, Dec D:M:S) = (%s, %s).\n", rahms, decdms);
+                printf("Field size: %g x %g %s\n", fieldw, fieldh, fieldunits);
+
+                free(fieldunits);
+                free(rahms);
+                free(decdms);
+
+                sl_free2(lines);
+            }
+
+
+
 
             if (makeplots) {
                 // sources + index overlay
