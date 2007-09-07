@@ -139,44 +139,50 @@ QUICKSTART
 
    If you have the netpbm tools installed (eg, jpegtopnm):
 
-     If you have any of indices 200 to 203:
-        $ solve-field --depth 0-20 --overwrite demo/sdss.jpg
-
-     If you have any of indices 203 to 205:
-        $ solve-field --depth 0-30 --overwrite --out apod1 http://antwrp.gsfc.nasa.gov/apod/image/0302/ngc2264_croman_c3.jpg 
-
-     If you have any of indices 206 to 211:
-        $ solve-field --depth 0-20,20-40 --overwrite --scale-low 1 demo/apod2.jpg
-
-     If you have any of indices 210 to 214:
-        $ solve-field --depth 0-20,20-30,30-50,50-60 --overwrite --scale-low 1 demo/apod3.jpg
-
      If you have any of indices 213 to 218:
-        $ solve-field --depth 0-20,20-40,40-50 --overwrite --scale-low 10 demo/apod4.jpg
+        $ solve-field --scale-low 10 demo/apod4.jpg
 
      If you have index 219:
-        $ solve-field --depth 0-70 --overwrite --scale-low 30 demo/apod5.jpg
+        $ solve-field --scale-low 30 demo/apod5.jpg
+
+     If you have any of indices 210 to 214:
+        $ solve-field --scale-low 1 demo/apod3.jpg
+
+     If you have any of indices 206 to 211:
+        $ solve-field --scale-low 1 demo/apod2.jpg
+
+     If you have any of indices 203 to 205:
+        $ solve-field --out apod1 http://antwrp.gsfc.nasa.gov/apod/image/0302/ngc2264_croman_c3.jpg 
+
+     If you have any of indices 200 to 203:
+        $ solve-field demo/sdss.jpg
+
+
+   Copyrights and credits for the demo images are listed in the file demo/CREDITS .
+
 
 
    If you don't have the netpbm tools, do this instead:
 
-     If you have any of indices 200 to 203:
-        $ solve-field --depth 0-20 --overwrite demo/sdss.xyls
-
-     If you have any of indices 203 to 205:
-        $ solve-field --depth 0-30 --overwrite demo/apod1.xyls
-
-     If you have any of indices 206 to 211:
-        $ solve-field --depth 0-20,20-40 --overwrite --scale-low 1 demo/apod2.xyls
-
-     If you have any of indices 210 to 214:
-        $ solve-field --depth 0-20,20-30,30-50,50-60 --overwrite --scale-low 1 demo/apod3.xyls
-
      If you have any of indices 213 to 218:
-        $ solve-field --depth 0-20,20-40,40-50 --overwrite --scale-low 10 demo/apod4.xyls
+        $ solve-field --scale-low 10 demo/apod4.xyls
 
      If you have index 219:
-        $ solve-field --depth 0-70 --overwrite --scale-low 30 demo/apod5.xyls
+        $ solve-field --scale-low 30 demo/apod5.xyls
+
+     If you have any of indices 210 to 214:
+        $ solve-field --scale-low 1 demo/apod3.xyls
+
+     If you have any of indices 206 to 211:
+        $ solve-field --scale-low 1 demo/apod2.xyls
+
+     If you have any of indices 203 to 205:
+        $ solve-field demo/apod1.xyls
+
+     If you have any of indices 200 to 203:
+        $ solve-field demo/sdss.xyls
+
+
 
 
    Each of these commands should solve the field and produce a number of output
