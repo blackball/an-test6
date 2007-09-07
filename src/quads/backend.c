@@ -258,12 +258,13 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
         for (i=0; i<sl_size(backend->index_paths); i++) {
             char* path = sl_get(backend->index_paths, i);
             DIR* dir = opendir(path);
-            sl* trybases = sl_new(16);
+            sl* trybases;
             int j;
             if (!dir) {
                 fprintf(stderr, "Failed to open directory \"%s\": %s\n", path, strerror(errno));
                 continue;
             }
+            trybases = sl_new(16);
             while (1) {
                 struct dirent* de;
                 char* name;
@@ -948,7 +949,8 @@ int main(int argc, char** args)
 	FILE* fconf;
 	int i;
 	backend_t* backend;
-    char* mydir;
+    char* mydir = NULL;
+    char* me;
     bool help = FALSE;
     sl* strings = sl_new(4);
 
@@ -965,7 +967,7 @@ int main(int argc, char** args)
             verbose = TRUE;
             break;
 		case 'c':
-			configfn = optarg;
+			configfn = strdup(optarg);
 			break;
 		case 'i':
 			inputfn = optarg;
@@ -990,34 +992,41 @@ int main(int argc, char** args)
 	backend = backend_new();
 
     // directory containing the 'backend' executable:
-    {
-        char* me;
+    me = find_executable(args[0], NULL);
+    if (!me)
         me = strdup(args[0]);
-        mydir = sl_append(strings, dirname(me));
-        free(me);
-    }
+    mydir = sl_append(strings, dirname(me));
+    free(me);
 
 	// Read config file
     if (!configfn) {
-        char* defaultcf;
-        asprintf_safe(&defaultcf, "%s/%s/%s", mydir, default_config_path, default_configfn);
-        //if (file_exists(default_configfn)) {
-        //configfn = default_configfn;
-        if (file_exists(defaultcf)) {
-            configfn = defaultcf;
-        } else {
-            // if config file not found in current directory, try the dir containing the
-            // backend executable.
-            char* tryfn;
-            free(defaultcf);
-            tryfn = sl_appendf(strings, "%s/%s", mydir, default_configfn);
-            if (!file_exists(tryfn)) {
-                fprintf(stderr, "Couldn't find config file \"%s\".\n", default_configfn);
-                fprintf(stderr, "(tried %s, %s)\n", default_configfn, tryfn);
-                exit(-1);
+        int i;
+        sl* trycf = sl_new(4);
+        sl_appendf(trycf, "%s/%s/%s", mydir, default_config_path, default_configfn);
+        sl_appendf(trycf, "%s/%s", mydir, default_configfn);
+        sl_appendf(trycf, "./%s", default_configfn);
+        sl_appendf(trycf, "./%s/%s", default_config_path, default_configfn);
+        for (i=0; i<sl_size(trycf); i++) {
+            char* cf = sl_get(trycf, i);
+            if (file_exists(cf)) {
+                configfn = strdup(cf);
+                if (verbose)
+                    printf("Using config file \"%s\"\n", cf);
+                break;
+            } else {
+                if (verbose)
+                    printf("Config file \"%s\" doesn't exist.\n", cf);
             }
-            configfn = tryfn;
         }
+        if (!configfn) {
+            fprintf(stderr, "Couldn't find config file: tried ");
+            for (i=0; i<sl_size(trycf); i++) {
+                char* cf = sl_get(trycf, i);
+                fprintf(stderr, "%s\"%s\"", (i ? ", " : ""), cf);
+            }
+            fprintf(stderr, "\n");
+        }
+        sl_free2(trycf);
     }
 	fconf = fopen(configfn, "r");
 	if (!fconf) {
@@ -1026,7 +1035,7 @@ int main(int argc, char** args)
 	}
 
 	if (parse_config_file(fconf, backend)) {
-		fprintf(stderr, "Failed to parse config file.\n");
+		fprintf(stderr, "Failed to parse config file \"%s\".\n", configfn);
 		exit( -1);
 	}
 	fclose(fconf);
@@ -1040,6 +1049,8 @@ int main(int argc, char** args)
 		fprintf(stderr, "\"minwidth\" and \"maxwidth\" must be positive!\n");
 		exit( -1);
 	}
+
+    free(configfn);
 
     if (!backend->blind) {
         // default "blind": relative to backend.

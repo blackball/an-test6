@@ -26,57 +26,33 @@
 #include "scriptutils.h"
 #include "ioutils.h"
 
-char* escape_filename(const char* fn) {
+char* shell_escape(const char* str) {
     char* escape = "|&;()<> \t\n\\'\"";
     int nescape = 0;
-    int len = strlen(fn);
+    int len = strlen(str);
     int i;
     char* result;
     int j;
 
     for (i=0; i<len; i++) {
-        char* cp = strchr(escape, fn[i]);
+        char* cp = strchr(escape, str[i]);
         if (!cp) continue;
         nescape++;
     }
     result = malloc(len + nescape + 1);
     for (i=0, j=0; i<len; i++, j++) {
-        char* cp = strchr(escape, fn[i]);
+        char* cp = strchr(escape, str[i]);
         if (!cp) {
-            result[j] = fn[i];
+            result[j] = str[i];
         } else {
             result[j] = '\\';
             j++;
-            result[j] = fn[i];
+            result[j] = str[i];
         }
     }
     assert(j == (len + nescape));
     result[j] = '\0';
     return result;
-}
-
-char* get_path(const char* prog, const char* me) {
-    char* cpy;
-    char* dir;
-    char* path;
-
-    // First look for it in this directory.
-    if (me) {
-        cpy = strdup(me);
-        dir = strdup(dirname(cpy));
-        free(cpy);
-        asprintf_safe(&path, "%s/%s", dir, prog);
-        free(dir);
-    } else {
-        asprintf_safe(&path, "./%s", prog);
-    }
-    if (file_executable(path))
-        return path;
-
-    // Otherwise, let the normal PATH-search machinery find it...
-    free(path);
-    path = strdup(prog);
-    return path;
 }
 
 char* create_temp_file(char* fn, char* dir) {

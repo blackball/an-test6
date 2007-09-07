@@ -55,7 +55,8 @@ PNG_LIB := $(shell pkg-config --libs libpng 2>/dev/null)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
-CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
+CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc \
+		listhead imcopy imarith
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 

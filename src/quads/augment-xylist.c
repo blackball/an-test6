@@ -123,8 +123,17 @@ static void print_help(const char* progname) {
 static int parse_depth_string(il* depths, const char* str);
 static int parse_fields_string(il* fields, const char* str);
 
-static void append_file(sl* list, const char* fn) {
-    sl_append_nocopy(list, escape_filename(fn));
+static void append_escape(sl* list, const char* fn) {
+    sl_append_nocopy(list, shell_escape(fn));
+}
+static void append_executable(sl* list, const char* fn, const char* me) {
+    char* exec = find_executable(fn, me);
+    if (!exec) {
+        fprintf(stderr, "Error, couldn't find executable \"%s\".\n", fn);
+        exit(-1);
+    }
+    sl_append_nocopy(list, shell_escape(exec));
+    free(exec);
 }
 
 int main(int argc, char** args) {
@@ -163,7 +172,7 @@ int main(int argc, char** args) {
     bool nof2f = FALSE;
     char* xcol = NULL;
     char* ycol = NULL;
-    char* me = args[0];
+    char* me;
     char* tempdir = "/tmp";
     // this is just to avoid leaking temp filenames...
     sl* tempfiles;
@@ -179,6 +188,8 @@ int main(int argc, char** args) {
     fields = il_new(16);
     cmd = sl_new(16);
     tempfiles = sl_new(4);
+
+    me = find_executable(args[0], NULL);
 
 	while (1) {
 		int option_index = 0;
@@ -360,19 +371,19 @@ int main(int argc, char** args) {
             sl_append_nocopy(tempfiles, pnmfn);
         }
 
-        sl_append_nocopy(cmd, get_path("image2pnm.py", me));
+        append_executable(cmd, "image2pnm.py", me);
         if (!verbose)
             sl_append(cmd, "--quiet");
         if (nof2f)
             sl_append(cmd, "--no-fits2fits");
         sl_append(cmd, "--infile");
-        append_file(cmd, imagefn);
+        append_escape(cmd, imagefn);
         sl_append(cmd, "--uncompressed-outfile");
-        append_file(cmd, uncompressedfn);
+        append_escape(cmd, uncompressedfn);
         sl_append(cmd, "--sanitized-fits-outfile");
-        append_file(cmd, sanitizedfn);
+        append_escape(cmd, sanitizedfn);
         sl_append(cmd, "--outfile");
-        append_file(cmd, pnmfn);
+        append_escape(cmd, pnmfn);
         if (force_ppm)
             sl_append(cmd, "--ppm");
 
@@ -403,7 +414,7 @@ int main(int argc, char** args) {
 
 		// Get image W, H, depth.
         sl_append(cmd, "pnmfile");
-        append_file(cmd, pnmfn);
+        append_escape(cmd, pnmfn);
 
         cmdstr = sl_implode(cmd, " ");
         sl_remove_all(cmd);
@@ -445,8 +456,8 @@ int main(int argc, char** args) {
                 fitsimgfn = sanitizedfn;
 
 			if (guess_scale) {
-                sl_append_nocopy(cmd, get_path("fits-guess-scale", me));
-                append_file(cmd, fitsimgfn);
+                append_executable(cmd, "fits-guess-scale", me);
+                append_escape(cmd, fitsimgfn);
                 
                 cmdstr = sl_implode(cmd, " ");
                 sl_remove_all(cmd);
@@ -487,9 +498,9 @@ int main(int argc, char** args) {
                     printf("Converting PPM image to FITS...\n");
 
                 sl_append(cmd, "ppmtopgm");
-                append_file(cmd, pnmfn);
+                append_escape(cmd, pnmfn);
                 sl_append(cmd, "| pnmtofits >");
-                append_file(cmd, fitsimgfn);
+                append_escape(cmd, fitsimgfn);
 
                 cmdstr = sl_implode(cmd, " ");
                 sl_remove_all(cmd);
@@ -507,9 +518,9 @@ int main(int argc, char** args) {
                     printf("Converting PGM image to FITS...\n");
 
                 sl_append(cmd, "pnmtofits");
-                append_file(cmd, pnmfn);
+                append_escape(cmd, pnmfn);
                 sl_append(cmd, ">");
-                append_file(cmd, fitsimgfn);
+                append_escape(cmd, fitsimgfn);
 
                 cmdstr = sl_implode(cmd, " ");
                 sl_remove_all(cmd);
@@ -532,11 +543,11 @@ int main(int argc, char** args) {
 		xylsfn = create_temp_file("xyls", tempdir);
         sl_append_nocopy(tempfiles, xylsfn);
 
-        sl_append_nocopy(cmd, get_path("image2xy", me));
+        append_executable(cmd, "image2xy", me);
         sl_append(cmd, "-O");
         sl_append(cmd, "-o");
-        append_file(cmd, xylsfn);
-        append_file(cmd, fitsimgfn);
+        append_escape(cmd, xylsfn);
+        append_escape(cmd, fitsimgfn);
         if (!verbose)
             sl_append(cmd, "-q");
 
@@ -573,11 +584,11 @@ int main(int argc, char** args) {
                 sl_append_nocopy(tempfiles, sanexylsfn);
             }
 
-            sl_append_nocopy(cmd, get_path("fits2fits.py", me));
+            append_executable(cmd, "fits2fits.py", me);
             if (verbose)
                 sl_append(cmd, "--verbose");
-            append_file(cmd, xylsfn);
-            append_file(cmd, sanexylsfn);
+            append_escape(cmd, xylsfn);
+            append_escape(cmd, sanexylsfn);
 
             cmdstr = sl_implode(cmd, " ");
             sl_remove_all(cmd);
@@ -610,13 +621,13 @@ int main(int argc, char** args) {
         }
 
 		// sort the table by FLUX.
-        sl_append_nocopy(cmd, get_path("tabsort", me));
+        append_executable(cmd, "tabsort", me);
         sl_append(cmd, "-i");
-        append_file(cmd, xylsfn);
+        append_escape(cmd, xylsfn);
         sl_append(cmd, "-o");
-        append_file(cmd, sortedxylsfn);
+        append_escape(cmd, sortedxylsfn);
         sl_append(cmd, "-c");
-        append_file(cmd, sortcol);
+        append_escape(cmd, sortcol);
         if (descending)
             sl_append(cmd, "-d");
         if (!verbose)

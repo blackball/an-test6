@@ -153,6 +153,19 @@ static int run_command(const char* cmd, bool* ctrlc) {
 	return rtn;
 }
 
+static void append_escape(sl* list, const char* fn) {
+    sl_append_nocopy(list, shell_escape(fn));
+}
+static void append_executable(sl* list, const char* fn, const char* me) {
+    char* exec = find_executable(fn, me);
+    if (!exec) {
+        fprintf(stderr, "Error, couldn't find executable \"%s\".\n", fn);
+        exit(-1);
+    }
+    sl_append_nocopy(list, shell_escape(exec));
+    free(exec);
+}
+
 int main(int argc, char** args) {
 	int c;
 	bool help = FALSE;
@@ -173,7 +186,7 @@ int main(int argc, char** args) {
 	bool fromstdin = FALSE;
 	bool overwrite = FALSE;
     bool makeplots = TRUE;
-    char* me = args[0];
+    char* me;
     char* tempdir = "/tmp";
     bool verbose = FALSE;
     char* baseout = NULL;
@@ -182,15 +195,18 @@ int main(int argc, char** args) {
     char* solvedin = NULL;
 	bool usecurl = TRUE;
 
+    me = find_executable(args[0], NULL);
+
 	augmentxyargs = sl_new(16);
-	sl_append_nocopy(augmentxyargs, get_path("augment-xylist", me));
+	append_executable(augmentxyargs, "augment-xylist", me);
 
 	backendargs = sl_new(16);
-	sl_append_nocopy(backendargs, get_path("backend", me));
+	append_executable(backendargs, "backend", me);
 
+	rtn = 0;
 	while (1) {
 		int option_index = 0;
-		c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
+		c = getopt_long_only(argc, args, OPTIONS, long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -204,42 +220,48 @@ int main(int argc, char** args) {
             break;
         case 'I':
             sl_append(augmentxyargs, "--solved-in");
-            sl_append_nocopy(augmentxyargs, escape_filename(optarg));
+            append_escape(augmentxyargs, optarg);
             solvedin = optarg;
             break;
         case 'k':
             sl_append(augmentxyargs, "--keep-xylist");
-            sl_append_nocopy(augmentxyargs, escape_filename(optarg));
+            append_escape(augmentxyargs, optarg);
             break;
         case 'o':
             baseout = optarg;
             break;
         case 'X':
-            sl_appendf(augmentxyargs, "--x-column \"%s\"", optarg);
+            sl_append(augmentxyargs, "--x-column");
+            append_escape(augmentxyargs, optarg);
             xcol = optarg;
             break;
         case 'Y':
-            sl_appendf(augmentxyargs, "--y-column \"%s\"", optarg);
+            sl_append(augmentxyargs, "--y-column");
+            append_escape(augmentxyargs, optarg);
             ycol = optarg;
             break;
         case 's':
-            sl_appendf(augmentxyargs, "--sort-column \"%s\"", optarg);
+            sl_append(augmentxyargs, "--sort-column");
+            append_escape(augmentxyargs, optarg);
             break;
         case 'a':
             sl_append(augmentxyargs, "--sort-ascending");
             break;
         case 'm':
-            sl_appendf(augmentxyargs, "--temp-dir \"%s\"", optarg);
+            sl_append(augmentxyargs, "--temp-dir");
+            append_escape(augmentxyargs, optarg);
             tempdir = optarg;
             break;
         case '2':
             sl_append(augmentxyargs, "--no-fits2fits");
             break;
         case 'F':
-            sl_appendf(augmentxyargs, "--fields \"%s\"", optarg);
+            sl_append(augmentxyargs, "--fields");
+            append_escape(augmentxyargs, optarg);
             break;
         case 'D':
-            sl_appendf(augmentxyargs, "--depth \"%s\"", optarg);
+            sl_append(augmentxyargs, "--depth");
+            append_escape(augmentxyargs, optarg);
             break;
         case 'P':
             makeplots = FALSE;
@@ -261,22 +283,23 @@ int main(int argc, char** args) {
 			break;
 		case 'L':
 			sl_append(augmentxyargs, "--scale-low");
-			sl_append(augmentxyargs, optarg);
+			append_escape(augmentxyargs, optarg);
 			break;
 		case 'U':
 			sl_append(augmentxyargs, "--scale-high");
-			sl_append(augmentxyargs, optarg);
+			append_escape(augmentxyargs, optarg);
 			break;
 		case 'u':
 			sl_append(augmentxyargs, "--scale-units");
-			sl_append(augmentxyargs, optarg);
+			append_escape(augmentxyargs, optarg);
 			break;
 		case 't':
 			sl_append(augmentxyargs, "--tweak-order");
-			sl_append(augmentxyargs, optarg);
+			append_escape(augmentxyargs, optarg);
 			break;
 		case 'c':
-			sl_appendf(backendargs, "--config \"%s\"", optarg);
+			sl_append(backendargs, "--config");
+			append_escape(backendargs, optarg);
 			break;
 		case 'd':
 			outdir = optarg;
@@ -284,6 +307,10 @@ int main(int argc, char** args) {
 		case 'f':
 			fromstdin = TRUE;
 			break;
+
+        case '?':
+            printf("\nTry \"--help\" to get a list of options.\n");
+            exit(-1);
 		}
 	}
 
@@ -292,7 +319,6 @@ int main(int argc, char** args) {
 		help = TRUE;
 	}
 
-	rtn = 0;
 	if (help) {
 		print_help(args[0]);
 		exit(rtn);
@@ -300,7 +326,7 @@ int main(int argc, char** args) {
 
 	if (outdir) {
         char* escout;
-        escout = escape_filename(outdir);
+        escout = shell_escape(outdir);
 		asprintf_safe(&cmd, "mkdir -p %s", escout);
         free(escout);
         if (run_command(cmd, NULL)) {
@@ -333,7 +359,6 @@ int main(int argc, char** args) {
         char* downloadfn;
         char* suffix = NULL;
 		sl* outfiles;
-		bool nextfile;
 		sl* cmdline;
         bool ctrlc = FALSE;
 
@@ -407,8 +432,10 @@ int main(int argc, char** args) {
             // MEMLEAK (small memleak here)
         }
 
+		free(base);
+		base = NULL;
+
 		// Check for (and delete) existing output filenames.
-		nextfile = FALSE;
 		for (i = 0; i < sl_size(outfiles); i++) {
 			char* fn = sl_get(outfiles, i);
 			if (!file_exists(fn))
@@ -422,17 +449,9 @@ int main(int argc, char** args) {
 				printf("Output file \"%s\" already exists.  Bailing out.  "
 				       "Use the --overwrite flag to overwrite existing files.\n", fn);
 				printf("Continuing to next input file.\n");
-				nextfile = TRUE;
-				break;
+                goto nextfile;
 			}
 		}
-		if (nextfile) {
-			sl_free2(outfiles);
-			continue;
-		}
-
-		free(base);
-		base = NULL;
 
         // Download URL...
         if (!file_exists(infile) &&
@@ -450,8 +469,8 @@ int main(int argc, char** args) {
                 //sl_append(cmdline, "--no-verbose");
 				sl_append(cmdline, "-O");
 			}
-            sl_append_nocopy(cmdline, escape_filename(downloadfn));
-            sl_append_nocopy(cmdline, escape_filename(infile));
+            append_escape(cmdline, downloadfn);
+            append_escape(cmdline, infile);
 
             cmd = sl_implode(cmdline, " ");
             sl_remove_all(cmdline);
@@ -476,7 +495,8 @@ int main(int argc, char** args) {
             printf("Checking if file \"%s\" is xylist or image: ", infile);
         fflush(NULL);
         // turn on QFITS error reporting.
-        qfits_err_statset(1);
+        if (verbose)
+            qfits_err_statset(1);
 		isxyls = xylist_is_file_xylist(infile, xcol, ycol, &reason);
         if (verbose) {
             printf(isxyls ? "xyls\n" : "image\n");
@@ -496,10 +516,10 @@ int main(int argc, char** args) {
 
 		if (image) {
 			sl_append(augmentxyargs, "--image");
-			sl_append_nocopy(augmentxyargs, escape_filename(image));
+			append_escape(augmentxyargs, image);
 		} else {
 			sl_append(augmentxyargs, "--xylist");
-			sl_append_nocopy(augmentxyargs, escape_filename(xyls));
+			append_escape(augmentxyargs, xyls);
 			/*
 			 if (!width || !height) {
 			 // Load the xylist and compute the min/max.
@@ -519,20 +539,20 @@ int main(int argc, char** args) {
             sl_append_nocopy(outfiles, ppmfn);
 
 			sl_append(augmentxyargs, "--pnm");
-			sl_append_nocopy(augmentxyargs, escape_filename(ppmfn));
+			append_escape(augmentxyargs, ppmfn);
 			sl_append(augmentxyargs, "--force-ppm");
 		}
 
 		sl_append(augmentxyargs, "--out");
-        sl_append_nocopy(augmentxyargs, escape_filename(axyfn));
+        append_escape(augmentxyargs, axyfn);
 		sl_append(augmentxyargs, "--match");
-        sl_append_nocopy(augmentxyargs, escape_filename(matchfn));
+        append_escape(augmentxyargs, matchfn);
 		sl_append(augmentxyargs, "--rdls");
-        sl_append_nocopy(augmentxyargs, escape_filename(rdlsfn));
+        append_escape(augmentxyargs, rdlsfn);
 		sl_append(augmentxyargs, "--solved");
-        sl_append_nocopy(augmentxyargs, escape_filename(solvedfn));
+        append_escape(augmentxyargs, solvedfn);
 		sl_append(augmentxyargs, "--wcs");
-        sl_append_nocopy(augmentxyargs, escape_filename(wcsfn));
+        append_escape(augmentxyargs, wcsfn);
 
 		cmd = sl_implode(augmentxyargs, " ");
         if (verbose)
@@ -549,41 +569,41 @@ int main(int argc, char** args) {
         if (makeplots) {
             // source extraction overlay
             // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
-            sl_append_nocopy(cmdline, get_path("plotxy", me));
+            append_executable(cmdline, "plotxy", me);
             sl_append(cmdline, "-i");
-            sl_append_nocopy(cmdline, escape_filename(axyfn));
+            append_escape(cmdline, axyfn);
             if (image) {
                 sl_append(cmdline, "-I");
-                sl_append_nocopy(cmdline, escape_filename(ppmfn));
+                append_escape(cmdline, ppmfn);
             }
             if (xcol) {
                 sl_append(cmdline, "-X");
-                sl_append_nocopy(cmdline, escape_filename(xcol));
+                append_escape(cmdline, xcol);
             }
             if (ycol) {
                 sl_append(cmdline, "-Y");
-                sl_append_nocopy(cmdline, escape_filename(ycol));
+                append_escape(cmdline, ycol);
             }
             sl_append(cmdline, "-P");
             sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
             
             sl_append(cmdline, "|");
 
-            sl_append_nocopy(cmdline, get_path("plotxy", me));
+            append_executable(cmdline, "plotxy", me);
             sl_append(cmdline, "-i");
-            sl_append_nocopy(cmdline, escape_filename(axyfn));
+            append_escape(cmdline, axyfn);
             if (xcol) {
                 sl_append(cmdline, "-X");
-                sl_append_nocopy(cmdline, escape_filename(xcol));
+                append_escape(cmdline, xcol);
             }
             if (ycol) {
                 sl_append(cmdline, "-Y");
-                sl_append_nocopy(cmdline, escape_filename(ycol));
+                append_escape(cmdline, ycol);
             }
             sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
             sl_append(cmdline, ">");
-            sl_append_nocopy(cmdline, escape_filename(objsfn));
+            append_escape(cmdline, objsfn);
 
             cmd = sl_implode(cmdline, " ");
             sl_remove_all(cmdline);
@@ -604,7 +624,7 @@ int main(int argc, char** args) {
             free(cmd);
         }
 
-		sl_append_nocopy(backendargs, escape_filename(axyfn));
+		append_escape(backendargs, axyfn);
 		cmd = sl_implode(backendargs, " ");
         if (verbose)
             printf("Running:\n  %s\n", cmd);
@@ -629,15 +649,15 @@ int main(int argc, char** args) {
             sl* lines;
 
 			// index rdls to xyls.
-            sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
+            append_executable(cmdline, "wcs-rd2xy", me);
             if (!verbose)
                 sl_append(cmdline, "-q");
 			sl_append(cmdline, "-w");
-			sl_append_nocopy(cmdline, escape_filename(wcsfn));
+			append_escape(cmdline, wcsfn);
 			sl_append(cmdline, "-i");
-			sl_append_nocopy(cmdline, escape_filename(rdlsfn));
+			append_escape(cmdline, rdlsfn);
 			sl_append(cmdline, "-o");
-			sl_append_nocopy(cmdline, escape_filename(indxylsfn));
+			append_escape(cmdline, indxylsfn);
 
 			cmd = sl_implode(cmdline, " ");
 			sl_remove_all(cmdline);
@@ -653,8 +673,8 @@ int main(int argc, char** args) {
 			free(cmd);
 
 
-            sl_append_nocopy(cmdline, get_path("wcsinfo", me));
-            sl_append(cmdline, escape_filename(wcsfn));
+            append_executable(cmdline, "wcsinfo", me);
+            append_escape(cmdline, wcsfn);
 
 			cmd = sl_implode(cmdline, " ");
 			sl_remove_all(cmdline);
@@ -721,27 +741,27 @@ int main(int argc, char** args) {
 
             if (makeplots) {
                 // sources + index overlay
-                sl_append_nocopy(cmdline, get_path("plotxy", me));
+                append_executable(cmdline, "plotxy", me);
                 sl_append(cmdline, "-i");
-                sl_append_nocopy(cmdline, escape_filename(axyfn));
+                append_escape(cmdline, axyfn);
                 if (image) {
                     sl_append(cmdline, "-I");
-                    sl_append_nocopy(cmdline, escape_filename(ppmfn));
+                    append_escape(cmdline, ppmfn);
                 }
                 if (xcol) {
                     sl_append(cmdline, "-X");
-                    sl_append_nocopy(cmdline, escape_filename(xcol));
+                    append_escape(cmdline, xcol);
                 }
                 if (ycol) {
                     sl_append(cmdline, "-Y");
-                    sl_append_nocopy(cmdline, escape_filename(ycol));
+                    append_escape(cmdline, ycol);
                 }
                 sl_append(cmdline, "-P");
                 sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
                 sl_append(cmdline, "|");
-                sl_append_nocopy(cmdline, get_path("plotxy", me));
+                append_executable(cmdline, "plotxy", me);
                 sl_append(cmdline, "-i");
-                sl_append_nocopy(cmdline, escape_filename(indxylsfn));
+                append_escape(cmdline, indxylsfn);
                 sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
 
                 mf = matchfile_open(matchfn);
@@ -757,7 +777,7 @@ int main(int argc, char** args) {
                 }
 
                 sl_append(cmdline, " -P |");
-                sl_append_nocopy(cmdline, get_path("plotquad", me));
+                append_executable(cmdline, "plotquad", me);
                 sl_append(cmdline, "-I -");
                 sl_append(cmdline, "-C green");
                 sl_append(cmdline, "-w 2");
@@ -767,7 +787,7 @@ int main(int argc, char** args) {
                 matchfile_close(mf);
 			
                 sl_append(cmdline, ">");
-                sl_append_nocopy(cmdline, escape_filename(redgreenfn));
+                append_escape(cmdline, redgreenfn);
 
                 cmd = sl_implode(cmdline, " ");
                 sl_remove_all(cmdline);
@@ -786,17 +806,17 @@ int main(int argc, char** args) {
             if (image && makeplots) {
                 sl* lines;
 
-                sl_append_nocopy(cmdline, get_path("plot-constellations", me));
+                append_executable(cmdline, "plot-constellations", me);
                 if (verbose)
                     sl_append(cmdline, "-v");
 				sl_append(cmdline, "-w");
-				sl_append_nocopy(cmdline, escape_filename(wcsfn));
+				append_escape(cmdline, wcsfn);
 				sl_append(cmdline, "-i");
-				sl_append_nocopy(cmdline, escape_filename(ppmfn));
+				append_escape(cmdline, ppmfn);
 				sl_append(cmdline, "-N");
 				sl_append(cmdline, "-C");
 				sl_append(cmdline, "-o");
-				sl_append_nocopy(cmdline, escape_filename(ngcfn));
+				append_escape(cmdline, ngcfn);
 
 				cmd = sl_implode(cmdline, " ");
 				sl_remove_all(cmdline);
@@ -823,15 +843,16 @@ int main(int argc, char** args) {
 
 			// create field rdls?
 		}
-
         fflush(NULL);
 
+    nextfile:        // clean up and move on to the next file.
         sl_free2(cmdline);
 		sl_free2(outfiles);
 	}
 
 	sl_free2(augmentxyargs);
 	sl_free2(backendargs);
+    free(me);
 
 	return 0;
 }

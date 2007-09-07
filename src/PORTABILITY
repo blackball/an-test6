@@ -6,8 +6,8 @@ pieces are Unix-centric.  For example, we assume that "/" is used to separate pa
 names, and in some places we use "/bin/sh".  This will make a Windows port unpleasant.
 For this we do not apologize. :)
 
-Everything should work fine on big-endian and small-endian machines.  However, the
-pre-cooked indices we are distributing will only work on small-endian machines (eg Intel).
+Everything should work fine on big-endian and little-endian machines.  However, the
+pre-cooked indices we are distributing will only work on little-endian machines (eg Intel).
 If you are interested in running on a big-endian machine, please contact us.
 
 Also, everything should work fine on 64-bit processors, though we have only tested this
@@ -18,6 +18,8 @@ processors, and vice versa.
 We define _GNU_SOURCE in the Makefile, which yields some GNU-specific extensions:
 
 -asprintf(), vasprintf() are GNU extensions.
+
+-canonicalize_file_name() is a GNU extension.
 
 -basename(): although _GNU_SOURCE defines some different behaviour, we do not depend
   on this.  (solve-field.c)

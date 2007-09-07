@@ -56,9 +56,20 @@ char* find_executable(const char* progname, const char* sibling) {
     char* path;
     char* pathenv;
 
-    // 1. Check relative to "sibling".
+    // If it's an absolute path, just return it.
+    if (progname[0] == '/')
+        return strdup(progname);
 
-    if (sibling) {
+    // If it's a relative path, resolve it.
+    if (strchr(progname, '/')) {
+        path = canonicalize_file_name(progname);
+        if (path && file_executable(path))
+            return path;
+        free(path);
+    }
+
+    // If "sibling" contains a "/", then check relative to it.
+    if (sibling && strchr(sibling, '/')) {
         // dirname() overwrites its arguments, so make a copy...
         sib = strdup(sibling);
         sibdir = strdup(dirname(sib));
@@ -73,17 +84,7 @@ char* find_executable(const char* progname, const char* sibling) {
         free(path);
     }
 
-    // 2. Check in current directory.
-
-    //path = canonicalize_file_name(progname);
-    //if (path && file_executable(path))
-    asprintf_safe(&path, "./%s", progname);
-    if (file_executable(path))
-        return path;
-
-    free(path);
-
-    // 3. Search PATH.
+    // Search PATH.
     pathenv = getenv("PATH");
     while (1) {
         char* colon;
@@ -107,7 +108,7 @@ char* find_executable(const char* progname, const char* sibling) {
             break;
     }
 
-    // 4. not found.
+    // Not found.
     return NULL;
 }
 

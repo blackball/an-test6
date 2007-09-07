@@ -21,9 +21,8 @@
 
 #include "bl.h"
 
-char* get_path(const char* prog, const char* me);
 char* create_temp_file(char* fn, char* dir);
-char* escape_filename(const char* fn);
+char* shell_escape(const char* str);
 
 int parse_positive_range_string(il* depths, const char* str,
                                 int default_low, int default_high,
