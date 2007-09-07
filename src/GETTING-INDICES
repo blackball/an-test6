@@ -9,7 +9,7 @@ annotate and make searchable all the world's astronomical
 information."
 
 We have put a lot of effort into building our solver, and we want to
-distribute the source code and the data files that make it tick. Our
+distribute the source code and the data files that make it tick.  Our
 project is all about making data accessible, and if we want to become
 a central part of astronomical data processing and storage, then our
 system must be transparent.  Also, by releasing our source code we
@@ -35,7 +35,7 @@ the following conditions:
  * NOT-FOR-PROFIT: Because the indices represent a re-release of data
    originally originating in the USNO-B Catalog, the indices may not
    be used for any commercial purpose whatsoever without prior written
-   consent from our team. Our consent will only be granted to
+   consent from our team.  Our consent will only be granted to
    commercial users for use in public, not-for-profit projects they
    are engaged in or supporting.
 
