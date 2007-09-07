@@ -75,7 +75,10 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2f
         new_infile = uncompressed
         if not quiet:
             log('compressed file, dumping to:', new_infile)
-        do_command(compcmds[typeinfo][1] % (shell_escape(infile), shell_escape(new_infile)))
+        ext, cmd = compcmds[typeinfo]
+        do_command(cmd % (shell_escape(infile), shell_escape(new_infile)))
+        print "compressed"
+        print ext
         return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits, mydir, quiet)
 
     if not typeinfo in imgcmds:

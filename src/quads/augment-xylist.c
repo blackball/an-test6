@@ -341,6 +341,7 @@ int main(int argc, char** args) {
 		char *pnmfn;				
 		sl* lines;
 		bool isfits;
+        bool iscompressed;
 		char *fitsimgfn;
 		char* line;
 		char pnmtype;
@@ -389,11 +390,14 @@ int main(int argc, char** args) {
         free(cmdstr);
 
 		isfits = FALSE;
+        iscompressed = FALSE;
 		for (i=0; i<sl_size(lines); i++) {
             if (verbose)
                 printf("  %s\n", sl_get(lines, i));
 			if (!strcmp("fits", sl_get(lines, i)))
 				isfits = TRUE;
+			if (!strcmp("compressed", sl_get(lines, i)))
+				iscompressed = TRUE;
 		}
 		sl_free2(lines);
 
@@ -432,7 +436,13 @@ int main(int argc, char** args) {
 		sl_free2(lines);
 
 		if (isfits) {
-			fitsimgfn = sanitizedfn;
+            if (nof2f) {
+                if (iscompressed)
+                    fitsimgfn = uncompressedfn;
+                else
+                    fitsimgfn = imagefn;
+            } else
+                fitsimgfn = sanitizedfn;
 
 			if (guess_scale) {
                 sl_append_nocopy(cmd, get_path("fits-guess-scale", me));
