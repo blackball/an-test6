@@ -1,11 +1,12 @@
 How to get the index files required to run the Astrometry.net code
------------------------------------------------------------------
+------------------------------------------------------------------
 September, 2007                                Astrometry.net team
 
 1. Preamble
 
 One of the goals of the Astrometry.net project is to "organize,
-annotate and make searchable all the world's astronomical information."
+annotate and make searchable all the world's astronomical
+information."
 
 We have put a lot of effort into building our solver, and we want to
 distribute the source code and the data files that make it tick. Our
@@ -38,39 +39,39 @@ the following conditions:
    commercial users for use in public, not-for-profit projects they
    are engaged in or supporting.
 
- * CREDIT: If the indices are used in a system which provides a public web
-   service, then any web page that makes use of the results must
-   clearly display the following text: 
-   "This service uses the Astrometry.net solver.
+ * CREDIT: If the indices are used in a system which provides a public
+   web service, then any web page that makes use of the results must
+   clearly display the following text:
+   "This service uses tools provided by Astrometry.net.
     For more details visit http://astrometry.net/ ."
 
  * PUBLIC SERVICES MUST BE OPEN: If the indices are used in a system
-   which provides a public web  service, then any astronomical images
+   which provides a public web service, then any astronomical images
    solved using the indices (alone or in conjunction with other data)
-   must be made available to any other interested party including
-   the Astrometry.net team. The  image files may be made accessible by
+   must be made available to any other interested party including the
+   Astrometry.net team. The image files may be made accessible by
    providing a list of URLs, by granting network access to a source
    control repository or database, or by giving access to or sending
-   physical media. 
+   physical media.
 
  * ACADEMIC CITATION: If the indices are used in any scholarly work,
-   research grant proposals or other scientific or academic publications,
-   the Astrometry.net project must be properly cited and acknowledged.
-   The paper to cite is the Lang et al paper on our bibliography page
-   http://astrometry.net/biblio.html . The acknowledgement text is
-   "This research made use of tools provided by Astrometry.net."
+   research grant proposals or other scientific or academic
+   publications, the Astrometry.net project must be properly cited and
+   acknowledged.  The paper to cite is the Lang et al paper on our
+   bibliography page http://astrometry.net/biblio.html . The
+   acknowledgement text is "This research made use of tools provided
+   by Astrometry.net."
 
- * NO REDISTRIBUTION: Redistribution, copying, posting, mirroring, or hosting
-   copies of the indices or information sufficient to obtain the
-   indices is not permitted. In other words, the only legitimate way
-   for someone to have the indices is for them to have obtained them
-   from us directly.
+ * NO REDISTRIBUTION: Redistribution, copying, posting, mirroring, or
+   hosting copies of the indices or information sufficient to obtain
+   the indices is not permitted. In other words, the only legitimate
+   way for someone to have the indices is for them to have obtained
+   them from us directly.
 
 3. Obtaining the indices
 
 Send an email to code@astrometry.net stating clearly your intended use
-of the indices, and stating explicitly that you have read and agreed to
-the conditions in this text file.  We will return to you information
-required to obtain the indices.  That information may not be
-redistributed, as noted in the conditions above.
-
+of the indices, and stating explicitly that you have read and agreed
+to the conditions in this text file.  We will return to you
+information required to obtain the indices.  That information may not
+be redistributed, as noted in the conditions above.
