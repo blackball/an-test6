@@ -298,6 +298,7 @@ void verify_hit(startree* skdt,
             qc[1] = 0.5 * (vf->field[2*mo->field[0]+1] + vf->field[2*mo->field[1]+1]);
             // Find the radius-squared of the quad = distsq(qc, A)
             rquad2 = distsq(vf->field + 2*mo->field[0], qc, 2);
+			debug("Quad radius = %g pixels\n", sqrt(rquad2));
 	}
 
 	// p(background) = 1/(W*H) of the image.
@@ -329,7 +330,7 @@ void verify_hit(startree* skdt,
 			double bestd2;
 			double sigma2;
 			//double cutoffd2;
-			double R2;
+			double R2 = 0.0;
 			double logprob = -HUGE_VAL;
 			int ind;
 			int fldind;
@@ -383,7 +384,9 @@ void verify_hit(startree* skdt,
 
 			if (DEBUGVERIFY) {
 				double ra,dec;
-				debug("\nIndex star %i (sweep %i): rad %g quads, sigma %g.\n", i, s, sqrt(R2/rquad2), sqrt(sigma2));
+				if (do_gamma)
+					debug("\nIndex star %i (sweep %i): rad %g pixels (%g quads) => sigma = %g.\n",
+						  i, s, sqrt(R2), sqrt(R2/rquad2), sqrt(sigma2));
 				debug("Index star is at (%g,%g) pixels.\n", indexpix[i*2], indexpix[i*2+1]);
 				xyzarr2radecdeg(res->results.d + i*3, &ra, &dec);
 				debug("Index star RA,Dec (%.8g,%.8g) deg\n", ra, dec);
@@ -404,7 +407,7 @@ void verify_hit(startree* skdt,
 				nnomatch++;
 			} else {
 				double oldprob;
-				debug("Match (field star %i), logprob %g\n", fldind, logprob);
+				debug("Match (field star %i), logprob %g (background=%g, distractor=%g)\n", fldind, logprob, logprob_background, logprob_distractor);
 				logprob = log(exp(logprob) + distractors/(fieldW*fieldH));
 
 				oldprob = bestprob[fldind];

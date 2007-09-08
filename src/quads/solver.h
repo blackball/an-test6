@@ -82,6 +82,9 @@ struct solver_t {
 	// OPTIONAL FIELDS WITH SENSIBLE DEFAULTS
 	// ======================================
 
+	// Minimum size of field quads to try, in pixels.
+	double quadsize_min;
+
 	// The first and last field objects to look at; default is all of them.
 	int startobj;
 	int endobj;

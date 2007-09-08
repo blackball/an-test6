@@ -272,6 +272,8 @@ static int read_parameters(blind_t* bp)
 			sp->codetol = atof(nextword);
 		} else if (is_word(line, "parity ", &nextword)) {
 			sp->parity = atoi(nextword);
+		} else if (is_word(line, "quadsize_min ", &nextword)) {
+			sp->quadsize_min = atof(nextword);
 		} else if (is_word(line, "fieldunits_lower ", &nextword)) {
 			sp->funits_lower = atof(nextword);
 		} else if (is_word(line, "fieldunits_upper ", &nextword)) {

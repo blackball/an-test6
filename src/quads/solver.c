@@ -486,6 +486,7 @@ void solver_run(solver_t* solver)
 				// FIXME die horribly if the indexes have differing cx_less_than_dx
 			}
 		}
+		solver->minminAB2 = MAX(solver->minminAB2, square(solver->quadsize_min));
 		logmsg("Quad scale range: [%g, %g] pixels\n", sqrt(solver->minminAB2), sqrt(solver->maxmaxAB2));
 
 		pquads = calloc(numxy * numxy, sizeof(pquad));

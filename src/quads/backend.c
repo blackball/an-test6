@@ -540,6 +540,9 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			WRITE(fout, "fieldw %g\n", job->imagew);
 			WRITE(fout, "fieldh %g\n", job->imageh);
 
+			// minimum quad size to try (in pixels)
+			WRITE(fout, "quadsize_min %g\n", 0.1 * MIN(job->imagew, job->imageh));
+
 			// range of quad sizes that could be found in the field,
 			// in arcsec.
 			fmax = 1.0 * MAX(job->imagew, job->imageh) * app_max;
@@ -1065,7 +1068,7 @@ int main(int argc, char** args)
         int i;
         for (i=0; i<max; i+=step) {
             il_append(backend->default_depths, i);
-            il_append(backend->default_depths, i+step);
+            il_append(backend->default_depths, i+step-1);
         }
     }
 
