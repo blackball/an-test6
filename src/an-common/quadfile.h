@@ -42,18 +42,6 @@ struct quadfile {
 
 	// when reading:
 	uint32_t* quadarray;
-
-	/*
-	  qfits_header* header;
-	  // when reading:
-	  void*  mmap_quad;
-	  size_t mmap_quad_size;
-	*/
-
-	// when writing:
-	qfits_header* header;
-	FILE* fid;
-	off_t header_end;
 };
 typedef struct quadfile quadfile;
 
@@ -77,5 +65,7 @@ double quadfile_get_index_scale_lower_arcsec(const quadfile* qf);
 quadfile* quadfile_open(const char* fname);
 
 quadfile* quadfile_open_for_writing(const char* quadfname);
+
+qfits_header* quadfile_get_header(const quadfile* qf);
 
 #endif

@@ -43,6 +43,10 @@ int quadfile_dimquads(const quadfile* qf) {
     return qf->dimquads;
 }
 
+qfits_header* quadfile_get_header(const quadfile* qf) {
+	return qf->fb->primheader;
+}
+
 static int callback_read_header(qfits_header* primheader, qfits_header* header,
 								size_t* expected, char** errstr,
 								void* userdata) {
@@ -55,7 +59,7 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
     qf->index_scale_lower = qfits_header_getdouble(primheader, "SCALE_L", -1.0);
 	qf->indexid = qfits_header_getint(primheader, "INDEXID", 0);
 	qf->healpix = qfits_header_getint(primheader, "HEALPIX", -1);
-	qf->header = header;
+	//qf->header = header;
 
 	if ((qf->numquads == -1) || (qf->numstars == -1) ||
 		(qf->index_scale_upper == -1.0) || (qf->index_scale_lower == -1.0)) {
@@ -63,7 +67,7 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
 		return -1;
 	}
 
-    if (fits_check_endian(header)) {
+    if (fits_check_endian(primheader)) {
 		if (errstr) *errstr = "File was written with the wrong endianness.";
 		return -1;
     }
@@ -103,17 +107,6 @@ int quadfile_close(quadfile* qf) {
 
 	if (!qf) return 0;
 	fitsbin_close(qf->fb);
-
-	if (qf->fid) {
-		fits_pad_file(qf->fid);
-		if (fclose(qf->fid)) {
-			fprintf(stderr, "Error closing quadfile: %s\n", strerror(errno));
-			rtn = -1;
-		}
-	}
-    if (qf->header)
-        qfits_header_destroy(qf->header);
-
 	free(qf);
     return rtn;
 }
@@ -172,13 +165,9 @@ int quadfile_write_header(quadfile* qf) {
 
 int quadfile_write_quad(quadfile* qf, uint* stars) {
     int i;
-	if (!qf->fid) {
-		fprintf(stderr, "quadfile_fits_write_quad: fid is null.\n");
-		return -1;
-	}
     for (i=0; i<qf->dimquads; i++) {
         uint32_t star = stars[i];
-        if (fwrite(&star, sizeof(uint32_t), 1, qf->fid) != 1) {
+        if (fwrite(&star, sizeof(uint32_t), 1, qf->fb->fid) != 1) {
             fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
             return -1;
         }

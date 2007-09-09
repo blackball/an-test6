@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
 	uint q;
 	int i;
 	uint numused;
+	qfits_header* qhdr;
 	
 	if (argc <= 2) {
 		printHelp(progname);
@@ -139,8 +140,10 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	fits_copy_header(quads->header, qidx->header, "INDEXID");
-	fits_copy_header(quads->header, qidx->header, "HEALPIX");
+	qhdr = quadfile_get_header(quads);
+
+	fits_copy_header(qhdr, qidx->header, "INDEXID");
+	fits_copy_header(qhdr, qidx->header, "HEALPIX");
 
 	boilerplate_add_fits_headers(qidx->header);
 	qfits_header_add(qidx->header, "HISTORY", "This file was created by the program \"quadidx\".", NULL, NULL);
@@ -149,7 +152,7 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(qidx->header, "HISTORY", "(end of quadidx command line)", NULL, NULL);
 
 	qfits_header_add(qidx->header, "HISTORY", "** History entries copied from the input file:", NULL, NULL);
-	fits_copy_all_headers(quads->header, qidx->header, "HISTORY");
+	fits_copy_all_headers(qhdr, qidx->header, "HISTORY");
 	qfits_header_add(qidx->header, "HISTORY", "** End of history entries.", NULL, NULL);
 
 	if (qidxfile_write_header(qidx)) {

@@ -78,6 +78,9 @@ int main(int argc, char **args) {
 	int lastgrass;
 	bool dosweeps = FALSE;
 
+	qfits_header* qouthdr;
+	qfits_header* qinhdr;
+
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
 		case 'q':
@@ -185,17 +188,20 @@ int main(int argc, char **args) {
 	qfout->index_scale_lower = qfin->index_scale_lower;
 	qfout->indexid           = qfin->indexid;
 
-	boilerplate_add_fits_headers(qfout->header);
-	qfits_header_add(qfout->header, "HISTORY", "This file was created by the program \"unpermute-stars\".", NULL, NULL);
-	qfits_header_add(qfout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
-	fits_add_args(qfout->header, args, argc);
-	qfits_header_add(qfout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
-	qfits_header_add(qfout->header, "HISTORY", "** unpermute-stars: history from input:", NULL, NULL);
-	fits_copy_all_headers(qfin->header, qfout->header, "HISTORY");
-	qfits_header_add(qfout->header, "HISTORY", "** unpermute-stars: end of history from input.", NULL, NULL);
-	qfits_header_add(qfout->header, "COMMENT", "** unpermute-stars: comments from input:", NULL, NULL);
-	fits_copy_all_headers(qfin->header, qfout->header, "COMMENT");
-	qfits_header_add(qfout->header, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
+	qouthdr = quadfile_get_header(qfout);
+	qinhdr  = quadfile_get_header(qfin);
+
+	boilerplate_add_fits_headers(qouthdr);
+	qfits_header_add(qouthdr, "HISTORY", "This file was created by the program \"unpermute-stars\".", NULL, NULL);
+	qfits_header_add(qouthdr, "HISTORY", "unpermute-stars command line:", NULL, NULL);
+	fits_add_args(qouthdr, args, argc);
+	qfits_header_add(qouthdr, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
+	qfits_header_add(qouthdr, "HISTORY", "** unpermute-stars: history from input:", NULL, NULL);
+	fits_copy_all_headers(qinhdr, qouthdr, "HISTORY");
+	qfits_header_add(qouthdr, "HISTORY", "** unpermute-stars: end of history from input.", NULL, NULL);
+	qfits_header_add(qouthdr, "COMMENT", "** unpermute-stars: comments from input:", NULL, NULL);
+	fits_copy_all_headers(qinhdr, qouthdr, "COMMENT");
+	qfits_header_add(qouthdr, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
 
 	if (idin) {
 		boilerplate_add_fits_headers(idout->header);

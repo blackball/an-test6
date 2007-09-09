@@ -70,6 +70,8 @@ int main(int argc, char **args) {
 	qfits_header* hdr;
 	int healpix;
 	int codehp;
+	qfits_header* qouthdr;
+	qfits_header* qinhdr;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -138,20 +140,23 @@ int main(int argc, char **args) {
 	quadout->index_scale_upper = quadin->index_scale_upper;
 	quadout->index_scale_lower = quadin->index_scale_lower;
 
-	boilerplate_add_fits_headers(quadout->header);
-	qfits_header_add(quadout->header, "HISTORY", "This file was created by the program \"unpermute-quads\".", NULL, NULL);
-	qfits_header_add(quadout->header, "HISTORY", "unpermute-quads command line:", NULL, NULL);
-	fits_add_args(quadout->header, args, argc);
-	qfits_header_add(quadout->header, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
-	qfits_header_add(quadout->header, "HISTORY", "** unpermute-quads: history from input:", NULL, NULL);
-	fits_copy_all_headers(quadin->header, quadout->header, "HISTORY");
-	qfits_header_add(quadout->header, "HISTORY", "** unpermute-quads end of history from input.", NULL, NULL);
-	qfits_header_add(quadout->header, "COMMENT", "** unpermute-quads: comments from input:", NULL, NULL);
-	fits_copy_all_headers(quadin->header, quadout->header, "COMMENT");
-	qfits_header_add(quadout->header, "COMMENT", "** unpermute-quads: end of comments from input.", NULL, NULL);
-	fits_copy_header(quadin->header, quadout->header, "CXDX");
-	fits_copy_header(quadin->header, quadout->header, "CXDXLT1");
-	fits_copy_header(quadin->header, quadout->header, "CIRCLE");
+	qouthdr = quadfile_get_header(quadout);
+	qinhdr  = quadfile_get_header(quadin);
+
+	boilerplate_add_fits_headers(qouthdr);
+	qfits_header_add(qouthdr, "HISTORY", "This file was created by the program \"unpermute-quads\".", NULL, NULL);
+	qfits_header_add(qouthdr, "HISTORY", "unpermute-quads command line:", NULL, NULL);
+	fits_add_args(qouthdr, args, argc);
+	qfits_header_add(qouthdr, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
+	qfits_header_add(qouthdr, "HISTORY", "** unpermute-quads: history from input:", NULL, NULL);
+	fits_copy_all_headers(qinhdr, qouthdr, "HISTORY");
+	qfits_header_add(qouthdr, "HISTORY", "** unpermute-quads end of history from input.", NULL, NULL);
+	qfits_header_add(qouthdr, "COMMENT", "** unpermute-quads: comments from input:", NULL, NULL);
+	fits_copy_all_headers(qinhdr, qouthdr, "COMMENT");
+	qfits_header_add(qouthdr, "COMMENT", "** unpermute-quads: end of comments from input.", NULL, NULL);
+	fits_copy_header(qinhdr, qouthdr, "CXDX");
+	fits_copy_header(qinhdr, qouthdr, "CXDXLT1");
+	fits_copy_header(qinhdr, qouthdr, "CIRCLE");
 
 	if (quadfile_write_header(quadout)) {
 		fprintf(stderr, "Failed to write quadfile header.\n");
@@ -183,7 +188,7 @@ int main(int argc, char **args) {
 	treeout->tree->perm = NULL;
 
 	hdr = codetree_header(treeout);
-	fits_copy_header(quadin->header, hdr, "HEALPIX");
+	fits_copy_header(qinhdr, hdr, "HEALPIX");
 	boilerplate_add_fits_headers(hdr);
 	qfits_header_add(hdr, "HISTORY", "This file was created by the program \"unpermute-quads\".", NULL, NULL);
 	qfits_header_add(hdr, "HISTORY", "unpermute-quads command line:", NULL, NULL);

@@ -39,13 +39,22 @@ seterr(char** errstr, const char* format, ...) {
 
 void fitsbin_close(fitsbin_t* fb) {
 	if (!fb) return;
-	if (munmap(fb->map, fb->mapsize)) {
-		fprintf(stderr, "Failed to munmap fitsbin: %s\n", strerror(errno));
+	if (fb->map) {
+		if (munmap(fb->map, fb->mapsize)) {
+			fprintf(stderr, "Failed to munmap fitsbin: %s\n", strerror(errno));
+		}
+	}
+	if (fb->fid) {
+		fits_pad_file(fb->fid);
+		if (fclose(fb->fid)) {
+			fprintf(stderr, "Error closing fitsbin: %s\n", strerror(errno));
+		}
 	}
 	free(fb->filename);
 	free(fb->tablename);
 	qfits_header_destroy(fb->primheader);
 	qfits_header_destroy(fb->header);
+	free(fb);
 }
 
 static fitsbin_t* new_fitsbin() {

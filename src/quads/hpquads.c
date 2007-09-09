@@ -693,6 +693,8 @@ int main(int argc, char** argv) {
 	double boxx[4], boxy[4];
 	int hp;
 
+	qfits_header* qhdr;
+
 	bool boundary = FALSE;
 	
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -823,14 +825,16 @@ int main(int argc, char** argv) {
 	quads->healpix = hp;
 	codes->healpix = hp;
 
-	boilerplate_add_fits_headers(quads->header);
-	qfits_header_add(quads->header, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
-	qfits_header_add(quads->header, "HISTORY", "hpquads command line:", NULL, NULL);
-	fits_add_args(quads->header, argv, argc);
-	qfits_header_add(quads->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
+	qhdr = quadfile_get_header(quads);
+
+	boilerplate_add_fits_headers(qhdr);
+	qfits_header_add(qhdr, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
+	qfits_header_add(qhdr, "HISTORY", "hpquads command line:", NULL, NULL);
+	fits_add_args(qhdr, argv, argc);
+	qfits_header_add(qhdr, "HISTORY", "(end of hpquads command line)", NULL, NULL);
 
 	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
-	fits_copy_all_headers(startree_header(starkd), quads->header, "HISTORY");
+	fits_copy_all_headers(startree_header(starkd), qhdr, "HISTORY");
 	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
 
 	boilerplate_add_fits_headers(codes->header);
@@ -843,16 +847,16 @@ int main(int argc, char** argv) {
 	fits_copy_all_headers(startree_header(starkd), codes->header, "HISTORY");
 	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
 
-	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
+	qfits_header_add(qhdr, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 
-	qfits_header_add(quads->header, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
+	qfits_header_add(qhdr, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
 	qfits_header_add(codes->header, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
 
-	qfits_header_add(quads->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
+	qfits_header_add(qhdr, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
 	qfits_header_add(codes->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
 
-	qfits_header_add(quads->header, "CIRCLE", (circle ? "T" : "F"), 
+	qfits_header_add(qhdr, "CIRCLE", (circle ? "T" : "F"), 
 					 (circle ? "Stars C,D live in the circle defined by AB."
 					  :        "Stars C,D live in the box defined by AB."), NULL);
 	qfits_header_add(codes->header, "CIRCLE", (circle ? "T" : "F"), 
@@ -864,7 +868,7 @@ int main(int argc, char** argv) {
 		char key[64];
 		sprintf(key, "PASS%i", i+1);
 		qfits_header_add(codes->header, key, "-1", "placeholder", NULL);
-		qfits_header_add(quads->header, key, "-1", "placeholder", NULL);
+		qfits_header_add(qhdr, key, "-1", "placeholder", NULL);
 	}
 
     if (quadfile_write_header(quads)) {
@@ -1116,7 +1120,7 @@ int main(int argc, char** argv) {
 				char key[64];
 				sprintf(key, "PASS%i", xpass * ypasses + ypass + 1);
 				fits_header_mod_int(codes->header, key, nthispass, "quads created in this pass");
-				fits_header_mod_int(quads->header, key, nthispass, "quads created in this pass");
+				fits_header_mod_int(qhdr, key, nthispass, "quads created in this pass");
 			}
 
 			// HACK -
