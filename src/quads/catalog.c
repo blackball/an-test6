@@ -229,7 +229,7 @@ catalog* catalog_open(char* catfn, int modifiable)
 		goto bail;
 	}
 
-	if (fits_find_table_column(catfn, "xyz", &offxyz, &sizexyz)) {
+	if (fits_find_table_column(catfn, "xyz", &offxyz, &sizexyz, NULL)) {
 		fflush(stdout);
 		fprintf(stderr, "Couldn't find \"xyz\" column in FITS file.");
 		goto bail;
@@ -242,7 +242,7 @@ catalog* catalog_open(char* catfn, int modifiable)
 		goto bail;
 	}
 
-	if (fits_find_table_column(catfn, "mags", &offmags, &sizemags)) {
+	if (fits_find_table_column(catfn, "mags", &offmags, &sizemags, NULL)) {
 		offmags = 0;
 		sizemags = 0;
 	} else {

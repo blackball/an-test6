@@ -447,33 +447,28 @@ qfits_table* fits_get_table_column(const char* fn, const char* colname, int* pco
 	return NULL;
 }
 
-int fits_find_table_column(const char* fn, const char* colname, int* pstart, int* psize) {
-    int i, nextens, start, size;
-
+int fits_find_table_column(const char* fn, const char* colname, int* pstart, int* psize, int* pext) {
+    int i, nextens;
 	nextens = qfits_query_n_ext(fn);
-	for (i=0; i<=nextens; i++) {
+	for (i=1; i<=nextens; i++) {
         qfits_table* table;
         int c;
-		if (qfits_get_datinfo(fn, i, &start, &size) == -1) {
-			fprintf(stderr, "error getting start/size for ext %i.\n", i);
-            return -1;
-        }
-		//fprintf(stderr, "ext %i starts at %i, has size %i.\n", i, start, size);
-		if (!qfits_is_table(fn, i))
-            continue;
         table = qfits_table_open(fn, i);
 		if (!table) {
-			fprintf(stderr, "Couldn't read FITS table from file %s, extension %i.\n",
-					fn, i);
+			//fprintf(stderr, "Couldn't read FITS table from file %s, extension %i.\n", fn, i);
 			continue;
 		}
 		c = fits_find_column(table, colname);
 		qfits_table_close(table);
-		if (c != -1) {
-			*pstart = start;
-			*psize = size;
-			return 0;
+		if (c == -1) {
+			continue;
 		}
+		if (qfits_get_datinfo(fn, i, pstart, psize) == -1) {
+			fprintf(stderr, "error getting start/size for ext %i.\n", i);
+            return -1;
+        }
+		if (pext) *pext = i;
+		return 0;
     }
     return -1;
 }

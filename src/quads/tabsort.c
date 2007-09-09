@@ -168,7 +168,9 @@ int main(int argc, char *argv[]) {
 		qfits_col* col;
 		unsigned char* map;
 		size_t mapsize;
-		int mstart, msize, mgap;
+		int mgap;
+		off_t mstart;
+		size_t msize;
 		int atomsize;
 		int (*sort_func)(const void*, const void*);
 		int* perm;

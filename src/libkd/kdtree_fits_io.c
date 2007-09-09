@@ -179,7 +179,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 
 	for (i=0; i<nextras; i++) {
 		extra_table* tab = extras + i;
-		if (fits_find_table_column(fn, tab->name, &tab->offset, &tab->size)) {
+		if (fits_find_table_column(fn, tab->name, &tab->offset, &tab->size, NULL)) {
 			if (tab->required) {
 				fprintf(stderr, "Failed to find table %s in file %s.\n", tab->name, fn);
 				fclose(fid);

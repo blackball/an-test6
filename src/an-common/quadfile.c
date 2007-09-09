@@ -93,7 +93,7 @@ quadfile* quadfile_open(const char* fn, int modifiable) {
 	}
 	//fprintf(stderr, "nquads %u, nstars %u.\n", qf->numquads, qf->numstars);
 
-    if (fits_find_table_column(fn, "quads", &offquads, &sizequads)) {
+    if (fits_find_table_column(fn, "quads", &offquads, &sizequads, NULL)) {
         fprintf(stderr, "Couldn't find \"quads\" column in FITS file.");
         goto bailout;
     }

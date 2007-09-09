@@ -302,7 +302,7 @@ char* file_get_contents(const char* fn) {
     return buf;
 }
 
-void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap) {
+void get_mmap_size(int start, int size, off_t* mapstart, size_t* mapsize, int* pgap) {
 	int ps = getpagesize();
 	int gap = start % ps;
 	// start must be a multiple of pagesize.

@@ -89,7 +89,7 @@ idfile* idfile_open(char* fn, int modifiable)
 	}
 	//fprintf(stderr, "nstars %u\n", id->numstars);
 
-	if (fits_find_table_column(fn, "ids", &off, &sizeanids)) {
+	if (fits_find_table_column(fn, "ids", &off, &sizeanids, NULL)) {
 		fflush(stdout);
 		fprintf(stderr, "Couldn't find \"ids\" column in FITS file.");
 		goto bailout;

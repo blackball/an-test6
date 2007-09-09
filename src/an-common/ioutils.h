@@ -36,7 +36,7 @@ asprintf_safe(char** strp, const char* format, ...);
 
 int run_command_get_outputs(const char* cmd, sl** outlines, sl** errlines, const char** errormsg);
 
-void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
+void get_mmap_size(int start, int size, off_t* mapstart, size_t* mapsize, int* pgap);
 
 char* find_executable(const char* progname, const char* sibling);
 

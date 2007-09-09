@@ -54,7 +54,7 @@ ANUTILS_DEPS :=
 
 ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
 ifndef NO_QFITS
-ANUTILS_OBJ += fitsioutils.o sip_qfits.o
+ANUTILS_OBJ += fitsbin.o fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
 endif
 ifndef NO_KDTREE

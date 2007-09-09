@@ -80,7 +80,7 @@ qidxfile* qidxfile_open(char* fn, int modifiable) {
 		goto bailout;
 	}
 
-	if (fits_find_table_column(fn, "qidx", &off, &datasize)) {
+	if (fits_find_table_column(fn, "qidx", &off, &datasize, NULL)) {
 		fprintf(stderr, "Couldn't find \"qidx\" column in FITS file.");
 		goto bailout;
 	}

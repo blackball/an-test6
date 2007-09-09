@@ -118,7 +118,7 @@ codefile* codefile_open(char* fn, int modifiable)
 	}
 	fprintf(stderr, "ncodes %u, nstars %u.\n", cf->numcodes, cf->numstars);
 
-	if (fits_find_table_column(fn, "codes", &offcodes, &sizecodes)) {
+	if (fits_find_table_column(fn, "codes", &offcodes, &sizecodes, NULL)) {
 		fprintf(stderr, "Couldn't find \"codes\" column in FITS file.");
 		goto bailout;
 	}
