@@ -164,14 +164,20 @@ int quadfile_write_header(quadfile* qf) {
 }
 
 int quadfile_write_quad(quadfile* qf, uint* stars) {
-    int i;
-    for (i=0; i<qf->dimquads; i++) {
-        uint32_t star = stars[i];
-        if (fwrite(&star, sizeof(uint32_t), 1, qf->fb->fid) != 1) {
-            fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
-            return -1;
-        }
-    }
+	uint32_t* data;
+	uint32_t ustars[qf->dimquads];
+	int i;
+	if (sizeof(uint32_t) == sizeof(uint)) {
+		data = stars;
+	} else {
+		data = ustars;
+		for (i=0; i<qf->dimquads; i++)
+			ustars[i] = stars[i];
+	}
+	if (fwrite(data, sizeof(uint32_t), qf->dimquads, qf->fb->fid) != qf->dimquads) {
+		fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
+		return -1;
+	}
 	qf->numquads++;
 	return 0;
 }
