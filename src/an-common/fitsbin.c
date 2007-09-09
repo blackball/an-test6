@@ -56,12 +56,128 @@ static fitsbin_t* new_fitsbin() {
 	return fb;
 }
 
+int fitsbin_write_primary_header(fitsbin_t* fb) {
+	if (qfits_header_dump(fb->primheader, fb->fid))
+		return -1;
+	fb->primheader_end = ftello(fb->fid);
+	return 0;
+}
+
+int fitsbin_write_header(fitsbin_t* fb) {
+    int ncols = 1;
+    int tablesize;
+    qfits_table* table;
+    qfits_header* hdr;
+	int i;
+
+	fb->header_start = ftello(fb->fid);
+
+	// the table header
+	tablesize = fb->itemsize * fb->nrows * ncols;
+	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, fb->nrows);
+    qfits_col_fill(table->col, fb->itemsize, 0, 1, TFITS_BIN_TYPE_A,
+				   fb->tablename, "", "", "", 0, 0, 0, 0, 0);
+    hdr = qfits_table_ext_header_default(table);
+    qfits_table_close(table);
+
+	// Copy headers from "fb->header" to "hdr".
+	// Skip first and last ("SIMPLE" and "END") headers.
+	for (i=1; i<(fb->header->n - 1); i++) {
+		char key[FITS_LINESZ+1];
+		char val[FITS_LINESZ+1];
+		char com[FITS_LINESZ+1];
+		char lin[FITS_LINESZ+1];
+		qfits_header_getitem(fb->header, i, key, val, com, lin);
+		qfits_header_add(hdr, key, val, com, lin);
+	}
+
+    if (qfits_header_dump(fb->header, fb->fid))
+		return -1;
+	fb->header_end = ftello(fb->fid);
+	qfits_header_destroy(hdr);
+	return 0;
+}
+
+int fitsbin_fix_header(fitsbin_t* fb) {
+	off_t offset;
+	off_t new_header_end;
+	off_t old_header_end;
+
+	offset = ftello(fb->fid);
+	fseeko(fb->fid, fb->header_start, SEEK_SET);
+    old_header_end = fb->header_end;
+
+    if (fitsbin_write_header(fb)) {
+        return -1;
+    }
+	new_header_end = fb->header_end;
+
+	if (new_header_end != old_header_end) {
+		fprintf(stderr, "Error: header used to end at %lu, "
+				"now it ends at %lu.  Data loss is likely!\n",
+                (unsigned long)old_header_end, (unsigned long)new_header_end);
+		return -1;
+	}
+
+	fseek(fb->fid, offset, SEEK_SET);
+	return 0;
+}
+
+int fitsbin_fix_primary_header(fitsbin_t* fb) {
+	off_t offset;
+	off_t new_header_end;
+	off_t old_header_end;
+
+	offset = ftello(fb->fid);
+	fseeko(fb->fid, 0, SEEK_SET);
+    old_header_end = fb->primheader_end;
+
+    if (fitsbin_write_primary_header(fb))
+        return -1;
+	new_header_end = fb->primheader_end;
+
+	if (new_header_end != old_header_end) {
+		fprintf(stderr, "Error: header used to end at %lu, "
+				"now it ends at %lu.  Data loss is likely!\n",
+                (unsigned long)old_header_end, (unsigned long)new_header_end);
+		return -1;
+	}
+	fseek(fb->fid, offset, SEEK_SET);
+	return 0;
+}
+
+fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
+									char** errstr) {
+	fitsbin_t* fb;
+
+	fb = new_fitsbin();
+	if (!fb)
+		goto bailout;
+	fb->fid = fopen(fn, "wb");
+	if (!fb->fid) {
+		fprintf(stderr, "Couldn't open file \"%s\" for output: %s\n", fn, strerror(errno));
+		goto bailout;
+	}
+
+    // the primary header
+    fb->primheader = qfits_table_prim_header_default();
+	fb->header = qfits_header_default();
+	return fb;
+
+ bailout:
+	if (fb) {
+		if (fb->fid)
+			fclose(fb->fid);
+		free(fb);
+	}
+	return NULL;
+}
+
 fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
 						char** errstr, 
 						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
 						void* userdata) {
 	FILE* fid = NULL;
-
 	qfits_header* primheader = NULL;
 	qfits_header* header = NULL;
     fitsbin_t* fb = NULL;

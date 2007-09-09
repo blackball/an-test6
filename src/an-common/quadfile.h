@@ -59,23 +59,23 @@ typedef struct quadfile quadfile;
 
 int quadfile_close(quadfile* qf);
 
-int quadfile_get_stars(quadfile* qf, unsigned int quadid,
+int quadfile_get_stars(const quadfile* qf, unsigned int quadid,
                        unsigned int* stars);
 
 int quadfile_write_quad(quadfile* qf, unsigned int* stars);
 
-int quadfile_dimquads(quadfile* qf);
+int quadfile_dimquads(const quadfile* qf);
 
 int quadfile_fix_header(quadfile* qf);
 
 int quadfile_write_header(quadfile* qf);
 
-double quadfile_get_index_scale_upper_arcsec(quadfile* qf);
+double quadfile_get_index_scale_upper_arcsec(const quadfile* qf);
 
-double quadfile_get_index_scale_lower_arcsec(quadfile* qf);
+double quadfile_get_index_scale_lower_arcsec(const quadfile* qf);
 
 quadfile* quadfile_open(const char* fname);
 
-quadfile* quadfile_open_for_writing(char* quadfname);
+quadfile* quadfile_open_for_writing(const char* quadfname);
 
 #endif

@@ -19,6 +19,8 @@
 #ifndef FITSBIN_H
 #define FITSBIN_H
 
+#include <stdio.h>
+
 #include "qfits.h"
 
 struct fitsbin_t {
@@ -28,17 +30,29 @@ struct fitsbin_t {
 	// The primary FITS header
 	qfits_header* primheader;
 
-	// The FITS header of the extension containing the table.
+	// Extra FITS headers to add to the extension header containing the table.
 	qfits_header* header;
 
 	// The data
 	void* data;
+
+	// The size of a single data item
+	int itemsize;
+	// The number of items (rows)
+	int nrows;
+
+	// Internal use:
 
 	// The mmap'ed address
 	char* map;
 	// The mmap'ed size.
 	size_t mapsize;
 
+	// Writing:
+	FILE* fid;
+	off_t primheader_end;
+	off_t header_start;
+	off_t header_end;
 };
 typedef struct fitsbin_t fitsbin_t;
 
@@ -48,7 +62,19 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
 						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
 						void* userdata);
 
+fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
+									char** errstr);
+
 void fitsbin_close(fitsbin_t* fb);
+
+int fitsbin_write_primary_header(fitsbin_t* fb);
+
+int fitsbin_write_header(fitsbin_t* fb);
+
+int fitsbin_fix_primary_header(fitsbin_t* fb);
+
+int fitsbin_fix_header(fitsbin_t* fb);
+
 
 
 #endif

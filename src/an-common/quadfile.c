@@ -39,7 +39,7 @@ static quadfile* new_quadfile() {
 	return qf;
 }
 
-int quadfile_dimquads(quadfile* qf) {
+int quadfile_dimquads(const quadfile* qf) {
     return qf->dimquads;
 }
 
@@ -75,13 +75,12 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
 quadfile* quadfile_open(const char* fn) {
     quadfile* qf = NULL;
 	fitsbin_t* fb = NULL;
-	char* errstr;
+	char* errstr = NULL;
 
     qf = new_quadfile();
     if (!qf)
         goto bailout;
 
-	errstr = NULL;
 	fb = fitsbin_open(fn, "quads", &errstr, callback_read_header, qf);
 	if (!fb) {
 		fprintf(stderr, "%s\n", errstr);
@@ -119,47 +118,59 @@ int quadfile_close(quadfile* qf) {
     return rtn;
 }
 
-quadfile* quadfile_open_for_writing(char* fn) {
+quadfile* quadfile_open_for_writing(const char* fn) {
 	quadfile* qf;
+	fitsbin_t* fb = NULL;
+	char* errstr = NULL;
 
 	qf = new_quadfile();
 	if (!qf)
 		goto bailout;
-	qf->fid = fopen(fn, "wb");
-	if (!qf->fid) {
-		fprintf(stderr, "Couldn't open file %s for quad FITS output: %s\n", fn, strerror(errno));
+
+	fb = fitsbin_open_for_writing(fn, "quads", &errstr);
+	if (!fb) {
+		fprintf(stderr, "%s\n", errstr);
 		goto bailout;
 	}
+	qf->fb = fb;
+
     // default
     qf->dimquads = 4;
 
-    // the header
-    qf->header = qfits_table_prim_header_default();
-    fits_add_endian(qf->header);
-
-	qfits_header_add(qf->header, "AN_FILE", "QUAD", "This file lists, for each quad, its stars.", NULL);
-	qfits_header_add(qf->header, "DIMQUADS", "0", "Number of stars in a quad.", NULL);
-	qfits_header_add(qf->header, "NQUADS", "0", "Number of quads.", NULL);
-	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used (or zero).", NULL);
-	qfits_header_add(qf->header, "SCALE_U", "0.0", "Upper-bound index scale.", NULL);
-	qfits_header_add(qf->header, "SCALE_L", "0.0", "Lower-bound index scale.", NULL);
-	qfits_header_add(qf->header, "INDEXID", "0", "Index unique ID.", NULL);
-	qfits_header_add(qf->header, "HEALPIX", "-1", "Healpix of this index.", NULL);
-    fits_add_long_comment(qf->header, "The first extension contains the quads "
+	// add default values to header
+    fits_add_endian(fb->primheader);
+	qfits_header_add(fb->primheader, "AN_FILE", "QUAD", "This file lists, for each quad, its stars.", NULL);
+	qfits_header_add(fb->primheader, "DIMQUADS", "0", "Number of stars in a quad.", NULL);
+	qfits_header_add(fb->primheader, "NQUADS", "0", "Number of quads.", NULL);
+	qfits_header_add(fb->primheader, "NSTARS", "0", "Number of stars used (or zero).", NULL);
+	qfits_header_add(fb->primheader, "SCALE_U", "0.0", "Upper-bound index scale.", NULL);
+	qfits_header_add(fb->primheader, "SCALE_L", "0.0", "Lower-bound index scale.", NULL);
+	qfits_header_add(fb->primheader, "INDEXID", "0", "Index unique ID.", NULL);
+	qfits_header_add(fb->primheader, "HEALPIX", "-1", "Healpix of this index.", NULL);
+    fits_add_long_comment(fb->primheader, "The first extension contains the quads "
                           "stored as %i 32-bit native-endian unsigned ints.", qf->dimquads);
 	return qf;
 
  bailout:
-	if (qf) {
-		if (qf->fid)
-			fclose(qf->fid);
+	if (qf)
 		free(qf);
-	}
 	return NULL;
 }
 
-int quadfile_write_quad(quadfile* qf,
-                        uint* stars) {
+int quadfile_write_header(quadfile* qf) {
+	fitsbin_t* fb = qf->fb;
+	fb->itemsize = qf->dimquads * sizeof(uint32_t);
+	fb->nrows = qf->numquads;
+
+	if (fitsbin_write_primary_header(fb) ||
+		fitsbin_write_header(fb)) {
+		fprintf(stderr, "Failed to write quadfile header.\n");
+		return -1;
+	}
+	return 0;
+}
+
+int quadfile_write_quad(quadfile* qf, uint* stars) {
     int i;
 	if (!qf->fid) {
 		fprintf(stderr, "quadfile_fits_write_quad: fid is null.\n");
@@ -177,74 +188,36 @@ int quadfile_write_quad(quadfile* qf,
 }
 
 int quadfile_fix_header(quadfile* qf) {
-	off_t offset;
-	off_t new_header_end;
-	off_t old_header_end;
-
-	if (!qf->fid) {
-		fprintf(stderr, "quadfile_fits_fix_header: fid is null.\n");
-		return -1;
-	}
-
-	offset = ftello(qf->fid);
-	fseeko(qf->fid, 0, SEEK_SET);
-    old_header_end = qf->header_end;
+	fitsbin_t* fb = qf->fb;
+	fb->itemsize = qf->dimquads * sizeof(uint32_t);
+	fb->nrows = qf->numquads;
 
 	// fill in the real values...
-	fits_header_mod_int(qf->header, "DIMQUADS", qf->dimquads, "Number of stars in a quad.");
-	fits_header_mod_int(qf->header, "NQUADS", qf->numquads, "Number of quads.");
-	fits_header_mod_int(qf->header, "NSTARS", qf->numstars, "Number of stars.");
-	fits_header_mod_double(qf->header, "SCALE_U", qf->index_scale_upper, "Upper-bound index scale (radians).");
-	fits_header_mod_double(qf->header, "SCALE_L", qf->index_scale_lower, "Lower-bound index scale (radians).");
-	fits_header_mod_int(qf->header, "INDEXID", qf->indexid, "Index unique ID.");
-	fits_header_mod_int(qf->header, "HEALPIX", qf->healpix, "Healpix of this index.");
+	fits_header_mod_int(fb->primheader, "DIMQUADS", qf->dimquads, "Number of stars in a quad.");
+	fits_header_mod_int(fb->primheader, "NQUADS", qf->numquads, "Number of quads.");
+	fits_header_mod_int(fb->primheader, "NSTARS", qf->numstars, "Number of stars.");
+	fits_header_mod_double(fb->primheader, "SCALE_U", qf->index_scale_upper, "Upper-bound index scale (radians).");
+	fits_header_mod_double(fb->primheader, "SCALE_L", qf->index_scale_lower, "Lower-bound index scale (radians).");
+	fits_header_mod_int(fb->primheader, "INDEXID", qf->indexid, "Index unique ID.");
+	fits_header_mod_int(fb->primheader, "HEALPIX", qf->healpix, "Healpix of this index.");
 
-    if (quadfile_write_header(qf)) {
+	if (fitsbin_fix_primary_header(fb) ||
+		fitsbin_fix_header(fb)) {
         fprintf(stderr, "Failed to fix quad header.\n");
-        return -1;
-    }
-	new_header_end = qf->header_end;
-
-	if (new_header_end != old_header_end) {
-		fprintf(stderr, "Error: quadfile header used to end at %lu, "
-				"now it ends at %lu.  Data loss is likely!\n",
-                (unsigned long)old_header_end, (unsigned long)new_header_end);
 		return -1;
 	}
-
-	fseek(qf->fid, offset, SEEK_SET);
-	fits_pad_file(qf->fid);
 	return 0;
 }
 
-int quadfile_write_header(quadfile* qf) {
-    // first table: the quads.
-    int datasize = qf->dimquads * sizeof(uint32_t);
-    int ncols = 1;
-    int nrows = qf->numquads;
-    int tablesize = datasize * nrows * ncols;
-    qfits_header* tablehdr;
-    qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-    qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-				   "quads", "", "", "", 0, 0, 0, 0, 0);
-    qfits_header_dump(qf->header, qf->fid);
-    tablehdr = qfits_table_ext_header_default(table);
-    qfits_header_dump(tablehdr, qf->fid);
-    qfits_table_close(table);
-    qfits_header_destroy(tablehdr);
-	qf->header_end = ftello(qf->fid);
-	return 0;
-}
-
-double quadfile_get_index_scale_upper_arcsec(quadfile* qf) {
+double quadfile_get_index_scale_upper_arcsec(const quadfile* qf) {
     return rad2arcsec(qf->index_scale_upper);
 }
 
-double quadfile_get_index_scale_lower_arcsec(quadfile* qf) {
+double quadfile_get_index_scale_lower_arcsec(const quadfile* qf) {
 	return rad2arcsec(qf->index_scale_lower);
 }
 
-int quadfile_get_stars(quadfile* qf, uint quadid, uint* stars) {
+int quadfile_get_stars(const quadfile* qf, uint quadid, uint* stars) {
     int i;
 	if (quadid >= qf->numquads) {
 		fprintf(stderr, "Requested quadid %i, but number of quads is %i.\n",
