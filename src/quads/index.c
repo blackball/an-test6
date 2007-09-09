@@ -48,7 +48,7 @@ index_t* index_load(const char* indexname, int flags)
 	// Read .quad file...
 	quadfname = mk_quadfn(indexname);
 	logmsg("Reading quads file %s...\n", quadfname);
-	index->quads = quadfile_open(quadfname, 0);
+	index->quads = quadfile_open(quadfname);
 	if (!index->quads) {
 		logerr("Couldn't read quads file %s\n", quadfname);
 		free_fn(quadfname);

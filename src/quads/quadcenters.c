@@ -113,7 +113,7 @@ int main(int argc, char** args) {
 		printf("Reading files with basename %s\n", basename);
 
 		fn = mk_quadfn(basename);
-		qf = quadfile_open(fn, 0);
+		qf = quadfile_open(fn);
 		if (!qf) {
 			fprintf(stderr, "Failed to open quad file %s.\n", fn);
             exit(-1);

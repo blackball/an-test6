@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "will write to file %s .\n", idxfname);
 
-	quads = quadfile_open(quadfname, 0);
+	quads = quadfile_open(quadfname);
 	if (!quads) {
 		fprintf(stderr, "Couldn't open quads file %s.\n", quadfname);
 		exit(-1);

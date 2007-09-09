@@ -122,7 +122,7 @@ int main(int argc, char **args) {
 	else
 		fn = mk_quadfn(basein);
 	printf("Reading quadfile from %s ...\n", fn);
-	qfin = quadfile_open(fn, 0);
+	qfin = quadfile_open(fn);
 	if (!qfin) {
 		fprintf(stderr, "Failed to read quadfile from %s.\n", fn);
 		exit(-1);

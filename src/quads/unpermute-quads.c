@@ -105,7 +105,7 @@ int main(int argc, char **args) {
 
 	fn = mk_quadfn(basein);
 	printf("Reading quads from %s ...\n", fn);
-	quadin = quadfile_open(fn, 0);
+	quadin = quadfile_open(fn);
 	if (!quadin) {
 		fprintf(stderr, "Failed to read quads from %s.\n", fn);
 		exit(-1);

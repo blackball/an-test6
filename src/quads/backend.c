@@ -100,7 +100,7 @@ static int get_index_scales(const char* indexname,
 	quadfname = mk_quadfn(indexname);
     if (verbose)
         printf("Reading quads file %s...\n", quadfname);
-	quads = quadfile_open(quadfname, 0);
+	quads = quadfile_open(quadfname);
 	if (!quads) {
         if (verbose)
             printf("Couldn't read quads file %s\n", quadfname);

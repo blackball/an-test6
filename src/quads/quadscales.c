@@ -91,7 +91,7 @@ int main(int argc, char** args) {
 
 		fn = mk_quadfn(basename);
 		fprintf(stderr, "Opening quad file %s...\n", fn);
-		qf = quadfile_open(fn, 0);
+		qf = quadfile_open(fn);
 		if (!qf) {
 			fprintf(stderr, "Failed to open quad file %s.\n", fn);
 			continue;
