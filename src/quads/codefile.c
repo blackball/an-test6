@@ -180,10 +180,9 @@ codefile* codefile_open_for_writing(const char* fn) {
 	qfits_header_add(cf->header, "SCALE_L", "0.0", "", NULL);
 	qfits_header_add(cf->header, "INDEXID", "0", "Index unique ID.", NULL);
 	qfits_header_add(cf->header, "HEALPIX", "-1", "Healpix of this index.", NULL);
-	qfits_header_add(cf->header, "COMMENT", "The first extension contains the codes ", NULL, NULL);
-	qfits_header_add(cf->header, "COMMENT", " stored as 4 native-{endian,size} doubles.", NULL, NULL);
-	qfits_header_add(cf->header, "COMMENT", " (ie, the quad location in 4-D code space.", NULL, NULL);
-
+	fits_add_long_comment(cf->header, "The first extension contains the codes "
+						  "stored as %i native-endian doubles.  "
+						  "(ie, the quad location in %i-D code space.", cf->dimcodes, cf->dimcodes);
 	return cf;
 
 bailout:
@@ -269,4 +268,8 @@ int codefile_write_code(codefile* cf, double* code) {
 
 qfits_header* codefile_get_header(const codefile* cf) {
 	return cf->header;
+}
+
+int codefile_dimcodes(const codefile* cf) {
+	return cf->dimcodes;
 }

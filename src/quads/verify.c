@@ -286,6 +286,7 @@ void verify_hit(startree* skdt,
 	bestprob = malloc(vf->NF * sizeof(double));
 	for (i=0; i<vf->NF; i++)
 		bestprob[i] = -HUGE_VAL;
+	// DIMQUADS
 	for (i=0; i<4; i++) {
 		assert(mo->field[i] >= 0);
 		assert(mo->field[i] < vf->NF);

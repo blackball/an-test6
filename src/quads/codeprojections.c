@@ -223,6 +223,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Allocate memory for projection histograms
+	// DIMQUADS
 	Dims = 4;
 	hists  = calloc(Dims * Dims, sizeof(int*));
 	dhists = calloc(Dims * Dims, sizeof(double*));

@@ -125,6 +125,7 @@ static double range(double *p, int n)
  */
 int is_inside_field(rect_field *f, double *p)
 {
+	// DIMQUADS
 	/* FIXME assumes 4 points, will need malloc'ing */
 	double coordtrans[12];
 	

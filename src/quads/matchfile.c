@@ -37,6 +37,7 @@ void matchobj_compute_derived(MatchObj* mo) {
 	int i;
 	matchobj_compute_overlap(mo);
 	mx = 0;
+	// DIMQUADS
 	for (i=0; i<4; i++)
 		if (mo->field[i] > mx) mx = mo->field[i];
 	mo->objs_tried = mx+1;
@@ -169,6 +170,7 @@ static void init_matchfile_fitstruct() {
 	const char* nil = " ";
 
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1, TRUE);
+	// DIMQUADS
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, 4, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_K, "ids", nil, ids, 4, FALSE);

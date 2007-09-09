@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
 	uint numused;
 	qfits_header* quadhdr;
 	qfits_header* qidxhdr;
+	int dimquads;
 	
 	if (argc <= 2) {
 		printHelp(progname);
@@ -104,15 +105,14 @@ int main(int argc, char *argv[]) {
 
 	quadlist = calloc(quads->numstars, sizeof(il*));
 
-	for (q=0; q<quads->numquads; q++) {
-        // DIMQUADS
-		uint inds[4];
+	dimquads = quadfile_dimquads(quads);
 
+	for (q=0; q<quads->numquads; q++) {
+		uint inds[dimquads];
 		quadfile_get_stars(quads, q, inds);
 
-		// append this quad index to the lists of each of
-		// its four stars.
-		for (i=0; i<4; i++) {
+		// append this quad index to the lists of each of its stars.
+		for (i=0; i<dimquads; i++) {
 			il* list;
 			uint starind = inds[i];
 			list = quadlist[starind];

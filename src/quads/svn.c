@@ -21,8 +21,8 @@
 
 #include "svn.h"
 
-static char date_rtnval[64];
-static char url_rtnval[64];
+static char date_rtnval[256];
+static char url_rtnval[256];
 
 const char* svn_date() {
 	/* Through the magic of Subversion, the date string on the following line will

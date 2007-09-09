@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
 
 	tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
 	N = codes->numcodes;
-	D = DIM_CODES;
+	D = codefile_dimcodes(codes);
 	codekd->tree = kdtree_new(N, D, Nleaf);
 	{
 		double low[D];

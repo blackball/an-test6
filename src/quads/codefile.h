@@ -55,6 +55,8 @@ typedef struct codefile codefile;
 
 int codefile_close(codefile* cf);
 
+int codefile_dimcodes(const codefile* cf);
+
 void codefile_get_code(const codefile* cf, uint codeid, double* code);
 
 codefile* codefile_open(const char* fn);

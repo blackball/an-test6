@@ -228,6 +228,8 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 		starcmass[j] = 0.0;
 	for (j=0; j<2; j++)
 		fieldcmass[j] = 0.0;
+
+	// DIMQUADS
 	for (i=0; i<4; i++) {
 		startree_get(starkd, mo->star[i], xyz);
 		for (j=0; j<3; j++)
@@ -255,6 +257,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 	f = malloc(Ncorr * 2 * sizeof(double));
 	j = 0;
 	if (!corr) {
+		// DIMQUADS
 		// just use the four stars that compose the quad.
 		for (i=0; i<4; i++) {
 			startree_get(starkd, mo->star[i], xyz);

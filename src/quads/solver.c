@@ -40,11 +40,7 @@
 #include "keywords.h"
 #include "log.h"
 #include "pquad.h"
-
 #include "kdtree.h"
-#define KD_DIM 4
-#include "kdtree.h"
-#undef KD_DIM
 
 #if TESTING
 #define DEBUGSOLVER 1

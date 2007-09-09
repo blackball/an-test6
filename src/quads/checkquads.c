@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 	quadfile* quad;
 	qidxfile* qidx;
 	uint q, s;
+	int dimquads;
 	
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -85,6 +86,8 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	dimquads = quadfile_dimquads(quad);
+
 	printf("Checking stars...\n");
 	for (s=0; s<qidx->numstars; s++) {
 		uint32_t* quads;
@@ -92,11 +95,11 @@ int main(int argc, char *argv[]) {
 		int j;
 		qidxfile_get_quads(qidx, s, &quads, &nquads);
 		for (j=0; j<nquads; j++) {
-			uint star[4];
+			uint star[dimquads];
 			int k, n;
-			quadfile_get_starids(quad, quads[j], star, star+1, star+2, star+3);
+			quadfile_get_stars(quad, quads[j], star);
 			n = 0;
-			for (k=0; k<4; k++) {
+			for (k=0; k<dimquads; k++) {
 				if (star[k] == s)
 					n++;
 			}
@@ -104,7 +107,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Star %i, quad %i: found %i instances of the quad in the qidx (not 1)\n",
 						s, quads[j], n);
 				fprintf(stderr, "  found: ");
-				for (k=0; k<4; k++) {
+				for (k=0; k<dimquads; k++) {
 					fprintf(stderr, "%i ", star[k]);
 				}
 				fprintf(stderr, "\n");
@@ -114,12 +117,12 @@ int main(int argc, char *argv[]) {
 
 	printf("Checking quads...\n");
 	for (q=0; q<quad->numquads; q++) {
-		uint star[4];
+		uint star[dimquads];
 		uint32_t* quads;
 		uint nquads;
 		int j;
-		quadfile_get_starids(quad, q, star, star+1, star+2, star+3);
-		for (j=0; j<4; j++) {
+		quadfile_get_stars(quad, q, star);
+		for (j=0; j<dimquads; j++) {
 			uint k;
 			int n;
 			qidxfile_get_quads(qidx, star[j], &quads, &nquads);
