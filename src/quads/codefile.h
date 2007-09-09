@@ -28,6 +28,9 @@
 struct codefile {
 	uint numcodes;
 	uint numstars;
+
+	int dimcodes;
+
 	// upper bound
 	double index_scale;
 	// lower bound
@@ -50,19 +53,20 @@ struct codefile {
 };
 typedef struct codefile codefile;
 
-int codefile_close(codefile* qf);
+int codefile_close(codefile* cf);
 
-void codefile_get_code(codefile* qf, uint codeid,
-                       double* cx, double* cy, double* dx, double* dy);
+void codefile_get_code(const codefile* cf, uint codeid, double* code);
 
-codefile* codefile_open(char* codefname, int modifiable);
+codefile* codefile_open(const char* fn);
 
-codefile* codefile_open_for_writing(char* codefname);
+codefile* codefile_open_for_writing(const char* fname);
 
-int codefile_write_header(codefile* qf);
+int codefile_write_header(codefile* cf);
 
-int codefile_write_code(codefile* qf, double cx, double cy, double dx, double dy);
+int codefile_write_code(codefile* cf, double* code);
 
-int codefile_fix_header(codefile* qf);
+int codefile_fix_header(codefile* cf);
+
+qfits_header* codefile_get_header(const codefile* cf);
 
 #endif

@@ -39,17 +39,14 @@ static codefile* new_codefile()
 }
 
 
-void codefile_get_code(codefile* cf, uint codeid,
-                       double* cx, double* cy, double* dx, double* dy)
-{
-	*cx = cf->codearray[codeid * DIM_CODES + 0];
-	*cy = cf->codearray[codeid * DIM_CODES + 1];
-	*dx = cf->codearray[codeid * DIM_CODES + 2];
-	*dy = cf->codearray[codeid * DIM_CODES + 3];
+void codefile_get_code(const codefile* cf, uint codeid, double* code) {
+	int i;
+	for (i=0; i<cf->dimcodes; i++) {
+		code[i] = cf->codearray[codeid * cf->dimcodes + i];
+	}
 }
 
-int codefile_close(codefile* cf)
-{
+int codefile_close(codefile* cf) {
 	int rtn = 0;
 	if (cf->mmap_code)
 		if (munmap(cf->mmap_code, cf->mmap_code_size)) {
@@ -70,8 +67,7 @@ int codefile_close(codefile* cf)
 	return rtn;
 }
 
-codefile* codefile_open(char* fn, int modifiable)
-{
+codefile* codefile_open(const char* fn) {
 	codefile* cf = NULL;
 	FILE* fid = NULL;
 	qfits_header* header = NULL;
@@ -105,6 +101,7 @@ codefile* codefile_open(char* fn, int modifiable)
 
 	cf->numcodes = qfits_header_getint(header, "NCODES", -1);
 	cf->numstars = qfits_header_getint(header, "NSTARS", -1);
+	cf->dimcodes = qfits_header_getint(header, "DIMCODES", 4);
 	cf->index_scale = qfits_header_getdouble(header, "SCALE_U", -1.0);
 	cf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
 	cf->indexid = qfits_header_getint(header, "INDEXID", 0);
@@ -123,19 +120,14 @@ codefile* codefile_open(char* fn, int modifiable)
 		goto bailout;
 	}
 
-	if (fits_bytes_needed(cf->numcodes * sizeof(double) * DIM_CODES) != sizecodes) {
+	if (fits_bytes_needed(cf->numcodes * sizeof(double) * cf->dimcodes) != sizecodes) {
 		fprintf(stderr, "Number of codes promised does jive with the table size: %u vs %u.\n",
-		        fits_bytes_needed(cf->numcodes * sizeof(double) * DIM_CODES), sizecodes);
+		        fits_bytes_needed(cf->numcodes * sizeof(double) * cf->dimcodes), sizecodes);
 		goto bailout;
 	}
 
-	if (modifiable) {
-		mode = PROT_READ | PROT_WRITE;
-		flags = MAP_PRIVATE;
-	} else {
-		mode = PROT_READ;
-		flags = MAP_SHARED;
-	}
+	mode = PROT_READ | PROT_WRITE;
+	flags = MAP_PRIVATE;
 
 	cf->mmap_code_size = offcodes + sizecodes;
 	cf->mmap_code = mmap(0, cf->mmap_code_size, mode, flags, fileno(fid), 0);
@@ -160,8 +152,7 @@ bailout:
 	return NULL;
 }
 
-codefile* codefile_open_for_writing(char* fn)
-{
+codefile* codefile_open_for_writing(const char* fn) {
 	codefile* cf;
 
 	cf = new_codefile();
@@ -173,6 +164,9 @@ codefile* codefile_open_for_writing(char* fn)
 		goto bailout;
 	}
 
+	// default
+	cf->dimcodes = 4;
+
 	// the header
 	cf->header = qfits_table_prim_header_default();
 	fits_add_endian(cf->header);
@@ -181,6 +175,7 @@ codefile* codefile_open_for_writing(char* fn)
 	qfits_header_add(cf->header, "AN_FILE", "CODE", "This file lists the code for each quad.", NULL);
 	qfits_header_add(cf->header, "NCODES", "0", "", NULL);
 	qfits_header_add(cf->header, "NSTARS", "0", "", NULL);
+	fits_header_add_int(cf->header, "DIMCODES", cf->dimcodes, "Code dimension");
 	qfits_header_add(cf->header, "SCALE_U", "0.0", "", NULL);
 	qfits_header_add(cf->header, "SCALE_L", "0.0", "", NULL);
 	qfits_header_add(cf->header, "INDEXID", "0", "Index unique ID.", NULL);
@@ -213,12 +208,13 @@ int codefile_write_header(codefile* cf) {
 	// fill in the real values...
 	fits_header_mod_int(cf->header, "NCODES", cf->numcodes, "Number of codes.");
 	fits_header_mod_int(cf->header, "NSTARS", cf->numstars, "Number of stars.");
+	fits_header_mod_int(cf->header, "DIMCODES", cf->dimcodes, "Dimension of codes.");
 	fits_header_mod_double(cf->header, "SCALE_U", cf->index_scale, "Upper-bound index scale (radians).");
 	fits_header_mod_double(cf->header, "SCALE_L", cf->index_scale_lower, "Lower-bound index scale (radians).");
 	fits_header_mod_int(cf->header, "INDEXID", cf->indexid, "Index unique ID.");
 	fits_header_mod_int(cf->header, "HEALPIX", cf->healpix, "Healpix of this index.");
 
-	datasize = DIM_CODES * sizeof(double);
+	datasize = cf->dimcodes * sizeof(double);
 	ncols = 1;
 	nrows = cf->numcodes;
 	tablesize = datasize * nrows * ncols;
@@ -237,8 +233,7 @@ int codefile_write_header(codefile* cf) {
 	return 0;
 }
 
-int codefile_fix_header(codefile* cf)
-{
+int codefile_fix_header(codefile* cf) {
  	off_t offset;
 	off_t old_header_end;
 
@@ -262,16 +257,16 @@ int codefile_fix_header(codefile* cf)
 	return 0;
 }
 
-int codefile_write_code(codefile* cf, double Cx, double Cy, double Dx, double Dy)
-{
+int codefile_write_code(codefile* cf, double* code) {
 	FILE *fid = cf->fid;
-	if (write_double(fid, Cx) ||
-		write_double(fid, Cy) ||
-		write_double(fid, Dx) ||
-		write_double(fid, Dy)) {
+	if (fwrite(code, sizeof(double), cf->dimcodes, fid) != cf->dimcodes) {
 		fprintf(stderr, "Error writing a code.\n");
 		return -1;
 	}
 	cf->numcodes++;
 	return 0;
+}
+
+qfits_header* codefile_get_header(const codefile* cf) {
+	return cf->header;
 }

@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (codefname) {
-		cf = codefile_open(codefname, 0);
+		cf = codefile_open(codefname);
 		if (!cf) {
 			fprintf(stderr, "Failed to read codefile %s.\n", codefname);
 			exit(-1);
@@ -253,8 +253,7 @@ int main(int argc, char *argv[])
 		double* onecode;
 
 		if (cf) {
-			codefile_get_code(cf, i,
-							  codearr, codearr+1, codearr+2, codearr+3);
+			codefile_get_code(cf, i, codearr);
 			onecode = codearr;
 		} else
 			//memcpy(onecode, ckdt->data + i*4, 4*sizeof(double));

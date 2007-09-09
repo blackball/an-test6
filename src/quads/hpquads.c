@@ -45,7 +45,12 @@
 #include "pnpoly.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RHL:b"
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RHL:bq:"
+
+// upper bound of dimquads value
+#define DQMAX 5
+// upper bound of dimcodes value
+#define DCMAX 6
 
 static void print_help(char* progname)
 {
@@ -88,7 +93,7 @@ static double quad_dist2_upper;
 static double quad_dist2_lower;
 
 struct quad {
-	uint star[4];
+	uint star[DQMAX];
 };
 typedef struct quad quad;
 
@@ -104,8 +109,6 @@ static int nabok = 0;
 static unsigned char* nuses;
 
 static bool hists = FALSE;
-
-
 
 static void* mymalloc(unsigned int n, int linenum) {
 	void* rtn = malloc(n);
@@ -129,7 +132,10 @@ static int compare_quads(const void* v1, const void* v2) {
 	const quad* q1 = v1;
 	const quad* q2 = v2;
 	int i;
-	for (i=0; i<4; i++) {
+	// Hmm... I thought about having a static global "dimquads" here, but
+	// instead just ensured that are quad is always initialized to zero so that
+	// "star" values between dimquads and DQMAX are always equal.
+	for (i=0; i<DQMAX; i++) {
 		if (q1->star[i] > q2->star[i])
 			return 1;
 		if (q1->star[i] < q2->star[i])
@@ -152,8 +158,8 @@ static bool add_quad(quad* q) {
 	return TRUE;
 }
 
-static void compute_code(quad* q, double* code) {
-	double sA[3], sB[3], sC[3], sD[3];
+static void compute_code(quad* q, double* code, int dimquads) {
+	double starxyz[3 * DQMAX];
 	double Bx, By;
 	double scale, invscale;
 	double ABx, ABy;
@@ -165,13 +171,17 @@ static void compute_code(quad* q, double* code) {
 	double Ax, Ay;
 	double costheta, sintheta;
 	bool ok;
+	int i;
+	double *sA, *sB;
 
-	if (startree_get(starkd, q->star[0], sA) ||
-		startree_get(starkd, q->star[1], sB) ||
-		startree_get(starkd, q->star[2], sC) ||
-		startree_get(starkd, q->star[3], sD)) {
-		fprintf(stderr, "Failed to get stars belonging to a quad.\n");
-		exit(-1);
+	sA = starxyz;
+	sB = starxyz + 3;
+
+	for (i=0; i<dimquads; i++) {
+		if (startree_get(starkd, q->star[i], starxyz + 3*i)) {
+			fprintf(stderr, "Failed to get stars belonging to a quad.\n");
+			exit(-1);
+		}
 	}
 
 	star_midpoint(midAB, sA, sB);
@@ -186,72 +196,85 @@ static void compute_code(quad* q, double* code) {
 	costheta = (ABy + ABx) * invscale;
 	sintheta = (ABy - ABx) * invscale;
 
-	starpos = sC;
-	ok = star_coords(starpos, midAB, &Dx, &Dy);
-	assert(ok);
-	ADx = Dx - Ax;
-	ADy = Dy - Ay;
-	x =  ADx * costheta + ADy * sintheta;
-	y = -ADx * sintheta + ADy * costheta;
-	code[0] = x;
-	code[1] = y;
-
-	starpos = sD;
-	ok = star_coords(starpos, midAB, &Dx, &Dy);
-	assert(ok);
-	ADx = Dx - Ax;
-	ADy = Dy - Ay;
-	x =  ADx * costheta + ADy * sintheta;
-	y = -ADx * sintheta + ADy * costheta;
-	code[2] = x;
-	code[3] = y;
+	for (i=2; i<dimquads; i++) {
+		starpos = starxyz + 3*i;
+		ok = star_coords(starpos, midAB, &Dx, &Dy);
+		assert(ok);
+		ADx = Dx - Ax;
+		ADy = Dy - Ay;
+		x =  ADx * costheta + ADy * sintheta;
+		y = -ADx * sintheta + ADy * costheta;
+		code[2*(i-2)+0] = x;
+		code[2*(i-2)+1] = y;
+	}
 }
 
-static Inline void drop_quad(int iA, int iB, int iC, int iD) {
-	nuses[iA]++;
-	nuses[iB]++;
-	nuses[iC]++;
-	nuses[iD]++;
+static Inline void drop_quad(quad* q, int dimquads) {
+	int i;
+	for (i=0; i<dimquads; i++)
+		nuses[q->star[i]]++;
 }
 
 static void write_quad(codefile* codes, quadfile* quads,
-					   quad* q) {
-	double code[4];
+					   quad* q, int dimquads, int dimcodes) {
+	double code[DCMAX];
+	double sum;
+	int i;
 
-	compute_code(q, code);
+	compute_code(q, code, dimquads);
 
-	// here we add the invariant that cx + dx <= 1.
-	if (code[0] + code[2] > 1.0) {
+	// here we add the invariant that (cx + dx + ...) / (dimquads-2) <= 1/2
+	sum = 0.0;
+	for (i=0; i<(dimquads-2); i++)
+		sum += code[2*i];
+	sum /= (dimquads-2);
+	if (sum > 0.5) {
 		// swap the labels of A,B.
 		uint tmp = q->star[0];
 		q->star[0] = q->star[1];
 		q->star[1] = tmp;
 
 		// rotate the code 180 degrees.
-		code[0] = 1.0 - code[0];
-		code[1] = 1.0 - code[1];
-		code[2] = 1.0 - code[2];
-		code[3] = 1.0 - code[3];
+		for (i=0; i<dimcodes; i++)
+			code[i] = 1.0 - code[i];
 	}
 
-	// here we add the invariant that cx <= dx.
-	if (code[0] > code[2]) {
+	// here we add the invariant that cx <= dx <= ....
+	for (i=0; i<(dimquads-2); i++) {
+		int j;
+		int jsmallest;
+		double smallest;
+		double x1;
 		double dtmp;
-		// swap the labels of C,D.
-		uint tmp = q->star[2];
-		q->star[2] = q->star[3];
-		q->star[3] = tmp;
+		uint tmp;
 
-		// switch the code values.
-		dtmp = code[0];
-		code[0] = code[2];
-		code[2] = dtmp;
-		dtmp = code[1];
-		code[1] = code[3];
-		code[3] = dtmp;
+		x1 = code[2*i];
+		jsmallest = -1;
+		smallest = x1;
+		for (j=i+1; j<(dimquads-2); j++) {
+			double x2 = code[2*j];
+			if (x2 < smallest) {
+				smallest = x2;
+				jsmallest = j;
+			}
+		}
+		if (jsmallest == -1)
+			continue;
+		j = jsmallest;
+		// swap the labels.
+		tmp = q->star[i+2];
+		q->star[i+2] = q->star[j+2];
+		q->star[j+2] = tmp;
+		// swap the code values.
+		dtmp = code[2*i];
+		code[2*i] = code[2*j];
+		code[2*j] = dtmp;
+		dtmp = code[2*i+1];
+		code[2*i+1] = code[2*j+1];
+		code[2*j+1] = dtmp;
 	}
 
-	codefile_write_code(codes, code[0], code[1], code[2], code[3]);
+	codefile_write_code(codes, code);
 	quadfile_write_quad(quads, q->star);
 }
 
@@ -381,6 +404,26 @@ check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	return destind;
 }
 
+static int add_interior_stars(int ninbox, int* inbox, quad* q, int* starinds,
+							  int starnum, int dimquads, int beginning) {
+	int i;
+	for (i=beginning; i<ninbox; i++) {
+		int iC = inbox[i];
+		q->star[starnum] = starinds[iC];
+		// Did we just add the last star?
+		if (starnum == dimquads-1) {
+			if (add_quad(q))
+				return 1;
+		} else {
+			// Recurse.
+			if (add_interior_stars(ninbox, inbox, q, starinds, starnum+1,
+								   dimquads, i+1))
+				return 1;
+		}
+	}
+	return 0;
+}
+
 static int Ncq = 0;
 static pquad* cq_pquads = NULL;
 static int* cq_inbox = NULL;
@@ -389,14 +432,15 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy,
 					   double* boxx, double* boxy,
-					   bool count_uses) {
+					   bool count_uses, int dimquads) {
 	uint iA=0, iB, iC, iD, newpoint;
 	int rtn = 0;
 	int ninbox;
-	int i, j, k;
+	int i, j;
 	int* inbox;
 	pquad* pquads;
 	int iAalloc;
+	quad q;
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
@@ -425,6 +469,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	  Note that we keep the invariants iA < iB and iC < iD.
 	*/
 
+	memset(&q, 0, sizeof(quad));
+
 	for (newpoint=0; newpoint<Nstars; newpoint++) {
 		pquad* pq;
 		// quads with the new star on the diagonal:
@@ -448,24 +494,17 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 				ninbox++;
 			}
 			ninbox = check_inbox(pq, inbox, ninbox, stars, circle);
-			for (j=0; j<ninbox; j++) {
-				iC = inbox[j];
-				for (k=j+1; k<ninbox; k++) {
-					quad q;
-					iD = inbox[k];
-					q.star[0] = pq->staridA;
-					q.star[1] = pq->staridB;
-					q.star[2] = starinds[iC];
-					q.star[3] = starinds[iD];
 
-					if (add_quad(&q)) {
-						if (count_uses)
-							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
-						rtn = 1;
-						goto theend;
-					}
-				}
+			q.star[0] = pq->staridA;
+			q.star[1] = pq->staridB;
+
+			if (add_interior_stars(ninbox, inbox, &q, starinds, 2, dimquads, 0)) {
+				if (count_uses)
+					drop_quad(&q, dimquads);
+				rtn = 1;
+				goto theend;
 			}
+
 			pq->inbox = malloc(Nstars * sizeof(int));
 			if (!pq->inbox) {
 				fprintf(stderr, "hpquads: failed to malloc pq->inbox.\n");
@@ -490,24 +529,16 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 				pq->ninbox++;
 				ninbox = pq->ninbox;
 
-				for (j=0; j<ninbox; j++) {
-					iC = pq->inbox[j];
-					for (k=j+1; k<ninbox; k++) {
-						quad q;
-						iD = pq->inbox[k];
-						q.star[0] = pq->staridA;
-						q.star[1] = pq->staridB;
-						q.star[2] = starinds[iC];
-						q.star[3] = starinds[iD];
+				q.star[0] = pq->staridA;
+				q.star[1] = pq->staridB;
 
-						if (add_quad(&q)) {
-							if (count_uses)
-								drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
-							rtn = 1;
-							iA = iAalloc;
-							goto theend;
-						}
-					}
+				if (add_interior_stars(ninbox, pq->inbox, &q, starinds,
+									   2, dimquads, 0)) {
+					if (count_uses)
+						drop_quad(&q, dimquads);
+					rtn = 1;
+					iA = iAalloc;
+					goto theend;
 				}
 			}
 		}
@@ -520,7 +551,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 			free(pq->inbox);
 		}
 	}
-
 	return rtn;
 }
 
@@ -537,7 +567,8 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 								   double* centre, double* vx, double* vy,
 								   double* xpts, double* ypts,
 								   bool* p_failed_nostars,
-								   int R) {
+								   int R,
+								   int dimquads) {
 	static int Nhighwater = 0;
 	double origin[3];
 	double dx[3];
@@ -567,7 +598,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	// containing that box.
 
 	N = res->nres;
-	if (N < 4) {
+	if (N < dimquads) {
 		kdtree_free_query(res);
 		if (p_nostars)
 			(*p_nostars)++;
@@ -590,7 +621,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		destind++;
 	}
 	N = destind;
-	if (N < 4) {
+	if (N < dimquads) {
 		kdtree_free_query(res);
 		if (p_nounused)
 			(*p_nounused)++;
@@ -651,6 +682,36 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	return TRUE;
 }
 
+static void add_headers(qfits_header* hdr, char** argv, int argc,
+						qfits_header* startreehdr, bool circle,
+						int npasses) {
+	int i;
+	boilerplate_add_fits_headers(hdr);
+	qfits_header_add(hdr, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "hpquads command line:", NULL, NULL);
+	fits_add_args(hdr, argv, argc);
+	qfits_header_add(hdr, "HISTORY", "(end of hpquads command line)", NULL, NULL);
+
+	qfits_header_add(startreehdr, "HISTORY", "** History entries copied from the input file:", NULL, NULL);
+	fits_copy_all_headers(startreehdr, hdr, "HISTORY");
+	qfits_header_add(startreehdr, "HISTORY", "** End of history entries.", NULL, NULL);
+
+	qfits_header_add(hdr, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
+	qfits_header_add(hdr, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
+	qfits_header_add(hdr, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
+
+	qfits_header_add(hdr, "CIRCLE", (circle ? "T" : "F"), 
+					 (circle ? "Stars C,D live in the circle defined by AB."
+					  :        "Stars C,D live in the box defined by AB."), NULL);
+
+	// add placeholders...
+	for (i=0; i<npasses; i++) {
+		char key[64];
+		sprintf(key, "PASS%i", i+1);
+		qfits_header_add(hdr, key, "-1", "placeholder", NULL);
+	}
+}
+
 int main(int argc, char** argv) {
 	int argchar;
 	char *quadfname;
@@ -694,11 +755,18 @@ int main(int argc, char** argv) {
 	int hp;
 
 	qfits_header* qhdr;
+	qfits_header* chdr;
 
 	bool boundary = FALSE;
+
+	int dimquads = 4;
+	int dimcodes;
 	
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'q':
+			dimquads = atoi(optarg);
+			break;
 		case 'b':
 			boundary = TRUE;
 			break;
@@ -765,6 +833,12 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Warning: you should set the unique-id for this index (-i).\n");
 	}
 
+	if (dimquads > DQMAX) {
+		fprintf(stderr, "Quad dimension %i exceeds compiled-in max %i.\n", dimquads, DQMAX);
+		exit(-1);
+	}
+	dimcodes = 2 * (dimquads - 2);
+
 	if (failedrdlsfn) {
 		failedrdls = rdlist_open_for_writing(failedrdlsfn);
 		if (!failedrdls) {
@@ -811,6 +885,9 @@ int main(int argc, char** argv) {
 		exit(-1);
 	}
 
+	quads->dimquads = dimquads;
+	codes->dimcodes = dimcodes;
+
 	if (id) {
 		quads->indexid = id;
 		codes->indexid = id;
@@ -826,50 +903,10 @@ int main(int argc, char** argv) {
 	codes->healpix = hp;
 
 	qhdr = quadfile_get_header(quads);
+	chdr = codefile_get_header(codes);
 
-	boilerplate_add_fits_headers(qhdr);
-	qfits_header_add(qhdr, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
-	qfits_header_add(qhdr, "HISTORY", "hpquads command line:", NULL, NULL);
-	fits_add_args(qhdr, argv, argc);
-	qfits_header_add(qhdr, "HISTORY", "(end of hpquads command line)", NULL, NULL);
-
-	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
-	fits_copy_all_headers(startree_header(starkd), qhdr, "HISTORY");
-	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
-
-	boilerplate_add_fits_headers(codes->header);
-	qfits_header_add(codes->header, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
-	qfits_header_add(codes->header, "HISTORY", "hpquads command line:", NULL, NULL);
-	fits_add_args(codes->header, argv, argc);
-	qfits_header_add(codes->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
-
-	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
-	fits_copy_all_headers(startree_header(starkd), codes->header, "HISTORY");
-	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
-
-	qfits_header_add(qhdr, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
-	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
-
-	qfits_header_add(qhdr, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
-	qfits_header_add(codes->header, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
-
-	qfits_header_add(qhdr, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
-	qfits_header_add(codes->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
-
-	qfits_header_add(qhdr, "CIRCLE", (circle ? "T" : "F"), 
-					 (circle ? "Stars C,D live in the circle defined by AB."
-					  :        "Stars C,D live in the box defined by AB."), NULL);
-	qfits_header_add(codes->header, "CIRCLE", (circle ? "T" : "F"), 
-					 (circle ? "Stars C,D live in the circle defined by AB."
-					  :        "Stars C,D live in the box defined by AB."), NULL);
-
-	// add placeholders...
-	for (i=0; i<(xpasses * ypasses); i++) {
-		char key[64];
-		sprintf(key, "PASS%i", i+1);
-		qfits_header_add(codes->header, key, "-1", "placeholder", NULL);
-		qfits_header_add(qhdr, key, "-1", "placeholder", NULL);
-	}
+	add_headers(qhdr, argv, argc, startree_header(starkd), circle, xpasses*ypasses);
+	add_headers(chdr, argv, argc, startree_header(starkd), circle, xpasses*ypasses);
 
     if (quadfile_write_header(quads)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
@@ -1033,7 +1070,7 @@ int main(int argc, char** argv) {
 											&N, centre, vx, vy,
 											boxx, boxy,
 											&failed_nostars,
-											Nreuse);
+											Nreuse, dimquads);
 
 				if (failedrdls) {
 					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
@@ -1064,7 +1101,7 @@ int main(int argc, char** argv) {
 				}
 
 				if (create_quad(stars, inds, N, circle,
-								centre, vx, vy, boxx, boxy, TRUE)) {
+								centre, vx, vy, boxx, boxy, TRUE, dimquads)) {
 					if (histnstars)
 						histogram_add(histnstars, (double)N);
 					nthispass++;
@@ -1119,7 +1156,7 @@ int main(int argc, char** argv) {
 			{
 				char key[64];
 				sprintf(key, "PASS%i", xpass * ypasses + ypass + 1);
-				fits_header_mod_int(codes->header, key, nthispass, "quads created in this pass");
+				fits_header_mod_int(chdr, key, nthispass, "quads created in this pass");
 				fits_header_mod_int(qhdr, key, nthispass, "quads created in this pass");
 			}
 
@@ -1186,12 +1223,12 @@ int main(int argc, char** argv) {
 													NULL, NULL, NULL, NULL, NULL,
 													&N, centre, vx, vy,
 													boxx, boxy,
-													NULL, INT_MAX)) {
+													NULL, INT_MAX, dimquads)) {
 							nfailed1++;
 							goto failedhp2;
 						}
 						if (!create_quad(stars, inds, N, circle,
-										 centre, vx, vy, boxx, boxy, FALSE)) {
+										 centre, vx, vy, boxx, boxy, FALSE, dimquads)) {
 							nfailed2++;
 							goto failedhp2;
 						}
@@ -1224,12 +1261,6 @@ int main(int argc, char** argv) {
 					}
 				}
 			}
-
-			/*
-			  if ((xpass == xpasses-1) &&
-			  (ypass == ypasses-1))
-			  break;
-			*/
 
 			printf("Merging quads...\n");
 			for (i=0; i<Nquads; i++) {
@@ -1282,12 +1313,12 @@ int main(int argc, char** argv) {
 													NULL, NULL, NULL, NULL, NULL,
 													&N, centre, vx, vy,
 													boxx, boxy,
-													NULL, mx)) {
+													NULL, mx, dimquads)) {
 							il_append(newlist, hp);
 							continue;
 						}
 						if (!create_quad(stars, inds, N, circle,
-										 centre, vx, vy, boxx, boxy, TRUE)) {
+										 centre, vx, vy, boxx, boxy, TRUE, dimquads)) {
 							il_append(newlist, hp);
 							continue;
 						}
@@ -1339,12 +1370,12 @@ int main(int argc, char** argv) {
 	nquads = bt_size(bigquadlist);
 	for (i=0; i<nquads; i++) {
 		quad* q = bt_access(bigquadlist, i);
-		write_quad(codes, quads, q);
+		write_quad(codes, quads, q, dimquads, dimcodes);
 	}
 	// add the quads that were made during the final round.
 	for (i=0; i<Nquads; i++) {
 		quad* q = quadlist + i;
-		write_quad(codes, quads, q);
+		write_quad(codes, quads, q, dimquads, dimcodes);
 	}
 	free(quadlist);
 
