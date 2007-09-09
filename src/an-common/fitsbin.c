@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2007 Dustin Lang.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -26,17 +26,6 @@
 #include "fitsbin.h"
 #include "fitsioutils.h"
 #include "ioutils.h"
-
-/*
-  void
-  ATTRIB_FORMAT(printf,1,2)
-  printerr(const char* format, ...) {
-  va_list lst;
-  va_start(lst, format);
-  vfprintf(stderr, format, lst);
-  va_end(lst);
-  }
-*/
 
 static void
 ATTRIB_FORMAT(printf,2,3)
@@ -123,37 +112,6 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
         goto bailout;
     }
 
-	/*
-	  if (fits_check_endian(header)) {
-	  fprintf(stderr, "File %s was written with wrong endianness.", fn);
-	  goto bailout;
-	  }
-	*/
-
-	/*
-	  qf->dimquads = qfits_header_getint(header, "DIMQUADS", 4);
-	  qf->numquads = qfits_header_getint(header, "NQUADS", -1);
-	  qf->numstars = qfits_header_getint(header, "NSTARS", -1);
-	  qf->index_scale_upper = qfits_header_getdouble(header, "SCALE_U", -1.0);
-	  qf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
-	  qf->indexid = qfits_header_getint(header, "INDEXID", 0);
-	  qf->healpix = qfits_header_getint(header, "HEALPIX", -1);
-
-	  if ((qf->numquads == -1) || (qf->numstars == -1) ||
-	  (qf->index_scale_upper == -1.0) || (qf->index_scale_lower == -1.0)) {
-	  fprintf(stderr, "Couldn't find NQUADS or NSTARS or SCALE_U or SCALE_L entries in FITS header.");
-	  goto bailout;
-	  }
-	  fprintf(stderr, "nquads %u, nstars %u.", qf->numquads, qf->numstars);
-	*/
-
-	/*
-	  if (modifiable) {
-	  mode = PROT_READ | PROT_WRITE;
-	  flags = MAP_PRIVATE;
-	  } else {
-	  }
-	*/
 	mode = PROT_READ;
 	flags = MAP_SHARED;
 

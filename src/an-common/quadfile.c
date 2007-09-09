@@ -43,107 +43,68 @@ int quadfile_dimquads(quadfile* qf) {
     return qf->dimquads;
 }
 
-quadfile* quadfile_open(const char* fn, int modifiable) {
-	FILE* fid = NULL;
-	qfits_header* header = NULL;
-    quadfile* qf = NULL;
-    int offquads, sizequads;
-	int size;
-	void* map;
-	int mode, flags;
-    int expected;
+static int callback_read_header(qfits_header* primheader, qfits_header* header,
+								size_t* expected, char** errstr,
+								void* userdata) {
+	quadfile* qf = userdata;
 
-	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-        goto bailout;
-	}
-	fid = fopen(fn, "rb");
-	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s to read quads: %s\n", fn, strerror(errno));
-        goto bailout;
-	}
-	header = qfits_header_read(fn);
-	if (!header) {
-		fprintf(stderr, "Couldn't read FITS quad header from %s.\n", fn);
-        goto bailout;
+    qf->dimquads = qfits_header_getint(primheader, "DIMQUADS", 4);
+    qf->numquads = qfits_header_getint(primheader, "NQUADS", -1);
+    qf->numstars = qfits_header_getint(primheader, "NSTARS", -1);
+    qf->index_scale_upper = qfits_header_getdouble(primheader, "SCALE_U", -1.0);
+    qf->index_scale_lower = qfits_header_getdouble(primheader, "SCALE_L", -1.0);
+	qf->indexid = qfits_header_getint(primheader, "INDEXID", 0);
+	qf->healpix = qfits_header_getint(primheader, "HEALPIX", -1);
+	qf->header = header;
+
+	if ((qf->numquads == -1) || (qf->numstars == -1) ||
+		(qf->index_scale_upper == -1.0) || (qf->index_scale_lower == -1.0)) {
+		if (errstr) *errstr = "Couldn't find NQUADS or NSTARS or SCALE_U or SCALE_L entries in FITS header.";
+		return -1;
 	}
 
     if (fits_check_endian(header)) {
-		fprintf(stderr, "File %s was written with wrong endianness.\n", fn);
-        goto bailout;
+		if (errstr) *errstr = "File was written with the wrong endianness.";
+		return -1;
     }
+
+    *expected = qf->numquads * qf->dimquads * sizeof(uint32_t);
+	return 0;
+}
+
+quadfile* quadfile_open(const char* fn) {
+    quadfile* qf = NULL;
+	fitsbin_t* fb = NULL;
+	char* errstr;
 
     qf = new_quadfile();
     if (!qf)
         goto bailout;
 
-    qf->dimquads = qfits_header_getint(header, "DIMQUADS", 4);
-    qf->numquads = qfits_header_getint(header, "NQUADS", -1);
-    qf->numstars = qfits_header_getint(header, "NSTARS", -1);
-    qf->index_scale_upper = qfits_header_getdouble(header, "SCALE_U", -1.0);
-    qf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
-	qf->indexid = qfits_header_getint(header, "INDEXID", 0);
-	qf->healpix = qfits_header_getint(header, "HEALPIX", -1);
-	qf->header = header;
-
-	if ((qf->numquads == -1) || (qf->numstars == -1) ||
-		(qf->index_scale_upper == -1.0) || (qf->index_scale_lower == -1.0)) {
-		fprintf(stderr, "Couldn't find NQUADS or NSTARS or SCALE_U or SCALE_L entries in FITS header.");
-        goto bailout;
-	}
-	//fprintf(stderr, "nquads %u, nstars %u.\n", qf->numquads, qf->numstars);
-
-    if (fits_find_table_column(fn, "quads", &offquads, &sizequads, NULL)) {
-        fprintf(stderr, "Couldn't find \"quads\" column in FITS file.");
-        goto bailout;
-    }
-
-    expected = qf->numquads * qf->dimquads * sizeof(uint32_t);
-	if (fits_bytes_needed(expected) != sizequads) {
-        fprintf(stderr, "Number of quads stated in the header (NQUADS=%i) does jive with the size of the table \"quads\": %u vs %u.\n",
-                qf->numquads, fits_bytes_needed(expected), sizequads);
-        goto bailout;
-    }
-
-	if (modifiable) {
-		mode = PROT_READ | PROT_WRITE;
-		flags = MAP_PRIVATE;
-	} else {
-		mode = PROT_READ;
-		flags = MAP_SHARED;
-	}
-    size = offquads + sizequads;
-	map = mmap(0, size, mode, flags, fileno(fid), 0);
-	fclose(fid);
-    fid = NULL;
-	if (map == MAP_FAILED) {
-		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
-        goto bailout;
+	errstr = NULL;
+	fb = fitsbin_open(fn, "quads", &errstr, callback_read_header, qf);
+	if (!fb) {
+		fprintf(stderr, "%s\n", errstr);
+		goto bailout;
 	}
 
-    qf->quadarray = (uint32_t*)(map + offquads);
-    qf->mmap_quad = map;
-    qf->mmap_quad_size = size;
+	qf->fb = fb;
+	qf->quadarray = (uint32_t*)(fb->data);
+
     return qf;
 
  bailout:
-    if (qf) {
-		if (qf->header)
-			qfits_header_destroy(qf->header);
+    if (qf)
         free(qf);
-	}
-	if (fid)
-        fclose(fid);
     return NULL;
 }
 
 int quadfile_close(quadfile* qf) {
     int rtn = 0;
-	if (qf->mmap_quad)
-		if (munmap(qf->mmap_quad, qf->mmap_quad_size)) {
-            fprintf(stderr, "Error munmapping quadfile: %s\n", strerror(errno));
-            rtn = -1;
-        }
+
+	if (!qf) return 0;
+	fitsbin_close(qf->fb);
+
 	if (qf->fid) {
 		fits_pad_file(qf->fid);
 		if (fclose(qf->fid)) {

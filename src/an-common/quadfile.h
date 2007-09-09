@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include "qfits.h"
+#include "fitsbin.h"
 
 struct quadfile {
 	unsigned int numquads;
@@ -37,14 +38,20 @@ struct quadfile {
 	// healpix covered by this index
 	int healpix;
 
-	qfits_header* header;
+	fitsbin_t* fb;
 
 	// when reading:
-	void*  mmap_quad;
-	size_t mmap_quad_size;
 	uint32_t* quadarray;
 
+	/*
+	  qfits_header* header;
+	  // when reading:
+	  void*  mmap_quad;
+	  size_t mmap_quad_size;
+	*/
+
 	// when writing:
+	qfits_header* header;
 	FILE* fid;
 	off_t header_end;
 };
@@ -67,7 +74,7 @@ double quadfile_get_index_scale_upper_arcsec(quadfile* qf);
 
 double quadfile_get_index_scale_lower_arcsec(quadfile* qf);
 
-quadfile* quadfile_open(const char* fname, int modifiable);
+quadfile* quadfile_open(const char* fname);
 
 quadfile* quadfile_open_for_writing(char* quadfname);
 
