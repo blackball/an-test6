@@ -59,7 +59,6 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
     qf->index_scale_lower = qfits_header_getdouble(primheader, "SCALE_L", -1.0);
 	qf->indexid = qfits_header_getint(primheader, "INDEXID", 0);
 	qf->healpix = qfits_header_getint(primheader, "HEALPIX", -1);
-	//qf->header = header;
 
 	if ((qf->numquads == -1) || (qf->numstars == -1) ||
 		(qf->index_scale_upper == -1.0) || (qf->index_scale_lower == -1.0)) {
@@ -103,18 +102,17 @@ quadfile* quadfile_open(const char* fn) {
 }
 
 int quadfile_close(quadfile* qf) {
-    int rtn = 0;
-
 	if (!qf) return 0;
 	fitsbin_close(qf->fb);
 	free(qf);
-    return rtn;
+    return 0;
 }
 
 quadfile* quadfile_open_for_writing(const char* fn) {
 	quadfile* qf;
 	fitsbin_t* fb = NULL;
 	char* errstr = NULL;
+	qfits_header* hdr;
 
 	qf = new_quadfile();
 	if (!qf)
@@ -130,17 +128,19 @@ quadfile* quadfile_open_for_writing(const char* fn) {
     // default
     qf->dimquads = 4;
 
+	hdr = fb->primheader;
+
 	// add default values to header
-    fits_add_endian(fb->primheader);
-	qfits_header_add(fb->primheader, "AN_FILE", "QUAD", "This file lists, for each quad, its stars.", NULL);
-	qfits_header_add(fb->primheader, "DIMQUADS", "0", "Number of stars in a quad.", NULL);
-	qfits_header_add(fb->primheader, "NQUADS", "0", "Number of quads.", NULL);
-	qfits_header_add(fb->primheader, "NSTARS", "0", "Number of stars used (or zero).", NULL);
-	qfits_header_add(fb->primheader, "SCALE_U", "0.0", "Upper-bound index scale.", NULL);
-	qfits_header_add(fb->primheader, "SCALE_L", "0.0", "Lower-bound index scale.", NULL);
-	qfits_header_add(fb->primheader, "INDEXID", "0", "Index unique ID.", NULL);
-	qfits_header_add(fb->primheader, "HEALPIX", "-1", "Healpix of this index.", NULL);
-    fits_add_long_comment(fb->primheader, "The first extension contains the quads "
+    fits_add_endian(hdr);
+	qfits_header_add(hdr, "AN_FILE", "QUAD", "This file lists, for each quad, its stars.", NULL);
+	qfits_header_add(hdr, "DIMQUADS", "0", "Number of stars in a quad.", NULL);
+	qfits_header_add(hdr, "NQUADS", "0", "Number of quads.", NULL);
+	qfits_header_add(hdr, "NSTARS", "0", "Number of stars used (or zero).", NULL);
+	qfits_header_add(hdr, "SCALE_U", "0.0", "Upper-bound index scale.", NULL);
+	qfits_header_add(hdr, "SCALE_L", "0.0", "Lower-bound index scale.", NULL);
+	qfits_header_add(hdr, "INDEXID", "0", "Index unique ID.", NULL);
+	qfits_header_add(hdr, "HEALPIX", "-1", "Healpix of this index.", NULL);
+    fits_add_long_comment(hdr, "The first extension contains the quads "
                           "stored as %i 32-bit native-endian unsigned ints.", qf->dimquads);
 	return qf;
 
@@ -183,18 +183,21 @@ int quadfile_write_quad(quadfile* qf, uint* stars) {
 }
 
 int quadfile_fix_header(quadfile* qf) {
+	qfits_header* hdr;
 	fitsbin_t* fb = qf->fb;
 	fb->itemsize = qf->dimquads * sizeof(uint32_t);
 	fb->nrows = qf->numquads;
 
+	hdr = fb->primheader;
+
 	// fill in the real values...
-	fits_header_mod_int(fb->primheader, "DIMQUADS", qf->dimquads, "Number of stars in a quad.");
-	fits_header_mod_int(fb->primheader, "NQUADS", qf->numquads, "Number of quads.");
-	fits_header_mod_int(fb->primheader, "NSTARS", qf->numstars, "Number of stars.");
-	fits_header_mod_double(fb->primheader, "SCALE_U", qf->index_scale_upper, "Upper-bound index scale (radians).");
-	fits_header_mod_double(fb->primheader, "SCALE_L", qf->index_scale_lower, "Lower-bound index scale (radians).");
-	fits_header_mod_int(fb->primheader, "INDEXID", qf->indexid, "Index unique ID.");
-	fits_header_mod_int(fb->primheader, "HEALPIX", qf->healpix, "Healpix of this index.");
+	fits_header_mod_int(hdr, "DIMQUADS", qf->dimquads, "Number of stars in a quad.");
+	fits_header_mod_int(hdr, "NQUADS", qf->numquads, "Number of quads.");
+	fits_header_mod_int(hdr, "NSTARS", qf->numstars, "Number of stars.");
+	fits_header_mod_double(hdr, "SCALE_U", qf->index_scale_upper, "Upper-bound index scale (radians).");
+	fits_header_mod_double(hdr, "SCALE_L", qf->index_scale_lower, "Lower-bound index scale (radians).");
+	fits_header_mod_int(hdr, "INDEXID", qf->indexid, "Index unique ID.");
+	fits_header_mod_int(hdr, "HEALPIX", qf->healpix, "Healpix of this index.");
 
 	if (fitsbin_fix_primary_header(fb) ||
 		fitsbin_fix_header(fb)) {

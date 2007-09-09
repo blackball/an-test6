@@ -66,7 +66,7 @@ int main(int argc, char** args) {
 	}
 
 	for (; optind<argc; optind++) {
-		uint* quads;
+		uint32_t* quads;
 		uint nquads;
 		uint* hist = NULL;
 		uint Nhist = 0;
@@ -76,7 +76,7 @@ int main(int argc, char** args) {
 		fn = mk_qidxfn(basefn);
 		fprintf(stderr, "Reading qidx from %s...\n", fn);
 		fflush(stderr);
-		qf = qidxfile_open(fn, 0);
+		qf = qidxfile_open(fn);
 		if (!qf) {
 			fprintf(stderr, "Couldn't read qidx from %s.\n", fn);
 			exit(-1);

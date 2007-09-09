@@ -59,7 +59,8 @@ int main(int argc, char *argv[]) {
 	uint q;
 	int i;
 	uint numused;
-	qfits_header* qhdr;
+	qfits_header* quadhdr;
+	qfits_header* qidxhdr;
 	
 	if (argc <= 2) {
 		printHelp(progname);
@@ -140,20 +141,21 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	qhdr = quadfile_get_header(quads);
+	quadhdr = quadfile_get_header(quads);
+	qidxhdr = qidxfile_get_header(qidx);
 
-	fits_copy_header(qhdr, qidx->header, "INDEXID");
-	fits_copy_header(qhdr, qidx->header, "HEALPIX");
+	fits_copy_header(quadhdr, qidxhdr, "INDEXID");
+	fits_copy_header(quadhdr, qidxhdr, "HEALPIX");
 
-	boilerplate_add_fits_headers(qidx->header);
-	qfits_header_add(qidx->header, "HISTORY", "This file was created by the program \"quadidx\".", NULL, NULL);
-	qfits_header_add(qidx->header, "HISTORY", "quadidx command line:", NULL, NULL);
-	fits_add_args(qidx->header, argv, argc);
-	qfits_header_add(qidx->header, "HISTORY", "(end of quadidx command line)", NULL, NULL);
+	boilerplate_add_fits_headers(qidxhdr);
+	qfits_header_add(qidxhdr, "HISTORY", "This file was created by the program \"quadidx\".", NULL, NULL);
+	qfits_header_add(qidxhdr, "HISTORY", "quadidx command line:", NULL, NULL);
+	fits_add_args(qidxhdr, argv, argc);
+	qfits_header_add(qidxhdr, "HISTORY", "(end of quadidx command line)", NULL, NULL);
 
-	qfits_header_add(qidx->header, "HISTORY", "** History entries copied from the input file:", NULL, NULL);
-	fits_copy_all_headers(qhdr, qidx->header, "HISTORY");
-	qfits_header_add(qidx->header, "HISTORY", "** End of history entries.", NULL, NULL);
+	qfits_header_add(qidxhdr, "HISTORY", "** History entries copied from the input file:", NULL, NULL);
+	fits_copy_all_headers(quadhdr, qidxhdr, "HISTORY");
+	qfits_header_add(qidxhdr, "HISTORY", "** End of history entries.", NULL, NULL);
 
 	if (qidxfile_write_header(qidx)) {
  		fprintf(stderr, "Couldn't write qidx header (%s).\n", idxfname);

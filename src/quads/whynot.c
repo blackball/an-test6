@@ -167,7 +167,7 @@ int main(int argc, char** args) {
 		pl_append(indexes, indx);
 
 		qidxfn = mk_qidxfn(name);
-		qidx = qidxfile_open(qidxfn, 0);
+		qidx = qidxfile_open(qidxfn);
 		if (!qidx) {
 			fprintf(stderr, "Failed to open qidxfile \"%s\".\n", qidxfn);
 			exit(-1);
@@ -186,7 +186,7 @@ int main(int argc, char** args) {
 		kdtree_qres_t* res;
 		index_t* indx;
 		uint nquads;
-		uint* quads;
+		uint32_t* quads;
 		int j;
 		qidxfile* qidx;
 		il* uniqquadlist;

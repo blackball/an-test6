@@ -142,7 +142,8 @@ int main(int argc, char *argv[]) {
 	for (i=0; i<res->nres; i++) {
 		double x, y;
 		double* starpos;
-		uint nquads, *quads;
+		uint nquads;
+		uint32_t *quads;
 		uint star = res->inds[i];
 		if (qidxfile_get_quads(qidx, star, &quads, &nquads)) {
 			fprintf(stderr, "Failed to get quads for star %u.\n", star);

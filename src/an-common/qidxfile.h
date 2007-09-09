@@ -20,40 +20,39 @@
 #define QIDXFILE_H
 
 #include <sys/types.h>
+#include <stdint.h>
 
 #include "qfits.h"
+#include "fitsbin.h"
 
 struct qidxfile {
 	uint numstars;
 	uint numquads;
 
+	fitsbin_t* fb;
+
 	// when reading:
-	void*  mmap_base;
-	size_t mmap_size;
-	uint* index;
-	uint* heap;
+	uint32_t* index;
+	uint32_t* heap;
 
-	// when writing:
-	FILE* fid;
-	off_t header_end;
-
-	qfits_header* header;
-	uint cursor_index;
-	uint cursor_heap;
+	uint32_t cursor_index;
+	uint32_t cursor_heap;
 };
 typedef struct qidxfile qidxfile;
 
 int qidxfile_close(qidxfile* qf);
 
-int qidxfile_get_quads(qidxfile* qf, uint starid, uint** quads, uint* nquads);
+int qidxfile_get_quads(const qidxfile* qf, uint starid, uint32_t** quads, uint* nquads);
 
 int qidxfile_write_star(qidxfile* qf, uint* quads, uint nquads);
 
 int qidxfile_write_header(qidxfile* qf);
 
-qidxfile* qidxfile_open(char* fname, int modifiable);
+qidxfile* qidxfile_open(const char* fname);
 
-qidxfile* qidxfile_open_for_writing(char* qidxfname,
+qidxfile* qidxfile_open_for_writing(const char* qidxfname,
 									uint nstars, uint nquads);
+
+qfits_header* qidxfile_get_header(const qidxfile* qf);
 
 #endif

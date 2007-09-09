@@ -87,7 +87,8 @@ int main(int argc, char *argv[]) {
 
 	printf("Checking stars...\n");
 	for (s=0; s<qidx->numstars; s++) {
-		uint* quads, nquads;
+		uint32_t* quads;
+		uint nquads;
 		int j;
 		qidxfile_get_quads(qidx, s, &quads, &nquads);
 		for (j=0; j<nquads; j++) {
@@ -114,7 +115,8 @@ int main(int argc, char *argv[]) {
 	printf("Checking quads...\n");
 	for (q=0; q<quad->numquads; q++) {
 		uint star[4];
-		uint* quads, nquads;
+		uint32_t* quads;
+		uint nquads;
 		int j;
 		quadfile_get_starids(quad, q, star, star+1, star+2, star+3);
 		for (j=0; j<4; j++) {
