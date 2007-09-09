@@ -29,6 +29,8 @@ struct qidxfile {
 	uint numstars;
 	uint numquads;
 
+	int dimquads;
+
 	fitsbin_t* fb;
 
 	// when reading:

@@ -89,10 +89,8 @@ quadfile* quadfile_open(const char* fn) {
 		fprintf(stderr, "%s\n", errstr);
 		goto bailout;
 	}
-
 	qf->fb = fb;
 	qf->quadarray = (uint32_t*)(fb->data);
-
     return qf;
 
  bailout:
@@ -124,13 +122,11 @@ quadfile* quadfile_open_for_writing(const char* fn) {
 		goto bailout;
 	}
 	qf->fb = fb;
-
     // default
     qf->dimquads = 4;
 
-	hdr = fb->primheader;
-
 	// add default values to header
+	hdr = fb->primheader;
     fits_add_endian(hdr);
 	qfits_header_add(hdr, "AN_FILE", "QUAD", "This file lists, for each quad, its stars.", NULL);
 	qfits_header_add(hdr, "DIMQUADS", "0", "Number of stars in a quad.", NULL);

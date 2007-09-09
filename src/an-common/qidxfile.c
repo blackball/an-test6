@@ -48,13 +48,14 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
 	}
 	qf->numstars = qfits_header_getint(primheader, "NSTARS", -1);
 	qf->numquads = qfits_header_getint(primheader, "NQUADS", -1);
+    qf->dimquads = qfits_header_getint(primheader, "DIMQUADS", 4);
 	if ((qf->numstars == -1) || (qf->numquads == -1)) {
 		if (errstr) *errstr = "Couldn't find NSTARS or NQUADS entries in FITS header.";
 		return -1;
 	}
 
     *expected = qf->numstars * 2 * sizeof(uint32_t) +
-		qf->numquads * 4 * sizeof(uint32_t);
+		qf->numquads * qf->dimquads * sizeof(uint32_t);
 	return 0;
 }
 
@@ -109,9 +110,11 @@ qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 	}
 	qf->fb = fb;
 
+    // default
+    qf->dimquads = 4;
+
 	hdr = fb->primheader;
     fits_add_endian(fb->primheader);
-
 	fits_header_add_int(hdr, "NSTARS", qf->numstars, "Number of stars used.");
 	fits_header_add_int(hdr, "NQUADS", qf->numquads, "Number of quads used.");
 	qfits_header_add(hdr, "AN_FILE", "QIDX", "This is a quad index file.", NULL);
@@ -135,7 +138,7 @@ bailout:
 int qidxfile_write_header(qidxfile* qf) {
 	fitsbin_t* fb = qf->fb;
 	fb->itemsize = sizeof(uint32_t);
-	fb->nrows = 2 * qf->numstars + 4 * qf->numquads;
+	fb->nrows = 2 * qf->numstars + qf->dimquads * qf->numquads;
 	if (fitsbin_write_primary_header(fb) ||
 		fitsbin_write_header(fb)) {
 		fprintf(stderr, "Failed to write qidxfile header.\n");
