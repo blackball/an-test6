@@ -93,26 +93,9 @@ verify_field_t* verify_field_preprocess(double* field, int NF) {
     vf->NF = NF;
     vf->field = field;
 
+    // Note: kdtree type: I tried U32 (duu) but it was marginally slower.
+    // I didn't try U16 (dss) because we need a fair bit of accuracy here.
 
-    // kdtree type;
-    // (this turned out to be marginally slower; I didn't try U16 because we need a fair bit
-    //  of accuracy here...)
-    /*
-      {
-      int exttype = KDT_EXT_DOUBLE;
-      int datatype = KDT_DATA_U32;
-      int treetype = KDT_TREE_U32;
-      int tt;
-      tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
-      if (datatype != KDT_DATA_DOUBLE) {
-      vf->fieldcopy = NULL;
-      // convert data
-      vf->ftree = kdtree_convert_data(NULL, vf->field, NF, 2, Nleaf, tt);
-      vf->ftree = kdtree_build(vf->ftree, vf->ftree->data.any, NF, 2, Nleaf, tt, KD_BUILD_SPLIT);
-      } else {
-      }
-    */
-    
     // Make a copy of the field objects, because we're going to build a
     // kdtree out of them and that shuffles their order.
     vf->fieldcopy = malloc(NF * 2 * sizeof(double));
@@ -146,7 +129,8 @@ void verify_hit(startree* skdt,
                 double fieldW,
                 double fieldH,
                 double logratio_tobail,
-                bool do_gamma) {
+                bool do_gamma,
+				int dimquads) {
 	int i;
 	double fieldcenter[3];
 	double fieldr2;
@@ -187,14 +171,12 @@ void verify_hit(startree* skdt,
 	star_midpoint(fieldcenter, mo->sMin, mo->sMax);
 	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
 
-	debug("\nVerifying a match.\n");
-	debug("Quad field stars: [%i, %i, %i, %i]\n",
-		  mo->field[0],
-		  mo->field[1],
-		  mo->field[2],
-		  mo->field[3]);
-
 	if (DEBUGVERIFY) {
+		debug("\nVerifying a match.\n");
+		debug("Quad field stars: [");
+		for (i=0; i<dimquads; i++)
+			debug("%s%i", (i?", ":""), mo->field[i]);
+		debug("]\n");
 		fieldr = sqrt(fieldr2);
 		fieldarcsec = distsq2arcsec(fieldr2);
 		debug("%g, %g\n", fieldr, fieldarcsec);
@@ -286,8 +268,7 @@ void verify_hit(startree* skdt,
 	bestprob = malloc(vf->NF * sizeof(double));
 	for (i=0; i<vf->NF; i++)
 		bestprob[i] = -HUGE_VAL;
-	// DIMQUADS
-	for (i=0; i<4; i++) {
+	for (i=0; i<dimquads; i++) {
 		assert(mo->field[i] >= 0);
 		assert(mo->field[i] < vf->NF);
 		bestprob[mo->field[i]] = HUGE_VAL;
@@ -335,14 +316,21 @@ void verify_hit(startree* skdt,
 			double logprob = -HUGE_VAL;
 			int ind;
 			int fldind;
+			int j;
+			bool cont;
 
 			if (sweeps[i] != s)
 				continue;
 
 			// Skip stars that are part of the quad:
 			ind = res->inds[i];
-			if (ind == mo->star[0] || ind == mo->star[1] ||
-				ind == mo->star[2] || ind == mo->star[3])
+			cont = FALSE;
+			for (j=0; j<dimquads; j++)
+				if (ind == mo->star[j]) {
+					cont = TRUE;
+					break;
+				}
+			if (cont)
 				continue;
 
 			// Distance from the quad center of this index star:
@@ -391,8 +379,8 @@ void verify_hit(startree* skdt,
 				debug("Index star is at (%g,%g) pixels.\n", indexpix[i*2], indexpix[i*2+1]);
 				xyzarr2radecdeg(res->results.d + i*3, &ra, &dec);
 				debug("Index star RA,Dec (%.8g,%.8g) deg\n", ra, dec);
-//				debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
-//					  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
+				// debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
+				// log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
 				debug("NN dist: %5.1f pix, %g sigmas\n", sqrt(bestd2), sqrt(bestd2/sigma2));
 			}
 			if (log((1.0 - distractors) / (2.0 * M_PI * sigma2 * vf->NF)) < logprob_background) {
@@ -441,7 +429,6 @@ void verify_hit(startree* skdt,
 		}
 
 		// After each sweep, check if it's the new best logprob.
-		//if ((logodds > bestlogodds) &&
 		if (logodds > bestlogodds) {
 			bestlogodds = logodds;
 			bestnmatch = nmatch;

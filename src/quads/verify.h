@@ -40,7 +40,8 @@ void verify_hit(startree* skdt,
                 double fieldW,
                 double fieldH,
                 double logratio_tobail,
-                bool distance_from_quad_bonus);
+                bool distance_from_quad_bonus,
+				int dimquads);
 
 verify_field_t* verify_field_preprocess(double* field, int NF);
 

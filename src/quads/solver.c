@@ -54,7 +54,6 @@ void test_try_all_codes(pquad* pq,
 
 
 static const int A = 0, B = 1, C = 2, D = 3;
-static const int CX = 0, CY = 1, DX = 2, DY = 3;
 
 static void find_field_boundaries(solver_t* solver);
 
@@ -890,7 +889,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         for (i=0; i<dimquads; i++)
             startree_get(solver->index->starkd, star[i], starxyz + 3*i);
 
-		debug("        stars [%i %i %i %i]\n", star[0], star[1], star[2], star[3]);
+		debug("        stars [");
+		for (i=0; i<dimquads; i++)
+			debug("%s%i", (i?" ":""), star[i]);
+		debug("]\n;");
 
 		// compute TAN projection from the matching quad alone.
 		blind_wcs_compute(starxyz, field, dimquads, &wcs, &scale);
@@ -955,6 +957,7 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 {
 	double match_distance_in_pixels2;
 	bool bail;
+	int dimquads;
 
 	mo->indexid = sp->index->indexid;
 	mo->healpix = sp->index->healpix;
@@ -962,9 +965,12 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 	match_distance_in_pixels2 = square(sp->verify_pix) +
 		square(sp->index->index_jitter / mo->scale);
 
+	dimquads = quadfile_dimquads(sp->index->quads);
+
 	verify_hit(sp->index->starkd, mo, sp->vf, match_distance_in_pixels2,
 	           sp->distractor_ratio, sp->field_maxx, sp->field_maxy,
-	           sp->logratio_bail_threshold, sp->distance_from_quad_bonus);
+	           sp->logratio_bail_threshold, sp->distance_from_quad_bonus,
+			   dimquads);
 	mo->nverified = sp->num_verified++;
 
 	if (mo->logodds >= sp->best_logodds)
