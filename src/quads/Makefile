@@ -53,7 +53,7 @@ NETPBM_LIB := -L. -lnetpbm
 PNG_INC := $(shell pkg-config --cflags libpng 2>/dev/null)
 PNG_LIB := $(shell pkg-config --libs libpng 2>/dev/null)
 
-QFITS_UTILS := fitsgetext subtable tabsort
+QFITS_UTILS := fitsgetext subtable tabsort column-merge
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc \
 		listhead imcopy imarith
@@ -386,6 +386,8 @@ fitsgetext: fitsgetext.o $(ANUTILS_LIB) $(QFITS_LIB)
 subtable: subtable.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LIB)
+
+column-merge: column-merge.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) \
 		$(QFITS_LIB)
