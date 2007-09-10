@@ -262,10 +262,10 @@ int main(int argc, char** args) {
 		add_star_noise(sD, inoise, nsD);
 
 		// noisy transform
-		blind_wcs_compute_2(nstar, nfield, 4, &ntan, &nscale);
+		blind_wcs_compute(nstar, nfield, 4, &ntan, &nscale);
 
 		// true transform
-		blind_wcs_compute_2(star, field, 4, &tan, &scale);
+		blind_wcs_compute(star, field, 4, &tan, &scale);
 
 		//printf("scalef(%i)=%g;\n", j+1, nscale/scale);
 

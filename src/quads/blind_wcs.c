@@ -24,12 +24,12 @@
 #include "sip.h"
 #include "sip_qfits.h"
 
-void blind_wcs_compute_2(double* starxyz,
-						 double* fieldxy,
-						 int N,
-						 // output:
-						 tan_t* tan,
-						 double* p_scale) {
+void blind_wcs_compute(double* starxyz,
+					   double* fieldxy,
+					   int N,
+					   // output:
+					   tan_t* tan,
+					   double* p_scale) {
 	int i, j, k;
 	double star_cm[3] = {0, 0, 0};
 	double field_cm[2] = {0, 0};
