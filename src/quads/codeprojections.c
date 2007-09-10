@@ -22,6 +22,10 @@
 
   Pipe the output to a file like "hists.m", then in Matlab run the
   "codeprojections.m" script.
+
+ HACK - I haven't looked at how code dimensionality (dimcodes)
+ influences the "volume_at_value()" function.  The volume-corrected plots
+ may therefore be wrong.
 */
 
 #include <string.h>
@@ -31,12 +35,12 @@
 
 #include "fileutil.h"
 #include "starutil.h"
-#include "codefile.h"
+#include "codekd.h"
 #include "kdtree_fits_io.h"
 #include "keywords.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hf:F:pd"
+#define OPTIONS "hd"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -44,8 +48,7 @@ extern int optind, opterr, optopt;
 static void print_help(char* progname)
 {
 	boilerplate_help_header(stderr);
-	fprintf(stderr, "Usage: %s ( -f <code-file>   OR  -F <ckdt-file> )\n"
-			"       [-p]: don't do all code permutations.\n"
+	fprintf(stderr, "Usage: %s  <code kdtree>\n"
 			"       [-d]: normalize by volume (produce density plots)\n\n",
 	        progname);
 }
@@ -139,14 +142,13 @@ static void add_to_cd_histogram(double val1, double val2) {
 int main(int argc, char *argv[])
 {
 	int argchar;
-	char *codefname = NULL;
 	char *ckdtfname = NULL;
 	int i, j, d, e;
-	bool allperms = TRUE;
 	bool circle;
-	codefile* cf = NULL;
+    codetree* ct = NULL;
 	kdtree_t* ckdt = NULL;
 	int Ncodes;
+    int dimcodes;
 
 	if (argc <= 2) {
 		print_help(argv[0]);
@@ -158,15 +160,6 @@ int main(int argc, char *argv[])
 		case 'd':
 			do_density = TRUE;
 			break;
-		case 'f':
-			codefname = optarg;
-			break;
-		case 'F':
-			ckdtfname = optarg;
-			break;
-		case 'p':
-			allperms = FALSE;
-			break;
 		case 'h':
 			print_help(argv[0]);
 			return (HELP_ERR);
@@ -174,33 +167,22 @@ int main(int argc, char *argv[])
 			return (OPT_ERR);
 		}
 
-	if (!(codefname || ckdtfname)) {
-		print_help(argv[0]);
-		return (OPT_ERR);
-	}
+    if (optind != argc-1) {
+        print_help(argv[0]);
+        printf("You must give a code kdtree filename!\n");
+        exit(-1);
+    }
+    ckdtfname = argv[optind];
 
-	if (codefname) {
-		cf = codefile_open(codefname);
-		if (!cf) {
-			fprintf(stderr, "Failed to read codefile %s.\n", codefname);
-			exit(-1);
-		}
-		fprintf(stderr, "Number of codes: %i\n", cf->numcodes);
-		fprintf(stderr, "Number of stars in catalogue: %i\n", cf->numstars);
-		fprintf(stderr, "Index scale lower: %g\n", cf->index_scale_lower);
-		fprintf(stderr, "Index scale upper: %g\n", cf->index_scale);
-		circle = qfits_header_getboolean(cf->header, "CIRCLE", 0);
-		Ncodes = cf->numcodes;
-	} else {
-		qfits_header* hdr;
-		ckdt = kdtree_fits_read(ckdtfname, &hdr);
-		if (!ckdt) {
-			fprintf(stderr, "Failed to read code kdtree file %s.\n", ckdtfname);
-			exit(-1);
-		}
-		circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
-		Ncodes = ckdt->ndata;
-	}
+    ct = codetree_open(ckdtfname);
+    if (!ct) {
+        fprintf(stderr, "Failed to read code kdtree file %s.\n", ckdtfname);
+        exit(-1);
+    }
+    circle = qfits_header_getboolean(ct->header, "CIRCLE", 0);
+    ckdt = ct->tree;
+    Ncodes = ckdt->ndata;
+    dimcodes = ckdt->ndim;
 
 	fprintf(stderr, "Index %s the CIRCLE property.\n",
 			(circle ? "has" : "does not have"));
@@ -223,104 +205,50 @@ int main(int argc, char *argv[])
 	}
 
 	// Allocate memory for projection histograms
-	// DIMQUADS
-	Dims = 4;
-	hists  = calloc(Dims * Dims, sizeof(int*));
-	dhists = calloc(Dims * Dims, sizeof(double*));
+	hists  = calloc(dimcodes * dimcodes, sizeof(int*));
+	dhists = calloc(dimcodes * dimcodes, sizeof(double*));
 
-	for (d = 0; d < Dims; d++) {
+	for (d = 0; d < dimcodes; d++) {
 		for (e = 0; e < d; e++) {
-			 hists[d*Dims + e] = calloc(Nbins * Nbins, sizeof(int));
-			dhists[d*Dims + e] = calloc(Nbins * Nbins, sizeof(double));
+            hists [d*dimcodes + e] = calloc(Nbins * Nbins, sizeof(int));
+			dhists[d*dimcodes + e] = calloc(Nbins * Nbins, sizeof(double));
 		}
 		// Since the 4x4 matrix of histograms is actually symmetric,
 		// only make half
-		for (; e < Dims; e++) {
-			hists [d*Dims + e] = NULL;
-			dhists[d*Dims + e] = NULL;
+		for (; e < dimcodes; e++) {
+			hists [d*dimcodes + e] = NULL;
+			dhists[d*dimcodes + e] = NULL;
 		}
 	}
 
 	xyhist  = calloc(Nbins * Nbins, sizeof(int));
 	dxyhist = calloc(Nbins * Nbins, sizeof(double));
 
-	single  = calloc(Dims * Nsingle, sizeof(int));
-	dsingle = calloc(Dims * Nsingle, sizeof(double));
+	single  = calloc(dimcodes * Nsingle, sizeof(int));
+	dsingle = calloc(dimcodes * Nsingle, sizeof(double));
 
 	for (i=0; i<Ncodes; i++) {
-		int perm;
-		double codearr[4];
-		double permcode[4];
-		double* onecode;
+		double code[dimcodes];
 
-		if (cf) {
-			codefile_get_code(cf, i, codearr);
-			onecode = codearr;
-		} else
-			//memcpy(onecode, ckdt->data + i*4, 4*sizeof(double));
-			onecode = ckdt->data.d + i*4;
+        codetree_get(ct, i, code);
 
-		if (allperms) {
-			for (perm = 0; perm < 4; perm++) {
-				switch (perm) {
-				case 0:
-					permcode[0] = onecode[0];
-					permcode[1] = onecode[1];
-					permcode[2] = onecode[2];
-					permcode[3] = onecode[3];
-					break;
-				case 1:
-					permcode[0] = onecode[2];
-					permcode[1] = onecode[3];
-					permcode[2] = onecode[0];
-					permcode[3] = onecode[1];
-					break;
-				case 2:
-					permcode[0] = 1.0 - onecode[0];
-					permcode[1] = 1.0 - onecode[1];
-					permcode[2] = 1.0 - onecode[2];
-					permcode[3] = 1.0 - onecode[3];
-					break;
-				case 3:
-					permcode[0] = 1.0 - onecode[2];
-					permcode[1] = 1.0 - onecode[3];
-					permcode[2] = 1.0 - onecode[0];
-					permcode[3] = 1.0 - onecode[1];
-					break;
-				}
-
-				for (d = 0; d < Dims; d++) {
-					for (e = 0; e < d; e++) {
-						add_to_histogram(d, e, permcode[d], permcode[e]);
-					}
-					add_to_single_histogram(d, permcode[d]);
-				}
-				add_to_cd_histogram(permcode[0], permcode[1]);
-				add_to_cd_histogram(permcode[2], permcode[3]);
-			}
-		} else {
-			for (d = 0; d < Dims; d++) {
-				for (e = 0; e < d; e++) {
-					add_to_histogram(d, e, onecode[d], onecode[e]);
-				}
-				add_to_single_histogram(d, onecode[d]);
-			}
-			add_to_cd_histogram(onecode[0], onecode[1]);
-			add_to_cd_histogram(onecode[2], onecode[3]);
-		}
+        for (d = 0; d < dimcodes; d++) {
+            for (e = 0; e < d; e++)
+                add_to_histogram(d, e, code[d], code[e]);
+            add_to_single_histogram(d, code[d]);
+        }
+        for (d=0; d<dimcodes/2; d++)
+            add_to_cd_histogram(code[2*d], code[2*d+1]);
 	}
 
-	if (cf)
-		codefile_close(cf);
-	else
-		kdtree_fits_close(ckdt);
+    codetree_close(ct);
 
-	for (d = 0; d < Dims; d++) {
+	for (d = 0; d < dimcodes; d++) {
 		for (e = 0; e < d; e++) {
 			int* hist;
 			printf("hist_%i_%i=zeros([%i,%i]);\n",
 			       d, e, Nbins, Nbins);
-			hist = hists[d * Dims + e];
+			hist = hists[d * dimcodes + e];
 			for (i = 0; i < Nbins; i++) {
 				int j;
 				printf("hist_%i_%i(%i,:)=[", d, e, i + 1);
@@ -334,7 +262,7 @@ int main(int argc, char *argv[])
 				double* dhist;
 				printf("dhist_%i_%i=zeros([%i,%i]);\n",
 					   d, e, Nbins, Nbins);
-				dhist = dhists[d * Dims + e];
+				dhist = dhists[d * dimcodes + e];
 				for (i = 0; i < Nbins; i++) {
 					printf("dhist_%i_%i(%i,:)=[", d, e, i + 1);
 					for (j = 0; j < Nbins; j++)

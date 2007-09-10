@@ -366,7 +366,7 @@ plotxy: plotxy.o cairoutils.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB) 
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-codeprojections: codeprojections.o codefile.o \
+codeprojections: codeprojections.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 quadlocations: quadlocations.o catalog.o \
