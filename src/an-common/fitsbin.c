@@ -83,7 +83,7 @@ int fitsbin_write_header(fitsbin_t* fb) {
 
 	// the table header
 	tablesize = fb->itemsize * fb->nrows * ncols;
-	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, fb->nrows);
+	table = qfits_table_new(fb->filename, QFITS_BINTABLE, tablesize, ncols, fb->nrows);
     qfits_col_fill(table->col, fb->itemsize, 0, 1, TFITS_BIN_TYPE_A,
 				   fb->tablename, "", "", "", 0, 0, 0, 0, 0);
     hdr = qfits_table_ext_header_default(table);
