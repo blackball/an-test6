@@ -168,6 +168,9 @@ fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 		goto bailout;
 	}
 
+	fb->filename = strdup(fn);
+	fb->filename = strdup(tablename);
+
     // the primary header
     fb->primheader = qfits_table_prim_header_default();
 	fb->header = qfits_header_default();
