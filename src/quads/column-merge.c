@@ -29,7 +29,7 @@ char* OPTIONS = "h";
 
 void printHelp(char* progname) {
     boilerplate_help_header(stdout);
-	printf("%s  <input-file-1> <input-file-2> <output-file>\n"
+	printf("\n\n%s  <input-file-1> <input-file-2> <output-file>\n"
            "\n",
 		   progname);
 }
@@ -64,8 +64,9 @@ int main(int argc, char** args) {
             exit(-1);
         }
 
-    if (optind != (argc - 2)) {
+    if (optind != (argc - 3)) {
         printHelp(args[0]);
+        printf("Need 3 arguments.\n");
         exit(-1);
     }
 
