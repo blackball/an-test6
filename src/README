@@ -152,13 +152,16 @@ QUICKSTART
         $ solve-field --scale-low 1 demo/apod2.jpg
 
      If you have any of indices 203 to 205:
-        $ solve-field --out apod1 http://antwrp.gsfc.nasa.gov/apod/image/0302/ngc2264_croman_c3.jpg 
+        $ solve-field apod1.jpg
 
      If you have any of indices 200 to 203:
         $ solve-field demo/sdss.jpg
 
 
    Copyrights and credits for the demo images are listed in the file demo/CREDITS .
+
+   Note that you can also give solve-field a URL rather than a file as input:
+        $ solve-field --out apod1b http://antwrp.gsfc.nasa.gov/apod/image/0302/ngc2264_croman_c3.jpg 
 
 
 
