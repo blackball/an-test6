@@ -71,7 +71,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
 	plot-constellations.o constellations.o quadcenters.o startree2rdls.o \
 	brightstars.o grab-stellarium-constellations.o cairoutils.o ngcic-accurate.o \
-	ngc2000.o noisesim.o noisesim4.o noise.o scriptutils.o
+	ngc2000.o noisesim.o noise.o scriptutils.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
