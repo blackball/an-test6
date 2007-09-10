@@ -675,9 +675,13 @@ void solver_run(solver_t* solver)
 
                         tol2 = get_tolerance(solver);
 
-                        // ("dimquads - 3" because we've set stars A, B, and C at this point)
-                        add_stars(pq, field, D, dimquads-3, 0, newpoint, dimquads, solver, tol2);
-                        if (solver->quit_now)
+						if (dimquads > 3) {
+							// ("dimquads - 3" because we've set stars A, B, and C at this point)
+							add_stars(pq, field, D, dimquads-3, 0, newpoint, dimquads, solver, tol2);
+						} else {
+							TRY_ALL_CODES(pq, field, dimquads, solver, tol2);
+						}
+						if (solver->quit_now)
                             goto quitnow;
 					}
 				}
@@ -1023,8 +1027,12 @@ void solver_set_default_values(solver_t* solver) {
 	solver->codetol = DEFAULT_CODE_TOL;
 }
 
+void solver_cleanup(solver_t* solver) {
+	pl_free(solver->indexes);
+}
+
 void solver_free(solver_t* solver) {
     if (!solver) return;
-    pl_free(solver->indexes);
+	solver_cleanup(solver);
     free(solver);
 }

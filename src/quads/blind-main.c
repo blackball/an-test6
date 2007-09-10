@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
 		solver_set_default_values(sp);
 
 		if (read_parameters(bp)) {
+			solver_cleanup(sp);
 			blind_cleanup(bp);
 			break;
 		}
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]) {
 			break;
 
     clean:
+		solver_cleanup(sp);
 		blind_cleanup(bp);
 	}
 

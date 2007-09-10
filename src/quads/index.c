@@ -37,6 +37,7 @@ index_t* index_load(const char* indexname, int flags)
 	if (!index->starkd) {
 		logerr("Failed to read star kdtree %s\n", startreefname);
 		free_fn(startreefname);
+		free(index);
 		return NULL;
 	}
 	free_fn(startreefname);
@@ -115,6 +116,7 @@ index_t* index_load(const char* indexname, int flags)
 
 void index_close(index_t* index)
 {
+	if (!index) return;
 	if (index->starkd)
 		startree_close(index->starkd);
 	if (index->codekd)
@@ -127,4 +129,5 @@ void index_close(index_t* index)
 	index->codekd = NULL;
 	index->id_file = NULL;
 	index->quads = NULL;
+	free(index);
 }

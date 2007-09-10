@@ -185,6 +185,7 @@ void      solver_free(solver_t*);
 void      solver_compute_quad_range(solver_t* solver, index_t* index, double*, double*);
 void      solver_run(solver_t* solver);
 void solver_reset_best_match(solver_t* sp);
+void solver_cleanup(solver_t* solver);
 
 // Call this before solver_inject_match() or solver_run().
 void solver_preprocess_field(solver_t* sp);
