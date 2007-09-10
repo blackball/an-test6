@@ -781,9 +781,10 @@ int main(int argc, char** args) {
                 sl_append(cmdline, "-I -");
                 sl_append(cmdline, "-C green");
                 sl_append(cmdline, "-w 2");
-                for (i=0; i<8; i++)
+				sl_appendf(cmdline, "-d %i", mo->dimquads);
+                for (i=0; i<(2 * mo->dimquads); i++)
                     sl_appendf(cmdline, " %g", mo->quadpix[i]);
-                
+
                 matchfile_close(mf);
 			
                 sl_append(cmdline, ">");

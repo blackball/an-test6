@@ -31,7 +31,7 @@
 #include "bl.h"
 #include "permutedsort.h"
 
-#define OPTIONS "hW:H:w:I:C:PRo:"
+#define OPTIONS "hW:H:w:I:C:PRo:d:"
 
 static void printHelp(char* progname) {
     int i;
@@ -51,6 +51,7 @@ static void printHelp(char* progname) {
 		   "  [-w <width>]      Width of lines to draw (default: 5).\n"
 		   "  [-R]:  Read quads from stdin.\n"
 		   "  [-o <opacity>]\n"
+           "  [-d <dimension of \"quad\">]\n"
 		   "  <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4> [...]\n"
 		   "\n");
 }
@@ -76,11 +77,15 @@ int main(int argc, char *args[]) {
 	cairo_t* cairo;
 	cairo_surface_t* target;
     float r=1.0, g=1.0, b=1.0;
+	int dimquads = 4;
 
 	coords = dl_new(16);
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'd':
+			dimquads = atoi(optarg);
+			break;
         case 'C':
 			if (!strcasecmp(optarg, "random"))
 				randomcolor = TRUE;
@@ -117,7 +122,7 @@ int main(int argc, char *args[]) {
 			exit(-1);
 		}
 
-	if (!fromstdin && ((argc - optind) % 8)) {
+	if (!fromstdin && ((argc - optind) % (2*dimquads))) {
 		printHelp(progname);
 		exit(-1);
 	}
@@ -137,19 +142,20 @@ int main(int argc, char *args[]) {
 	}
 	if (fromstdin) {
 		for (;;) {
-			double p[8];
+			int j;
+			double p;
 			if (feof(stdin))
 				break;
-			if (fscanf(stdin, "%lg %lg %lg %lg %lg %lg %lg %lg ",
-					   p+0, p+1, p+2, p+3, p+4, p+5, p+6, p+7) != 8) {
-				fprintf(stderr, "Failed to read a quad from stdin.\n");
-				exit(-1);
+			for (j=0; j<(2*dimquads); j++) {
+				if (fscanf(stdin, " %lg", &p) != 1) {
+					fprintf(stderr, "Failed to read a quad from stdin.\n");
+					exit(-1);
+				}
+				dl_append(coords, p);
 			}
-			for (i=0; i<8; i++)
-				dl_append(coords, p[i]);
 		}
 	}
-	nquads = dl_size(coords) / 8;
+	nquads = dl_size(coords) / (2*dimquads);
 
     if (infn) {
         ppm_init(&argc, args);
@@ -176,25 +182,25 @@ int main(int argc, char *args[]) {
 
 	for (i=0; i<nquads; i++) {
 		int j;
-		double theta[4];
-		int perm[4];
+		double theta[dimquads];
+		int perm[dimquads];
 		double cx, cy;
 
 		// Make the quad convex so Sam's eyes don't bleed.
 		cx = cy = 0.0;
-		for (j=0; j<4; j++) {
-			cx += dl_get(coords, i*8 + j*2);
-			cy += dl_get(coords, i*8 + j*2 + 1);
+		for (j=0; j<dimquads; j++) {
+			cx += dl_get(coords, i*(2*dimquads) + j*2);
+			cy += dl_get(coords, i*(2*dimquads) + j*2 + 1);
 		}
-		cx /= 4.0;
-		cy /= 4.0;
-		for (j=0; j<4; j++) {
-			theta[j] = atan2(dl_get(coords, i*8 + j*2 + 1)-cy,
-							 dl_get(coords, i*8 + j*2 + 0)-cx);
+		cx /= dimquads;
+		cy /= dimquads;
+		for (j=0; j<dimquads; j++) {
+			theta[j] = atan2(dl_get(coords, i*(2*dimquads) + j*2 + 1)-cy,
+							 dl_get(coords, i*(2*dimquads) + j*2 + 0)-cx);
 			perm[j] = j;
 		}
 		permuted_sort_set_params(theta, sizeof(double), compare_doubles);
-		permuted_sort(perm, 4);
+		permuted_sort(perm, dimquads);
 
 		if (randomcolor) {
 			r = ((rand() % 128) + 127) / 255.0;
@@ -203,11 +209,15 @@ int main(int argc, char *args[]) {
 			cairo_set_source_rgba(cairo, r, g, b, a);
 		}
 
-		for (j=0; j<4; j++) {
+		for (j=0; j<dimquads; j++) {
 			if (j==0)
-				cairo_move_to(cairo, dl_get(coords, i*8 + perm[j]*2), dl_get(coords, i*8 + perm[j]*2 + 1));
+				cairo_move_to(cairo,
+							  dl_get(coords, i*(2*dimquads) + perm[j]*2),
+							  dl_get(coords, i*(2*dimquads) + perm[j]*2 + 1));
 			else
-				cairo_line_to(cairo, dl_get(coords, i*8 + perm[j]*2), dl_get(coords, i*8 + perm[j]*2 + 1));
+				cairo_line_to(cairo,
+							  dl_get(coords, i*(2*dimquads) + perm[j]*2),
+							  dl_get(coords, i*(2*dimquads) + perm[j]*2 + 1));
 		}
 		cairo_close_path(cairo);
 		cairo_stroke(cairo);
