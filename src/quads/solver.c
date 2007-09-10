@@ -923,6 +923,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         mo.quad_npeers = krez->nres;
 		mo.timeused = solver->timeused;
 		mo.quadno = thisquadno;
+		mo.dimquads = dimquads;
         for (i=0; i<dimquads; i++)
             mo.star[i] = star[i];
         for (i=0; i<dimquads; i++)

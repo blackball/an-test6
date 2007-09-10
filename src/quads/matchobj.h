@@ -26,9 +26,9 @@
 
 struct match_struct {
     unsigned int quadno;
-	unsigned int star[4];
-	unsigned int field[4];
-	uint64_t ids[4];
+	unsigned int star[DQMAX];
+	unsigned int field[DQMAX];
+	uint64_t ids[DQMAX];
 	// actually code error ^2.
     float code_err;
 	double sMin[3];
@@ -37,9 +37,11 @@ struct match_struct {
 	double sMaxMin[3];
 
 	// Pixel positions of the quad stars.
-	double quadpix[8];
+	double quadpix[2 * DQMAX];
 	// Star positions of the quad stars.
-	double quadxyz[12];
+	double quadxyz[3 * DQMAX];
+
+	uint8_t dimquads;
 
     // How many quads were matched to this single quad (not a running total)
     // (only counts a single ABCD permutation)
