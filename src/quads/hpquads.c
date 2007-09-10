@@ -58,6 +58,7 @@ static void print_help(char* progname)
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
+		   "     [-q <dimquads>] number of stars in a \"quad\".\n"
 		   "     [-x <x-passes>] number of passes in the x direction\n"
 		   "     [-y <y-passes>] number of passes in the y direction\n"
 		   "     [-r <reuse-times>] number of times a star can be used.\n"
