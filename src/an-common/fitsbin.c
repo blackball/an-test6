@@ -102,7 +102,7 @@ int fitsbin_write_header(fitsbin_t* fb) {
 		qfits_header_add(hdr, key, val, com, lin);
 	}
 
-    if (qfits_header_dump(fb->header, fb->fid))
+    if (qfits_header_dump(hdr, fb->fid))
 		return -1;
 	fb->header_end = ftello(fb->fid);
 	qfits_header_destroy(hdr);
