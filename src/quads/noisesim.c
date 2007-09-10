@@ -81,6 +81,11 @@ int main(int argc, char** args) {
     double* realA;
     double* realB;
 
+    /*
+     int abInvalid = 0;
+     int cdInvalid = 0;
+     */
+
 	noises = dl_new(16);
 
     srand((unsigned int)time(NULL));
@@ -157,6 +162,12 @@ int main(int argc, char** args) {
 	printf("pixerrs=[];\n");
     printf("indexnoise=%g;\n", indexjitter);
 
+    /*
+     printf("abinvalid=[];\n");
+     printf("cdinvalid=[];\n");
+     printf("scale=[];\n");
+     */
+
 	if (dl_size(noises) == 0)
 		dl_append(noises, pixnoise);
 
@@ -169,6 +180,8 @@ int main(int argc, char** args) {
 		codedelta = dl_new(256);
 		codedists = dl_new(256);
 
+		//abInvalid = cdInvalid = 0;
+
 		for (j=0; j<N; j++) {
 			double midAB[3];
 			double fcode[dimcodes];
@@ -176,6 +189,7 @@ int main(int argc, char** args) {
 			double field[dimquads * 2];
 			int i;
             bool ok = TRUE;
+            double scale;
 
 			star_midpoint(midAB, realA, realB);
 
@@ -201,7 +215,18 @@ int main(int argc, char** args) {
             for (i=0; i<dimquads; i++)
                 add_field_noise(field + 2*i, pixnoise, field + 2*i);
 
-			compute_field_code(field, dimquads, fcode, NULL);
+			compute_field_code(field, dimquads, fcode, &scale);
+
+            /*
+             if ((scale < square(lowerAngle * 60.0 / pixscale)) ||
+             (scale > square(upperAngle * 60.0 / pixscale)))
+             abInvalid++;
+             else if ((((codecx*codecx - codecx) + (codecy*codecy - codecy)) > 0.0) ||
+             (((codedx*codedx - codedx) + (codedy*codedy - codedy)) > 0.0))
+             cdInvalid++;
+             if (matlab)
+             printf("scale(%i)=%g;\n", j+1, sqrt(scale)*pixscale/60.0);
+             */
 
             if (printcodes) {
                 printf("icode(%i,:)=[", j+1);
@@ -237,6 +262,11 @@ int main(int argc, char** args) {
 		printf("pixerrs(%i)=%g;\n", k+1, pixnoise);
         printf("codemean(%i)=%g;\n", k+1, mean);
         printf("codestd(%i)=%g;\n", k+1, std);
+
+        /*
+         printf("abinvalid(%i) = %g;\n", k+1, abInvalid / (double)N);
+         printf("cdinvalid(%i) = %g;\n", k+1, cdInvalid / (double)N);
+         */
 
 		dl_free(codedelta);
 		dl_free(codedists);

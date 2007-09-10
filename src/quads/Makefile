@@ -229,8 +229,6 @@ wcs-rd2xy: wcs-rd2xy.o $(UTIL_OBJS) \
 
 noisesim: noisesim.o noise.o $(ANUTILS_LIB)
 
-noisesim2: noisesim2.o noise.o $(ANUTILS_LIB)
-
 noisesim3: noisesim3.o noise.o $(ANUTILS_LIB)
 
 noisesim4: noisesim4.o blind_wcs.o noise.o svd.o \
