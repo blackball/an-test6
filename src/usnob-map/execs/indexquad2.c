@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 
 	snprintf(fn, sizeof(fn), "%s%s.qidx.fits", basedir, filename);
 	fprintf(stderr, "Opening file %s...\n", fn);
-	qidx = qidxfile_open(fn, 0);
+	qidx = qidxfile_open(fn);
 	if (!qidx) {
 		fprintf(stderr, "Failed to open quadidx file.\n");
 		exit(-1);
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
 
 	snprintf(fn, sizeof(fn), "%s%s.quad.fits", basedir, filename);
 	fprintf(stderr, "Opening file %s...\n", fn);
-	qfile = quadfile_open(fn, 0);
+	qfile = quadfile_open(fn);
 	if (!qfile) {
 		fprintf(stderr, "Failed to open quad file.\n");
 		exit(-1);
