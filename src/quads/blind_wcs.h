@@ -24,11 +24,6 @@
 #include "sip.h"
 #include "starkd.h"
 
-void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
-					   startree* starkd, int* correspondences,
-					   // output:
-					   tan_t* wcstan);
-
 /*
   Computes a rigid TAN WCS projection, based on the correspondence
   between stars and field objects.
