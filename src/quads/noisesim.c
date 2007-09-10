@@ -240,6 +240,14 @@ int main(int argc, char** args) {
             }
 
 			dl_append(codedists, sqrt(distsq(icode, fcode, dimcodes)));
+
+            /*
+             compute the true and noisy transforms, sample stars some number
+             of quad radiuses away from the quad center, transform them
+             through the two transforms and measure the distance between the
+             transformed positions...
+             */
+
 		}
 
         if (printdists) {

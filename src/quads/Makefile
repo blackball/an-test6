@@ -229,9 +229,6 @@ wcs-rd2xy: wcs-rd2xy.o $(UTIL_OBJS) \
 
 noisesim: noisesim.o noise.o $(ANUTILS_LIB)
 
-noisesim4: noisesim4.o blind_wcs.o noise.o svd.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-
 hpgrid: hpgrid.o $(ANUTILS_LIB)
 
 get-healpix: get-healpix.o $(ANUTILS_LIB)
