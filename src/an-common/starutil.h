@@ -25,9 +25,12 @@
 #include "keywords.h"
 
 #define DIM_STARS 3
-#define DIM_CODES 4
-#define DIM_QUADS 4
 #define DIM_XY 2
+
+// upper bound of dimquads value
+#define DQMAX 5
+// upper bound of dimcodes value
+#define DCMAX 6
 
 typedef unsigned char uchar;
 

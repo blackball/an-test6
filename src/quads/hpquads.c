@@ -47,11 +47,6 @@
 
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RHL:bq:"
 
-// upper bound of dimquads value
-#define DQMAX 5
-// upper bound of dimcodes value
-#define DCMAX 6
-
 static void print_help(char* progname)
 {
 	boilerplate_help_header(stdout);
