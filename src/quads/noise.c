@@ -113,8 +113,7 @@ void add_field_noise(const double* real, double noisestd, double* noisy) {
 	noisy[1] = real[1] + mag2;
 }
 
-void compute_star_code(double* A, double* B, double* C, double* D,
-					   double* code) {
+void compute_star_code(const double* xyz, int dimquads, double* code) {
 	double midAB[3];
 	double Ax, Ay;
 	double Bx, By;
@@ -124,6 +123,9 @@ void compute_star_code(double* A, double* B, double* C, double* D,
 	double Dx, Dy;
 	double ADx, ADy;
     bool ok = TRUE;
+    int i;
+    const double* A = xyz;
+    const double* B = xyz + 3;
 
 	star_midpoint(midAB, A, B);
 	ok &= star_coords(A, midAB, &Ax, &Ay);
@@ -134,55 +136,44 @@ void compute_star_code(double* A, double* B, double* C, double* D,
 	invscale = 1.0 / scale;
 	costheta = (ABy + ABx) * invscale;
 	sintheta = (ABy - ABx) * invscale;
-	ok &= star_coords(C, midAB, &Dx, &Dy);
-	ADx = Dx - Ax;
-	ADy = Dy - Ay;
-	code[0] =  ADx * costheta + ADy * sintheta;
-	code[1] = -ADx * sintheta + ADy * costheta;
-	ok &= star_coords(D, midAB, &Dx, &Dy);
-    assert(ok);
-	ADx = Dx - Ax;
-	ADy = Dy - Ay;
-	code[2] =  ADx * costheta + ADy * sintheta;
-	code[3] = -ADx * sintheta + ADy * costheta;
+    for (i=2; i<dimquads; i++) {
+        ok &= star_coords(xyz + 3*i, midAB, &Dx, &Dy);
+        assert(ok);
+        ADx = Dx - Ax;
+        ADy = Dy - Ay;
+        code[(i-2)*2 + 0] =  ADx * costheta + ADy * sintheta;
+        code[(i-2)*2 + 1] = -ADx * sintheta + ADy * costheta;
+    }
 }
 
-void compute_field_code(double* A, double* B, double* C, double* D,
+void compute_field_code(const double* pix, int dimquads,
 						double* code, double* p_scale) {
 	double Ax, Ay, Bx, By, dx, dy, scale;
 	double costheta, sintheta;
 	double Cx, Cy, xxtmp;
+    int i;
 
-	Ax = A[0];
-	Ay = A[1];
-	Bx = B[0];
-	By = B[1];
+	Ax = pix[0];
+	Ay = pix[1];
+	Bx = pix[2];
+	By = pix[3];
 	dx = Bx - Ax;
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
 	costheta = (dy + dx) / scale;
 	sintheta = (dy - dx) / scale;
 
-	Cx = C[0];
-	Cy = C[1];
-	Cx -= Ax;
-	Cy -= Ay;
-	xxtmp = Cx;
-	Cx =     Cx * costheta + Cy * sintheta;
-	Cy = -xxtmp * sintheta + Cy * costheta;
-	code[0] = Cx;
-	code[1] = Cy;
-
-	Cx = D[0];
-	Cy = D[1];
-	Cx -= Ax;
-	Cy -= Ay;
-	xxtmp = Cx;
-	Cx =     Cx * costheta + Cy * sintheta;
-	Cy = -xxtmp * sintheta + Cy * costheta;
-	code[2] = Cx;
-	code[3] = Cy;
-
+    for (i=2; i<dimquads; i++) {
+        Cx = pix[(i*2) + 0];
+        Cy = pix[(i*2) + 1];
+        Cx -= Ax;
+        Cy -= Ay;
+        xxtmp = Cx;
+        Cx =     Cx * costheta + Cy * sintheta;
+        Cy = -xxtmp * sintheta + Cy * costheta;
+        code[2*(i-2) + 0] = Cx;
+        code[2*(i-2) + 1] = Cy;
+    }
 	if (p_scale)
 		*p_scale = scale;
 }

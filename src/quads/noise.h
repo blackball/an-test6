@@ -40,10 +40,9 @@ void add_star_noise(const double* real, double noisestddev, double* noisy);
 
 void add_field_noise(const double* real, double noisestddev, double* noisy);
 
-void compute_star_code(double* A, double* B, double* C, double* D,
-					   double* code);
+void compute_star_code(const double* xyz, int dimquads, double* code);
 
-void compute_field_code(double* A, double* B, double* C, double* D,
-						double* code, double* scale);
+void compute_field_code(const double* pix, int dimquads,
+                        double* code, double* scale);
 
 #endif

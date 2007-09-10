@@ -257,7 +257,7 @@ inline void dec2dms(double dec, int* d, int* m, double* s) {
 	the resulting x direction is increasing DEC, the resulting y direction is increasing RA
 	which might not be the normal convention
 */
-inline bool star_coords(double *s, double *r, double *x, double *y)
+inline bool star_coords(const double *s, const double *r, double *x, double *y)
 {
 	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
 	if (sdotr <= 0.0)
@@ -292,7 +292,7 @@ inline bool star_coords(double *s, double *r, double *x, double *y)
 	return TRUE;
 }
 
-inline void star_midpoint(double* mid, double* A, double* B) {
+inline void star_midpoint(double* mid, const double* A, const double* B) {
 	double len;
 	double invlen;
 	// we don't divide by 2 because we immediately renormalize it...

@@ -34,12 +34,23 @@
 #include "mathutil.h"
 #include "noise.h"
 
-const char* OPTIONS = "e:n:ma:ri:s:";
+const char* OPTIONS = "he:n:da:ri:s:";
+
+void print_help(char* progname) {
+    printf("Usage: %s\n"
+           "   [-i <index-jitter>]: noise in the index, in arcseconds\n"
+           "   [-e <field-jitter>]: noise in the image, in pixels\n"
+           "   [-q <dimquads>]: set number of stars per \"quad\"\n"
+           "   [-n <n-samples>]: number of samples to draw\n"
+           "   [-a <quad-scale>]: angle between stars A and B, in arcminutes\n"
+           "   [-s <pixel-scale>]: set the image pixel scale (arcseconds/pixel)\n"
+           "   [-d]: print the individual code distances\n"
+           "   [-r]: print the index and field code values\n"
+           "\n", progname);
+}
 
 int main(int argc, char** args) {
 	int argchar;
-
-    //double fwhm = 1.0 / (2.0 * sqrt(2.0 * log(2.0)));
 
 	double ABangle = 4.0; // arcminutes
 	double pixscale = 0.396; // arcsec/pixel
@@ -48,28 +59,27 @@ int main(int argc, char** args) {
 	double indexjitter = 1.0; // arcsec, stddev
 	double noisedist;
 
-	double realA[3];
-	double realB[3];
-	double realC[3];
-	double realD[3];
+    int dimquads = 4;
+    int dimcodes;
 
-	double A[3];
-	double B[3];
-	double C[3];
-	double D[3];
+	double realxyz[3 * DQMAX];
+    double indexxyz[3 * DQMAX];
 
 	double ra, dec;
 	int j;
 	int k;
 	int N=1000;
 
-	int matlab = FALSE;
+	int printdists = FALSE;
 
 	dl* codedelta;
 	dl* codedists;
 	dl* noises;
 
-    int real = FALSE;
+    int printcodes = FALSE;
+
+    double* realA;
+    double* realB;
 
 	noises = dl_new(16);
 
@@ -77,6 +87,15 @@ int main(int argc, char** args) {
 
 	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'h':
+            print_help(args[0]);
+            exit(0);
+        case '?':
+            print_help(args[0]);
+            exit(-1);
+        case 'q':
+            dimquads = atoi(optarg);
+            break;
         case 'i':
             indexjitter = atof(optarg);
             break;
@@ -84,8 +103,8 @@ int main(int argc, char** args) {
 			pixnoise = atof(optarg);
 			dl_append(noises, pixnoise);
 			break;
-		case 'm':
-			matlab = TRUE;
+		case 'd':
+			printdists = TRUE;
 			break;
 		case 'n':
 			N = atoi(optarg);
@@ -94,12 +113,27 @@ int main(int argc, char** args) {
 			ABangle = atof(optarg);
 			break;
         case 'r':
-            real = TRUE;
+            printcodes = TRUE;
             break;
         case 's':
             pixscale = atof(optarg);
             break;
 		}
+
+    if (optind != argc-1) {
+        print_help(args[0]);
+        printf("Unknown extra args.\n");
+        exit(-1);
+    }
+
+    if (dimquads > DQMAX || dimquads < 3) {
+        fprintf(stderr, "Invalid dimquads: must be in [3, %i]\n", DQMAX);
+        exit(-1);
+    }
+    dimcodes = 2 * (dimquads - 2);
+
+    realA = realxyz;
+    realB = realxyz + 3;
 
 	// A
 	ra = 0.0;
@@ -111,7 +145,7 @@ int main(int argc, char** args) {
 	dec = 0.0;
 	radec2xyzarr(ra, dec, realB);
 
-	if (matlab && real) {
+	if (printcodes) {
 		printf("icode=[];\n");
 		printf("fcode=[];\n");
 	}
@@ -137,68 +171,53 @@ int main(int argc, char** args) {
 
 		for (j=0; j<N; j++) {
 			double midAB[3];
-			double fcode[4];
-			double icode[4];
-			double field[8];
+			double fcode[dimcodes];
+			double icode[dimcodes];
+			double field[dimquads * 2];
 			int i;
             bool ok = TRUE;
 
 			star_midpoint(midAB, realA, realB);
 
-			// C
-			// place C uniformly in the circle around the midpoint of AB.
-			sample_star_in_circle(midAB, ABangle/2.0, realC);
+			// place interior stars uniformly in the circle around the midpoint of AB.
+            for (i=2; i<dimquads; i++)
+                sample_star_in_circle(midAB, ABangle/2.0, realxyz + 3*i);
 
-			// D
-			// place D uniformly in the circle around the midpoint of AB.
-			sample_star_in_circle(midAB, ABangle/2.0, realD);
+			// add noise to real star positions to yield index positions
+            for (i=0; i<dimquads; i++)
+                add_star_noise(realxyz + 3*i, noisedist, indexxyz + 3*i);
 
-			// add noise to A,B,C,D
-			add_star_noise(realA, noisedist, A);
-			add_star_noise(realB, noisedist, B);
-			add_star_noise(realC, noisedist, C);
-			add_star_noise(realD, noisedist, D);
-
-			compute_star_code(A, B, C, D, icode);
-
-			//compute_star_code(realA, realB, realC, realD, realcode);
+			compute_star_code(indexxyz, dimquads, icode);
 
 			// project to field coords
-			ok &= star_coords(realA, midAB, field+0, field+1);
-			ok &= star_coords(realB, midAB, field+2, field+3);
-			ok &= star_coords(realC, midAB, field+4, field+5);
-			ok &= star_coords(realD, midAB, field+6, field+7);
+            for (i=0; i<dimquads; i++)
+                ok &= star_coords(realxyz + 3*i, midAB, field + 2*i, NULL);
             assert(ok);
 			// scale to pixels.
-			for (i=0; i<8; i++)
+			for (i=0; i<(dimquads*2); i++)
 				field[i] = rad2arcsec(field[i]) / pixscale;
 
-			// add field noise
-			add_field_noise(field+0, pixnoise, field+0);
-			add_field_noise(field+2, pixnoise, field+2);
-			add_field_noise(field+4, pixnoise, field+4);
-			add_field_noise(field+6, pixnoise, field+6);
+			// add field noise to get image coordinates
+            for (i=0; i<dimquads; i++)
+                add_field_noise(field + 2*i, pixnoise, field + 2*i);
 
-			compute_field_code(field+0, field+2, field+4, field+6, fcode, NULL);
+			compute_field_code(field, dimquads, fcode, NULL);
 
-            if (matlab && real) {
-                //double ra = atan2(A[1],A[0]);
-                //printf("A(%i,:)=[%g,%g];\n", j+1, rad2arcsec(ra), rad2arcsec(z2dec(A[2])));
-                printf("icode(%i,:)=[%g,%g,%g,%g];\n", j+1,
-                       icode[0], icode[1], icode[2], icode[3]);
-                printf("fcode(%i,:)=[%g,%g,%g,%g];\n", j+1,
-                       fcode[0], fcode[1], fcode[2], fcode[3]);
+            if (printcodes) {
+                printf("icode(%i,:)=[", j+1);
+                for (i=0; i<dimcodes; i++)
+                    printf("%g,", icode[i]);
+                printf("];\n");
+                printf("fcode(%i,:)=[", j+1);
+                for (i=0; i<dimcodes; i++)
+                    printf("%g,", fcode[i]);
+                printf("];\n");
             }
 
-			/*
-			  for (i=0; i<4; i++)
-			  dl_append(codedelta, code[i] - realcode[i]);
-			*/
-
-			dl_append(codedists, sqrt(distsq(icode, fcode, 4)));
+			dl_append(codedists, sqrt(distsq(icode, fcode, dimcodes)));
 		}
 
-        if (matlab) {
+        if (printdists) {
             printf("codedists%i=[", k+1);
             for (j=0; j<dl_size(codedists); j++)
                 printf("%g,", dl_get(codedists, j));
