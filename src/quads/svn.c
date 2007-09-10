@@ -36,7 +36,8 @@ const char* svn_date() {
         I saw a poster once - it had a dog with a thought bubble that said,
         "Whoever said that dogs shouldn't take LSD definitely wasn't a dog on LSD."
         Hahahaha.  It was a dopey-looking golden retriever.  But then, aren't all
-       golden retrievers fairly dopey looking?
+        golden retrievers fairly dopey looking?  But did you ever wonder whether
+        golden retrievers think we're fairly dopey looking?
 	*/
 	const char* datestr = "$Date$";
 	// (I want to trim off the first seven and last two characters.)
