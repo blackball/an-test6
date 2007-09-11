@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 
-//#include "CuTest.h" // WHERE IS THIS FILE???
+#include "cutest.h"
 
 #include "bl.h"
 
@@ -364,43 +364,4 @@ void test_dl_push(CuTest* tc) {
 	CuAssert(tc, "dl", 1.0 == dl_get(bl, 1));
 	CuAssert(tc, "dl", 2.0 == dl_get(bl, 2));
 	CuAssertIntEquals(tc, dl_check_consistency(bl), 0);
-}
-
-
-
-
-int main(int argc, char** args) {
-
-	/* Run all tests */
-	CuString *output = CuStringNew();
-	CuSuite* suite = CuSuiteNew();
-
-	/* Add new tests here */
-	SUITE_ADD_TEST(suite, test_il_new);
-	SUITE_ADD_TEST(suite, test_il_size);
-	SUITE_ADD_TEST(suite, test_il_get_push);
-	SUITE_ADD_TEST(suite, test_il_push_pop);
-	SUITE_ADD_TEST(suite, test_il_push_pop2);
-	SUITE_ADD_TEST(suite, test_il_remove_value);
-	SUITE_ADD_TEST(suite, test_il_contains);
-	SUITE_ADD_TEST(suite, test_il_insert_ascending);
-	SUITE_ADD_TEST(suite, test_il_insert_descending);
-	SUITE_ADD_TEST(suite, test_il_insert_unique_ascending);
-	SUITE_ADD_TEST(suite, test_il_copy);
-	SUITE_ADD_TEST(suite, test_il_dupe);
-	SUITE_ADD_TEST(suite, test_dl_push);
-	SUITE_ADD_TEST(suite, test_set);
-	SUITE_ADD_TEST(suite, test_delete);
-	SUITE_ADD_TEST(suite, test_delete_2);
-	SUITE_ADD_TEST(suite, test_delete_3);
-	SUITE_ADD_TEST(suite, test_delete_4);
-
-
-	/* Run the suite, collect results and display */
-	CuSuiteRun(suite);
-	CuSuiteSummary(suite, output);
-	CuSuiteDetails(suite, output);
-	printf("%s\n", output->buffer);
-
-	return 0;
 }

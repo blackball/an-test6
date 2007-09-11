@@ -171,6 +171,11 @@ solver_test.o: solver.c
 
 test_dfind: $(TEST_DFIND_OBJ)
 
+test_bl-main.c: make-tests.sh test_bl.c
+	bash make-tests.sh test_bl.c > test_bl-main.c
+
+test_bl: cutest.o test_bl-main.o test_bl.o $(ANUTILS_LIB)
+
 image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
 
 fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
