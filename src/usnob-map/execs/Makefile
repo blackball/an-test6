@@ -70,7 +70,8 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_constellation.o \
 		render_messier.o \
 		render_clean.o \
-		render_dirty.o
+		render_dirty.o \
+		render_solid.o
 
 MISC_OBJS := merctree.o pnmutils.o
 

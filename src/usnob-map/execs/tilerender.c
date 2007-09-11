@@ -23,6 +23,7 @@
 
 #include "render_clean.h"
 #include "render_dirty.h"
+#include "render_solid.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -48,7 +49,8 @@ char* layernames[] = {
     "messier",
 
     "clean",
-    "dirty"
+    "dirty",
+    "solid"
 };
 render_func_t renderers[] = {
     render_image,
@@ -61,7 +63,8 @@ render_func_t renderers[] = {
     render_messier,
 
     render_clean,
-    render_dirty
+    render_dirty,
+    render_solid
 };
 
 static void write_png(unsigned char * img, int w, int h);
