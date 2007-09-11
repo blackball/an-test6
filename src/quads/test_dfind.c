@@ -19,6 +19,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "cutest.h"
+
 int dfind(int *image, int nx, int ny, int *object);
 int dfind2(int *image, int nx, int ny, int *object);
 int compare_inputs(int *test_data, int nx, int ny) {
@@ -42,7 +45,7 @@ int compare_inputs(int *test_data, int nx, int ny) {
 }
 
 
-void test1() {
+void test_empty(CuTest* tc) {
 	int test_data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -52,10 +55,10 @@ void test1() {
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	compare_inputs(test_data, 11, 9);
+	CuAssertIntEquals(tc, compare_inputs(test_data, 11, 9), 0);
 }
 
-void test2() {
+void test_medium(CuTest* tc) {
 	int test_data[] = {1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0,
@@ -65,10 +68,10 @@ void test2() {
 	                   0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
 	                   0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0,
 	                   0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0};
-	compare_inputs(test_data, 11, 9);
+	CuAssertIntEquals(tc,compare_inputs(test_data, 11, 9),0);
 }
 
-void test3() {
+void test_tricky(CuTest* tc) {
 	int test_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	                   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -78,10 +81,10 @@ void test3() {
 	                   1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
 	                   1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
 	                   0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0};
-	compare_inputs(test_data, 11, 9);
+	CuAssertIntEquals(tc,compare_inputs(test_data, 11, 9),0);
 }
 
-void test4() {
+void test_nasty(CuTest* tc) {
 	int test_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	                   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -91,10 +94,10 @@ void test4() {
 	                   1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0,
 	                   1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
 	                   0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0};
-	compare_inputs(test_data, 11, 9);
+	CuAssertIntEquals(tc,compare_inputs(test_data, 11, 9),0);
 }
 
-void test5() {
+void test_very_nasty(CuTest* tc) {
 	int test_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	                   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -104,19 +107,5 @@ void test5() {
 	                   1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0,
 	                   0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
 	                   0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0};
-	compare_inputs(test_data, 11, 9);
+	CuAssertIntEquals(tc, compare_inputs(test_data, 11, 9),0);
 }
-
-int main() {
-	test1();
-	printf("--------------------------------------------\n");
-	test2();
-	printf("--------------------------------------------\n");
-	test3();
-	printf("--------------------------------------------\n");
-	test4();
-	printf("--------------------------------------------\n");
-	test5();
-	return 0;
-}
-

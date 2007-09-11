@@ -169,7 +169,9 @@ ALL_OBJ += test-solver.o
 solver_test.o: solver.c
 	$(CC) $(CFLAGS) -DTESTING=1 -o $@ -c $<
 
-test_dfind: $(TEST_DFIND_OBJ)
+test_dfind-main.c: make-tests.sh test_dfind.c
+	bash make-tests.sh test_dfind.c > test_dfind-main.c
+test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
 
 test_bl-main.c: make-tests.sh test_bl.c
 	bash make-tests.sh test_bl.c > test_bl-main.c
