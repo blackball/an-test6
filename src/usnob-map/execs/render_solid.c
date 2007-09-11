@@ -4,7 +4,7 @@
 #include <sys/mman.h>
 
 #include "tilerender.h"
-#include "render_dirty.h"
+#include "render_solid.h"
 
 static void logmsg(char* format, ...) {
     va_list args;
@@ -16,6 +16,8 @@ static void logmsg(char* format, ...) {
 
 int render_solid(unsigned char* img, render_args_t* args) {
     int i, j;
+
+    logmsg("render_solid: filling with RGBA=(0,0,0,255)\n");
 
     for (j=0; j<args->H; j++) {
         for (i=0; i<args->W; i++) {
