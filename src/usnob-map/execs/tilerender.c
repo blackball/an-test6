@@ -21,6 +21,9 @@
 #include "render_constellation.h"
 #include "render_messier.h"
 
+#include "render_clean.h"
+#include "render_dirty.h"
+
 /**
    This program gets called by "tile.php" in response to a client requesting a map
    tile.  The coordinates of the tile are specified as a range of RA and DEC values.
@@ -42,7 +45,10 @@ char* layernames[] = {
     "rdls",
     "boundary",
     "constellation",
-    "messier"
+    "messier",
+
+    "clean",
+    "dirty"
 };
 render_func_t renderers[] = {
     render_image,
@@ -52,7 +58,10 @@ render_func_t renderers[] = {
     render_rdls,
     render_boundary,
     render_constellation,
-    render_messier
+    render_messier,
+
+    render_clean,
+    render_dirty
 };
 
 static void write_png(unsigned char * img, int w, int h);
