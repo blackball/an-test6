@@ -49,7 +49,7 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
 				 ]; // 'clean'
 
 var usnobMapType;
-var cleanMapType;
+//var cleanMapType;
 
 /*
   This function gets called as the user moves the map.
@@ -126,9 +126,11 @@ function linktohere() {
 		}
 	}
 
-	if (map.getCurrentMapType() == cleanMapType) {
-		url = url + "&clean";
-	}
+    /*
+     if (map.getCurrentMapType() == cleanMapType) {
+     url = url + "&clean";
+     }
+     */
 
 	window.location = url;
 }
@@ -209,11 +211,13 @@ function startup() {
 	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
 
-	var cleanTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	cleanTile.myLayers='usnob';
-	cleanTile.myFormat='image/png';
-	cleanTile.myBaseURL=TILE_URL + "&tag=usnob-clean" + "&clean";
-	cleanTile.getTileUrl=CustomGetTileUrl;
+    /*
+     var cleanTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+     cleanTile.myLayers='usnob';
+     cleanTile.myFormat='image/png';
+     cleanTile.myBaseURL=TILE_URL + "&tag=usnob-clean" + "&clean";
+     cleanTile.getTileUrl=CustomGetTileUrl;
+     */
 
 	//layers = 'tycho,grid';
 	lay = [];
@@ -240,6 +244,12 @@ function startup() {
 	if ("rdlsfn" in getdata) {
 		lay.push('rdls');
 	}
+	if ("clean" in getdata) {
+		lay.push('clean');
+	}
+	if ("dirty" in getdata) {
+		lay.push('dirty');
+	}
 	layers = lay.join(",");
 
 	var userTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
@@ -252,8 +262,10 @@ function startup() {
 
 		usnobMapType = new GMapType([usnobTile],
 									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
-		cleanMapType = new GMapType([cleanTile],
-									G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
+        /*
+         cleanMapType = new GMapType([cleanTile],
+         G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
+         */
 
 	map.getMapTypes().length = 0;
 	/*
@@ -261,13 +273,16 @@ function startup() {
 	  map.setMapType(myMapType);
 	*/
 	map.addMapType(usnobMapType);
-	map.addMapType(cleanMapType);
+	//map.addMapType(cleanMapType);
 	map.addMapType(userMapType);
 	map.addMapType(userUsnobMapType);
-	if ('clean' in getdata)
-		map.setMapType(cleanMapType);
-	else
-		map.setMapType(usnobMapType);
+    /*
+     if ('clean' in getdata)
+     map.setMapType(cleanMapType);
+     else
+     map.setMapType(usnobMapType);
+     */
+    map.setMapType(userMapType);
 
 	// Show an overview map?
 	if (("over" in getdata) && (getdata["over"] == "no")) {
