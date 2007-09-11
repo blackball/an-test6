@@ -81,7 +81,7 @@ static void map_flux(unsigned char* img, render_args_t* args,
 	pix[0] = min(255, 255.0*R);
 	pix[1] = min(255, 255.0*G);
 	pix[2] = min(255, 255.0*B);
-	pix[3] = 255;
+	pix[3] = (pix[0]/3 + pix[1]/3 + pix[2]/3);
 }
 
 int render_usnob(unsigned char* img, render_args_t* args) {
