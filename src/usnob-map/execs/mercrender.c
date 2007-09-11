@@ -131,7 +131,7 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 		float* fluximg, int render_symbol, render_args_t* args)
 {
 	// this is stupid
-	int ndrops[] = {25, 18, 16};
+	int ndrops[] = {25, 18, 16, 25};
 	int dx0[] =  { -2, -1,  0,  1,  2, 
 	               -2, -1,  0,  1,  2, 
 	               -2, -1,  0,  1,  2, 
