@@ -48,6 +48,7 @@ static void map_flux(unsigned char* img, render_args_t* args,
 	I = (r + g + b) / 3;
 	if (I == 0.0) {
 		R = G = B = 0.0;
+        meanRGB = 0.0;
 	} else {
 		if (args->arc) {
 			f = asinh(I * amp);
@@ -59,20 +60,17 @@ static void map_flux(unsigned char* img, render_args_t* args,
 		B = f*b/I;
 
         meanRGB = (R + G + B) / 3.0;
+        if (meanRGB > 1.0) meanRGB = 1.0;
 
 		maxRGB = max(R, max(G, B));
-		if (maxRGB > 1.0) {
-			R /= maxRGB;
-			G /= maxRGB;
-			B /= maxRGB;
-		}
+		//if (maxRGB > 1.0) {
+        R /= maxRGB;
+        G /= maxRGB;
+        B /= maxRGB;
+        //}
 	}
 	pix = pixel(x, y, img, args);
 
-    R /= maxRGB;
-    G /= maxRGB;
-    B /= maxRGB;
-    if (meanRGB > 1.0) meanRGB = 1.0;
     pix[0] = min(255, 255.0*R);
     pix[1] = min(255, 255.0*G);
     pix[2] = min(255, 255.0*B);
