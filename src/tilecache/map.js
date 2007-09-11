@@ -226,6 +226,8 @@ function startup() {
 	//} else {
 	//lay += 'tycho';
 	//}
+
+    lay.push("solid");
 	if ("tycho" in getdata) {
 		lay.push('tycho') ;
 	}
