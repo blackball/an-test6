@@ -5,6 +5,7 @@ struct mercargs {
 	render_args_t* args;
 	float* fluximg;
 	merctree* merc;
+    int symbol;
 };
 typedef struct mercargs mercargs;
 
@@ -12,7 +13,7 @@ static void leaf_node(const kdtree_t* kd, int node, void* vargs);
 static void expand_node(const kdtree_t* kd, int node, void* vargs);
 static void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* args);
 
-float* mercrender_file(char* fn, render_args_t* args) {
+float* mercrender_file(char* fn, render_args_t* args, int symbol) {
 	float* fluximg;
 	merctree* merc = merctree_open(fn);
 	if (!merc) {
@@ -25,13 +26,13 @@ float* mercrender_file(char* fn, render_args_t* args) {
 		fprintf(stderr, "Failed to allocate flux image.\n");
 		return NULL;
 	}
-	mercrender(merc, args, fluximg);
+	mercrender(merc, args, fluximg, symbol);
 	merctree_close(merc);
 	return fluximg;
 }
 
 void mercrender(merctree* merc, render_args_t* args,
-				float* fluximg) {
+				float* fluximg, int symbol) {
 	double querylow[2], queryhigh[2];
 	double xmargin, ymargin;
 	mercargs margs;
@@ -39,6 +40,7 @@ void mercrender(merctree* merc, render_args_t* args,
 	margs.args = args;
 	margs.fluximg = fluximg;
 	margs.merc = merc;
+    margs.symbol = symbol;
 
 	// Magic number 2: number of pixels around a star.
 	xmargin = 2.0 / args->xpixelpermerc;
@@ -153,6 +155,8 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	                3,  3,  3, -1,  0,
 	                1,  2, -1,  0,  1, 2 };
 
+    int* dx3 = dx0;
+    int* dy3 = dy0;
 	/*
 	  % How to create the "scale" array in Matlab:
 	  x=[-2:2];
@@ -169,16 +173,24 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 		0.00214490928858,  0.04308165471265,  0.11710807914534,  0.04308165471265,  0.00214490928858,
 		0.00010678874539,  0.00214490928858,  0.00583046794284,  0.00214490928858,  0.00010678874539 };
 
+	float scale5x5dot[] = {
+        0, 1, 1, 1, 0,
+        1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1,
+        0, 1, 1, 1, 0,
+    };
+
 	// clearly constructing these arrays should be done at runtime
-	int* dxs[] = {dx0, dx1, dx2};
-	int* dys[] = {dy0, dy1, dy2};
-	float* scales[] = {scale5x5gaussian, NULL, NULL};
+	int* dxs[] = {dx0, dx1, dx2, dx3};
+	int* dys[] = {dy0, dy1, dy2, dy3};
+	float* scales[] = {scale5x5gaussian, NULL, NULL, scale5x5dot};
 	float *scale;
 	int *dx,*dy;
 	int ndrop,mindx,maxdx,mindy,maxdy;
 	int x,y,w,h,i;
 
-	if (render_symbol < 0 || render_symbol >= 3) {
+	if (render_symbol < 0 || render_symbol >= 4) {
 		fprintf(stderr, "tilerender: add_star: invalid render symbol %d\n", render_symbol);
 		return 0;
 	}
@@ -224,5 +236,5 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 }
 
 void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* margs) {
-	add_star(xp, yp, flux->rflux, flux->bflux, flux->nflux, margs->fluximg, RENDERSYMBOL_psf, margs->args);
+	add_star(xp, yp, flux->rflux, flux->bflux, flux->nflux, margs->fluximg, margs->symbol, margs->args);
 }

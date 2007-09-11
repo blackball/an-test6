@@ -236,7 +236,7 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				continue;
                 //return -1;
             }
-            mercrender(merc, args, fluximg);
+            mercrender(merc, args, fluximg, RENDERSYMBOL_psf);
             merctree_close(merc);
         }
     }

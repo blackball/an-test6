@@ -35,7 +35,7 @@ int render_tycho(unsigned char* img, render_args_t* args) {
 
 	for (i=0; i<sizeof(merc_files)/sizeof(char*); i++) {
 		logmsg("trying mercfile %s.\n", merc_files[i]);
-		fluximg = mercrender_file(merc_files[i], args);
+		fluximg = mercrender_file(merc_files[i], args, RENDERSYMBOL_psf);
 		if (fluximg) 
 			break;
 	}

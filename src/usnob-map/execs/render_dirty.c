@@ -35,50 +35,61 @@ static void map_flux(unsigned char* img, render_args_t* args,
 					 double rflux, double bflux, double nflux,
 					 int x, int y, double amp) {
 	unsigned char* pix;
-	double r, g, b, I, f, R, G, B, maxRGB;
-    double meanRGB;
-    double flux;
+    /*
+     double r, g, b, I, f, R, G, B, maxRGB;
+     double meanRGB;
+     double flux;
+     */
+    pix = pixel(x, y, img, args);
+    if (rflux + bflux + nflux == 0.0) {
+        pix[3] = 0;
+    } else {
+        pix[0] = 255;
+        pix[1] = 0;
+        pix[2] = 0;
+        pix[3] = 255;
+    }
 
-    flux = (rflux + bflux + nflux);
-    if (flux > 0)
-        flux /=
-        ((rflux > 0.0 ? 1.0 : 0.0) + 
-         (bflux > 0.0 ? 1.0 : 0.0) + 
-         (nflux > 0.0 ? 1.0 : 0.0));
-    r = flux;
-    g = b = 0.0;
+    /*
+     flux = (rflux + bflux + nflux);
+     if (flux > 0)
+     flux /=
+     ((rflux > 0.0 ? 1.0 : 0.0) + 
+     (bflux > 0.0 ? 1.0 : 0.0) + 
+     (nflux > 0.0 ? 1.0 : 0.0));
+     r = flux;
+     g = b = 0.0;
+     I = (r + g + b) / 3;
+     if (I == 0.0) {
+     R = G = B = 0.0;
+     meanRGB = 0.0;
+     } else {
+     if (args->arc) {
+     f = asinh(I * amp);
+     } else {
+     f = pow(I * amp, 0.25);
+     }
+     R = f*r/I;
+     G = f*g/I;
+     B = f*b/I;
 
-	I = (r + g + b) / 3;
-	if (I == 0.0) {
-		R = G = B = 0.0;
-        meanRGB = 0.0;
-	} else {
-		if (args->arc) {
-			f = asinh(I * amp);
-		} else {
-			f = pow(I * amp, 0.25);
-		}
-		R = f*r/I;
-		G = f*g/I;
-		B = f*b/I;
+     meanRGB = (R + G + B) / 3.0;
+     if (meanRGB > 1.0) meanRGB = 1.0;
 
-        meanRGB = (R + G + B) / 3.0;
-        if (meanRGB > 1.0) meanRGB = 1.0;
+     maxRGB = max(R, max(G, B));
+     //if (maxRGB > 1.0) {
+     R /= maxRGB;
+     G /= maxRGB;
+     B /= maxRGB;
+     //}
+     }
+     pix = pixel(x, y, img, args);
 
-		maxRGB = max(R, max(G, B));
-		//if (maxRGB > 1.0) {
-        R /= maxRGB;
-        G /= maxRGB;
-        B /= maxRGB;
-        //}
-	}
-	pix = pixel(x, y, img, args);
-
-    pix[0] = min(255, 255.0*R);
-    pix[1] = min(255, 255.0*G);
-    pix[2] = min(255, 255.0*B);
-    pix[3] = min(255, 255.0*meanRGB);
-
+     pix[0] = min(255, 255.0*R);
+     pix[1] = min(255, 255.0*G);
+     pix[2] = min(255, 255.0*B);
+     pix[3] = min(255, 255.0*meanRGB);
+     */
     /*
      pix[0] = min(255, 255.0*R);
      pix[1] = min(255, 255.0*G);
@@ -231,7 +242,7 @@ int render_dirty(unsigned char* img, render_args_t* args) {
 				continue;
                 //return -1;
             }
-            mercrender(merc, args, fluximg);
+            mercrender(merc, args, fluximg, RENDERSYMBOL_dot);
             merctree_close(merc);
         }
     }
