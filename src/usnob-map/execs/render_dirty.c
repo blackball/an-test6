@@ -39,7 +39,9 @@ static void map_flux(unsigned char* img, render_args_t* args,
     double meanRGB;
     double flux;
 
-    flux = (rflux + bflux + nflux) /
+    flux = (rflux + bflux + nflux);
+    if (flux > 0)
+        flux /=
         ((rflux > 0.0 ? 1.0 : 0.0) + 
          (bflux > 0.0 ? 1.0 : 0.0) + 
          (nflux > 0.0 ? 1.0 : 0.0));
