@@ -84,7 +84,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	rd = rdlist_get_field(rdls, 0);
+	rd = rdlist_get_field(rdls, 1);
 	if (!rd) {
 		fprintf(stderr, "Failed to get RDLS field.\n");
 		exit(-1);
