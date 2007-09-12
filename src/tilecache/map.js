@@ -211,21 +211,7 @@ function startup() {
 	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
 
-    /*
-     var cleanTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-     cleanTile.myLayers='usnob';
-     cleanTile.myFormat='image/png';
-     cleanTile.myBaseURL=TILE_URL + "&tag=usnob-clean" + "&clean";
-     cleanTile.getTileUrl=CustomGetTileUrl;
-     */
-
-	//layers = 'tycho,grid';
 	lay = [];
-	//if ("usnob" in getdata) {
-	//lay += 'usnob';
-	//} else {
-	//lay += 'tycho';
-	//}
 
     lay.push("solid");
 	if ("tycho" in getdata) {
@@ -259,8 +245,17 @@ function startup() {
 	userTile.myFormat='image/png';
 	userTile.myBaseURL=TILE_URL;
 	userTile.getTileUrl=CustomGetTileUrl;
-	var userUsnobMapType = new GMapType([usnobTile, userTile], G_SATELLITE_MAP.getProjection(), "User+", G_SATELLITE_MAP);
-	var userMapType = new GMapType([userTile], G_SATELLITE_MAP.getProjection(), "User", G_SATELLITE_MAP);
+
+	var userTile2 = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	userTile2.myLayers=layers;
+	userTile2.myFormat='image/png';
+	userTile2.myBaseURL=TILE_URL + "&20070911";
+	userTile2.getTileUrl=CustomGetTileUrl;
+
+	//var userUsnobMapType = new GMapType([usnobTile, userTile], G_SATELLITE_MAP.getProjection(), "User+", G_SATELLITE_MAP);
+
+	var userMapType = new GMapType([userTile], G_SATELLITE_MAP.getProjection(), "2007-09-09", G_SATELLITE_MAP);
+	var userMapType2 = new GMapType([userTile2], G_SATELLITE_MAP.getProjection(), "2007-09-11", G_SATELLITE_MAP);
 
 		usnobMapType = new GMapType([usnobTile],
 									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
@@ -277,14 +272,10 @@ function startup() {
 	map.addMapType(usnobMapType);
 	//map.addMapType(cleanMapType);
 	map.addMapType(userMapType);
+	map.addMapType(userMapType2);
 	map.addMapType(userUsnobMapType);
-    /*
-     if ('clean' in getdata)
-     map.setMapType(cleanMapType);
-     else
-     map.setMapType(usnobMapType);
-     */
-    map.setMapType(userMapType);
+
+    map.setMapType(userMapType2);
 
 	// Show an overview map?
 	if (("over" in getdata) && (getdata["over"] == "no")) {

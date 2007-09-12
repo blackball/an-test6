@@ -14,8 +14,10 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-static char* merc_template  = "/data1/usnob-gmaps/merc-dirty-20070911/merc_bad_%02i_%02i.mkdt.fits";
-static char* prerendered_template = "/data1/usnob-gmaps/prerendered-dirty-20070911/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+static char* merc_template  = "/data1/usnob-gmaps/merc-dirty-20070909/merc_bad_%02i_%02i.mkdt.fits";
+static char* prerendered_template = "/data1/usnob-gmaps/prerendered-dirty-20070909/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+static char* merc_template_newest  = "/data1/usnob-gmaps/merc-dirty-20070911/merc_bad_%02i_%02i.mkdt.fits";
+static char* prerendered_template_newest = "/data1/usnob-gmaps/prerendered-dirty-20070911/zoom%i/usnob_z%1$i_%02i_%02i.raw";
 
 // Gridding of Mercator space
 static int NM = 32;
@@ -172,7 +174,9 @@ int render_dirty(unsigned char* img, render_args_t* args) {
 				logmsg("  merc x step %g (%g for %i pixels)\n", mxstep, mxstep*WH, WH);
 				logmsg("  merc y step %g (%g for %i pixels)\n", mystep, mystep*WH, WH);
 
-                snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, i, j);
+                snprintf(fn, sizeof(fn),
+						 (args->newest ? prerendered_template_newest : prerendered_template),
+						 args->zoomlevel, i, j);
 				logmsg("  reading file %s\n", fn);
 				f = fopen(fn, "rb");
 				if (!f) {
@@ -234,7 +238,9 @@ int render_dirty(unsigned char* img, render_args_t* args) {
 
             logmsg("rendering tile %i, %i.\n", i, j);
 
-            snprintf(fn, sizeof(fn), merc_template, j, i);
+            snprintf(fn, sizeof(fn),
+					 (args->newest ? merc_template_newest : merc_template),
+					 j, i);
             logmsg("reading file %s\n", fn);
             merc = merctree_open(fn);
             if (!merc) {

@@ -34,7 +34,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:Spk:zd"
+const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdA"; // S
 
 
 /* All render layers must go in here */
@@ -108,6 +108,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'A':
+			args.newest = TRUE;
+			break;
 		case 'z':
 			args.zoomright = TRUE;
 			break;
@@ -117,9 +120,11 @@ int main(int argc, char *argv[]) {
 		case 'p':
 			args.nopre = TRUE;
 			break;
-		case 'S':
-			args.clean = TRUE;
-			break;
+			/*
+			  case 'S':
+			  args.clean = TRUE;
+			  break;
+			*/
 		case 'C':
 			args.cmap = strdup(optarg);
 			break;

@@ -51,8 +51,10 @@ struct render_args {
 
 	// Args for render_usnob:
 	char* cmap;
-	bool clean; // diffraction-spike-less version, or original?
+	//bool clean; // diffraction-spike-less version, or original?
 	bool nopre; // don't use pre-rendered tiles (useful when you're trying to *make* pre-rendered tiles)
+
+	bool newest;
 
 	// Args for render_rdls
 	/*
