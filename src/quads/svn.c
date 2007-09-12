@@ -37,7 +37,8 @@ const char* svn_date() {
         "Whoever said that dogs shouldn't take LSD definitely wasn't a dog on LSD."
         Hahahaha.  It was a dopey-looking golden retriever.  But then, aren't all
         golden retrievers fairly dopey looking?  But did you ever wonder whether
-        golden retrievers think we're fairly dopey looking?
+        golden retrievers think we're fairly dopey looking?  Are you starting to
+        wonder how long this is going to go on?
 	*/
 	const char* datestr = "$Date$";
 	// (I want to trim off the first seven and last two characters.)
