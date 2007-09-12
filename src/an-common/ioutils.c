@@ -315,6 +315,10 @@ bool file_exists(const char* fn) {
     return (access(fn, F_OK) == 0);
 }
 
+bool file_readable(const char* fn) {
+    return (access(fn, R_OK) == 0);
+}
+
 bool file_executable(const char* fn) {
     return (access(fn, X_OK) == 0);
 }

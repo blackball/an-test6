@@ -42,6 +42,8 @@ char* find_executable(const char* progname, const char* sibling);
 
 bool file_exists(const char* fn);
 
+bool file_readable(const char* fn);
+
 bool file_executable(const char* fn);
 
 char* file_get_contents(const char* fn);

@@ -169,25 +169,13 @@ void cairoutils_rgba_to_argb32(unsigned char* img, int W, int H) {
     }
 }
 
-unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH) {
+unsigned char* cairoutils_read_ppm_stream(FILE* fid, int* pW, int* pH) {
     int x,y;
     int W, H, format;
     pixval maxval;
     pixel* pixelrow;
-    FILE* fin;
-    int fromstdin;
     unsigned char* img;
 
-    fromstdin = !strcmp(infn, "-");
-    if (!fromstdin) {
-        fin = fopen(infn, "rb");
-        if (!fin) {
-            fprintf(stderr, "Failed to read input image %s: %s\n", infn, strerror(errno));
-            return NULL;
-        }
-    } else {
-        fin = stdin;
-    }
     ppm_readppminit(fin, &W, &H, &maxval, &format);
     pixelrow = ppm_allocrow(W);
     //printf("%i x %i, maxval %i, format 0x%x\n", C, R, maxval, format);
@@ -221,6 +209,26 @@ unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH) {
         }
     }
     ppm_freerow(pixelrow);
+}
+
+unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH) {
+    FILE* fin;
+    int fromstdin;
+    unsigned char* img;
+
+    fromstdin = !strcmp(infn, "-");
+    if (!fromstdin) {
+        fin = fopen(infn, "rb");
+        if (!fin) {
+            fprintf(stderr, "Failed to read input image %s: %s\n", infn, strerror(errno));
+            return NULL;
+        }
+    } else {
+        fin = stdin;
+    }
+
+    img = cairoutils_read_ppm_stream(fin, pW, pH);
+
     if (!fromstdin) {
         fclose(fin);
     }
