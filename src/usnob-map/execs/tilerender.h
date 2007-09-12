@@ -39,6 +39,9 @@ struct render_args {
 	int W;
 	int H;
 
+    // The current layer we're rendering.
+    char* currentlayer;
+
 	// Args for render_image:
 	char* imagefn;
     char* imwcsfn;
@@ -51,10 +54,9 @@ struct render_args {
 
 	// Args for render_usnob:
 	char* cmap;
-	//bool clean; // diffraction-spike-less version, or original?
 	bool nopre; // don't use pre-rendered tiles (useful when you're trying to *make* pre-rendered tiles)
 
-	bool newest;
+    char* version;
 
 	// Args for render_rdls
 	/*

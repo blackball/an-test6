@@ -143,15 +143,8 @@ if ($gain) {
 //////////////////////
 // render_usnob layer:
 
-// diffraction-spike cleaned version:
-/*
-if (array_key_exists('clean', $_REQUEST)) {
-	$cmdline .= " -S";
-}
-*/
-
-if (array_key_exists('20070911', $_REQUEST)) {
-	$cmdline .= " -A";
+if (array_key_exists('version', $_REQUEST)) {
+	$cmdline .= " -V " . escapeshellarg($_REQUEST['version']);
 }
 
 // color mapping:

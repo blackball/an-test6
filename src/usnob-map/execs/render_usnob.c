@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <sys/mman.h>
+#include <sys/param.h>
 
 #include "tilerender.h"
 #include "starutil.h"
@@ -10,24 +11,13 @@
 #include "keywords.h"
 #include "mercrender.h"
 
-#define max(a, b)  ((a)>(b)?(a):(b))
-#define min(a, b)  ((a)<(b)?(a):(b))
-
-/*
-  static char* merc_template  = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
-  static char* clean_template = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
-  static char* prerendered_template = "/h/260/dstn/raid3/usnob-prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
-*/
-static char* merc_template  = "/data1/usnob-gmaps/merc-orig/merc_%02i_%02i.mkdt.fits";
-//static char* clean_template = "/data1/usnob-gmaps/merc-clean/merc_%02i_%02i.mkdt.fits";
-//static char* clean_template = "/nobackup2/dstn/stars/merc-spikefree/merc_%02i_%02i.mkdt.fits";
-static char* prerendered_template = "/data1/usnob-gmaps/prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
-//static char* prerendered_clean = "/data1/usnob-gmaps/prerendered-clean/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+static char* prerendered_usnob = "/data1/usnob-gmaps/prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+static char* merc_usnob = "/data1/usnob-gmaps/merc-orig/merc_%02i_%02i.mkdt.fits";
+static char* merc_clean = "/data1/usnob-gmaps/merc-clean-%s/merc_%02i_%02i.mkdt.fits";
+static char* merc_dirty = "/data1/usnob-gmaps/merc-dirty-%s/merc_bad_%02i_%02i.mkdt.fits";
 
 // Gridding of Mercator space
 static int NM = 32;
-// Max pre-rendered zoom level
-static int PRERENDERED = 5;
 
 static void logmsg(char* format, ...) {
     va_list args;
@@ -37,51 +27,106 @@ static void logmsg(char* format, ...) {
     va_end(args);
 }
 
+enum maptype {
+    USNOB,
+    CLEAN,
+    DIRTY
+};
+typedef enum maptype maptype;
+
 static void map_flux(unsigned char* img, render_args_t* args,
 					 double rflux, double bflux, double nflux,
-					 int x, int y, double amp) {
+					 int x, int y, double amp, maptype type) {
 	unsigned char* pix;
-	double r, g, b, I, f, R, G, B, maxRGB;
+    pix = pixel(x, y, img, args);
 
 	// Map R,B,N to RGB
 
-	if (args->cmap && !strcmp(args->cmap, "rb")) {
-		r = rflux;
-		b = bflux;
-		g = sqrt(r * b);
-	} else if (args->cmap && !strcmp(args->cmap, "i")) {
-		r = g = b = nflux;
-	} else {
-		r = nflux;
-		g = rflux;
-		b = bflux;
-	}
+    if (type == USNOB) {
+        double r, g, b, I, f, R, G, B, maxRGB;
+        if (args->cmap && !strcmp(args->cmap, "rb")) {
+            r = rflux;
+            b = bflux;
+            g = sqrt(r * b);
+        } else if (args->cmap && !strcmp(args->cmap, "i")) {
+            r = g = b = nflux;
+        } else {
+            r = nflux;
+            g = rflux;
+            b = bflux;
+        }
+        I = (r + g + b) / 3;
+        if (I == 0.0) {
+            R = G = B = 0.0;
+        } else {
+            if (args->arc) {
+                f = asinh(I * amp);
+            } else {
+                f = pow(I * amp, 0.25);
+            }
+            R = f*r/I;
+            G = f*g/I;
+            B = f*b/I;
+            maxRGB = MAX(R, MAX(G, B));
+            if (maxRGB > 1.0) {
+                R /= maxRGB;
+                G /= maxRGB;
+                B /= maxRGB;
+            }
+        }
+        pix[0] = MIN(255, 255.0*R);
+        pix[1] = MIN(255, 255.0*G);
+        pix[2] = MIN(255, 255.0*B);
+        pix[3] = (pix[0]/3 + pix[1]/3 + pix[2]/3);
 
-	I = (r + g + b) / 3;
-	if (I == 0.0) {
-		R = G = B = 0.0;
-	} else {
-		if (args->arc) {
-			f = asinh(I * amp);
-		} else {
-			f = pow(I * amp, 0.25);
-		}
-		R = f*r/I;
-		G = f*g/I;
-		B = f*b/I;
-		maxRGB = max(R, max(G, B));
-		if (maxRGB > 1.0) {
-			R /= maxRGB;
-			G /= maxRGB;
-			B /= maxRGB;
-		}
-	}
-	pix = pixel(x, y, img, args);
+    } else if (type == CLEAN) {
+        double r, g, b, I, f, R, G, B, maxRGB;
+        double meanRGB;
+        double flux;
 
-	pix[0] = min(255, 255.0*R);
-	pix[1] = min(255, 255.0*G);
-	pix[2] = min(255, 255.0*B);
-	pix[3] = (pix[0]/3 + pix[1]/3 + pix[2]/3);
+        flux = (rflux + bflux + nflux);
+        if (flux > 0)
+            flux /=
+                ((rflux > 0.0 ? 1.0 : 0.0) + 
+                 (bflux > 0.0 ? 1.0 : 0.0) + 
+                 (nflux > 0.0 ? 1.0 : 0.0));
+        r = b = g = flux;
+        I = (r + g + b) / 3;
+        if (I == 0.0) {
+            R = G = B = 0.0;
+            meanRGB = 0.0;
+        } else {
+            if (args->arc) {
+                f = asinh(I * amp);
+            } else {
+                f = pow(I * amp, 0.25);
+            }
+            R = f*r/I;
+            G = f*g/I;
+            B = f*b/I;
+            meanRGB = (R + G + B) / 3.0;
+            if (meanRGB > 1.0) meanRGB = 1.0;
+            maxRGB = MAX(R, MAX(G, B));
+            R /= maxRGB;
+            G /= maxRGB;
+            B /= maxRGB;
+        }
+        pix[0] = MIN(255, 255.0*R);
+        pix[1] = MIN(255, 255.0*G);
+        pix[2] = MIN(255, 255.0*B);
+        pix[3] = MIN(255, 255.0*meanRGB);
+
+    } else if (type == DIRTY) {
+        if (rflux + bflux + nflux == 0.0) {
+            pix[3] = 0;
+        } else {
+            pix[0] = 255;
+            pix[1] = 0;
+            pix[2] = 0;
+            pix[3] = 255;
+        }
+    }
+
 }
 
 int render_usnob(unsigned char* img, render_args_t* args) {
@@ -90,8 +135,43 @@ int render_usnob(unsigned char* img, render_args_t* args) {
     int i, j;
     int xlo, xhi, ylo, yhi;
     int tmp;
+    maptype type;
+    int symbol = RENDERSYMBOL_psf;
+    int max_prerendered = 5;
 
     logmsg("hello world\n");
+
+    if (!strcmp(args->currentlayer, "usnob")) {
+        type = USNOB;
+    } else if (!strcmp(args->currentlayer, "clean")) {
+        type = CLEAN;
+    } else if (!strcmp(args->currentlayer, "dirty")) {
+        type = DIRTY;
+    } else {
+        logmsg("unknown layer name \"%s\"\n", args->currentlayer);
+        return -1;
+    }
+
+    switch (type) {
+    case USNOB:
+        break;
+    case CLEAN:
+        max_prerendered = -1;
+        break;
+    case DIRTY:
+        symbol = RENDERSYMBOL_dot;
+        max_prerendered = -1;
+        break;
+    }
+
+    if (type == CLEAN || type == DIRTY) {
+        if (!args->version ||
+            (!(!strcmp(args->version, "20070909") ||
+               !strcmp(args->version, "20070911")))) {
+            logmsg("invalid version \"%s\".\n", args->version);
+            exit(-1);
+        }
+    }
 
     xlo = (int)(NM * args->xmercmin);
     xhi = (int)(NM * args->xmercmax);
@@ -99,10 +179,10 @@ int render_usnob(unsigned char* img, render_args_t* args) {
     yhi = (int)(NM * args->ymercmax);
     logmsg("reading tiles x:[%i, %i], y:[%i, %i]\n", xlo, xhi, ylo, yhi);
     // clamp.
-    xlo = min(NM-1, max(0, xlo));
-    xhi = min(NM-1, max(0, xhi));
-    ylo = min(NM-1, max(0, ylo));
-    yhi = min(NM-1, max(0, yhi));
+    xlo = MIN(NM-1, MAX(0, xlo));
+    xhi = MIN(NM-1, MAX(0, xhi));
+    ylo = MIN(NM-1, MAX(0, ylo));
+    yhi = MIN(NM-1, MAX(0, yhi));
     if (xlo > xhi) {
         logmsg("xlo > xhi: %i, %i\n", xlo, xhi);
         tmp = xlo;
@@ -118,9 +198,9 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 
     logmsg("reading tiles x:[%i, %i], y:[%i, %i]\n", xlo, xhi, ylo, yhi);
 
-    amp = pow(4.0, min(5, args->zoomlevel)) * 32.0 * exp(args->gain * log(4.0));
+    amp = pow(4.0, MIN(5, args->zoomlevel)) * 32.0 * exp(args->gain * log(4.0));
 
-	if (!args->nopre && args->zoomlevel <= PRERENDERED) {
+	if (!args->nopre && args->zoomlevel <= max_prerendered) {
 		char fn[1024];
 		int n = (1 << args->zoomlevel);
 		// assume NM = 2^(PRERENDERED+1) ?
@@ -158,14 +238,7 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				logmsg("  merc x step %g (%g for %i pixels)\n", mxstep, mxstep*WH, WH);
 				logmsg("  merc y step %g (%g for %i pixels)\n", mystep, mystep*WH, WH);
 
-				/*
-				  if (args->clean) {
-				  snprintf(fn, sizeof(fn), prerendered_clean, args->zoomlevel, i, j);
-				  } else {
-				  snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, i, j);
-				  }
-				*/
-				snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, i, j);
+				snprintf(fn, sizeof(fn), prerendered_usnob, args->zoomlevel, i, j);
 
 				logmsg("  reading file %s\n", fn);
 				f = fopen(fn, "rb");
@@ -205,7 +278,7 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 						r = flux[3*(yp*WH + xp) + 1];
 						b = flux[3*(yp*WH + xp) + 2];
 
-						map_flux(img, args, r, b, n, ix, iy, amp);
+						map_flux(img, args, r, b, n, ix, iy, amp, type);
 					}
 				}
 
@@ -228,22 +301,20 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 
             logmsg("rendering tile %i, %i.\n", i, j);
 
-			/*
-			  if (args->clean) {
-			  snprintf(fn, sizeof(fn), clean_template, j, i);
-			  } else {
-			  snprintf(fn, sizeof(fn), merc_template, j, i);
-			  }
-			*/
-			snprintf(fn, sizeof(fn), merc_template, j, i);
+            if (type == USNOB) {
+                snprintf(fn, sizeof(fn), merc_usnob, j, i);
+            } else if (type == CLEAN) {
+                snprintf(fn, sizeof(fn), merc_clean, args->version, j, i);
+            } else if (type == DIRTY) {
+                snprintf(fn, sizeof(fn), merc_dirty, args->version, j, i);
+            }
             logmsg("reading file %s\n", fn);
             merc = merctree_open(fn);
             if (!merc) {
                 logmsg("Failed to open merctree %s\n", fn);
 				continue;
-                //return -1;
             }
-            mercrender(merc, args, fluximg, RENDERSYMBOL_psf);
+            mercrender(merc, args, fluximg, symbol);
             merctree_close(merc);
         }
     }
@@ -271,7 +342,7 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 			b = fluximg[3*(j*args->W + i) + 1];
 			n = fluximg[3*(j*args->W + i) + 2];
 
-			map_flux(img, args, r, b, n, i, j, amp);
+			map_flux(img, args, r, b, n, i, j, amp, type);
         }
     }
     free(fluximg);

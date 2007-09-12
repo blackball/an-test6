@@ -243,13 +243,13 @@ function startup() {
 	var userTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	userTile.myLayers=layers;
 	userTile.myFormat='image/png';
-	userTile.myBaseURL=TILE_URL;
+	userTile.myBaseURL=TILE_URL + "&version=20070909";
 	userTile.getTileUrl=CustomGetTileUrl;
 
 	var userTile2 = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	userTile2.myLayers=layers;
 	userTile2.myFormat='image/png';
-	userTile2.myBaseURL=TILE_URL + "&20070911";
+	userTile2.myBaseURL=TILE_URL + "&version=20070911";
 	userTile2.getTileUrl=CustomGetTileUrl;
 
 	//var userUsnobMapType = new GMapType([usnobTile, userTile], G_SATELLITE_MAP.getProjection(), "User+", G_SATELLITE_MAP);

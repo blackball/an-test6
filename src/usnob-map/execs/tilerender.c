@@ -20,9 +20,6 @@
 #include "render_boundary.h"
 #include "render_constellation.h"
 #include "render_messier.h"
-
-#include "render_clean.h"
-#include "render_dirty.h"
 #include "render_solid.h"
 
 /**
@@ -34,7 +31,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdA"; // S
+const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:";
 
 
 /* All render layers must go in here */
@@ -62,8 +59,8 @@ render_func_t renderers[] = {
     render_constellation,
     render_messier,
 
-    render_clean,
-    render_dirty,
+    render_usnob,
+    render_usnob,
     render_solid
 };
 
@@ -108,8 +105,8 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
-		case 'A':
-			args.newest = TRUE;
+		case 'V':
+			args.version = optarg;
 			break;
 		case 'z':
 			args.zoomright = TRUE;
@@ -120,11 +117,6 @@ int main(int argc, char *argv[]) {
 		case 'p':
 			args.nopre = TRUE;
 			break;
-			/*
-			  case 'S':
-			  args.clean = TRUE;
-			  break;
-			*/
 		case 'C':
 			args.cmap = strdup(optarg);
 			break;
@@ -281,6 +273,7 @@ int main(int argc, char *argv[]) {
 
         for (j=0; j<NR; j++) {
             if (!strcmp(layer, layernames[j])) {
+                args.currentlayer = layernames[j];
                 if (renderers[j](thisimg, &args)) {
                     fprintf(stderr, "tilecache: Renderer \"%s\" failed.\n", layernames[j]);
                 } else {
