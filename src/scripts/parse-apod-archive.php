@@ -1,12 +1,16 @@
 <?php
 
+/*
 $archive = 'http://antwrp.gsfc.nasa.gov/apod/archivepix.html';
 $baseurl = dirname($archive) . "/";
-
+ */
 /*
 $archive = 'archivepix.html';
 $baseurl = "./";
 */
+
+$archive = 'archivepix.html';
+$baseurl = 'http://antwrp.gsfc.nasa.gov/apod/';
 
 $str = file_get_contents($archive);
 if (!$str) {
@@ -24,18 +28,22 @@ if (!preg_match_all($pat, $str, $matches, PREG_SET_ORDER)) {
 echo "Got " . count($matches) . " matches.\n";
 
 foreach ($matches as $m) {
-	echo $m[0] . "\n";
-	echo "  " . $m[1] . "\n";
 	$url = $baseurl . $m[1];
 	$date = $m[2];
-	echo "  " . $url . "\n";
-	echo "  " . $m[2] . "\n";
-	echo "  " . $m[3] . "\n";
+    echo $m[0] . "\n";
+    /*
+     echo "  " . $m[1] . "\n";
+     echo "  " . $url . "\n";
+     echo "  " . $m[2] . "\n";
+     echo "  " . $m[3] . "\n";
+     */
 
     // temp
-    if (substr($date, 0, 2) != "96")
-        continue;
-
+    /*
+     //if (substr($date, 0, 2) != "96")
+     if (substr($date, 0, 4) != "9601")
+     continue;
+     */
 	/*
 	sscanf($date, "%d", $datenum);
 	if ($datenum > 70522)
@@ -47,14 +55,17 @@ foreach ($matches as $m) {
 		die("Couldn't get: " . $url);
 	}
 
-	$pat = "|<a href=\"(image/.*?)\">\s*<IMG SRC=\"(image/.*?\\.(.*?))\".*?>\s*</a>|s";
+	$pat = "|<a href=\"(image/.*?)\"\n?>\s*<IMG SRC=\"(image/.*?\\.(.*?))\".*?>\s*</a>|s";
 	if (!preg_match($pat, $str, $match)) {
 		echo "-- No match found for " . $date . " --\n";
 		continue;
 	}
-	echo "  " . $match[1] . "\n";
-	echo "  " . $match[2] . "\n";
-	echo "  " . $match[3] . "\n";
+
+    /*
+     echo "  " . $match[1] . "\n";
+     echo "  " . $match[2] . "\n";
+     echo "  " . $match[3] . "\n";
+     */
 
 	$bigimgurl = $baseurl . $match[1];
 	$imgurl = $baseurl . $match[2];
