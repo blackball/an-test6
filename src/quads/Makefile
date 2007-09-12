@@ -169,14 +169,30 @@ ALL_OBJ += test-solver.o
 solver_test.o: solver.c
 	$(CC) $(CFLAGS) -DTESTING=1 -o $@ -c $<
 
+#######################################
+# KEIR'S SUPER SIMPLE TESTING FRAMEWORK
+# 1. Add your file's test_blah.c and corresponding files needed to compile it
+#    to the all tests executable 'test' by editing the three variables below:
+ALL_TEST_FILES_C := test_dfind.c test_bl.c
+ALL_TEST_FILES_O := test_dfind.o test_bl.o
+TESTED_FILES := dfind.o
+
+# 2. Add your individual test case like the ones below
+test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
 test_dfind-main.c: make-tests.sh test_dfind.c
 	bash make-tests.sh test_dfind.c > test_dfind-main.c
-test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
 
+test_bl: cutest.o test_bl-main.o test_bl.o $(ANUTILS_LIB)
 test_bl-main.c: make-tests.sh test_bl.c
 	bash make-tests.sh test_bl.c > test_bl-main.c
 
-test_bl: cutest.o test_bl-main.o test_bl.o $(ANUTILS_LIB)
+# You shouldn't need to edit this.
+test.c: make-tests.sh $(ALL_TEST_FILES_C)
+	bash make-tests.sh $(ALL_TEST_FILES_C) > test.c
+test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(ANUTILS_LIB)
+
+# END OF KEIR'S SUPER SIMPLE TESTING FRAMEWORK
+######################################################
 
 image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
 
