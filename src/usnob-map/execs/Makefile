@@ -26,6 +26,8 @@ include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.cairo
+include $(COMMON)/makefile.netpbm
+include $(COMMON)/makefile.png
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -37,6 +39,8 @@ CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 CFLAGS  += $(CAIRO_INC)
+CFLAGS  += $(NETPBM_INC)
+CFLAGS  += $(PNG_INC)
 
 LDFLAGS += $(CAIRO_LIB)
 
@@ -49,17 +53,14 @@ USNOBMAP_EXECS := usnobcount usnobtile sdssfieldtile \
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
 MISC_MAIN_OBJS := $(addsuffix .o,$(MISC_EXECS))
 
-NETPBM_I :=
-NETPBM_L := -L. -lnetpbm
-
-#CFLAGS += $(NETPBM_I)
-#LFLAGS += $(NETPBM_L)
-
 $(ANUTILS_LIB): $(REMAKE_ANUTILS)
 
 $(LIBKD_LIB): $(REMAKE_LIBKD)
 
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
+
+$(COMMON)/cairoutils.o:
+	$(MAKE) -C $(COMMON) cairoutils.o
 
 TILERENDER_OBJS := tilerender.o render_image.o \
 		render_tycho.o mercrender.o merctree.o \
@@ -69,12 +70,13 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_boundary.o \
 		render_constellation.o \
 		render_messier.o \
-		render_solid.o
+		render_solid.o $(COMMON)/cairoutils.o
 
 MISC_OBJS := merctree.o pnmutils.o
 
 tilerender: $(TILERENDER_OBJS) \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB)
 
 rdlstile: rdlstile.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -113,23 +115,13 @@ sdssquad: sdssquad.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 zoomout: zoomout.o pnmutils.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_LIB)
 
 ppmnormrgb: ppmnormrgb.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
-
-ppmnormrgb.o: ppmnormrgb.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_LIB) -lm
 
 whitebalance: whitebalance.o pnmutils.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
-
-whitebalance.o: whitebalance.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
-
-pnmutils.o: pnmutils.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
-
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_LIB) -lm
 
 .PHONY: tags
 tags:

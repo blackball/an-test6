@@ -6,9 +6,6 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-#define max(a, b)  ((a)>(b)?(a):(b))
-#define min(a, b)  ((a)<(b)?(a):(b))
-
 struct render_args {
 	// In degrees
 	double ramin;

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "tilerender.h"
 #include "render_gridlines.h"
@@ -12,8 +13,8 @@ int render_gridlines(unsigned char* img, render_args_t* args) {
 	double ra, dec;
 	int i;
 
-	ind = max(1, args->zoomlevel);
-	ind = min(ind, sizeof(steps)/sizeof(double)-1);
+	ind = MAX(1, args->zoomlevel);
+	ind = MIN(ind, sizeof(steps)/sizeof(double)-1);
 	rastep = decstep = steps[ind];
 
 	for (ra = rastep * floor(args->ramin / rastep);

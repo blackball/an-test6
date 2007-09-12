@@ -27,7 +27,8 @@ include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.gsl
-
+include $(COMMON)/makefile.netpbm
+include $(COMMON)/makefile.png
 include $(COMMON)/makefile.cairo
 
 LDFLAGS := $(LDFLAGS_DEF)
@@ -47,12 +48,6 @@ CFLAGS += -fPIC
 
 SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
 
-NETPBM_INC :=
-NETPBM_LIB := -L. -lnetpbm
-
-PNG_INC := $(shell pkg-config --cflags libpng 2>/dev/null)
-PNG_LIB := $(shell pkg-config --libs libpng 2>/dev/null)
-
 QFITS_UTILS := fitsgetext subtable tabsort column-merge
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc \
@@ -70,7 +65,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
 	plot-constellations.o constellations.o quadcenters.o startree2rdls.o \
-	brightstars.o grab-stellarium-constellations.o cairoutils.o ngcic-accurate.o \
+	brightstars.o grab-stellarium-constellations.o ngcic-accurate.o \
 	ngc2000.o noisesim.o noise.o scriptutils.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
@@ -363,13 +358,16 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
 plotquad.o: plotquad.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
-plotquad: plotquad.o cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
+$(COMMON)/cairoutils.o:
+	$(MAKE) -C $(COMMON) cairoutils.o
+
+plotquad: plotquad.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB)
 
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_INC) -c -o $@ $<
 
-plot-constellations: plot-constellations.o constellations.o cairoutils.o \
+plot-constellations: plot-constellations.o constellations.o $(COMMON)/cairoutils.o \
 		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o svn.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB)
@@ -377,7 +375,7 @@ plot-constellations: plot-constellations.o constellations.o cairoutils.o \
 plotxy.o: plotxy.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
-plotxy: plotxy.o cairoutils.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+plotxy: plotxy.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB)
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)

@@ -175,7 +175,7 @@ void cairoutils_rgba_to_argb32(unsigned char* img, int W, int H) {
     }
 }
 
-unsigned char* cairoutils_read_ppm_stream(FILE* fid, int* pW, int* pH) {
+unsigned char* cairoutils_read_ppm_stream(FILE* fin, int* pW, int* pH) {
     int x,y;
     int W, H, format;
     pixval maxval;
@@ -215,6 +215,7 @@ unsigned char* cairoutils_read_ppm_stream(FILE* fid, int* pW, int* pH) {
         }
     }
     ppm_freerow(pixelrow);
+    return img;
 }
 
 unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH) {

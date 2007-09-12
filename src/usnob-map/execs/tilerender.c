@@ -5,6 +5,7 @@
 #include <string.h>
 #include <limits.h>
 #include <unistd.h>
+#include <sys/param.h>
 
 #include <png.h>
 
@@ -243,8 +244,8 @@ int main(int argc, char *argv[]) {
 
     // The y mercator position can end up *near* but not exactly
     // equal to the boundary conditions... clamp.
-    args.ymercmin = max(0.0, args.ymercmin);
-    args.ymercmax = min(1.0, args.ymercmax);
+    args.ymercmin = MAX(0.0, args.ymercmin);
+    args.ymercmax = MIN(1.0, args.ymercmax);
 
     args.xpixelpermerc = (double)args.W / (args.xmercmax - args.xmercmin);
     args.ypixelpermerc = (double)args.H / (args.ymercmax - args.ymercmin);
@@ -299,7 +300,7 @@ int main(int argc, char *argv[]) {
                 accpix[0] = accpix[0]*(1.0 - alpha) + newpix[0] * alpha;
                 accpix[1] = accpix[1]*(1.0 - alpha) + newpix[1] * alpha;
                 accpix[2] = accpix[2]*(1.0 - alpha) + newpix[2] * alpha;
-                accpix[3] = min(255, accpix[3] + newpix[3]);
+                accpix[3] = MIN(255, accpix[3] + newpix[3]);
             }
         }
 
@@ -456,11 +457,11 @@ void draw_line_merc(double mx1, double my1, double mx2, double my2,
                     cairo_t* cairo, render_args_t* args) {
     cairo_move_to(cairo, xmerc2pixel(mx1, args), ymerc2pixel(my1, args));
     cairo_line_to(cairo, xmerc2pixel(mx2, args), ymerc2pixel(my2, args));
-    if (min(mx1,mx2) < 0) {
+    if (MIN(mx1,mx2) < 0) {
         cairo_move_to(cairo, xmerc2pixel(mx1+1, args), ymerc2pixel(my1, args));
         cairo_line_to(cairo, xmerc2pixel(mx2+1, args), ymerc2pixel(my2, args));
     }
-    if (max(mx1,mx2) > 1) {
+    if (MAX(mx1,mx2) > 1) {
         cairo_move_to(cairo, xmerc2pixel(mx1-1, args), ymerc2pixel(my1, args));
         cairo_line_to(cairo, xmerc2pixel(mx2-1, args), ymerc2pixel(my2, args));
     }

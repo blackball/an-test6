@@ -1,3 +1,5 @@
+#include <sys/param.h>
+
 #include "mercrender.h"
 #include "tilerender.h"
 
@@ -46,10 +48,10 @@ void mercrender(merctree* merc, render_args_t* args,
 	xmargin = 2.0 / args->xpixelpermerc;
 	ymargin = 2.0 / args->ypixelpermerc;
 
- 	querylow [0] = max(0.0, args->xmercmin - xmargin);
-	queryhigh[0] = min(1.0, args->xmercmax + xmargin);
-	querylow [1] = max(0.0, args->ymercmin - ymargin);
-	queryhigh[1] = min(1.0, args->ymercmax + ymargin);
+ 	querylow [0] = MAX(0.0, args->xmercmin - xmargin);
+	queryhigh[0] = MIN(1.0, args->xmercmax + xmargin);
+	querylow [1] = MAX(0.0, args->ymercmin - ymargin);
+	queryhigh[1] = MIN(1.0, args->ymercmax + ymargin);
 
 	kdtree_nodes_contained(merc->tree, querylow, queryhigh,
 						   expand_node, leaf_node, &margs);
@@ -58,8 +60,8 @@ void mercrender(merctree* merc, render_args_t* args,
 	if (args->xmercmin < 0) {
 		args->xmercmin += 1.0;
 		args->xmercmax += 1.0;
-		querylow [0] = max(0.0, args->xmercmin - xmargin);
-		queryhigh[0] = min(1.0, args->xmercmax + xmargin);
+		querylow [0] = MAX(0.0, args->xmercmin - xmargin);
+		queryhigh[0] = MIN(1.0, args->xmercmax + xmargin);
 		kdtree_nodes_contained(merc->tree, querylow, queryhigh,
 							   expand_node, leaf_node, &margs);
 		args->xmercmin -= 1.0;
@@ -68,8 +70,8 @@ void mercrender(merctree* merc, render_args_t* args,
 	if (args->xmercmax > 1) {
 		args->xmercmin -= 1.0;
 		args->xmercmax -= 1.0;
-		querylow [0] = max(0.0, args->xmercmin - xmargin);
-		queryhigh[0] = min(1.0, args->xmercmax + xmargin);
+		querylow [0] = MAX(0.0, args->xmercmin - xmargin);
+		queryhigh[0] = MIN(1.0, args->xmercmax + xmargin);
 		kdtree_nodes_contained(merc->tree, querylow, queryhigh,
 							   expand_node, leaf_node, &margs);
 		args->xmercmin += 1.0;

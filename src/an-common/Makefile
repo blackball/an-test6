@@ -34,6 +34,8 @@ endif
 ifndef NO_KDTREE
 include $(COMMON)/makefile.libkd
 endif
+include $(COMMON)/makefile.cairo
+include $(COMMON)/makefile.netpbm
 
 CFLAGS := $(CFLAGS_DEF)
 ifndef NO_QFITS
@@ -85,6 +87,13 @@ DEP_PREREQS := $(QFITS_LIB)
 endif
 include $(COMMON)/makefile.deps
 
+# we'll just tack this on here...
+ifeq ($(MAKECMDGOALS),cairoutils.o)
+  include cairoutils.dep
+endif
+cairoutils.o: cairoutils.c
+	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) -c $< -o $@
+
 clean:
 	rm -f $(ANUTILS_LIB) $(ANUTILS_OBJ) $(ANFILES_LIB) $(ANFILES_OBJ) \
-		$(DEPS) deps
+		$(DEPS) deps cairoutils.o
