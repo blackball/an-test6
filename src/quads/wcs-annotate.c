@@ -107,9 +107,7 @@ int main(int argc, char** args) {
 		}
 	}
 
-	W = qfits_header_getint(hdr, "IMAGEW", -1);
-	H = qfits_header_getint(hdr, "IMAGEH", -1);
-	if ((W == -1) || (H == -1)) {
+    if ((sip.wcstan.imagew == 0.0) || (sip.wcstan.imageh == 0.0)) {
 		fprintf(stderr, "IMAGEW, IMAGEH FITS headers not found.\n");
 		exit(-1);
 	}

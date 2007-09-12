@@ -126,9 +126,9 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to parse SIP header from %s.\n", wcsfn);
 	}
 	// image W, H
-	W = qfits_header_getint(hdr, "IMAGEW", 0);
-	H = qfits_header_getint(hdr, "IMAGEH", 0);
-	if (!(W && H)) {
+	W = sip.wcstan.imagew;
+	H = sip.wcstan.imageh;
+	if ((W == 0.0) || (H == 0.0)) {
 		fprintf(stderr, "WCS file %s didn't contain IMAGEW and IMAGEH headers.\n", wcsfn);
 		// FIXME - use bounds of xylist?
 		exit(-1);

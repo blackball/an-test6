@@ -1035,13 +1035,14 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 				assert(bestmo->wcs_valid);
 
-				if (sip)
-					hdr = blind_wcs_get_sip_header(sip);
-				else
-					hdr = blind_wcs_get_header(&(bestmo->wcstan));
+                // save image W,H
+                bestmo->wcstan.imagew = sp->field_maxx;
+                bestmo->wcstan.imageh = sp->field_maxy;
 
-				fits_header_add_double(hdr, "IMAGEW", sp->field_maxx, "Width of the image used to solve this WCS.");
-				fits_header_add_double(hdr, "IMAGEH", sp->field_maxy, "Height of the image used to solve this WCS.");
+				if (sip)
+                    hdr = sip_create_header(sip);
+				else
+                    hdr = tan_create_header(&(bestmo->wcstan));
 
 				boilerplate_add_fits_headers(hdr);
 				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);

@@ -85,9 +85,9 @@ int main(int argc, char** args) {
 		return -1;
 	}
 
-	imw = qfits_header_getdouble(wcshead, "IMAGEW", -1.0);
-	imh = qfits_header_getdouble(wcshead, "IMAGEH", -1.0);
-	if ((imw == -1.0) || (imh == -1.0)) {
+    imw = wcs.wcstan.imagew;
+    imh = wcs.wcstan.imageh;
+	if ((imw == 0.0) || (imh == 0.0)) {
 		fprintf(stderr, "failed to find IMAGE{W,H} in WCS file.\n");
 		return -1;
 	}

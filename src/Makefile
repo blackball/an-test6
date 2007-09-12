@@ -91,6 +91,9 @@ snapshot:
 	gzip --best -c $(SNAPSHOT_DIR).tar > $(SNAPSHOT_DIR).tar.gz
 	bzip2 --best $(SNAPSHOT_DIR).tar
 
+test:
+	$(MAKE) -C quads test
+
 clean:
 	$(MAKE) -C an-common clean
 	-$(MAKE) -C cfitsio clean

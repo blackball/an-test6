@@ -203,11 +203,3 @@ void blind_wcs_compute(double* starxyz,
 	free(f);
 }
 
-qfits_header* blind_wcs_get_header(tan_t* tan) {
-	return tan_create_header(tan);
-}
-
-qfits_header* blind_wcs_get_sip_header(sip_t* sip) {
-	return sip_create_header(sip);
-}
-

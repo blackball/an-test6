@@ -20,37 +20,30 @@
 
 #include "sip_qfits.h"
 #include "an-bool.h"
+#include "fitsioutils.h"
 
 static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
-	char val[64];
-
 	qfits_header_add(hdr, "WCSAXES", "2", NULL, NULL);
-
 	qfits_header_add(hdr, "EQUINOX", "2000.0", "Epoch (yr) of celestial coordinates", NULL);
 	qfits_header_add(hdr, "LONPOLE", "180.0", NULL, NULL);
 	qfits_header_add(hdr, "LATPOLE", "0.0", NULL, NULL);
 
-	sprintf(val, "%.12g", tan->crval[0]);
-	qfits_header_add(hdr, "CRVAL1", val, "RA  of reference point", NULL);
-	sprintf(val, "%.12g", tan->crval[1]);
-	qfits_header_add(hdr, "CRVAL2", val, "DEC of reference point", NULL);
-
-	sprintf(val, "%.12g", tan->crpix[0]);
-	qfits_header_add(hdr, "CRPIX1", val, "X reference pixel", NULL);
-	sprintf(val, "%.12g", tan->crpix[1]);
-	qfits_header_add(hdr, "CRPIX2", val, "Y reference pixel", NULL);
-
+	fits_header_add_double(hdr, "CRVAL1", tan->crval[0], "RA  of reference point");
+	fits_header_add_double(hdr, "CRVAL2", tan->crval[1], "DEC of reference point");
+	fits_header_add_double(hdr, "CRPIX1", tan->crpix[0], "X reference pixel");
+	fits_header_add_double(hdr, "CRPIX2", tan->crpix[1], "Y reference pixel");
 	qfits_header_add(hdr, "CUNIT1", "deg", "X pixel scale units", NULL);
 	qfits_header_add(hdr, "CUNIT2", "deg", "Y pixel scale units", NULL);
 
-	sprintf(val, "%.12g", tan->cd[0][0]);
-	qfits_header_add(hdr, "CD1_1", val, "Transformation matrix", NULL);
-	sprintf(val, "%.12g", tan->cd[0][1]);
-	qfits_header_add(hdr, "CD1_2", val, " ", NULL);
-	sprintf(val, "%.12g", tan->cd[1][0]);
-	qfits_header_add(hdr, "CD2_1", val, " ", NULL);
-	sprintf(val, "%.12g", tan->cd[1][1]);
-	qfits_header_add(hdr, "CD2_2", val, " ", NULL);
+	fits_header_add_double(hdr, "CD1_1", tan->cd[0][0], "Transformation matrix");
+	fits_header_add_double(hdr, "CD1_2", tan->cd[0][1], "");
+	fits_header_add_double(hdr, "CD2_1", tan->cd[1][0], "");
+	fits_header_add_double(hdr, "CD2_2", tan->cd[1][1], "");
+
+    if (tan->imagew)
+        fits_header_add_int(hdr, "IMAGEW", tan->imagew, "Image width,  in pixels.");
+    if (tan->imageh)
+        fits_header_add_int(hdr, "IMAGEH", tan->imageh, "Image height, in pixels.");
 }
 
 static void add_polynomial(qfits_header* hdr, const char* format,
@@ -58,7 +51,6 @@ static void add_polynomial(qfits_header* hdr, const char* format,
 						   bool drop_linear) {
 	int i, j;
 	char key[64];
-	char val[64];
 	for (i=0; i<=order; i++)
 		for (j=0; (i+j)<=order; j++) {
 			if (i+j < 1)
@@ -66,33 +58,26 @@ static void add_polynomial(qfits_header* hdr, const char* format,
 			if (drop_linear && (i+j < 2))
 				continue;
 			sprintf(key, format, i, j);
-			sprintf(val, "%.12g", data[i*datastride + j]);
-			qfits_header_add(hdr, key, val, NULL, NULL);
+			fits_header_add_double(hdr, key, data[i*datastride + j], "");
 		}
 }
 
 void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
-	char val[64];
-
 	qfits_header_add(hdr, "CTYPE1", "RA---TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
 	qfits_header_add(hdr, "CTYPE2", "DEC--TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
 
 	wcs_hdr_common(hdr, &(sip->wcstan));
 
-	sprintf(val, "%i", sip->a_order);
-	qfits_header_add(hdr, "A_ORDER", val, "Polynomial order, axis 1", NULL);
+	fits_header_add_int(hdr, "A_ORDER", sip->a_order, "Polynomial order, axis 1");
 	add_polynomial(hdr, "A_%i_%i", sip->a_order, (double*)sip->a, SIP_MAXORDER, TRUE);
 
-	sprintf(val, "%i", sip->b_order);
-	qfits_header_add(hdr, "B_ORDER", val, "Polynomial order, axis 2", NULL);
+	fits_header_add_int(hdr, "B_ORDER", sip->b_order, "Polynomial order, axis 2");
 	add_polynomial(hdr, "B_%i_%i", sip->b_order, (double*)sip->b, SIP_MAXORDER, TRUE);
 
-	sprintf(val, "%i", sip->ap_order);
-	qfits_header_add(hdr, "AP_ORDER", val, "Inv polynomial order, axis 1", NULL);
+	fits_header_add_int(hdr, "AP_ORDER", sip->ap_order, "Inv polynomial order, axis 1");
 	add_polynomial(hdr, "AP_%i_%i", sip->ap_order, (double*)sip->ap, SIP_MAXORDER, FALSE);
 
-	sprintf(val, "%i", sip->bp_order);
-	qfits_header_add(hdr, "BP_ORDER", val, "Inv polynomial order, axis 2", NULL);
+	fits_header_add_int(hdr, "BP_ORDER", sip->bp_order, "Inv polynomial order, axis 2");
 	add_polynomial(hdr, "BP_%i_%i", sip->bp_order, (double*)sip->bp, SIP_MAXORDER, FALSE);
 }
 
@@ -119,7 +104,7 @@ static bool read_polynomial(qfits_header* hdr, const char* format,
 							bool skip_linear) {
 	int i, j;
 	char key[64];
-	double nil = -1e300;
+	double nil = -HUGE_VAL;
 	double val;
 	for (i=0; i<=order; i++)
 		for (j=0; (i+j)<=order; j++) {
@@ -245,6 +230,9 @@ tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 		fprintf(stderr, "TAN header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
 		return NULL;
 	}
+
+    tan.imagew = qfits_header_getint(hdr, "IMAGEW", 0);
+    tan.imageh = qfits_header_getint(hdr, "IMAGEH", 0);
 
 	{
 		const char* keys[] = { "CRVAL1", "CRVAL2", "CRPIX1", "CRPIX2",

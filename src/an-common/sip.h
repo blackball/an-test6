@@ -53,6 +53,10 @@ typedef struct tan_s {
 	// coordinates.
 	double cd[2][2];
 
+    // size of the image in pixels.  Not strictly part of the WCS, but useful!
+    double imagew;
+    double imageh;
+
 } tan_t;
 
 // Flat structure for minimal SIP wcs. This structure should contain enough
