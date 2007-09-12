@@ -273,7 +273,7 @@ function startup() {
 	//map.addMapType(cleanMapType);
 	map.addMapType(userMapType);
 	map.addMapType(userMapType2);
-	map.addMapType(userUsnobMapType);
+	//map.addMapType(userUsnobMapType);
 
     map.setMapType(userMapType2);
 
