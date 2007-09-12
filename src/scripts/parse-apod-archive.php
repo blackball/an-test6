@@ -32,6 +32,10 @@ foreach ($matches as $m) {
 	echo "  " . $m[2] . "\n";
 	echo "  " . $m[3] . "\n";
 
+    // temp
+    if (substr($date, 0, 2) != "96")
+        continue;
+
 	/*
 	sscanf($date, "%d", $datenum);
 	if ($datenum > 70522)
