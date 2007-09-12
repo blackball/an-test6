@@ -123,6 +123,12 @@ static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm
 	return 0;
 }
 
+void cairoutils_fake_ppm_init() {
+    char* fake_args[] = {"cairoutils"};
+    int fake_argc = 1;
+    ppm_init(&fake_argc, fake_args);
+}
+
 int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H) {
     return writeout(outfn, img, W, H, 1);
 }
