@@ -9,7 +9,7 @@ $archive = 'archivepix.html';
 $baseurl = "./";
 */
 
-$archive = 'archivepix.html';
+$archive = 'http://antwrp.gsfc.nasa.gov/apod/archivepix.html';
 $baseurl = 'http://antwrp.gsfc.nasa.gov/apod/';
 
 $str = file_get_contents($archive);
@@ -30,7 +30,7 @@ echo "Got " . count($matches) . " matches.\n";
 foreach ($matches as $m) {
 	$url = $baseurl . $m[1];
 	$date = $m[2];
-    echo $m[0] . "\n";
+    //echo $m[0] . "\n";
     /*
      echo "  " . $m[1] . "\n";
      echo "  " . $url . "\n";
@@ -39,11 +39,20 @@ foreach ($matches as $m) {
      */
 
     // temp
+    if (substr($date, 0, 2) != "06")
+        //if (substr($date, 0, 4) != "9601")
+        continue;
+
     /*
-     //if (substr($date, 0, 2) != "96")
-     if (substr($date, 0, 4) != "9601")
+     $ss = substr($date, 0, 6);
+     if (!in_array($ss,
+     array("061227", "061208", "061006", "060825",
+     "060722", "060720", "060529", "060519")))
      continue;
      */
+
+    echo $m[0] . "\n";
+
 	/*
 	sscanf($date, "%d", $datenum);
 	if ($datenum > 70522)
@@ -55,7 +64,7 @@ foreach ($matches as $m) {
 		die("Couldn't get: " . $url);
 	}
 
-	$pat = "|<a href=\"(image/.*?)\"\n?>\s*<IMG SRC=\"(image/.*?\\.(.*?))\".*?>\s*</a>|s";
+	$pat = "|<a href=\"(image/[^ \n]*?)\"(?:.*?\")?\n?>\s*<(?i:img) SRC=\"(image/.*?\\.(.*?))\".*?>\s*</a>|s";
 	if (!preg_match($pat, $str, $match)) {
 		echo "-- No match found for " . $date . " --\n";
 		continue;
@@ -78,6 +87,16 @@ foreach ($matches as $m) {
 	if (!file_put_contents($date . "." . $suffix, $img)) {
 		die("Couldn't write image: " . $imgurl);
 	}
+
+
+	$bigimg = file_get_contents($bigimgurl);
+	if (!$bigimg) {
+		die("Couldn't get bigimage: " . $bigimgurl);
+	}
+	if (!file_put_contents($date . "-big." . $suffix, $bigimg)) {
+		die("Couldn't write image: " . $bigimgurl);
+	}
+
 }
 
 ?>

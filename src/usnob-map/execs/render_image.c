@@ -43,13 +43,12 @@ int render_image(unsigned char* img, render_args_t* args) {
 	}
 
     cairoutils_fake_ppm_init();
-    userimg = cairoutils_read_ppm(fn, &imw, &imh);
     // note, this returns RGBA.
+    userimg = cairoutils_read_ppm(fn, &imw, &imh);
     if (!userimg) {
         fprintf(stderr, "Failed to read input image %s.\n", fn);
         return -1;
     }
-    //cairoutils_rgba_to_argb32(img, W, H);
 
     // Read WCS.
 	for (i=0; i<sizeof(image_dirs)/sizeof(char*); i++) {
