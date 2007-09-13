@@ -85,6 +85,7 @@ MISC_OBJS := merctree.o pnmutils.o
 tilerender: $(TILERENDER_OBJS) \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
 		$(COMMON)/cairoutils.o
+	$(MAKE) -C $(COMMON) cairoutils.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
 
 rdlstile: rdlstile.o \

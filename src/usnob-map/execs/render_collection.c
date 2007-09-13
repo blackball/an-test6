@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdarg.h>
+#include <sys/param.h>
 
 #include "ioutils.h"
 #include "tilerender.h"
@@ -32,6 +33,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
     int* counts;
     int* ink;
     int i, j, w;
+    double *ravals, *decvals;
 
 	logmsg("starting.\n");
 
@@ -42,10 +44,17 @@ int render_collection(unsigned char* img, render_args_t* args) {
     }
     logmsg("found %i files in image directory %s.\n", sl_size(imagefiles), image_dir);
 
+    w = args->W;
+
     counts = calloc(args->W * args->H, sizeof(int));
     ink = calloc(3 * args->W * args->H, sizeof(int));
 
-    w = args->W;
+    ravals  = malloc(args->W * sizeof(double));
+    decvals = malloc(args->H * sizeof(double));
+    for (i=0; i<w; i++)
+        ravals[i] = pixel2ra(i, args);
+    for (j=0; j<args->H; j++)
+        decvals[j] = pixel2dec(j, args);
     for (I=0; I<sl_size(imagefiles); I++) {
         char* imgfn;
         char* wcsfn;
@@ -58,6 +67,11 @@ int render_collection(unsigned char* img, render_args_t* args) {
         sip_t* res;
         double ra, dec;
         double imagex, imagey;
+        double ramin, ramax, decmin, decmax;
+        double racenter, deccenter;
+        int xvals[4];
+        int yvals[4];
+        int xlo, xhi, ylo, yhi;
 
         imgfn = sl_get(imagefiles, I);
         dot = strrchr(imgfn, '.');
@@ -96,16 +110,86 @@ int render_collection(unsigned char* img, render_args_t* args) {
             userimg = cairoutils_read_png(imgfn, &W, &H);
 
         if (!userimg)
-            logmsg("failod to read image file %s\n", imgfn);
+            logmsg("failed to read image file %s\n", imgfn);
 
         logmsg("Image %s is %i x %i.\n", imgfn, W, H);
 
-        // want to iterate over mercator space (ie, output pixels)
-        for (j=0; j<args->H; j++) {
-            for (i=0; i<w; i++) {
+        /*{
+         char* outfn;
+         asprintf(&outfn, "/tmp/out-%s.png", imgfn);
+         cairoutils_write_png(outfn, userimg, W, H);
+         free(outfn);
+         }*/
+
+        // find the bounds in RA,Dec of this image.
+        sip_pixelxy2radec(&wcs, W/2, H/2, &racenter, &deccenter);
+        xvals[0] = 0;
+        yvals[0] = 0;
+        xvals[1] = W;
+        yvals[1] = 0;
+        xvals[2] = W;
+        yvals[2] = H;
+        xvals[3] = 0;
+        yvals[3] = H;
+        decmin = decmax = deccenter;
+        ramin = ramax = racenter;
+        for (i=0; i<4; i++) {
+            double dra;
+            double dx = 0;
+            sip_pixelxy2radec(&wcs, xvals[i], yvals[i], &ra, &dec);
+            decmin = MIN(decmin, dec);
+            decmax = MAX(decmax, dec);
+
+            // ugh, does RA wrap around?
+
+            // "x" is intermediate world coordinate, which points in the
+            // direction of decreasing RA.  The CD matrix is ~ the derivative
+            // of x wrt pixel coordinates
+            dx = (wcs.wcstan.cd[0][0] * (xvals[i] - W/2)) +
+                (wcs.wcstan.cd[0][1] * (yvals[i] - H/2));
+            // expected change in RA (we just care about the sign)
+
+            // FIXME - comments in sip.h suggest it should be:
+            //dra = -dx;
+            // - but in practice it should be this:
+            dra = dx;
+
+            // If we expected RA to be bigger but it isn't, or we expected it
+            // to be smaller but it isn't, then we wrapped around.
+            if ((dra * (ra - racenter)) < 0.0) {
+                // wrap around!
+                ramin = 0.0;
+                ramax = 360.0;
+            } else {
+                ramin = MIN(ramin, ra);
+                ramax = MAX(ramax, ra);
+            }
+        }
+        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
+               ramin, ramax, decmin, decmax);
+
+        xlo = floor(ra2pixelf(ramin, args));
+        xhi = ceil (ra2pixelf(ramax, args));
+        // increasing DEC -> decreasing Y pixel coord
+        ylo = floor(dec2pixelf(decmax, args));
+        yhi = ceil (dec2pixelf(decmin, args));
+
+        logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+
+        // clamp to image bounds
+        xlo = MAX(0, MIN(args->W-1, xlo));
+        xhi = MAX(0, MIN(args->W-1, xhi));
+        ylo = MAX(0, MIN(args->H-1, ylo));
+        yhi = MAX(0, MIN(args->H-1, yhi));
+
+        logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+        
+        // iterate over mercator space (ie, output pixels)
+        for (j=ylo; j<=yhi; j++) {
+            dec = decvals[j];
+            for (i=xlo; i<=xhi; i++) {
                 int pppx,pppy;
-                ra = pixel2ra(i, args);
-                dec = pixel2dec(j, args);
+                ra = ravals[i];
                 if (!sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey))
                     continue;
                 pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
@@ -113,9 +197,9 @@ int render_collection(unsigned char* img, render_args_t* args) {
                 if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
                     continue;
 				// nearest neighbour. bilinear is for weenies.
-				ink[3*(j*w + i) + 0] += userimg[4 * (W * pppy + pppx) + 0];
-				ink[3*(j*w + i) + 1] += userimg[4 * (W * pppy + pppx) + 1];
-				ink[3*(j*w + i) + 2] += userimg[4 * (W * pppy + pppx) + 2];
+				ink[3*(j*w + i) + 0] += userimg[4*(pppy*W + pppx) + 0];
+				ink[3*(j*w + i) + 1] += userimg[4*(pppy*W + pppx) + 1];
+				ink[3*(j*w + i) + 2] += userimg[4*(pppy*W + pppx) + 2];
 
                 // FIXME - pixel density
 				counts[j*w + i] += 1;
@@ -141,7 +225,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
         }
     }
 
-    sl_free(imagefiles);
+    sl_free2(imagefiles);
+
+    free(ravals);
+    free(decvals);
 
     free(counts);
     free(ink);

@@ -238,6 +238,9 @@ function startup() {
 	if ("dirty" in getdata) {
 		lay.push('dirty');
 	}
+	if ("apod" in getdata) {
+		lay.push('apod');
+	}
 	layers = lay.join(",");
 
 	var userTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
