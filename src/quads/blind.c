@@ -954,6 +954,9 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 		solver_preprocess_field(sp);
 
+		template.wcstan.imagew = sp->field_maxx;
+		template.wcstan.imageh = sp->field_maxy;
+
 		if (verify_wcs) {
 			// fabricate a match...
 			MatchObj mo;
@@ -1036,8 +1039,6 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 				assert(bestmo->wcs_valid);
 
                 // save image W,H
-                bestmo->wcstan.imagew = sp->field_maxx;
-                bestmo->wcstan.imageh = sp->field_maxy;
 
 				if (sip)
                     hdr = sip_create_header(sip);

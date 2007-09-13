@@ -40,10 +40,10 @@ static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	fits_header_add_double(hdr, "CD2_1", tan->cd[1][0], "");
 	fits_header_add_double(hdr, "CD2_2", tan->cd[1][1], "");
 
-    if (tan->imagew)
-        fits_header_add_int(hdr, "IMAGEW", tan->imagew, "Image width,  in pixels.");
-    if (tan->imageh)
-        fits_header_add_int(hdr, "IMAGEH", tan->imageh, "Image height, in pixels.");
+    if (tan->imagew > 0.0)
+        fits_header_add_double(hdr, "IMAGEW", tan->imagew, "Image width,  in pixels.");
+    if (tan->imageh > 0.0)
+        fits_header_add_double(hdr, "IMAGEH", tan->imageh, "Image height, in pixels.");
 }
 
 static void add_polynomial(qfits_header* hdr, const char* format,
