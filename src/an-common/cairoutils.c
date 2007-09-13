@@ -217,6 +217,7 @@ unsigned char* cairoutils_read_jpeg_stream(FILE* fid, int* pW, int* pH) {
     }
     jpeg_finish_decompress(&cinfo);
     jpeg_destroy_decompress(&cinfo);
+    free(buffer);
 
     if (pW) *pW = W;
     if (pH) *pH = H;

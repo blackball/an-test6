@@ -27,6 +27,67 @@ logmsg(char* format, ...) {
     va_end(args);
 }
 
+static void get_radec_bounds(sip_t* wcs, int W, int H,
+                             double* pramin, double* pramax,
+                             double* pdecmin, double* pdecmax) {
+    double ramin, ramax, decmin, decmax;
+    double racenter, deccenter;
+    int xvals[4];
+    int yvals[4];
+    int i;
+
+    sip_pixelxy2radec(wcs, W/2, H/2, &racenter, &deccenter);
+    xvals[0] = 0;
+    yvals[0] = 0;
+    xvals[1] = W;
+    yvals[1] = 0;
+    xvals[2] = W;
+    yvals[2] = H;
+    xvals[3] = 0;
+    yvals[3] = H;
+    decmin = decmax = deccenter;
+    ramin = ramax = racenter;
+    for (i=0; i<4; i++) {
+        double dra;
+        double dx = 0;
+        double ra, dec;
+        sip_pixelxy2radec(wcs, xvals[i], yvals[i], &ra, &dec);
+        decmin = MIN(decmin, dec);
+        decmax = MAX(decmax, dec);
+
+        // ugh, does RA wrap around?
+
+        // "x" is intermediate world coordinate, which points in the
+        // direction of decreasing RA.  The CD matrix is ~ the derivative
+        // of x wrt pixel coordinates
+        dx = (wcs->wcstan.cd[0][0] * (xvals[i] - W/2)) +
+            (wcs->wcstan.cd[0][1] * (yvals[i] - H/2));
+        // expected change in RA (we just care about the sign)
+        
+        // FIXME - comments in sip.h suggest it should be:
+        //dra = -dx;
+        // - but in practice it should be this:
+        dra = dx;
+        
+        // If we expected RA to be bigger but it isn't, or we expected it
+        // to be smaller but it isn't, then we wrapped around.
+        if ((dra * (ra - racenter)) < 0.0) {
+            // wrap around!
+            ramin = 0.0;
+            ramax = 360.0;
+        } else {
+            ramin = MIN(ramin, ra);
+            ramax = MAX(ramax, ra);
+        }
+    }
+
+    if (pramin) *pramin = ramin;
+    if (pramax) *pramax = ramax;
+    if (pdecmin) *pdecmin = decmin;
+    if (pdecmax) *pdecmax = decmax;
+    
+}
+
 int render_collection(unsigned char* img, render_args_t* args) {
     int I;
     sl* imagefiles;
@@ -68,11 +129,9 @@ int render_collection(unsigned char* img, render_args_t* args) {
         double ra, dec;
         double imagex, imagey;
         double ramin, ramax, decmin, decmax;
-        double racenter, deccenter;
-        int xvals[4];
-        int yvals[4];
         int xlo, xhi, ylo, yhi;
         float pixeldensity, weight;
+        bool fakesize = FALSE;
 
         imgfn = sl_get(imagefiles, I);
         dot = strrchr(imgfn, '.');
@@ -105,67 +164,21 @@ int render_collection(unsigned char* img, render_args_t* args) {
             continue;
         }
 
-        if (jpeg)
-            userimg = cairoutils_read_jpeg(imgfn, &W, &H);
-        else if (png)
-            userimg = cairoutils_read_png(imgfn, &W, &H);
-
-        if (!userimg)
-            logmsg("failed to read image file %s\n", imgfn);
-
-        logmsg("Image %s is %i x %i.\n", imgfn, W, H);
-
-        /*{
-         char* outfn;
-         asprintf(&outfn, "/tmp/out-%s.png", imgfn);
-         cairoutils_write_png(outfn, userimg, W, H);
-         free(outfn);
-         }*/
+        // HACK - some of my 2006 APOD solves seem to not have IMAGEW,H in the WCS...
+        W = wcs.wcstan.imagew;
+        H = wcs.wcstan.imageh;
+        if (!W) {
+            W = 10000;
+            fakesize = TRUE;
+        }
+        if (!H) {
+            H = 10000;
+            fakesize = TRUE;
+        }
 
         // find the bounds in RA,Dec of this image.
-        sip_pixelxy2radec(&wcs, W/2, H/2, &racenter, &deccenter);
-        xvals[0] = 0;
-        yvals[0] = 0;
-        xvals[1] = W;
-        yvals[1] = 0;
-        xvals[2] = W;
-        yvals[2] = H;
-        xvals[3] = 0;
-        yvals[3] = H;
-        decmin = decmax = deccenter;
-        ramin = ramax = racenter;
-        for (i=0; i<4; i++) {
-            double dra;
-            double dx = 0;
-            sip_pixelxy2radec(&wcs, xvals[i], yvals[i], &ra, &dec);
-            decmin = MIN(decmin, dec);
-            decmax = MAX(decmax, dec);
+        get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
-            // ugh, does RA wrap around?
-
-            // "x" is intermediate world coordinate, which points in the
-            // direction of decreasing RA.  The CD matrix is ~ the derivative
-            // of x wrt pixel coordinates
-            dx = (wcs.wcstan.cd[0][0] * (xvals[i] - W/2)) +
-                (wcs.wcstan.cd[0][1] * (yvals[i] - H/2));
-            // expected change in RA (we just care about the sign)
-
-            // FIXME - comments in sip.h suggest it should be:
-            //dra = -dx;
-            // - but in practice it should be this:
-            dra = dx;
-
-            // If we expected RA to be bigger but it isn't, or we expected it
-            // to be smaller but it isn't, then we wrapped around.
-            if ((dra * (ra - racenter)) < 0.0) {
-                // wrap around!
-                ramin = 0.0;
-                ramax = 360.0;
-            } else {
-                ramin = MIN(ramin, ra);
-                ramax = MAX(ramax, ra);
-            }
-        }
         logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
                ramin, ramax, decmin, decmax);
 
@@ -176,6 +189,36 @@ int render_collection(unsigned char* img, render_args_t* args) {
         yhi = ceil (dec2pixelf(decmin, args));
 
         logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+
+        if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H))
+            // No need to read the image!
+            continue;
+
+        if (jpeg)
+            userimg = cairoutils_read_jpeg(imgfn, &W, &H);
+        else if (png)
+            userimg = cairoutils_read_png(imgfn, &W, &H);
+
+        if (!userimg)
+            logmsg("failed to read image file %s\n", imgfn);
+
+        logmsg("Image %s is %i x %i.\n", imgfn, W, H);
+
+        if (fakesize) {
+            // if we set fake image size, recompute...
+            get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
+            xlo = floor(ra2pixelf(ramin, args));
+            xhi = ceil (ra2pixelf(ramax, args));
+            // increasing DEC -> decreasing Y pixel coord
+            ylo = floor(dec2pixelf(decmax, args));
+            yhi = ceil (dec2pixelf(decmin, args));
+        }
+        /*{
+         char* outfn;
+         asprintf(&outfn, "/tmp/out-%s.png", imgfn);
+         cairoutils_write_png(outfn, userimg, W, H);
+         free(outfn);
+         }*/
 
         // clamp to image bounds
         xlo = MAX(0, MIN(args->W-1, xlo));
