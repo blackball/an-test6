@@ -70,12 +70,13 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_boundary.o \
 		render_constellation.o \
 		render_messier.o \
-		render_solid.o $(COMMON)/cairoutils.o
+		render_solid.o
 
 MISC_OBJS := merctree.o pnmutils.o
 
 tilerender: $(TILERENDER_OBJS) \
-		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
+		$(COMMON)/cairoutils.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB)
 
 rdlstile: rdlstile.o \
