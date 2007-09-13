@@ -30,8 +30,8 @@ logmsg(char* format, ...) {
 int render_collection(unsigned char* img, render_args_t* args) {
     int I;
     sl* imagefiles;
-    int* counts;
-    int* ink;
+    float* counts;
+    float* ink;
     int i, j, w;
     double *ravals, *decvals;
 
@@ -46,8 +46,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
 
     w = args->W;
 
-    counts = calloc(args->W * args->H, sizeof(int));
-    ink = calloc(3 * args->W * args->H, sizeof(int));
+    counts = calloc(args->W * args->H, sizeof(float));
+    ink = calloc(3 * args->W * args->H, sizeof(float));
 
     ravals  = malloc(args->W * sizeof(double));
     decvals = malloc(args->H * sizeof(double));
@@ -72,6 +72,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
         int xvals[4];
         int yvals[4];
         int xlo, xhi, ylo, yhi;
+        float pixeldensity, weight;
 
         imgfn = sl_get(imagefiles, I);
         dot = strrchr(imgfn, '.');
@@ -183,7 +184,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
         yhi = MAX(0, MIN(args->H-1, yhi));
 
         logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
-        
+
+        pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
+        weight = pixeldensity;
+
         // iterate over mercator space (ie, output pixels)
         for (j=ylo; j<=yhi; j++) {
             dec = decvals[j];
@@ -197,12 +201,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
                 if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
                     continue;
 				// nearest neighbour. bilinear is for weenies.
-				ink[3*(j*w + i) + 0] += userimg[4*(pppy*W + pppx) + 0];
-				ink[3*(j*w + i) + 1] += userimg[4*(pppy*W + pppx) + 1];
-				ink[3*(j*w + i) + 2] += userimg[4*(pppy*W + pppx) + 2];
-
-                // FIXME - pixel density
-				counts[j*w + i] += 1;
+				ink[3*(j*w + i) + 0] += userimg[4*(pppy*W + pppx) + 0] * weight;
+				ink[3*(j*w + i) + 1] += userimg[4*(pppy*W + pppx) + 1] * weight;
+				ink[3*(j*w + i) + 2] += userimg[4*(pppy*W + pppx) + 2] * weight;
+				counts[j*w + i] += weight;
 			}
 		}
         free(userimg);
@@ -213,9 +215,9 @@ int render_collection(unsigned char* img, render_args_t* args) {
             uchar* pix;
             pix = pixel(i, j, img, args);
             if (counts[j*w + i]) {
-                pix[0] = ink[3 * (j*w + i) + 0] / counts[j*w + i];
-                pix[1] = ink[3 * (j*w + i) + 1] / counts[j*w + i];
-                pix[2] = ink[3 * (j*w + i) + 2] / counts[j*w + i];
+                pix[0] = MAX(0, MIN(255, ink[3 * (j*w + i) + 0] / counts[j*w + i]));
+                pix[1] = MAX(0, MIN(255, ink[3 * (j*w + i) + 1] / counts[j*w + i]));
+                pix[2] = MAX(0, MIN(255, ink[3 * (j*w + i) + 2] / counts[j*w + i]));
             } else {
                 pix[0] = 0;
                 pix[1] = 0;
