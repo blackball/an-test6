@@ -30,8 +30,8 @@
  */
 
 $CACHEDIR = "/data1/tilecache2";
-$TILERENDER = "/home/gmaps/alpha/usnob-map/execs/tilerender";
-$LOGFILE = "/tmp/tilecache.log";
+$TILERENDER = "/home/gmaps/test/usnob-map/execs/tilerender";
+$LOGFILE = "/tmp/tilecache2.log";
 
 // Write a message to the log file.
 function loggit($mesg) {

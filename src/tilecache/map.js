@@ -238,15 +238,18 @@ function startup() {
 	if ("dirty" in getdata) {
 		lay.push('dirty');
 	}
-	if ("apod" in getdata) {
-		lay.push('apod');
-	}
+	/*if ("apod" in getdata) {
+	  lay.push('apod');
+	  }
+	*/
 	layers = lay.join(",");
 
 	var userTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	userTile.myLayers=layers;
+	var mylay = lay;
+	mylay.push('apod');
+	userTile.myLayers=mylay.join(",");
 	userTile.myFormat='image/png';
-	userTile.myBaseURL=TILE_URL + "&version=20070909";
+	userTile.myBaseURL=TILE_URL + "&tag=apod";
 	userTile.getTileUrl=CustomGetTileUrl;
 
 	var userTile2 = new GTileLayer(new GCopyrightCollection(""), 1, 17);
@@ -257,8 +260,8 @@ function startup() {
 
 	//var userUsnobMapType = new GMapType([usnobTile, userTile], G_SATELLITE_MAP.getProjection(), "User+", G_SATELLITE_MAP);
 
-	var userMapType = new GMapType([userTile], G_SATELLITE_MAP.getProjection(), "2007-09-09", G_SATELLITE_MAP);
-	var userMapType2 = new GMapType([userTile2], G_SATELLITE_MAP.getProjection(), "2007-09-11", G_SATELLITE_MAP);
+	var userMapType = new GMapType([userTile], G_SATELLITE_MAP.getProjection(), "APOD", G_SATELLITE_MAP);
+	var userMapType2 = new GMapType([userTile2], G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
 
 		usnobMapType = new GMapType([usnobTile],
 									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
@@ -278,7 +281,7 @@ function startup() {
 	map.addMapType(userMapType2);
 	//map.addMapType(userUsnobMapType);
 
-    map.setMapType(userMapType2);
+    map.setMapType(userMapType);
 
 	// Show an overview map?
 	if (("over" in getdata) && (getdata["over"] == "no")) {
