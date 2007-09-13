@@ -17,6 +17,7 @@
 */
 
 #include <stdint.h>
+#include <assert.h>
 
 #include <cairo.h>
 #include <png.h>
@@ -107,17 +108,25 @@ unsigned char* cairoutils_read_png(const char* fn, int* pW, int *pH) {
     return img;
 }
 
+static void user_error_fn(png_structp png_ptr, png_const_charp error_msg) {
+    fprintf(stderr, "PNG error: %s\n", error_msg);
+}
+static void user_warning_fn(png_structp png_ptr, png_const_charp warning_msg) {
+    fprintf(stderr, "PNG warning: %s\n", warning_msg);
+}
+
 unsigned char* cairoutils_read_png_stream(FILE* fid, int* pW, int *pH) {
     png_structp png_ptr;
     png_infop info_ptr;
-    png_infop end_info;
-    int transforms;
-    int W, H;
+    //int transforms;
+    png_uint_32 W, H;
     unsigned char* outimg;
     png_bytepp rows;
-    int i,j;
+    int j;
+    int bitdepth, color_type, interlace, compress, filter;
 
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
+                                     user_error_fn, user_warning_fn);
     if (!png_ptr)
         return NULL;
     info_ptr = png_create_info_struct(png_ptr);
@@ -125,25 +134,18 @@ unsigned char* cairoutils_read_png_stream(FILE* fid, int* pW, int *pH) {
         png_destroy_read_struct(&png_ptr, NULL, NULL);
         return NULL;
     }
-    end_info = png_create_info_struct(png_ptr);
-    if (!end_info) {
-        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-        return NULL;
-    }
+
     png_init_io(png_ptr, fid);
 
-    transforms = PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING;
-    png_read_png(png_ptr, info_ptr, transforms, NULL);
-    W = png_get_image_width(png_ptr, info_ptr);
-    H = png_get_image_height(png_ptr, info_ptr);
-    rows = png_get_rows(png_ptr, info_ptr);
-
-    outimg = malloc(4 * W * H);
-    if (!outimg) {
-        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-        return NULL;
-    }
-
+    // Clearly I was wrong to think that I wanted the high-level read
+    // interface and that a high-level read interface should handle paletted
+    // images...
+    /*
+     transforms = PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING;
+     png_read_png(png_ptr, info_ptr, transforms, NULL);
+     W = png_get_image_width(png_ptr, info_ptr);
+     H = png_get_image_height(png_ptr, info_ptr);
+     rows = png_get_rows(png_ptr, info_ptr);
     for (j=0; j<H; j++) {
         unsigned char* thisrow = rows[j];
         for (i=0; i<W; i++) {
@@ -153,6 +155,44 @@ unsigned char* cairoutils_read_png_stream(FILE* fid, int* pW, int *pH) {
             outimg[4 * ((j*W) + i) + 3] = 255;
         }
     }
+     */
+    png_read_info(png_ptr, info_ptr);
+    png_get_IHDR(png_ptr, info_ptr, &W, &H, &bitdepth, &color_type,
+                 &interlace, &compress, &filter);
+
+    if (color_type == PNG_COLOR_TYPE_PALETTE)
+        png_set_palette_to_rgb(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_GRAY && bitdepth < 8)
+        png_set_gray_1_2_4_to_8(png_ptr);
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha(png_ptr);
+    if (bitdepth == 16)
+        png_set_strip_16(png_ptr);
+    if (bitdepth < 8)
+        png_set_packing(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_GRAY ||
+        color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png_ptr);
+    if (interlace != PNG_INTERLACE_NONE)
+        png_set_interlace_handling(png_ptr);
+    png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
+    png_read_update_info(png_ptr, info_ptr);
+
+    outimg = malloc(4 * W * H);
+    rows = malloc(H * sizeof(png_bytep));
+    if (!outimg || !rows) {
+        free(outimg);
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        return NULL;
+    }
+    for (j=0; j<H; j++)
+        rows[j] = outimg + j*4*W;
+
+    png_read_image(png_ptr, rows);
+
+    png_read_end (png_ptr, info_ptr);
+
+    free(rows);
 
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
