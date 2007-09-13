@@ -30,6 +30,7 @@ include $(COMMON)/makefile.gsl
 include $(COMMON)/makefile.netpbm
 include $(COMMON)/makefile.png
 include $(COMMON)/makefile.cairo
+include $(COMMON)/makefile.jpeg
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -362,7 +363,7 @@ $(COMMON)/cairoutils.o:
 	$(MAKE) -C $(COMMON) cairoutils.o
 
 plotquad: plotquad.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
-	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB)
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
 
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_INC) -c -o $@ $<
@@ -370,13 +371,13 @@ plot-constellations.o: plot-constellations.c
 plot-constellations: plot-constellations.o constellations.o $(COMMON)/cairoutils.o \
 		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o svn.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB)
+	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB) $(JPEG_LIB)
 
 plotxy.o: plotxy.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
 plotxy: plotxy.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB)
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
