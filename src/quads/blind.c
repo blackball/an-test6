@@ -761,9 +761,6 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 	if (mo->logodds < bp->logratio_tokeep)
 		return FALSE;
 
-	mo->wcstan.imagew = sp->field_maxx;
-	mo->wcstan.imageh = sp->field_maxy;
-
 	if (bp->mf &&
 		matchfile_write_match(bp->mf, mo)) {
 		logmsg("Field %i: error writing a match.\n", mo->fieldnum);

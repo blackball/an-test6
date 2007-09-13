@@ -981,6 +981,9 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 	if (mo->logodds >= sp->best_logodds)
 		sp->best_logodds = mo->logodds;
 
+	mo->wcstan.imagew = sp->field_maxx;
+	mo->wcstan.imageh = sp->field_maxy;
+
 	if (!sp->have_best_match || (mo->logodds > sp->best_match.logodds)) {
 		logmsg("Got a new best match: logodds %g.\n", mo->logodds);
 		//print_match(bp, mo);
