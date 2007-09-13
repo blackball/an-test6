@@ -954,6 +954,8 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 		solver_preprocess_field(sp);
 
+		logerr("image w,h = (%g, %g)\n", sp->field_maxx, sp->field_maxy);
+
 		template.wcstan.imagew = sp->field_maxx;
 		template.wcstan.imageh = sp->field_maxy;
 
@@ -1017,9 +1019,13 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 			sp->index = sp->best_index;
 
+			logerr("image w,h = (%g, %g)\n", bestmo->wcstan.imagew, bestmo->wcstan.imageh);
+
 			// Tweak, if requested.
 			if (bp->do_tweak) {
 				sip = tweak(bp, bestmo, sp->index->starkd);
+
+				logerr("image w,h = (%g, %g)\n", sip->wcstan.imagew, sip->wcstan.imageh);
 			}
 
 			// Write WCS, if requested.
