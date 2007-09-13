@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <libgen.h>
+#include <dirent.h>
 
 #include "ioutils.h"
 
@@ -48,6 +49,56 @@ void asprintf_safe(char** strp, const char* format, ...) {
         *strp = NULL;
     }
 	va_end(lst);
+}
+
+sl* dir_get_contents(const char* path, sl* list, bool filesonly, bool recurse) {
+    DIR* dir = opendir(path);
+    if (!dir) {
+        fprintf(stderr, "Failed to open directory \"%s\": %s\n", path, strerror(errno));
+        return NULL;
+    }
+    if (!list)
+        list = sl_new(256);
+    while (1) {
+        struct dirent* de;
+        struct stat st;
+        char* name;
+        char* fullpath;
+        bool freeit = FALSE;
+        errno = 0;
+        de = readdir(dir);
+        if (!de) {
+            if (errno)
+                fprintf(stderr, "Failed to read entry from directory \"%s\": %s\n", path, strerror(errno));
+            break;
+        }
+        name = de->d_name;
+        if (!strcmp(name, ".") || !strcmp(name, ".."))
+            continue;
+        asprintf_safe(&fullpath, "%s/%s", path, name);
+        if (stat(fullpath, &st)) {
+            fprintf(stderr, "Failed to stat file %s: %s\n", fullpath, strerror(errno));
+            closedir(dir);
+            sl_free2(list);
+            return NULL;
+        }
+
+        if (filesonly) {
+            if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode))
+                sl_append_nocopy(list, fullpath);
+            else
+                freeit = TRUE;
+        } else {
+            sl_append_nocopy(list, fullpath);
+        }
+        if (recurse && S_ISDIR(st.st_mode)) {
+            dir_get_contents(path, list, filesonly, recurse);
+        }
+        if (freeit)
+            free(fullpath);
+    }
+    closedir(dir);
+    return list;
 }
 
 char* find_executable(const char* progname, const char* sibling) {

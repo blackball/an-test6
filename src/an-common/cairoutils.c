@@ -21,6 +21,9 @@
 #include <cairo.h>
 #include <png.h>
 #include <ppm.h>
+#include <jpeglib.h>
+
+#include "cairoutils.h"
 
 char* cairoutils_get_color_name(int i) {
     switch (i) {
@@ -76,6 +79,131 @@ static void write_png(unsigned char * img, int w, int h, FILE* fout)
     free(image_rows);
 
     png_destroy_write_struct(&png_ptr, &png_info);
+}
+
+unsigned char* cairoutils_read_jpeg(const char* fn, int* pW, int* pH) {
+    FILE* fid;
+    unsigned char* img;
+    fid = fopen(fn, "rb");
+    if (!fid) {
+        fprintf(stderr, "Failed to open file %s\n", fn);
+        return NULL;
+    }
+    img = cairoutils_read_jpeg_stream(fid, pW, pH);
+    fclose(fid);
+    return img;
+}
+
+unsigned char* cairoutils_read_png(const char* fn, int* pW, int *pH) {
+    FILE* fid;
+    unsigned char* img;
+    fid = fopen(fn, "rb");
+    if (!fid) {
+        fprintf(stderr, "Failed to open file %s\n", fn);
+        return NULL;
+    }
+    img = cairoutils_read_png_stream(fid, pW, pH);
+    fclose(fid);
+    return img;
+}
+
+unsigned char* cairoutils_read_png_stream(FILE* fid, int* pW, int *pH) {
+    png_structp png_ptr;
+    png_infop info_ptr;
+    png_infop end_info;
+    int transforms;
+    int W, H;
+    unsigned char* outimg;
+    png_bytepp rows;
+    int i,j;
+
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr)
+        return NULL;
+    info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        png_destroy_read_struct(&png_ptr, NULL, NULL);
+        return NULL;
+    }
+    end_info = png_create_info_struct(png_ptr);
+    if (!end_info) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        return NULL;
+    }
+    png_init_io(png_ptr, fid);
+
+    transforms = PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING;
+    png_read_png(png_ptr, info_ptr, transforms, NULL);
+    W = png_get_image_width(png_ptr, info_ptr);
+    H = png_get_image_height(png_ptr, info_ptr);
+    rows = png_get_rows(png_ptr, info_ptr);
+
+    outimg = malloc(4 * W * H);
+    if (!outimg) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        return NULL;
+    }
+
+    for (j=0; j<H; j++) {
+        unsigned char* thisrow = rows[j];
+        for (i=0; i<W; i++) {
+            outimg[4 * ((j*W) + i) + 0] = thisrow[3*i + 0];
+            outimg[4 * ((j*W) + i) + 1] = thisrow[3*i + 1];
+            outimg[4 * ((j*W) + i) + 2] = thisrow[3*i + 2];
+            outimg[4 * ((j*W) + i) + 3] = 255;
+        }
+    }
+
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
+    if (pW) *pW = W;
+    if (pH) *pH = H;
+
+    return outimg;
+}
+
+unsigned char* cairoutils_read_jpeg_stream(FILE* fid, int* pW, int* pH) {
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    JSAMPLE* buffer;
+    int row_stride;
+    unsigned char* outimg;
+    int W, H;
+    int i, j;
+
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&cinfo);
+    jpeg_stdio_src(&cinfo, fid);
+    jpeg_read_header(&cinfo, TRUE);
+    jpeg_start_decompress(&cinfo);
+    row_stride = cinfo.output_width * cinfo.output_components;
+    buffer = malloc(row_stride * sizeof(JSAMPLE));
+    W = cinfo.output_width;
+    H = cinfo.output_height;
+    outimg = malloc(4 * W * H);
+    for (j=0; j<H; j++) {
+        jpeg_read_scanlines(&cinfo, &buffer, 1);
+        for (i=0; i<W; i++) {
+            if (cinfo.output_components == 3) {
+                outimg[4 * (j*W + i) + 0] = buffer[3*i + 0];
+                outimg[4 * (j*W + i) + 1] = buffer[3*i + 1];
+                outimg[4 * (j*W + i) + 2] = buffer[3*i + 2];
+                outimg[4 * (j*W + i) + 3] = 255;
+            } else if (cinfo.output_components == 1) {
+                outimg[4 * (j*W + i) + 0] = buffer[i];
+                outimg[4 * (j*W + i) + 1] = buffer[i];
+                outimg[4 * (j*W + i) + 2] = buffer[i];
+                outimg[4 * (j*W + i) + 3] = 255;
+            }
+        }
+    }
+    jpeg_finish_decompress(&cinfo);
+    jpeg_destroy_decompress(&cinfo);
+
+    if (pW) *pW = W;
+    if (pH) *pH = H;
+
+    return outimg;
 }
 
 static int streamout(FILE* fout, unsigned char* img, int W, int H, int ppm) {

@@ -92,7 +92,7 @@ ifeq ($(MAKECMDGOALS),cairoutils.o)
   include cairoutils.dep
 endif
 cairoutils.o: cairoutils.c
-	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) -c $< -o $@
+	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) $(JPEG_INC) $(PNG_INC) -c $< -o $@
 
 clean:
 	rm -f $(ANUTILS_LIB) $(ANUTILS_OBJ) $(ANFILES_LIB) $(ANFILES_OBJ) \

@@ -25,6 +25,14 @@ void cairoutils_argb32_to_rgba(unsigned char* img, int W, int H);
 
 void cairoutils_rgba_to_argb32(unsigned char* img, int W, int H);
 
+unsigned char* cairoutils_read_png_stream(FILE* fid, int* pW, int *pH);
+
+unsigned char* cairoutils_read_jpeg_stream(FILE* fid, int* pW, int* pH);
+
+unsigned char* cairoutils_read_png(const char* fn, int* pW, int *pH);
+
+unsigned char* cairoutils_read_jpeg(const char* fn, int* pW, int* pH);
+
 void cairoutils_fake_ppm_init();
 
 // You must call ppm_init()

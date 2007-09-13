@@ -54,6 +54,8 @@ sl* file_get_lines(const char* fn, bool include_newlines);
 
 sl* fid_get_lines(FILE* fid, bool include_newlines);
 
+sl* dir_get_contents(const char* path, sl* result, bool filesonly, bool recursive);
+
 /**
    If "cmdline" starts with "keyword", returns 1 and places the address of
    the start of the next word in "p_next_word".
