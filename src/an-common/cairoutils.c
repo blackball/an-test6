@@ -116,85 +116,63 @@ static void user_warning_fn(png_structp png_ptr, png_const_charp warning_msg) {
 }
 
 unsigned char* cairoutils_read_png_stream(FILE* fid, int* pW, int *pH) {
-    png_structp png_ptr;
-    png_infop info_ptr;
-    //int transforms;
+    png_structp ping;
+    png_infop info;
     png_uint_32 W, H;
     unsigned char* outimg;
     png_bytepp rows;
     int j;
-    int bitdepth, color_type, interlace, compress, filter;
+    int bitdepth, color_type, interlace;
 
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-                                     user_error_fn, user_warning_fn);
-    if (!png_ptr)
+    ping = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
+                                  user_error_fn, user_warning_fn);
+    if (!ping)
         return NULL;
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        png_destroy_read_struct(&png_ptr, NULL, NULL);
+    info = png_create_info_struct(ping);
+    if (!info) {
+        png_destroy_read_struct(&ping, NULL, NULL);
         return NULL;
     }
 
-    png_init_io(png_ptr, fid);
+    png_init_io(ping, fid);
+    png_read_info(ping, info);
+    png_get_IHDR(ping, info, &W, &H, &bitdepth, &color_type,
+                 &interlace, NULL, NULL);
 
-    // Clearly I was wrong to think that I wanted the high-level read
-    // interface and that a high-level read interface should handle paletted
-    // images...
-    /*
-     transforms = PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING;
-     png_read_png(png_ptr, info_ptr, transforms, NULL);
-     W = png_get_image_width(png_ptr, info_ptr);
-     H = png_get_image_height(png_ptr, info_ptr);
-     rows = png_get_rows(png_ptr, info_ptr);
-    for (j=0; j<H; j++) {
-        unsigned char* thisrow = rows[j];
-        for (i=0; i<W; i++) {
-            outimg[4 * ((j*W) + i) + 0] = thisrow[3*i + 0];
-            outimg[4 * ((j*W) + i) + 1] = thisrow[3*i + 1];
-            outimg[4 * ((j*W) + i) + 2] = thisrow[3*i + 2];
-            outimg[4 * ((j*W) + i) + 3] = 255;
-        }
-    }
-     */
-    png_read_info(png_ptr, info_ptr);
-    png_get_IHDR(png_ptr, info_ptr, &W, &H, &bitdepth, &color_type,
-                 &interlace, &compress, &filter);
-
+    // see cairo's cairo-png.c
     if (color_type == PNG_COLOR_TYPE_PALETTE)
-        png_set_palette_to_rgb(png_ptr);
+        png_set_palette_to_rgb(ping);
     if (color_type == PNG_COLOR_TYPE_GRAY && bitdepth < 8)
-        png_set_gray_1_2_4_to_8(png_ptr);
-    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
-        png_set_tRNS_to_alpha(png_ptr);
+        png_set_gray_1_2_4_to_8(ping);
+    if (png_get_valid(ping, info, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha(ping);
     if (bitdepth == 16)
-        png_set_strip_16(png_ptr);
+        png_set_strip_16(ping);
     if (bitdepth < 8)
-        png_set_packing(png_ptr);
+        png_set_packing(ping);
     if (color_type == PNG_COLOR_TYPE_GRAY ||
         color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-        png_set_gray_to_rgb(png_ptr);
+        png_set_gray_to_rgb(ping);
     if (interlace != PNG_INTERLACE_NONE)
-        png_set_interlace_handling(png_ptr);
-    png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
-    png_read_update_info(png_ptr, info_ptr);
+        png_set_interlace_handling(ping);
+    png_set_filler(ping, 0xff, PNG_FILLER_AFTER);
+    png_read_update_info(ping, info);
 
     outimg = malloc(4 * W * H);
     rows = malloc(H * sizeof(png_bytep));
     if (!outimg || !rows) {
         free(outimg);
-        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        png_destroy_read_struct(&ping, &info, NULL);
         return NULL;
     }
     for (j=0; j<H; j++)
         rows[j] = outimg + j*4*W;
 
-    png_read_image(png_ptr, rows);
+    png_read_image(ping, rows);
+    png_read_end (ping, info);
 
-    png_read_end (png_ptr, info_ptr);
-
+    png_destroy_read_struct(&ping, &info, NULL);
     free(rows);
-
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
     if (pW) *pW = W;
     if (pH) *pH = H;
