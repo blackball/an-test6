@@ -28,6 +28,7 @@ include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.cairo
 include $(COMMON)/makefile.netpbm
 include $(COMMON)/makefile.png
+include $(COMMON)/makefile.jpeg
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -41,6 +42,7 @@ CFLAGS += $(ANFILES_INC)
 CFLAGS  += $(CAIRO_INC)
 CFLAGS  += $(NETPBM_INC)
 CFLAGS  += $(PNG_INC)
+CFLAGS  += $(JPEG_INC)
 
 LDFLAGS += $(CAIRO_LIB)
 
@@ -62,6 +64,11 @@ all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 $(COMMON)/cairoutils.o:
 	$(MAKE) -C $(COMMON) cairoutils.o
 
+#.PHONY: remake-cairoutils
+#remake-cairoutils:
+#	$(MAKE) -C $(COMMON) cairoutils.o
+#tilerender: remake-cairoutils
+
 TILERENDER_OBJS := tilerender.o render_image.o \
 		render_tycho.o mercrender.o merctree.o \
 		render_gridlines.o \
@@ -70,14 +77,15 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_boundary.o \
 		render_constellation.o \
 		render_messier.o \
-		render_solid.o
+		render_solid.o \
+		render_collection.o
 
 MISC_OBJS := merctree.o pnmutils.o
 
 tilerender: $(TILERENDER_OBJS) \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
 		$(COMMON)/cairoutils.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
 
 rdlstile: rdlstile.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)

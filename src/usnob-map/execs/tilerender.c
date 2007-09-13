@@ -12,6 +12,7 @@
 #include "an-bool.h"
 #include "tilerender.h"
 #include "starutil.h"
+#include "cairoutils.h"
 
 #include "render_image.h"
 #include "render_tycho.h"
@@ -22,6 +23,7 @@
 #include "render_constellation.h"
 #include "render_messier.h"
 #include "render_solid.h"
+#include "render_collection.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -48,7 +50,9 @@ char* layernames[] = {
 
     "clean",
     "dirty",
-    "solid"
+    "solid",
+
+    "apod"
 };
 render_func_t renderers[] = {
     render_image,
@@ -62,10 +66,10 @@ render_func_t renderers[] = {
 
     render_usnob,
     render_usnob,
-    render_solid
-};
+    render_solid,
 
-static void write_png(unsigned char * img, int w, int h);
+    render_collection
+};
 
 static void default_rdls_args(render_args_t* args) {
 	// Set the other RDLS-related args if they haven't been set already.
@@ -311,7 +315,7 @@ int main(int argc, char *argv[]) {
         fwrite(args.rawfloatimg, sizeof(float), args.W * args.H * 3, stdout);
         free(args.rawfloatimg);
     } else {
-        write_png(img, args.W, args.H);
+        cairoutils_stream_png(stdout, img, args.W, args.H);
     }
 
     free(img);
@@ -407,36 +411,6 @@ double xmerc2pixelf(double x, render_args_t* args) {
 
 double ymerc2pixelf(double y, render_args_t* args) {
     return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
-}
-
-// fires an ALPHA png out stdout
-static void write_png(unsigned char * img, int w, int h)
-{
-    png_bytepp image_rows;
-    png_structp png_ptr;
-    png_infop png_info;
-    int n;
-
-    image_rows = malloc(sizeof(png_bytep)*h);
-    for (n = 0; n < h; n++)
-        image_rows[n] = (unsigned char *) img + 4*n*w;
-
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    png_info = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, stdout);
-    png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
-    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-
-    png_set_IHDR(png_ptr, png_info, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-    png_write_info(png_ptr, png_info);
-
-    png_write_image(png_ptr, image_rows);
-    png_write_end(png_ptr, png_info);
-
-    free(image_rows);
-
-    png_destroy_write_struct(&png_ptr, &png_info);
 }
 
 int in_image(int x, int y, render_args_t* args) {
