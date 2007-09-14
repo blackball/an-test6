@@ -706,9 +706,6 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 	if (mo->logodds < bp->logratio_tokeep)
 		return FALSE;
 
-	if (mo->logodds < bp->logratio_tosolve)
-		return FALSE;
-
     logmsg("Pixel scale: %g arcsec/pix.\n", mo->scale);
 
     // Tweak, if requested.
@@ -720,6 +717,9 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
         search_indexrdls(bp, mo);
 
     bl_insert_sorted(bp->solutions, mo, compare_matchobjs);
+
+	if (mo->logodds < bp->logratio_tosolve)
+		return FALSE;
 
     bp->nsolves_sofar++;
     if (bp->nsolves_sofar >= bp->nsolves) {
