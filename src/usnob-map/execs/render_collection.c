@@ -234,25 +234,33 @@ int render_collection(unsigned char* img, render_args_t* args) {
 
         // 
         if (args->outline) {
-            // 
-            for (j=0; j<H; j++) {
-                for (i=0; i<W; i++) {
-                    int px, py;
-                    sip_pixelxy2radec(&wcs, i, j, &ra, &dec);
-                    px = ra2pixel(ra, args);
-                    if (px < 0 || px >= args->W)
+            // bottom, top, left, right
+            int offsetx[] = { 0, 0, 0, W };
+            int offsety[] = { 0, H, 0, 0 };
+            int stepx[] = { 1, 1, 0, 0 };
+            int stepy[] = { 0, 0, 1, 1 };
+            int Nsteps[] = { W, W, H, H };
+            int side;
+            for (side=0; side<4; side++) {
+                for (i=0; i<Nsteps[side]; i++) {
+                    int xin, yin;
+                    int xout, yout;
+                    xin = offsetx[side] + i * stepx[side];
+                    yin = offsety[side] + i * stepy[side];
+                    sip_pixelxy2radec(&wcs, xin, yin, &ra, &dec);
+                    xout = ra2pixel(ra, args);
+                    if (xout < 0 || xout >= args->W)
                         continue;
-                    py = dec2pixel(dec, args);
-                    if (py < 0 || py >= args->H)
+                    yout = dec2pixel(dec, args);
+                    if (yout < 0 || yout >= args->H)
                         continue;
-                    ink[3*(py*w + px) + 0] = 255.0 * 1e20;
-                    ink[3*(py*w + px) + 1] = 255.0 * 1e20;
-                    ink[3*(py*w + px) + 2] = 255.0 * 1e20;
-                    counts[py*w + px] = 1e20;
+                    ink[3*(yout*w + xout) + 0] = 255.0 * 1e20;
+                    ink[3*(yout*w + xout) + 1] = 255.0 * 1e20;
+                    ink[3*(yout*w + xout) + 2] = 255.0 * 1e20;
+                    counts[yout*w + xout] = 1e20;
                 }
             }
         }
-
     }
 
 	for (j=0; j<args->H; j++) {
