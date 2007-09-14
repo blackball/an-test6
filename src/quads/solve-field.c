@@ -90,10 +90,11 @@ static struct option long_options[] = {
     {"sort-ascending", no_argument,       0, 'a'},
     {"keep-xylist",    required_argument, 0, 'k'},
 	{"solved-in",      required_argument, 0, 'I'},
+    {"verify",         required_argument, 0, 'V'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -126,6 +127,7 @@ static void print_help(const char* progname) {
            "  [--verbose]: be more chatty!  (-v)\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
            "  [--solved-in <filename>]: input filename for solved file  (-I)\n"
+           "  [--verify <wcs-file>]: try to verify an existing WCS file  (-V)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
            "\n"
@@ -217,6 +219,10 @@ int main(int argc, char** args) {
             sl_append(augmentxyargs, "--verbose");
             sl_append(backendargs, "--verbose");
             verbose = TRUE;
+            break;
+        case 'V':
+            sl_append(augmentxyargs, "--verify");
+            append_escape(augmentxyargs, optarg);
             break;
         case 'I':
             sl_append(augmentxyargs, "--solved-in");

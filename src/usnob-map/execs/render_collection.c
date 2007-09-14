@@ -162,6 +162,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
             fakesize = TRUE;
         }
 
+        logmsg("WCS image W,H = (%i, %i)%s\n", W, H, (fakesize ?" (fake)":""));
+
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
@@ -201,10 +203,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
         }
 
         // clamp to image bounds
-        xlo = MAX(0, MIN(args->W-1, xlo));
-        xhi = MAX(0, MIN(args->W-1, xhi));
-        ylo = MAX(0, MIN(args->H-1, ylo));
-        yhi = MAX(0, MIN(args->H-1, yhi));
+        xlo = MAX(0, xlo);
+        ylo = MAX(0, ylo);
+        xhi = MIN(args->W-1, xhi);
+        yhi = MIN(args->H-1, yhi);
 
         logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 

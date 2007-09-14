@@ -42,6 +42,7 @@
 #include "math.h"
 #include "fitsioutils.h"
 #include "scriptutils.h"
+#include "sip_qfits.h"
 
 #include "qfits.h"
 
@@ -77,10 +78,11 @@ static struct option long_options[] = {
     {"sort-column",    required_argument, 0, 's'},
     {"sort-ascending", no_argument,       0, 'a'},
     {"keep-xylist",    required_argument, 0, 'k'},
+    {"verify",         required_argument, 0, 'V'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -117,6 +119,7 @@ static void print_help(const char* progname) {
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
+           "  [--verify <wcs-file>]: try to verify an existing WCS file  (-V)\n"
 		   "\n", progname);
 }
 
@@ -157,7 +160,7 @@ int main(int argc, char** args) {
     bool force_ppm = FALSE;
 	bool guess_scale = FALSE;
 	dl* scales;
-	int i;
+	int i, I;
 	bool guessed_scale = FALSE;
 	char* cancelfile = NULL;
 	char* solvedfile = NULL;
@@ -183,11 +186,13 @@ int main(int argc, char** args) {
     char* keep_xylist = NULL;
     char* solvedin = NULL;
     bool addwh = TRUE;
+    sl* verifywcs;
 
     depths = il_new(4);
     fields = il_new(16);
     cmd = sl_new(16);
     tempfiles = sl_new(4);
+    verifywcs = sl_new(4);
 
     me = find_executable(args[0], NULL);
 
@@ -207,6 +212,9 @@ int main(int argc, char** args) {
 			break;
         case 'v':
             verbose = TRUE;
+            break;
+        case 'V':
+            sl_append(verifywcs, optarg);
             break;
         case 'I':
             solvedin = optarg;
@@ -766,6 +774,41 @@ int main(int argc, char** args) {
             fits_header_add_int(hdr, key, hi, "field range: high");
         }
     }
+
+    I = 0;
+    for (i=0; i<sl_size(verifywcs); i++) {
+        char* fn;
+        qfits_header* wcshdr;
+        sip_t sip;
+        tan_t* wcs = &(sip.wcstan);
+		char key[64];
+		char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
+                         "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
+		double vals[] = { wcs->crval[0], wcs->crval[1],
+                          wcs->crpix[0], wcs->crpix[1],
+                          wcs->cd[0][0], wcs->cd[0][1],
+                          wcs->cd[1][0], wcs->cd[1][1] };
+		int j;
+
+        fn = sl_get(verifywcs, i);
+        wcshdr = qfits_header_read(fn);
+        if (!wcshdr) {
+            fprintf(stderr, "Failed to read FITS header from file \"%s\".\n", fn);
+            continue;
+        }
+        if (!sip_read_header(wcshdr, &sip)) {
+            fprintf(stderr, "Failed to parse WCS header from file \"%s\".\n", fn);
+            qfits_header_destroy(wcshdr);
+            continue;
+        }
+        qfits_header_destroy(wcshdr);
+        I++;
+		for (j = 0; j < 8; j++) {
+			sprintf(key, keys[j], I);
+            fits_header_add_double(hdr, key, vals[j], "");
+        }
+    }
+    sl_free2(verifywcs);
 
 	fout = fopen(outfn, "wb");
 	if (!fout) {
