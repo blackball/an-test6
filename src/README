@@ -36,9 +36,11 @@ QUICKSTART
       * cairo
       * netpbm
       * png
+      * jpeg
 
    On Ubuntu or Debian-like systems, the following should suffice:
-      $ sudo apt-get install libcairo2-dev libnetpbm10-dev netpbm libpng12-dev
+      $ sudo apt-get install libcairo2-dev libnetpbm10-dev netpbm \
+             libpng12-dev libjpeg-dev
 
    If you don't have and can't get these libraries, you should still be able to
    compile and use the core parts of the solver, but you will miss out on some

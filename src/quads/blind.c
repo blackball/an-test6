@@ -192,7 +192,9 @@ void blind_run(blind_t* bp) {
 
         bp->logratio_tosolve = oldodds;
 
-        for (i=0; i<il_size(bp->solutions); i++) {
+		logmsg("Got %i solutions.\n", bl_size(bp->solutions));
+
+        for (i=0; i<bl_size(bp->solutions); i++) {
             MatchObj* mo = bl_access(bp->solutions, i);
             if (mo->logodds >= bp->logratio_tosolve)
                 solved_field(bp, mo->fieldnum);
@@ -945,7 +947,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
         if (sp->best_match_solves) {
             solved_field(bp, fieldnum);
-		} else {
+		} else if (!verify_wcs) {
 			// Field unsolved.
             logerr("Field %i did not solve", fieldnum);
             if (bp->solver.index && bp->solver.index->indexname) {
