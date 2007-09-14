@@ -595,6 +595,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			WRITE(fout, "ratio_tokeep %g\n", job->odds_tokeep);
 			WRITE(fout, "ratio_tosolve %g\n", job->odds_tosolve);
 			WRITE(fout, "ratio_tobail %g\n", 1e-100);
+			WRITE(fout, "best_only\n");
 
             if (job->xcol)
                 WRITE(fout, "xcol %s\n", job->xcol);
@@ -617,7 +618,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 				WRITE(fout, "match %s\n", job->matchfile);
 			if (job->rdlsfile) {
 				WRITE(fout, "indexrdls %s\n", job->rdlsfile);
-				WRITE(fout, "indexrdls_solvedonly\n");
+				//WRITE(fout, "indexrdls_solvedonly\n");
             }
 			if (job->wcsfile)
 				WRITE(fout, "wcs %s\n", job->wcsfile);

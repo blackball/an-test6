@@ -65,7 +65,9 @@ static bool is_field_solved(blind_t* bp, int fieldnum);
 static int write_solutions(blind_t* bp);
 static void solved_field(blind_t* bp, int fieldnum);
 static int compare_matchobjs(const void* v1, const void* v2);
-void search_indexrdls(blind_t* bp, MatchObj* mo);
+static void search_indexrdls(blind_t* bp, MatchObj* mo);
+static void remove_duplicate_solutions(blind_t* bp);
+static void free_matchobj(MatchObj* mo);
 
 static int get_cpu_usage(blind_t* bp) {
 	struct rusage r;
@@ -112,7 +114,7 @@ static void check_time_limits(blind_t* bp) {
 
 void blind_run(blind_t* bp) {
 	solver_t* sp = &(bp->solver);
-	int I;
+	int i, I;
     int index_options = 0;
 
 	// Write the start file.
@@ -178,7 +180,7 @@ void blind_run(blind_t* bp) {
 			pl_append(sp->indexes, index);
 			sp->index_num = I;
 			sp->index = index;
-			logmsg("Verifying WCS with index %i of %i\n",  I + 1, pl_size(bp->indexnames));
+			logmsg("Verifying WCS with index %i of %i\n",  I + 1, sl_size(bp->indexnames));
 			for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
 				tan_t* wcs = bl_access(bp->verify_wcs_list, w);
 				// Do it!
@@ -193,6 +195,9 @@ void blind_run(blind_t* bp) {
         bp->logratio_tosolve = oldodds;
 
 		logmsg("Got %i solutions.\n", bl_size(bp->solutions));
+
+		if (bp->best_hit_only)
+			remove_duplicate_solutions(bp);
 
         for (i=0; i<bl_size(bp->solutions); i++) {
             MatchObj* mo = bl_access(bp->solutions, i);
@@ -287,6 +292,12 @@ void blind_run(blind_t* bp) {
 
     if (write_solutions(bp))
         exit(-1);
+
+	for (i=0; i<bl_size(bp->solutions); i++) {
+		MatchObj* mo = bl_access(bp->solutions, i);
+		free_matchobj(mo);
+	}
+	bl_remove_all(bp->solutions);
 
 	if (bp->donefname) {
 		FILE* fdone = NULL;
@@ -1028,7 +1039,7 @@ static void solved_field(blind_t* bp, int fieldnum) {
         bp->single_field_solved = TRUE;
 }
 
-void search_indexrdls(blind_t* bp, MatchObj* mo) {
+static void search_indexrdls(blind_t* bp, MatchObj* mo) {
     kdtree_qres_t* res = NULL;
     double* starxyz;
     int nstars;

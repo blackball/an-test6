@@ -132,6 +132,8 @@ struct blind_params {
 	int tweak_aborder;
 	int tweak_abporder;
 	bool tweak_skipshift;
+
+	bool best_hit_only;
 };
 typedef struct blind_params blind_t;
 

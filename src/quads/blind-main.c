@@ -188,6 +188,8 @@ static int read_parameters(blind_t* bp)
              */
 		} else if (is_word(line, "indexrdls_expand ", &nextword)) {
 			bp->indexrdls_expand = atof(nextword);
+		} else if (is_word(line, "best_only", &nextword)) {
+			bp->best_hit_only = TRUE;
 		} else if (is_word(line, "solved ", &nextword)) {
 			free(bp->solved_in);
 			free(bp->solved_out);
