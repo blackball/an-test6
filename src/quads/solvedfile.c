@@ -65,7 +65,7 @@ int solvedfile_get(char* fn, int fieldnum) {
 		fclose(f);
 		return -1;
 	}
-	if (end < fieldnum) {
+	if (end <= fieldnum) {
 		fclose(f);
 		return 0;
 	}
