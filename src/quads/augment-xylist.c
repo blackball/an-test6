@@ -780,14 +780,6 @@ int main(int argc, char** args) {
         char* fn;
         qfits_header* wcshdr;
         sip_t sip;
-        tan_t* wcs = &(sip.wcstan);
-		char key[64];
-		char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
-                         "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
-		double vals[] = { wcs->crval[0], wcs->crval[1],
-                          wcs->crpix[0], wcs->crpix[1],
-                          wcs->cd[0][0], wcs->cd[0][1],
-                          wcs->cd[1][0], wcs->cd[1][1] };
 		int j;
 
         fn = sl_get(verifywcs, i);
@@ -803,9 +795,20 @@ int main(int argc, char** args) {
         }
         qfits_header_destroy(wcshdr);
         I++;
-		for (j = 0; j < 8; j++) {
-			sprintf(key, keys[j], I);
-            fits_header_add_double(hdr, key, vals[j], "");
+        {
+            tan_t* wcs = &(sip.wcstan);
+            // note, this initialization has to happen *after* you read the WCS header :)
+            double vals[] = { wcs->crval[0], wcs->crval[1],
+                              wcs->crpix[0], wcs->crpix[1],
+                              wcs->cd[0][0], wcs->cd[0][1],
+                              wcs->cd[1][0], wcs->cd[1][1] };
+            char key[64];
+            char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
+                             "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
+            for (j = 0; j < 8; j++) {
+                sprintf(key, keys[j], I);
+                fits_header_add_double(hdr, key, vals[j], "");
+            }
         }
     }
     sl_free2(verifywcs);
