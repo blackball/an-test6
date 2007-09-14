@@ -39,7 +39,7 @@ foreach ($matches as $m) {
      */
 
     // temp
-    if (substr($date, 0, 2) != "06")
+    if (substr($date, 0, 2) != "05")
         //if (substr($date, 0, 4) != "9601")
         continue;
 
@@ -64,21 +64,50 @@ foreach ($matches as $m) {
 		die("Couldn't get: " . $url);
 	}
 
-	$pat = "|<a href=\"(image/[^ \n]*?)\"(?:.*?\")?\n?>\s*<(?i:img) SRC=\"(image/.*?\\.(.*?))\".*?>\s*</a>|s";
+	$pat = "|<a href=" // link to...
+		"\"(" . // start quote & capture
+		"?P<bigimgurl>" . // link to the big image:
+		"image/[^ \n]*?" . // (no spaces, newlines)
+		") ?\"" . // end capture & quote; optional space for 051029.
+		"(?:" . // (optionally), don't capture...
+        ".*?\"" . // junk ending in quote
+        ")?" . // (end optional)
+        "\n?" . // optional newline
+        ">" . // close link
+        "\s*" . // link text
+        "<" .
+        "(?i:img) " . // (img or IMG)
+        "SRC=\"" .
+        "(?P<imgurl>" . // capture...
+        "image/.*?" . // base
+        "\\." . // dot
+        "(?P<extension>" . // filename extension
+        ".*?" .
+        ")" . // (end extension)
+        ")" . // (end filename)
+        "\"" . // quote to end image filename
+        ".*?" . // other junk
+        ">" . // end <IMG >
+        "\s*</a>|s";
 	if (!preg_match($pat, $str, $match)) {
 		echo "-- No match found for " . $date . " --\n";
 		continue;
 	}
-
+	
     /*
      echo "  " . $match[1] . "\n";
      echo "  " . $match[2] . "\n";
      echo "  " . $match[3] . "\n";
-     */
+	*/
 
+    /*
 	$bigimgurl = $baseurl . $match[1];
 	$imgurl = $baseurl . $match[2];
 	$suffix = $match[3];
+	*/
+	$bigimgurl = $baseurl . $match['bigimgurl'];
+	$imgurl = $baseurl . $match['imgurl'];
+	$suffix = $match['extension'];
 
 	$img = file_get_contents($imgurl);
 	if (!$img) {

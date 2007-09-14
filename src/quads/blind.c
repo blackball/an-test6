@@ -905,6 +905,11 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		}
 
 		// Has the field already been solved?
+		if (bp->solved_in) {
+			logmsg("Checking %s field %i to see if the field is solved: %i.\n",
+				   bp->solved_in, fieldnum,
+				   solvedfile_get(bp->solved_in, fieldnum));
+		}
 		if (bp->solved_in &&
 			(solvedfile_get(bp->solved_in, fieldnum) == 1)) {
 			// file exists; field has already been solved.
