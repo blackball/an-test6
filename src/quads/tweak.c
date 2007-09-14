@@ -1191,7 +1191,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	M = stride;
 	N = sip_coeffs;
 
-	assert(M >= N);
+	//assert(M >= N);
 
 	mA = gsl_matrix_alloc(M, N);
 	b1 = gsl_vector_alloc(M);
