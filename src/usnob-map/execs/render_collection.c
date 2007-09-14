@@ -31,61 +31,47 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
                              double* pramin, double* pramax,
                              double* pdecmin, double* pdecmax) {
     double ramin, ramax, decmin, decmax;
-    double racenter, deccenter;
-    int xvals[4];
-    int yvals[4];
-    int i;
+    int i, side;
+    int STEP = 10;
+    // Walk the perimeter of the image in steps of STEP pixels
+    // to find the RA,Dec min/max.
+    int offsetx[] = { STEP, W, W, 0 };
+    int offsety[] = { 0, 0, H, H };
+    int stepx[] = { +STEP, 0, -STEP, 0 };
+    int stepy[] = { 0, +STEP, 0, -STEP };
+    int Nsteps[] = { (W/STEP)-1, H/STEP, W/STEP, H/STEP };
+    double lastra, lastdec;
 
-    sip_pixelxy2radec(wcs, W/2, H/2, &racenter, &deccenter);
-    xvals[0] = 0;
-    yvals[0] = 0;
-    xvals[1] = W;
-    yvals[1] = 0;
-    xvals[2] = W;
-    yvals[2] = H;
-    xvals[3] = 0;
-    yvals[3] = H;
-    decmin = decmax = deccenter;
-    ramin = ramax = racenter;
-    for (i=0; i<4; i++) {
-        double dra;
-        double dx = 0;
-        double ra, dec;
-        sip_pixelxy2radec(wcs, xvals[i], yvals[i], &ra, &dec);
-        decmin = MIN(decmin, dec);
-        decmax = MAX(decmax, dec);
+    sip_pixelxy2radec(wcs, 0, 0, &lastra, &lastdec);
+    ramin = ramax = lastra;
+    decmin = decmax = lastdec;
 
-        // ugh, does RA wrap around?
+    for (side=0; side<4; side++) {
+        for (i=0; i<Nsteps[side]; i++) {
+            double ra, dec;
+            int x, y;
+            x = offsetx[side] + i * stepx[side];
+            y = offsety[side] + i * stepy[side];
+            sip_pixelxy2radec(wcs, x, y, &ra, &dec);
 
-        // "x" is intermediate world coordinate, which points in the
-        // direction of decreasing RA.  The CD matrix is ~ the derivative
-        // of x wrt pixel coordinates
-        dx = (wcs->wcstan.cd[0][0] * (xvals[i] - W/2)) +
-            (wcs->wcstan.cd[0][1] * (yvals[i] - H/2));
-        // expected change in RA (we just care about the sign)
-        
-        // FIXME - comments in sip.h suggest it should be:
-        //dra = -dx;
-        // - but in practice it should be this:
-        dra = dx;
-        
-        // If we expected RA to be bigger but it isn't, or we expected it
-        // to be smaller but it isn't, then we wrapped around.
-        if ((dra * (ra - racenter)) < 0.0) {
-            // wrap around!
-            ramin = 0.0;
-            ramax = 360.0;
-        } else {
-            ramin = MIN(ramin, ra);
-            ramax = MAX(ramax, ra);
+            decmin = MIN(decmin, dec);
+            decmax = MAX(decmax, dec);
+
+            // Did we just walk over the RA wrap-around line?
+            if ((lastra < 90 && ra > 270) ||
+                (lastra > 270 && ra < 90)) {
+                ramin = 0.0;
+                ramax = 360.0;
+            } else {
+                ramin = MIN(ramin, ra);
+                ramax = MAX(ramax, ra);
+            }
         }
     }
-
     if (pramin) *pramin = ramin;
     if (pramax) *pramax = ramax;
     if (pdecmin) *pdecmin = decmin;
     if (pdecmax) *pdecmax = decmax;
-    
 }
 
 int render_collection(unsigned char* img, render_args_t* args) {
@@ -213,12 +199,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
             ylo = floor(dec2pixelf(decmax, args));
             yhi = ceil (dec2pixelf(decmin, args));
         }
-        /*{
-         char* outfn;
-         asprintf(&outfn, "/tmp/out-%s.png", imgfn);
-         cairoutils_write_png(outfn, userimg, W, H);
-         free(outfn);
-         }*/
 
         // clamp to image bounds
         xlo = MAX(0, MIN(args->W-1, xlo));
@@ -251,6 +231,28 @@ int render_collection(unsigned char* img, render_args_t* args) {
 			}
 		}
         free(userimg);
+
+        // 
+        if (args->outline) {
+            // 
+            for (j=0; j<H; j++) {
+                for (i=0; i<W; i++) {
+                    int px, py;
+                    sip_pixelxy2radec(&wcs, i, j, &ra, &dec);
+                    px = ra2pixel(ra, args);
+                    if (px < 0 || px >= args->W)
+                        continue;
+                    py = dec2pixel(dec, args);
+                    if (py < 0 || py >= args->H)
+                        continue;
+                    ink[3*(py*w + px) + 0] = 255.0 * 1e20;
+                    ink[3*(py*w + px) + 1] = 255.0 * 1e20;
+                    ink[3*(py*w + px) + 2] = 255.0 * 1e20;
+                    counts[py*w + px] = 1e20;
+                }
+            }
+        }
+
     }
 
 	for (j=0; j<args->H; j++) {
@@ -261,12 +263,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
                 pix[0] = MAX(0, MIN(255, ink[3 * (j*w + i) + 0] / counts[j*w + i]));
                 pix[1] = MAX(0, MIN(255, ink[3 * (j*w + i) + 1] / counts[j*w + i]));
                 pix[2] = MAX(0, MIN(255, ink[3 * (j*w + i) + 2] / counts[j*w + i]));
-            } else {
-                pix[0] = 0;
-                pix[1] = 0;
-                pix[2] = 0;
+                pix[3] = 255;
             }
-            pix[3] = 255;
         }
     }
 

@@ -46,6 +46,7 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
 				 'dashbox', 'cmap',
  				 'rdlsfn', 'rdlsfield', 'rdlsstyle',
  				 'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
+                 'outline'
 				 ]; // 'clean'
 
 var usnobMapType;

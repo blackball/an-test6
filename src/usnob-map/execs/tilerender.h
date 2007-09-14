@@ -39,6 +39,9 @@ struct render_args {
     // The current layer we're rendering.
     char* currentlayer;
 
+    // render_collection:
+    bool outline;
+
 	// Args for render_image:
 	char* imagefn;
     char* imwcsfn;

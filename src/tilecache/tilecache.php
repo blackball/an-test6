@@ -96,6 +96,11 @@ foreach ($layers as $l) {
 // Collect arguments for the renderer
 // ***************************************************
 
+// render_collection:
+if (array_key_exists('outline', $_REQUEST)) {
+    $cmdline .= " -O";
+}
+
 //////////////////////
 // render_image layer:
 
