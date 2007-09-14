@@ -1192,7 +1192,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	N = sip_coeffs;
 
     if (M < N) {
-        logmsg("Too few correspondences for the SIP order specified (%i < %n)\n", M, N);
+        logmsg("Too few correspondences for the SIP order specified (%i < %i)\n", M, N);
         return;
     }
 	//assert(M >= N);
