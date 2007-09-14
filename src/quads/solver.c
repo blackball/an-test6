@@ -961,7 +961,7 @@ void solver_inject_match(solver_t* solver, MatchObj* mo) {
 static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 {
 	double match_distance_in_pixels2;
-	bool bail;
+    bool solved;
 	int dimquads;
 
 	mo->indexid = sp->index->indexid;
@@ -999,9 +999,9 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 	update_timeused(sp);
 	mo->timeused = sp->timeused;
 
-	bail = sp->record_match_callback(mo, sp->userdata);
+	solved = sp->record_match_callback(mo, sp->userdata);
 
-	if (bail) {
+	if (solved) {
 		sp->best_match_solves = TRUE;
 		return TRUE;
 	}

@@ -1191,6 +1191,10 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	M = stride;
 	N = sip_coeffs;
 
+    if (M < N) {
+        logmsg("Too few correspondences for the SIP order specified (%i < %n)\n", M, N);
+        return;
+    }
 	//assert(M >= N);
 
 	mA = gsl_matrix_alloc(M, N);

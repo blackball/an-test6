@@ -176,6 +176,11 @@ void blind_run(blind_t* bp) {
 
 	// Verify any WCS estimates we have.
 	if (pl_size(bp->verify_wcs_list)) {
+        // We want to get the best logodds out of all the indices, so we set the
+        // logodds-to-solve impossibly high so that a "good enough" solution doesn't
+        // stop us from continuing to search...
+        double oldodds = bp->logratio_tosolve;
+        bp->logratio_tosolve = HUGE_VAL;
 		for (I = 0; I < sl_size(bp->indexnames); I++) {
 			char* fname;
 			int w;
@@ -208,6 +213,13 @@ void blind_run(blind_t* bp) {
 			pl_remove_all(sp->indexes);
 			sp->index = NULL;
 		}
+        bp->logratio_tosolve = oldodds;
+        if (sp->best_logodds >= bp->logratio_tosolve) {
+            sp->best_match_solves = TRUE;
+            sp->quit_now = TRUE;
+            record_match_callback(&(sp->best_match), bp);
+            goto verified;
+        }
 	}
 
 	verify_init();
@@ -288,7 +300,7 @@ void blind_run(blind_t* bp) {
 	verify_cleanup();
 
 	// Clean up.
-
+ verified:
 	xylist_close(bp->xyls);
 
 	if (bp->solvedserver) {
@@ -906,9 +918,9 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 		// Has the field already been solved?
 		if (bp->solved_in) {
-			logmsg("Checking %s field %i to see if the field is solved: %i.\n",
-				   bp->solved_in, fieldnum,
-				   solvedfile_get(bp->solved_in, fieldnum));
+			logverb("Checking %s field %i to see if the field is solved: %s.\n",
+                    bp->solved_in, fieldnum,
+                    (solvedfile_get(bp->solved_in, fieldnum) ? "yes" : "no"));
 		}
 		if (bp->solved_in &&
 			(solvedfile_get(bp->solved_in, fieldnum) == 1)) {
