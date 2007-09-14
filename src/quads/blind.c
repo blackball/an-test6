@@ -55,15 +55,17 @@
 #include "tic.h"
 
 static bool record_match_callback(MatchObj* mo, void* userdata);
-
 static time_t timer_callback(void* user_data);
-
 static void add_blind_params(blind_t* bp, qfits_header* hdr);
 static void get_fields_from_solvedserver(blind_t* bp, solver_t* sp);
 static void load_and_parse_wcsfiles(blind_t* bp);
-static void indexrdls_write_header(blind_t* bp);
-static void indexrdls_write_new_field(blind_t* bp, char* fieldname);
 static void solve_fields(blind_t* bp, tan_t* verify_wcs);
+static void remove_invalid_fields(il* fieldlist, int maxfield);
+static bool is_field_solved(blind_t* bp, int fieldnum);
+static int write_solutions(blind_t* bp);
+static void solved_field(blind_t* bp, int fieldnum);
+static int compare_matchobjs(const void* v1, const void* v2);
+void search_indexrdls(blind_t* bp, MatchObj* mo);
 
 static int get_cpu_usage(blind_t* bp) {
 	struct rusage r;
@@ -146,51 +148,29 @@ void blind_run(blind_t* bp) {
 	bp->xyls->yname = bp->ycolname;
 	logmsg("got %u fields.\n", xylist_n_fields(bp->xyls));
 
-	// Initialize output files...
-	if (bp->matchfname) {
-		bp->mf = matchfile_open_for_writing(bp->matchfname);
-		if (!bp->mf) {
-			logerr("Failed to open file %s to write match file.\n", bp->matchfname);
-			exit( -1);
-		}
-		boilerplate_add_fits_headers(bp->mf->header);
-		qfits_header_add(bp->mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
-		qfits_header_add(bp->mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
-		add_blind_params(bp, bp->mf->header);
-		if (matchfile_write_header(bp->mf)) {
-			logerr("Failed to write matchfile header.\n");
-			exit( -1);
-		}
-	}
-	if (bp->indexrdlsfname) {
-		bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
-		if (!bp->indexrdls) {
-			logerr("Failed to open index RDLS file %s for writing.\n",
-				   bp->indexrdlsfname);
-		}
-		indexrdls_write_header(bp);
-	}
+    remove_invalid_fields(bp->fieldlist, xylist_n_fields(bp->xyls));
 
     if (bp->use_idfile)
         index_options |= INDEX_USE_IDFILE;
 
 	// Verify any WCS estimates we have.
 	if (pl_size(bp->verify_wcs_list)) {
+        int i;
+
         // We want to get the best logodds out of all the indices, so we set the
         // logodds-to-solve impossibly high so that a "good enough" solution doesn't
         // stop us from continuing to search...
         double oldodds = bp->logratio_tosolve;
         bp->logratio_tosolve = HUGE_VAL;
+
 		for (I = 0; I < sl_size(bp->indexnames); I++) {
 			char* fname;
 			int w;
 			index_t* index;
-
 			if (bp->single_field_solved)
 				break;
 			if (bp->cancelled)
 				break;
-
 			fname = sl_get(bp->indexnames, I);
 			index = index_load(fname, index_options);
 			if (!index) 
@@ -198,27 +178,24 @@ void blind_run(blind_t* bp) {
 			pl_append(sp->indexes, index);
 			sp->index_num = I;
 			sp->index = index;
-
-			logmsg("Verifying WCS with index %i of %i\n", 
-				   I + 1, pl_size(bp->indexnames));
-
+			logmsg("Verifying WCS with index %i of %i\n",  I + 1, pl_size(bp->indexnames));
 			for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
 				tan_t* wcs = bl_access(bp->verify_wcs_list, w);
 				// Do it!
 				solve_fields(bp, wcs);
 			}
-
 			// Clean up this index...
 			index_close(index);
 			pl_remove_all(sp->indexes);
 			sp->index = NULL;
 		}
+
         bp->logratio_tosolve = oldodds;
-        if (sp->best_logodds >= bp->logratio_tosolve) {
-            sp->best_match_solves = TRUE;
-            sp->quit_now = TRUE;
-            record_match_callback(&(sp->best_match), bp);
-            goto verified;
+
+        for (i=0; i<il_size(bp->solutions); i++) {
+            MatchObj* mo = bl_access(bp->solutions, i);
+            if (mo->logodds >= bp->logratio_tosolve)
+                solved_field(bp, mo->fieldnum);
         }
 	}
 
@@ -300,27 +277,14 @@ void blind_run(blind_t* bp) {
 	verify_cleanup();
 
 	// Clean up.
- verified:
+    // verified:
 	xylist_close(bp->xyls);
 
-	if (bp->solvedserver) {
+	if (bp->solvedserver)
 		solvedclient_set_server(NULL);
-	}
 
-	// Finalize output files.
-	if (bp->mf) {
-		if (matchfile_fix_header(bp->mf) ||
-			matchfile_close(bp->mf)) {
-			logerr("Error closing matchfile.\n");
-		}
-	}
-	if (bp->indexrdls) {
-		if (rdlist_fix_header(bp->indexrdls) ||
-			rdlist_close(bp->indexrdls)) {
-			logerr("Failed to close index RDLS file.\n");
-		}
-		bp->indexrdls = NULL;
-	}
+    if (write_solutions(bp))
+        exit(-1);
 
 	if (bp->donefname) {
 		FILE* fdone = NULL;
@@ -398,39 +362,13 @@ void blind_restore_logging(blind_t* bp) {
 	}
 }
 
-static void indexrdls_write_header(blind_t* bp) {
-	boilerplate_add_fits_headers(bp->indexrdls->header);
-	fits_add_long_history(bp->indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
-	                      "  It contains the RA/DEC of index objects that were found inside a solved field.");
-	qfits_header_add(bp->indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
-	add_blind_params(bp, bp->indexrdls->header);
-	if (rdlist_write_header(bp->indexrdls)) {
-		logerr("Failed to write index RDLS header.\n");
-		rdlist_close(bp->indexrdls);
-		bp->indexrdls = NULL;
-	}
-}
-
-static void indexrdls_write_new_field(blind_t* bp, char* fieldname) {
-	if (rdlist_new_field(bp->indexrdls))
-		goto err;
-	if (fieldname && strlen(fieldname))
-		qfits_header_add(bp->indexrdls->fieldheader, "FIELDID", fieldname, "Name of this field", NULL);
-	if (rdlist_write_field_header(bp->indexrdls)) {
-		goto err;
-	}
-	return ;
- err:
-	logerr("Failed to write index RDLS field header.\n");
-}
-
-
 void blind_init(blind_t* bp) {
 	solver_t* sp = &(bp->solver);
 	// Reset params.
 	memset(bp, 0, sizeof(blind_t));
 
 	bp->fieldlist = il_new(256);
+    bp->solutions = bl_new(16, sizeof(MatchObj));
 	bp->indexnames = sl_new(16);
 	bp->verify_wcs_list = bl_new(1, sizeof(tan_t));
 	bp->verify_wcsfiles = sl_new(1);
@@ -487,12 +425,10 @@ int blind_parameters_are_sane(blind_t* bp, solver_t* sp) {
 int blind_is_run_obsolete(blind_t* bp, solver_t* sp) {
 	// If we're just solving one field, check to see if it's already
 	// solved before doing a bunch of work and spewing tons of output.
-	if ((il_size(bp->fieldlist) == 1) && (bp->solved_in)) {
-		if (solvedfile_get(bp->solved_in, il_get(bp->fieldlist, 0))) {
-			logerr("Field %i is already solved.\n", il_get(bp->fieldlist, 0));
-			return 1;
-		}
-	}
+	if ((il_size(bp->fieldlist) == 1) && bp->solved_in) {
+        if (is_field_solved(bp, il_get(bp->fieldlist, 0)))
+            return 1;
+    }
 	// Early check to see if this job was cancelled.
 	if (bp->cancelfname) {
 		if (file_exists(bp->cancelfname)) {
@@ -504,34 +440,32 @@ int blind_is_run_obsolete(blind_t* bp, solver_t* sp) {
 	return 0;
 }
 
-static void get_fields_from_solvedserver(blind_t* bp, solver_t* sp)
-{
-	if (bp->solvedserver) {
-		if (solvedclient_set_server(bp->solvedserver)) {
-			logerr("Error setting solvedserver.\n");
-			exit( -1);
-		}
+static void get_fields_from_solvedserver(blind_t* bp, solver_t* sp) {
+	if (!bp->solvedserver)
+        return;
+    if (solvedclient_set_server(bp->solvedserver)) {
+        logerr("Error setting solvedserver.\n");
+        exit( -1);
+    }
 
-		if ((il_size(bp->fieldlist) == 0) && (bp->firstfield != -1) && (bp->lastfield != -1)) {
-			int j;
-			il_free(bp->fieldlist);
-			logmsg("Contacting solvedserver to get field list...\n");
-			bp->fieldlist = solvedclient_get_fields(bp->fieldid, bp->firstfield, bp->lastfield, 0);
-			if (!bp->fieldlist) {
-				logerr("Failed to get field list from solvedserver.\n");
-				exit( -1);
-			}
-			logmsg("Got %i fields from solvedserver: ", il_size(bp->fieldlist));
-			for (j = 0; j < il_size(bp->fieldlist); j++) {
-				logmsg("%i ", il_get(bp->fieldlist, j));
-			}
-			logmsg("\n");
-		}
-	}
+    if ((il_size(bp->fieldlist) == 0) && (bp->firstfield != -1) && (bp->lastfield != -1)) {
+        int j;
+        il_free(bp->fieldlist);
+        logmsg("Contacting solvedserver to get field list...\n");
+        bp->fieldlist = solvedclient_get_fields(bp->fieldid, bp->firstfield, bp->lastfield, 0);
+        if (!bp->fieldlist) {
+            logerr("Failed to get field list from solvedserver.\n");
+            exit( -1);
+        }
+        logmsg("Got %i fields from solvedserver: ", il_size(bp->fieldlist));
+        for (j = 0; j < il_size(bp->fieldlist); j++) {
+            logmsg("%i ", il_get(bp->fieldlist, j));
+        }
+        logmsg("\n");
+    }
 }
 
-static void load_and_parse_wcsfiles(blind_t* bp)
-{
+static void load_and_parse_wcsfiles(blind_t* bp) {
 	int i;
 	for (i = 0; i < sl_size(bp->verify_wcsfiles); i++) {
 		tan_t wcs;
@@ -608,6 +542,7 @@ void blind_log_run_parameters(blind_t* bp)
 
 void blind_cleanup(blind_t* bp) {
 	il_free(bp->fieldlist);
+    bl_free(bp->solutions);
 	sl_free2(bp->indexnames);
 	sl_free2(bp->verify_wcsfiles);
 	bl_free(bp->verify_wcs_list);
@@ -759,41 +694,53 @@ static void print_match(blind_t* bp, MatchObj* mo)
 
 static bool record_match_callback(MatchObj* mo, void* userdata) {
 	blind_t* bp = userdata;
+	solver_t* sp = &(bp->solver);
 
 	check_time_limits(bp);
 
-	if (mo->logodds >= bp->logratio_toprint) {
-		int Nmin = MIN(mo->nindex, mo->nfield);
-		int ndropout = Nmin - mo->noverlap - mo->nconflict;
-		logmsg("  logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
-		       mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
-	}
+	if (mo->logodds >= bp->logratio_toprint)
+        print_match(bp, mo);
 
 	if (mo->logodds < bp->logratio_tokeep)
 		return FALSE;
 
-	if (bp->mf &&
-		matchfile_write_match(bp->mf, mo)) {
-		logmsg("Field %i: error writing a match.\n", mo->fieldnum);
-	}
+	if (mo->logodds < bp->logratio_tosolve)
+		return FALSE;
 
-	if (mo->logodds >= bp->logratio_tosolve) {
-		bp->nsolves_sofar++;
-		if (bp->nsolves_sofar >= bp->nsolves) {
+    logmsg("Pixel scale: %g arcsec/pix.\n", mo->scale);
+
+    // Tweak, if requested.
+    if (bp->do_tweak)
+        mo->sip = tweak(bp, mo, sp->index->starkd);
+
+    // Gather stars for index rdls, if requested.
+    if (bp->indexrdlsfname)
+        search_indexrdls(bp, mo);
+
+    bl_insert_sorted(bp->solutions, mo, compare_matchobjs);
+
+    bp->nsolves_sofar++;
+    if (bp->nsolves_sofar >= bp->nsolves) {
+        if (bp->solver.index) {
             char* copy;
             char* base;
             copy = strdup(bp->solver.index->indexname);
             base = strdup(basename(copy));
             free(copy);
-			logerr("Field %i: solved with index %s.\n", mo->fieldnum, base);
+            logerr("Field %i: solved with index %s.\n", mo->fieldnum, base);
             free(base);
-			return TRUE;
-		} else {
-			logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
-					bp->nsolves_sofar, bp->nsolves);
-		}
-	}
-
+        } else {
+            logerr("Field %i: solved with index %i", mo->fieldnum, mo->indexid);
+            if (mo->healpix >= 0)
+                logerr(", healpix %i\n", mo->healpix);
+            else
+                logerr("\n");
+        }
+        return TRUE;
+    } else {
+        logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
+               bp->nsolves_sofar, bp->nsolves);
+    }
 	return FALSE;
 }
 
@@ -803,15 +750,8 @@ static time_t timer_callback(void* user_data) {
 	check_time_limits(bp);
 
 	// check if the field has already been solved...
-	if (bp->solved_in && solvedfile_get(bp->solved_in, bp->fieldnum)) {
-		logmsg("  field %u: file \"%s\" indicates that the field has been solved.\n",
-				bp->fieldnum, bp->solved_in);
-		return 0;
-	}
-	if (bp->solvedserver && solvedclient_get(bp->fieldid, bp->fieldnum)) {
-		logmsg("  field %u: field solved; aborting.\n", bp->fieldnum);
-		return 0;
-	}
+    if (is_field_solved(bp, bp->fieldnum))
+        return 0;
 	if (bp->cancelfname && file_exists(bp->cancelfname)) {
 		bp->cancelled = TRUE;
 		logmsg("File \"%s\" exists: cancelling.\n", bp->cancelfname);
@@ -820,8 +760,7 @@ static time_t timer_callback(void* user_data) {
 	return 1; // wait 1 second... FIXME config?
 }
 
-static void add_blind_params(blind_t* bp, qfits_header* hdr)
-{
+static void add_blind_params(blind_t* bp, qfits_header* hdr) {
 	solver_t* sp = &(bp->solver);
 	int i;
 	fits_add_long_comment(hdr, "-- blind solver parameters: --");
@@ -870,6 +809,23 @@ static void add_blind_params(blind_t* bp, qfits_header* hdr)
 	fits_add_long_comment(hdr, "--");
 }
 
+static void remove_invalid_fields(il* fieldlist, int maxfield) {
+    int i;
+    for (i=0; i<il_size(fieldlist); i++) {
+        int fieldnum = il_get(fieldlist, i);
+        if (fieldnum >= 1 && fieldnum <= maxfield)
+            continue;
+        if (fieldnum > maxfield) {
+			logerr("Field %i does not exist (max=%i).\n", fieldnum, maxfield);
+        }
+        if (fieldnum < 1) {
+            logerr("Field %i is invalid (must be >= 1).\n", fieldnum);
+        }
+        il_remove(fieldlist, i);
+        i--;
+    }
+}
+
 static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 	solver_t* sp = &(bp->solver);
 	double last_utime, last_stime;
@@ -890,14 +846,6 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		qfits_header* fieldhdr = NULL;
 
 		fieldnum = il_get(bp->fieldlist, fi);
-		if (fieldnum > nfields) {
-			logerr("Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
-			goto cleanup;
-		}
-        if (fieldnum < 1) {
-            logerr("Field %i is invalid (must be >= 1).\n", fieldnum);
-            goto cleanup;
-        }
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
@@ -912,29 +860,9 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			qfits_header_destroy(fieldhdr);
 		}
 
-		if (bp->indexrdls && !bp->indexrdls_solvedonly) {
-			indexrdls_write_new_field(bp, template.fieldname);
-		}
-
 		// Has the field already been solved?
-		if (bp->solved_in) {
-			logverb("Checking %s field %i to see if the field is solved: %s.\n",
-                    bp->solved_in, fieldnum,
-                    (solvedfile_get(bp->solved_in, fieldnum) ? "yes" : "no"));
-		}
-		if (bp->solved_in &&
-			(solvedfile_get(bp->solved_in, fieldnum) == 1)) {
-			// file exists; field has already been solved.
-			logmsg("Field %i: solvedfile %s: field has been solved.\n", fieldnum, bp->solved_in);
-			goto cleanup;
-		}
-
-		if (bp->solvedserver &&
-			(solvedclient_get(bp->fieldid, fieldnum) == 1)) {
-			// field has already been solved.
-			logmsg("Field %i: field has already been solved.\n", fieldnum);
-			goto cleanup;
-		}
+        if (is_field_solved(bp, fieldnum))
+            goto cleanup;
 
 		// Get the field.
 		sp->nfield = xylist_n_entries(bp->xyls, fieldnum);
@@ -1014,154 +942,9 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			}
 		}
 
-		solver_free_field(sp);
 
-		// Fix the matchfile.
-		if (bp->mf && matchfile_fix_header(bp->mf)) {
-			logerr("Failed to fix the matchfile header for field %i.\n", fieldnum);
-		}
-
-		if (sp->have_best_match && sp->best_match_solves) {
-			MatchObj* bestmo = &(sp->best_match);
-			sip_t* sip = NULL;
-			// Field solved!
-			//logerr("Field %i solved: ", fieldnum);
-			print_match(bp, bestmo);
-			logmsg("Pixel scale: %g arcsec/pix.\n", bestmo->scale);
-
-			sp->index = sp->best_index;
-
-			// Tweak, if requested.
-			if (bp->do_tweak)
-				sip = tweak(bp, bestmo, sp->index->starkd);
-
-			// Write WCS, if requested.
-			if (bp->wcs_template) {
-				char wcs_fn[1024];
-				FILE* fout;
-				qfits_header* hdr;
-				char* tm;
-
-				snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
-				fout = fopen(wcs_fn, "ab");
-				if (!fout) {
-					logerr("Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
-					exit( -1);
-				}
-
-				assert(bestmo->wcs_valid);
-
-				if (sip)
-                    hdr = sip_create_header(sip);
-				else
-                    hdr = tan_create_header(&(bestmo->wcstan));
-
-				boilerplate_add_fits_headers(hdr);
-				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
-				tm = qfits_get_datetime_iso8601();
-				qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
-
-				add_blind_params(bp, hdr);
-
-				fits_add_long_comment(hdr, "-- properties of the matching quad: --");
-				fits_add_long_comment(hdr, "quadno: %i", bestmo->quadno);
-				fits_add_long_comment(hdr, "stars: %i,%i,%i,%i", bestmo->star[0], bestmo->star[1], bestmo->star[2], bestmo->star[3]);
-				fits_add_long_comment(hdr, "field: %i,%i,%i,%i", bestmo->field[0], bestmo->field[1], bestmo->field[2], bestmo->field[3]);
-				fits_add_long_comment(hdr, "code error: %g", sqrt(bestmo->code_err));
-				fits_add_long_comment(hdr, "noverlap: %i", bestmo->noverlap);
-				fits_add_long_comment(hdr, "nconflict: %i", bestmo->nconflict);
-				fits_add_long_comment(hdr, "nfield: %i", bestmo->nfield);
-				fits_add_long_comment(hdr, "nindex: %i", bestmo->nindex);
-				fits_add_long_comment(hdr, "scale: %g arcsec/pix", bestmo->scale);
-				fits_add_long_comment(hdr, "parity: %i", (int)bestmo->parity);
-				fits_add_long_comment(hdr, "quads tried: %i", bestmo->quads_tried);
-				fits_add_long_comment(hdr, "quads matched: %i", bestmo->quads_matched);
-				fits_add_long_comment(hdr, "quads verified: %i", bestmo->nverified);
-				fits_add_long_comment(hdr, "objs tried: %i", bestmo->objs_tried);
-				fits_add_long_comment(hdr, "cpu time: %g", bestmo->timeused);
-				fits_add_long_comment(hdr, "--");
-
-				if (sp->mo_template && sp->mo_template->fieldname[0])
-					qfits_header_add(hdr, bp->fieldid_key, sp->mo_template->fieldname, "Field name (copied from input field)", NULL);
-				if (qfits_header_dump(hdr, fout)) {
-					logerr("Failed to write FITS WCS header.\n");
-					exit( -1);
-				}
-				fits_pad_file(fout);
-				qfits_header_destroy(hdr);
-				fclose(fout);
-			}
-
-			if (bp->indexrdls) {
-				kdtree_qres_t* res = NULL;
-				double* starxyz;
-				int nstars;
-				double* radec;
-				int i;
-				double fieldcenter[3];
-				double fieldr2;
-				double factor;
-
-				// find all the index stars that are inside the circle that bounds
-				// the field.
-				star_midpoint(fieldcenter, bestmo->sMin, bestmo->sMax);
-				fieldr2 = distsq(fieldcenter, bestmo->sMin, 3);
-				// 1.05 is a little safety factor.
-				factor = 1.05;
-				if (bp->indexrdls_expand > 0.0)
-					factor *= bp->indexrdls_expand;
-				res = kdtree_rangesearch_options(sp->index->starkd->tree, fieldcenter,
-				                                 fieldr2 * factor,
-				                                 KD_OPTIONS_SMALL_RADIUS |
-				                                 KD_OPTIONS_RETURN_POINTS);
-				if (!res || !res->nres) {
-					logmsg("No index stars found!\n");
-				}
-				starxyz = res->results.d;
-				nstars = res->nres;
-
-				radec = malloc(nstars * 2 * sizeof(double));
-				for (i = 0; i < nstars; i++)
-					xyzarr2radec(starxyz + i*3, radec + i*2, radec + i*2 + 1);
-				for (i = 0; i < 2*nstars; i++)
-					radec[i] = rad2deg(radec[i]);
-
-				if (bp->indexrdls_solvedonly) {
-					indexrdls_write_new_field(bp, template.fieldname);
-				}
-
-				if (rdlist_write_entries(bp->indexrdls, radec, nstars)) {
-					logerr("Failed to write index RDLS entry.\n");
-				}
-
-				if (bp->indexrdls_solvedonly) {
-					if (rdlist_fix_field(bp->indexrdls)) {
-						logerr("Failed to fix index RDLS field header.\n");
-					}
-				}
-
-				free(radec);
-				kdtree_free_query(res);
-			}
-
-			if (sip) {
-				sip_free(sip);
-			}
-			// Record in solved file, or send to solved server.
-			if (bp->solved_out) {
-				logmsg("Field %i solved: writing to file %s to indicate this.\n", fieldnum, bp->solved_out);
-				if (solvedfile_set(bp->solved_out, fieldnum)) {
-					logerr("Failed to write to solvedfile %s.\n", bp->solved_out);
-				}
-			}
-			if (bp->solvedserver) {
-				solvedclient_set(bp->fieldid, fieldnum);
-			}
-
-			// If we're just solving a single field, and we solved it...
-			if (il_size(bp->fieldlist) == 1)
-				bp->single_field_solved = TRUE;
-
+        if (sp->best_match_solves) {
+            solved_field(bp, fieldnum);
 		} else {
 			// Field unsolved.
             logerr("Field %i did not solve", fieldnum);
@@ -1186,6 +969,8 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			}
 		}
 
+		solver_free_field(sp);
+
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
 		logmsg("Spent %g s user, %g s system, %g s total, %g s wall time.\n",
@@ -1197,15 +982,272 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		last_wtime = wtime;
 
 	cleanup:
-		if (bp->indexrdls && !bp->indexrdls_solvedonly) {
-			if (rdlist_fix_field(bp->indexrdls)) {
-				logerr("Failed to fix index RDLS field header.\n");
-			}
-		}
 		logmsg("\n");
 	}
 
 	free(sp->field);
 	sp->field = NULL;
+}
+
+static bool is_field_solved(blind_t* bp, int fieldnum) {
+    if (bp->solved_in) {
+        logverb("Checking %s field %i to see if the field is solved: %s.\n",
+                bp->solved_in, fieldnum,
+                (solvedfile_get(bp->solved_in, fieldnum) ? "yes" : "no"));
+    }
+    if (bp->solved_in &&
+        (solvedfile_get(bp->solved_in, fieldnum) == 1)) {
+        // file exists; field has already been solved.
+        logmsg("Field %i: solvedfile %s: field has been solved.\n", fieldnum, bp->solved_in);
+        return TRUE;
+    }
+    if (bp->solvedserver &&
+        (solvedclient_get(bp->fieldid, fieldnum) == 1)) {
+        // field has already been solved.
+        logmsg("Field %i: field has already been solved.\n", fieldnum);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static void solved_field(blind_t* bp, int fieldnum) {
+    // Record in solved file, or send to solved server.
+    if (bp->solved_out) {
+        logmsg("Field %i solved: writing to file %s to indicate this.\n", fieldnum, bp->solved_out);
+        if (solvedfile_set(bp->solved_out, fieldnum)) {
+            logerr("Failed to write to solvedfile %s.\n", bp->solved_out);
+        }
+    }
+    if (bp->solvedserver) {
+        solvedclient_set(bp->fieldid, fieldnum);
+    }
+    // If we're just solving a single field, and we solved it...
+    if (il_size(bp->fieldlist) == 1)
+        bp->single_field_solved = TRUE;
+}
+
+void search_indexrdls(blind_t* bp, MatchObj* mo) {
+    kdtree_qres_t* res = NULL;
+    double* starxyz;
+    int nstars;
+    double* radec;
+    int i;
+    double safetyfactor;
+	solver_t* sp = &(bp->solver);
+
+    // find all the index stars that are inside the circle that bounds
+    // the field.
+    safetyfactor = 1.05;
+    if (bp->indexrdls_expand > 0.0)
+        safetyfactor *= bp->indexrdls_expand;
+    res = kdtree_rangesearch_options(sp->index->starkd->tree, mo->center,
+                                     square(mo->radius) * safetyfactor,
+                                     KD_OPTIONS_SMALL_RADIUS |
+                                     KD_OPTIONS_RETURN_POINTS);
+    if (!res || !res->nres) {
+        logmsg("No index stars found!\n");
+    }
+    starxyz = res->results.d;
+    nstars = res->nres;
+    radec = malloc(nstars * 2 * sizeof(double));
+    for (i = 0; i < nstars; i++)
+        xyzarr2radecdegarr(starxyz + i*3, radec + i*2);
+    kdtree_free_query(res);
+
+    mo->indexrdls = radec;
+    mo->nindexrdls = nstars;
+}
+
+static void free_matchobj(MatchObj* mo) {
+    if (!mo) return;
+    if (mo->sip) {
+        sip_free(mo->sip);
+        mo->sip = NULL;
+    }
+    if (mo->indexrdls) {
+        free(mo->indexrdls);
+        mo->indexrdls = NULL;
+        mo->nindexrdls = 0;
+    }
+}
+
+static void remove_duplicate_solutions(blind_t* bp) {
+    int i, j;
+    for (i=0; i<bl_size(bp->solutions); i++) {
+        MatchObj* mo = bl_access(bp->solutions, i);
+        j = i+1;
+        while (j < bl_size(bp->solutions)) {
+            MatchObj* mo2 = bl_access(bp->solutions, j);
+            if (mo->fieldfile != mo2->fieldfile)
+                break;
+            if (mo->fieldnum != mo2->fieldnum)
+                break;
+            assert(mo2->logodds <= mo->logodds);
+            free_matchobj(mo2);
+            bl_remove_index(bp->solutions, j);
+        }
+    }
+}
+
+static int write_solutions(blind_t* bp) {
+    int i;
+	if (bp->matchfname) {
+		bp->mf = matchfile_open_for_writing(bp->matchfname);
+		if (!bp->mf) {
+			logerr("Failed to open file %s to write match file.\n", bp->matchfname);
+            return -1;
+		}
+		boilerplate_add_fits_headers(bp->mf->header);
+		qfits_header_add(bp->mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
+		qfits_header_add(bp->mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+		add_blind_params(bp, bp->mf->header);
+		if (matchfile_write_header(bp->mf)) {
+			logerr("Failed to write matchfile header.\n");
+            return -1;
+		}
+
+        for (i=0; i<bl_size(bp->solutions); i++) {
+            MatchObj* mo = bl_access(bp->solutions, i);
+            if (matchfile_write_match(bp->mf, mo)) {
+                logerr("Field %i: error writing a match.\n", mo->fieldnum);
+                return -1;
+            }
+        }
+
+		if (matchfile_fix_header(bp->mf) ||
+			matchfile_close(bp->mf)) {
+			logerr("Error closing matchfile.\n");
+            return -1;
+		}
+        bp->mf = NULL;
+	}
+
+	if (bp->indexrdlsfname) {
+		bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
+		if (!bp->indexrdls) {
+			logerr("Failed to open index RDLS file %s for writing.\n",
+				   bp->indexrdlsfname);
+            return -1;
+		}
+
+        boilerplate_add_fits_headers(bp->indexrdls->header);
+        fits_add_long_history(bp->indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
+                              "  It contains the RA/DEC of index objects that were found inside a solved field.");
+        qfits_header_add(bp->indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+        add_blind_params(bp, bp->indexrdls->header);
+        if (rdlist_write_header(bp->indexrdls)) {
+            logerr("Failed to write index RDLS header.\n");
+            return -1;
+        }
+
+        for (i=0; i<bl_size(bp->solutions); i++) {
+            MatchObj* mo = bl_access(bp->solutions, i);
+            if (rdlist_new_field(bp->indexrdls)) {
+                logerr("Failed to write index RDLS field header.\n");
+                return -1;
+            }
+            if (strlen(mo->fieldname))
+                qfits_header_add(bp->indexrdls->fieldheader, "FIELDID", mo->fieldname, "Name of this field", NULL);
+            if (rdlist_write_field_header(bp->indexrdls)) {
+                logerr("Failed to write index RDLS field header.\n");
+                return -1;
+            }
+            assert(mo->indexrdls);
+
+            if (rdlist_write_entries(bp->indexrdls, mo->indexrdls, mo->nindexrdls)) {
+                logerr("Failed to write index RDLS entry.\n");
+                return -1;
+            }
+            if (rdlist_fix_field(bp->indexrdls)) {
+                logerr("Failed to fix index RDLS field header.\n");
+                return -1;
+            }
+        }
+
+		if (rdlist_fix_header(bp->indexrdls) ||
+			rdlist_close(bp->indexrdls)) {
+			logerr("Failed to close index RDLS file.\n");
+            return -1;
+		}
+		bp->indexrdls = NULL;
+	}
+
+    if (bp->wcs_template) {
+        // We want to write only the best WCS for each field.
+        remove_duplicate_solutions(bp);
+
+        for (i=0; i<bl_size(bp->solutions); i++) {
+            char wcs_fn[1024];
+            FILE* fout;
+            qfits_header* hdr;
+            char* tm;
+
+            MatchObj* mo = bl_access(bp->solutions, i);
+            snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, mo->fieldnum);
+            fout = fopen(wcs_fn, "wb");
+            if (!fout) {
+                logerr("Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
+                return -1;
+            }
+            assert(mo->wcs_valid);
+
+            if (mo->sip)
+                hdr = sip_create_header(mo->sip);
+            else
+                hdr = tan_create_header(&(mo->wcstan));
+
+            boilerplate_add_fits_headers(hdr);
+            qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
+            tm = qfits_get_datetime_iso8601();
+            qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
+            add_blind_params(bp, hdr);
+            fits_add_long_comment(hdr, "-- properties of the matching quad: --");
+            fits_add_long_comment(hdr, "quadno: %i", mo->quadno);
+            fits_add_long_comment(hdr, "stars: %i,%i,%i,%i", mo->star[0], mo->star[1], mo->star[2], mo->star[3]);
+            fits_add_long_comment(hdr, "field: %i,%i,%i,%i", mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
+            fits_add_long_comment(hdr, "code error: %g", sqrt(mo->code_err));
+            fits_add_long_comment(hdr, "noverlap: %i", mo->noverlap);
+            fits_add_long_comment(hdr, "nconflict: %i", mo->nconflict);
+            fits_add_long_comment(hdr, "nfield: %i", mo->nfield);
+            fits_add_long_comment(hdr, "nindex: %i", mo->nindex);
+            fits_add_long_comment(hdr, "scale: %g arcsec/pix", mo->scale);
+            fits_add_long_comment(hdr, "parity: %i", (int)mo->parity);
+            fits_add_long_comment(hdr, "quads tried: %i", mo->quads_tried);
+            fits_add_long_comment(hdr, "quads matched: %i", mo->quads_matched);
+            fits_add_long_comment(hdr, "quads verified: %i", mo->nverified);
+            fits_add_long_comment(hdr, "objs tried: %i", mo->objs_tried);
+            fits_add_long_comment(hdr, "cpu time: %g", mo->timeused);
+            fits_add_long_comment(hdr, "--");
+
+            if (strlen(mo->fieldname)) {
+                qfits_header_add(hdr, bp->fieldid_key, mo->fieldname, "Field name (copied from input field)", NULL);
+				if (qfits_header_dump(hdr, fout)) {
+					logerr("Failed to write FITS WCS header.\n");
+                    return -1;
+				}
+				fits_pad_file(fout);
+				qfits_header_destroy(hdr);
+				fclose(fout);
+            }
+        }
+    }
+    return 0;
+}
+
+static int compare_matchobjs(const void* v1, const void* v2) {
+    int diff;
+    float fdiff;
+    const MatchObj* mo1 = v1;
+    const MatchObj* mo2 = v2;
+    diff = mo1->fieldfile - mo2->fieldfile;
+    if (diff) return diff;
+    diff = mo1->fieldnum - mo2->fieldnum;
+    if (diff) return diff;
+    fdiff = mo1->logodds - mo2->logodds;
+    if (fdiff == 0.0)
+        return 0;
+    if (fdiff < 0.0)
+        return -1;
+    return 1;
 }
 

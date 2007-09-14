@@ -92,6 +92,11 @@ struct match_struct {
 	int nverified;
 	// how many seconds of CPU time have we spent on this field?
 	float timeused;
+
+    // stuff used by blind...
+    sip_t* sip;
+    double* indexrdls;
+    int nindexrdls;
 };
 typedef struct match_struct MatchObj;
 
@@ -99,10 +104,5 @@ void matchobj_compute_overlap(MatchObj* mo);
 
 // compute all derived fields.
 void matchobj_compute_derived(MatchObj* mo);
-
-#define MATCH_VECTOR_SIZE 6
-
-#define mk_MatchObj() ((MatchObj *)calloc(1, sizeof(MatchObj)))
-#define free_MatchObj(m) free(m)
 
 #endif

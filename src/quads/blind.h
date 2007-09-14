@@ -103,6 +103,9 @@ struct blind_params {
 	bool indexrdls_solvedonly;
 	double indexrdls_expand;
 
+    // List of MatchObjs with logodds >= logodds_tokeep
+    bl* solutions;
+
 	int cpulimit;
 	int cpu_start;
 	bool hit_cpulimit;
@@ -129,7 +132,6 @@ struct blind_params {
 	int tweak_aborder;
 	int tweak_abporder;
 	bool tweak_skipshift;
-
 };
 typedef struct blind_params blind_t;
 
