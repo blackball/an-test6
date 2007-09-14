@@ -1248,7 +1248,7 @@ static int compare_matchobjs(const void* v1, const void* v2) {
     fdiff = mo1->logodds - mo2->logodds;
     if (fdiff == 0.0)
         return 0;
-    if (fdiff < 0.0)
+    if (fdiff > 0.0)
         return -1;
     return 1;
 }

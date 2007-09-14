@@ -97,6 +97,7 @@ struct match_struct {
     sip_t* sip;
     double* indexrdls;
     int nindexrdls;
+	//int indexnum;
 };
 typedef struct match_struct MatchObj;
 
