@@ -719,9 +719,17 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 
     logmsg("Pixel scale: %g arcsec/pix.\n", mo->scale);
 
-	assert(sp->index);
-	assert(sp->index->indexname);
-	mo->indexname = sp->index->indexname;
+	// Tweak, if requested.
+	if (bp->do_tweak)
+		mo->sip = tweak(bp, mo, sp->index->starkd);
+	// Gather stars for index rdls, if requested.
+	if (bp->indexrdlsfname)
+		search_indexrdls(bp, mo);
+	/*
+	  assert(sp->index);
+	  assert(sp->index->indexname);
+	  mo->indexname = sp->index->indexname;
+	*/
     bl_insert_sorted(bp->solutions, mo, compare_matchobjs);
 
 	if (mo->logodds < bp->logratio_tosolve)
@@ -1099,30 +1107,32 @@ static void remove_duplicate_solutions(blind_t* bp) {
 
 static int write_solutions(blind_t* bp) {
     int i;
-	solver_t* sp = &(bp->solver);
 
-	if (bp->do_tweak || bp->indexrdlsfname) {
-		for (i=0; i<bl_size(bp->solutions); i++) {
-			index_t* index;
-			const char* fn;
-			MatchObj* mo = bl_access(bp->solutions, i);
-			//assert(mo->indexnum >= 0);
-			//assert(mo->indexnum < sl_size(bp->indexnames));
-			//fn = sl_get(bp->indexnames, mo->indexnum);
-			fn = mo->indexname;
-			assert(fn);
-			index = index_load(fn, INDEX_ONLY_LOAD_SKDT);
-			// Tweak, if requested.
-			if (bp->do_tweak) {
-				sp->index = index;
-				mo->sip = tweak(bp, mo, index->starkd);
-			}
-			// Gather stars for index rdls, if requested.
-			if (bp->indexrdlsfname)
-				search_indexrdls(bp, mo);
-			index_close(index);
-		}
-	}
+	/*
+	  solver_t* sp = &(bp->solver);
+	  if (bp->do_tweak || bp->indexrdlsfname) {
+	  for (i=0; i<bl_size(bp->solutions); i++) {
+	  index_t* index;
+	  const char* fn;
+	  MatchObj* mo = bl_access(bp->solutions, i);
+	  //assert(mo->indexnum >= 0);
+	  //assert(mo->indexnum < sl_size(bp->indexnames));
+	  //fn = sl_get(bp->indexnames, mo->indexnum);
+	  fn = mo->indexname;
+	  assert(fn);
+	  index = index_load(fn, INDEX_ONLY_LOAD_SKDT);
+	  // Tweak, if requested.
+	  if (bp->do_tweak) {
+	  sp->index = index;
+	  mo->sip = tweak(bp, mo, index->starkd);
+	  }
+	  // Gather stars for index rdls, if requested.
+	  if (bp->indexrdlsfname)
+	  search_indexrdls(bp, mo);
+	  index_close(index);
+	  }
+	  }
+	*/
 
 	if (bp->matchfname) {
 		bp->mf = matchfile_open_for_writing(bp->matchfname);
