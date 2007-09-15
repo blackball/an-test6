@@ -158,6 +158,7 @@ void blind_run(blind_t* bp) {
 	// Verify any WCS estimates we have.
 	if (pl_size(bp->verify_wcs_list)) {
         int i;
+		int w;
 
         // We want to get the best logodds out of all the indices, so we set the
         // logodds-to-solve impossibly high so that a "good enough" solution doesn't
@@ -165,31 +166,43 @@ void blind_run(blind_t* bp) {
         double oldodds = bp->logratio_tosolve;
         bp->logratio_tosolve = HUGE_VAL;
 
-		for (I = 0; I < sl_size(bp->indexnames); I++) {
-			char* fname;
-			int w;
-			index_t* index;
-			if (bp->single_field_solved)
-				break;
-			if (bp->cancelled)
-				break;
-			fname = sl_get(bp->indexnames, I);
-			index = index_load(fname, index_options);
-			if (!index) 
-				exit( -1);
-			pl_append(sp->indexes, index);
-			sp->index_num = I;
-			sp->index = index;
-			logmsg("Verifying WCS with index %i of %i\n",  I + 1, sl_size(bp->indexnames));
-			for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
-				tan_t* wcs = bl_access(bp->verify_wcs_list, w);
+		for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
+			double quadlo, quadhi;
+			tan_t* wcs = bl_access(bp->verify_wcs_list, w);
+			//logmsg("Verifying WCS with index %i of %i\n",  I + 1, sl_size(bp->indexnames));
+
+			// We don't want to try to verify a wide-field image using a narrow-
+			// field index, because it will contain a TON of index stars in the
+			// field.  We therefore only try to verify using indices that contain
+			// quads that could have been found in the image.
+			assert(wcs->imagew > 0.0);
+			assert(wcs->imageh > 0.0);
+			quadlo = 0.1 * MIN(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
+			quadhi = 1.0 * MAX(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
+
+			for (I = 0; I < sl_size(bp->indexnames); I++) {
+				char* fname;
+				index_t* index;
+				fname = sl_get(bp->indexnames, I);
+				index = index_load(fname, index_options);
+				if (!index) 
+					exit( -1);
+				if ((quadfile_get_index_scale_lower_arcsec(index->quads) > quadhi) ||
+					(quadfile_get_index_scale_upper_arcsec(index->quads) < quadlo)) {
+					index_close(index);
+					continue;
+				}
+				pl_append(sp->indexes, index);
+				//sp->index_num = I;
+				sp->index = index;
+				logmsg("Verifying WCS with index %i of %i\n",  I + 1, sl_size(bp->indexnames));
 				// Do it!
 				solve_fields(bp, wcs);
+				// Clean up this index...
+				index_close(index);
+				pl_remove_all(sp->indexes);
+				sp->index = NULL;
 			}
-			// Clean up this index...
-			index_close(index);
-			pl_remove_all(sp->indexes);
-			sp->index = NULL;
 		}
 
         bp->logratio_tosolve = oldodds;
