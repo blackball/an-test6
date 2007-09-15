@@ -1099,6 +1099,7 @@ static void remove_duplicate_solutions(blind_t* bp) {
 
 static int write_solutions(blind_t* bp) {
     int i;
+	solver_t* sp = &(bp->solver);
 
 	if (bp->do_tweak || bp->indexrdlsfname) {
 		for (i=0; i<bl_size(bp->solutions); i++) {
@@ -1112,8 +1113,10 @@ static int write_solutions(blind_t* bp) {
 			assert(fn);
 			index = index_load(fn, INDEX_ONLY_LOAD_SKDT);
 			// Tweak, if requested.
-			if (bp->do_tweak)
+			if (bp->do_tweak) {
+				sp->index = index;
 				mo->sip = tweak(bp, mo, index->starkd);
+			}
 			// Gather stars for index rdls, if requested.
 			if (bp->indexrdlsfname)
 				search_indexrdls(bp, mo);
