@@ -46,6 +46,8 @@ typedef struct index_s index_t;
 
 #define INDEX_USE_IDFILE 1
 #define INDEX_ONLY_LOAD_METADATA 2
+#define INDEX_ONLY_LOAD_SKDT 4
+//#define INDEX_QUIET 8
 
 /**
  * Load an index from disk

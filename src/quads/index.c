@@ -46,6 +46,9 @@ index_t* index_load(const char* indexname, int flags)
 	index->index_jitter = qfits_header_getdouble(index->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
 	logmsg("Setting index jitter to %g arcsec.\n", index->index_jitter);
 
+	if (flags & INDEX_ONLY_LOAD_SKDT)
+		return index;
+
 	// Read .quad file...
 	quadfname = mk_quadfn(indexname);
 	logmsg("Reading quads file %s...\n", quadfname);
