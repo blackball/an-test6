@@ -179,6 +179,8 @@ void blind_run(blind_t* bp) {
 			assert(wcs->imageh > 0.0);
 			quadlo = 0.1 * MIN(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
 			quadhi = 1.0 * MAX(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
+			logmsg("Verifying WCS using indices with quads of size [%g, %g] arcmin\n",
+				   arcsec2arcmin(quadlo), arcsec2arcmin(quadhi));
 
 			for (I = 0; I < sl_size(bp->indexnames); I++) {
 				char* fname;
