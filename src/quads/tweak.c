@@ -446,29 +446,37 @@ void tweak_clear_correspondences(tweak_t* t)
 		assert(t->image);
 		assert(t->ref);
 		assert(t->dist2);
-		il_remove_all(t->image);
-		il_remove_all(t->ref);
-		dl_remove_all(t->dist2);
+		assert(t->included);
+		/*
+		  il_remove_all(t->included);
+		  il_remove_all(t->image);
+		  il_remove_all(t->ref);
+		  dl_remove_all(t->dist2);
+		*/
 		il_free(t->image);
 		il_free(t->ref);
 		dl_free(t->dist2);
+		il_free(t->included);
 		if (t->weight)
 			dl_free(t->weight);
 		t->image = NULL;
 		t->ref = NULL;
 		t->dist2 = NULL;
+		t->included = NULL;
 		t->weight = NULL;
 		t->state &= ~TWEAK_HAS_CORRESPONDENCES;
 	} else {
 		assert(!t->image);
 		assert(!t->ref);
 		assert(!t->dist2);
+		assert(!t->included);
 		assert(!t->weight);
 	}
 	assert(!t->image);
 	assert(!t->ref);
 	assert(!t->dist2);
 	assert(!t->weight);
+	assert(!t->included);
 }
 
 void tweak_clear_on_sip_change(tweak_t* t)
