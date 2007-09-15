@@ -1263,16 +1263,16 @@ static int write_solutions(blind_t* bp) {
             fits_add_long_comment(hdr, "cpu time: %g", mo->timeused);
             fits_add_long_comment(hdr, "--");
 
-            if (strlen(mo->fieldname)) {
+            if (strlen(mo->fieldname))
                 qfits_header_add(hdr, bp->fieldid_key, mo->fieldname, "Field name (copied from input field)", NULL);
-				if (qfits_header_dump(hdr, fout)) {
-					logerr("Failed to write FITS WCS header.\n");
-                    return -1;
-				}
-				fits_pad_file(fout);
-				qfits_header_destroy(hdr);
-				fclose(fout);
-            }
+			
+			if (qfits_header_dump(hdr, fout)) {
+				logerr("Failed to write FITS WCS header.\n");
+				return -1;
+			}
+			fits_pad_file(fout);
+			qfits_header_destroy(hdr);
+			fclose(fout);
         }
     }
     return 0;
