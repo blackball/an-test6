@@ -145,6 +145,7 @@ static int read_parameters(blind_t* bp)
 			sl_append(bp->verify_wcsfiles, nextword);
 		} else if (is_word(line, "verify_wcs ", &nextword)) {
 			tan_t wcs;
+			memset(&wcs, 0, sizeof(wcs));
 			if (sscanf(nextword, "%lg %lg %lg %lg %lg %lg %lg %lg",
 			           &(wcs.crval[0]), &(wcs.crval[1]),
 			           &(wcs.crpix[0]), &(wcs.crpix[1]),

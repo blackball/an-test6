@@ -175,6 +175,11 @@ void blind_run(blind_t* bp) {
 			// field index, because it will contain a TON of index stars in the
 			// field.  We therefore only try to verify using indices that contain
 			// quads that could have been found in the image.
+			if (wcs->imagew == 0.0 && sp->field_maxx > 0.0)
+				wcs->imagew = sp->field_maxx;
+			if (wcs->imageh == 0.0 && sp->field_maxy > 0.0)
+				wcs->imageh = sp->field_maxy;
+
 			assert(wcs->imagew > 0.0);
 			assert(wcs->imageh > 0.0);
 			quadlo = 0.1 * MIN(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
@@ -505,6 +510,7 @@ static void load_and_parse_wcsfiles(blind_t* bp) {
 			logerr("Failed to read FITS header from file %s\n", fn);
 			continue;
 		}
+		memset(&wcs, 0, sizeof(wcs));
 		if (!tan_read_header(hdr, &wcs)) {
 			logerr("Failed to parse WCS header from file %s\n", fn);
 			qfits_header_destroy(hdr);
