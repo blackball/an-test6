@@ -10,12 +10,9 @@
 #include "cairoutils.h"
 #include "keywords.h"
 
-//char* image_dir = "/home/gmaps/apod-solves";
-//char* wcs_dir = "/home/gmaps/apod-solves";
-
+char* image_dir = "/home/gmaps/apod-solves";
 //char* image_dir = "/u/dstn/raid2/APOD/dstn/2006-solved";
-
-char* image_dir = "/tmp/imgs";
+//char* image_dir = "/tmp/imgs";
 
 static void
 ATTRIB_FORMAT(printf,1,2)
@@ -86,7 +83,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 	logmsg("starting.\n");
 
     // Find images in the image directory.
-    imagefiles = dir_get_contents(image_dir, NULL, TRUE, TRUE);
+    imagefiles = dir_get_contents(image_dir, NULL, TRUE, FALSE);
     if (!imagefiles) {
         logmsg("error getting image file list.\n");
     }
@@ -322,8 +319,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
                             cairo_move_to(cairo, lastx, lasty);
                             cairo_line_to(cairo, xout, yout);
                             cairo_stroke(cairo);
-                        } else {
-                            //cairo_move_to(cairo, xout, yout);
                         }
                         lastx = xout;
                         lasty = yout;

@@ -543,7 +543,7 @@ if ($didsolve) {
 
 	$listfile = $mydir . $const_list_fn;
 	if (!file_exists($listfile)) {
-		$pixscale = $jd['pixscale'];
+		// pixscale gets set above...
 		$fldsz = $pixscale * sqrt($fullW * $fullH);
 		render_const_overlay($mydir, FALSE, $jd, $fldsz);
 	}
