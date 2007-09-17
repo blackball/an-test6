@@ -54,8 +54,15 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB)
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
 
-ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o \
-	constellations.o
+ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
+
+# put this here to break the grab-stellarium-constellations <-> constellations.o
+# circular dependency.
+grab-stellarium-constellations: grab-stellarium-constellations.o \
+		$(ANUTILS_OBJ) $(QFITS_LIB)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LIBKD_LIB) -lm
+
+ANUTILS_OBJ += constellations.o
 ifndef NO_QFITS
 ANUTILS_OBJ += fitsbin.o fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
@@ -94,10 +101,6 @@ include $(COMMON)/makefile.deps
 
 stellarium-constellations.c: grab-stellarium-constellations
 	-./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@
-
-grab-stellarium-constellations: grab-stellarium-constellations.o \
-		$(ANUTILS_OBJ) $(QFITS_LIB)
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LIBKD_LIB) -lm
 
 # we'll just tack this on here... It depends on cairo, libjpeg, etc, so it's not part
 # of the anX.a libraries.

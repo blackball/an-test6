@@ -10,6 +10,7 @@
 #include "tilerender.h"
 #include "render_boundary.h"
 #include "sip_qfits.h"
+#include "cairoutils.h"
 
 char* wcs_dirs[] = {
 	"/home/gmaps/ontheweb-data/",
@@ -153,20 +154,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		}
 	}
 
-	// Cairo's uint32 ARGB32 format is a little different than what we need,
-	// which is uchar R,G,B,A.
-	for (i=0; i<(args->H*args->W); i++) {
-		unsigned char r,g,b,a;
-		uint32_t ipix = *((uint32_t*)(img + 4*i));
-		a = (ipix >> 24) & 0xff;
-		r = (ipix >> 16) & 0xff;
-		g = (ipix >>  8) & 0xff;
-		b = (ipix      ) & 0xff;
-		img[4*i + 0] = r;
-		img[4*i + 1] = g;
-		img[4*i + 2] = b;
-		img[4*i + 3] = a;
-	}
+    cairoutils_argb32_to_rgba(img, args->W, args->H);
 
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);

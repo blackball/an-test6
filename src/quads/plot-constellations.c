@@ -363,8 +363,8 @@ int main(int argc, char** args) {
                 double gapfrac;
 				star1 = il_get(lines, i*2+0);
 				star2 = il_get(lines, i*2+1);
-				constellations_get_star_radec(il_get(lines, i*2+0), &ra1, &dec1);
-				constellations_get_star_radec(il_get(lines, i*2+1), &ra2, &dec2);
+				constellations_get_star_radec(star1, &ra1, &dec1);
+				constellations_get_star_radec(star2, &ra2, &dec2);
                 if (!sip_radec2pixelxy(&sip, ra1, dec1, &px1, &py1) ||
                     !sip_radec2pixelxy(&sip, ra2, dec2, &px2, &py2))
                     continue;
