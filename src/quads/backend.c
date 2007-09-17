@@ -907,6 +907,8 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
         if (order >= 2) {
             if (order > 9)
                 order = 9;
+            wcs.a_order = order;
+            wcs.b_order = order;
             for (i=0; i<=order; i++) {
                 for (j=0; (i+j)<=order; j++) {
                     if (i+j < 1)
@@ -923,6 +925,8 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
         if (order >= 2) {
             if (order > 9)
                 order = 9;
+            wcs.ap_order = order;
+            wcs.bp_order = order;
             for (i=0; i<=order; i++) {
                 for (j=0; (i+j)<=order; j++) {
                     if (i+j < 1)
