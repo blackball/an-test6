@@ -11,7 +11,6 @@
 #include "keywords.h"
 
 char* image_dir = "/home/gmaps/apod-solves";
-//char* image_dir = "/u/dstn/raid2/APOD/dstn/2006-solved";
 //char* image_dir = "/tmp/imgs";
 
 static void
@@ -266,8 +265,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
     if (args->outline) {
         cairo_t* cairo;
         cairo_surface_t* target;
-        double lw = 2.0;
-
+        double lw = 1.0;
         sip_t* wcs;
         int j;
 
@@ -293,7 +291,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
                 int stepy[] = { 0, 1, 0, -1 };
                 int Nsteps[] = { W, H, W, H };
                 int side;
-                double lastx, lasty;
+                double lastx=0, lasty=0;
                 bool lastvalid = FALSE;
 
                 for (side=0; side<4; side++) {
@@ -314,7 +312,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
                             lastvalid = FALSE;
                             continue;
                         }
-
                         if (lastvalid) {
                             cairo_move_to(cairo, lastx, lasty);
                             cairo_line_to(cairo, xout, yout);
