@@ -218,13 +218,36 @@ int render_collection(unsigned char* img, render_args_t* args) {
             dec = decvals[j];
             for (i=xlo; i<=xhi; i++) {
                 int pppx,pppy;
+                double dx, dy;
+                double sipdx, sipdy;
+                double sipx, sipy;
+                double unsipdx, unsipdy;
+                double unsipx, unsipy;
+                double tandx, tandy;
+                double tanx, tany;
+
                 ra = ravals[i];
-                if (!sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey))
+                //if (!sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey))
+                if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
                     continue;
                 pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
                 pppy = lround(imagey-1);
                 if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
                     continue;
+
+                // DEBUG
+                /*
+                 tan_radec2pixelxy(&(wcs.wcstan), ra, dec, &unsipx, &unsipy);
+                 unsipdx = unsipx - wcs.wcstan.crpix[0];
+                 unsipdy = unsipy - wcs.wcstan.crpix[1];
+                 sip_calc_inv_distortion(&wcs, unsipdx, unsipdy, &sipdx, &sipdy);
+                 sipx = sipdx + wcs.wcstan.crpix[0];
+                 sipy = sipdy + wcs.wcstan.crpix[1];
+                 sip_calc_distortion(&wcs, sipdx, sipdy, &tandx, &tandy);
+                 tanx = tandx + wcs.wcstan.crpix[0];
+                 tany = tandy + wcs.wcstan.crpix[1];
+                 */
+
 				// nearest neighbour. bilinear is for weenies.
 				ink[3*(j*w + i) + 0] += userimg[4*(pppy*W + pppx) + 0] * weight;
 				ink[3*(j*w + i) + 1] += userimg[4*(pppy*W + pppx) + 1] * weight;

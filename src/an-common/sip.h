@@ -143,6 +143,9 @@ WarnUnusedResult
 bool sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 
 WarnUnusedResult
+bool sip_radec2pixelxy_check(sip_t* sip, double ra, double dec, double *px, double *py);
+
+WarnUnusedResult
 bool sip_xyzarr2pixelxy(sip_t* sip, const double* xyz, double *px, double *py);
 
 double tan_det_cd(tan_t* tan);

@@ -153,6 +153,32 @@ bool sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py
 	return TRUE;
 }
 
+// RA,Dec in degrees to Pixels.
+bool sip_radec2pixelxy_check(sip_t* sip, double ra, double dec, double *px, double *py) {
+	double u, v;
+	double U, V;
+	double U2, V2;
+	if (!tan_radec2pixelxy(&(sip->wcstan), ra, dec, px, py))
+		return FALSE;
+	// Subtract crpix, invert SIP distortion, add crpix.
+	// Sanity check:
+	if (sip->a_order != 0 && sip->ap_order == 0) {
+		fprintf(stderr, "suspicious inversion; no inversion SIP coeffs "
+				"yet there are forward SIP coeffs\n");
+	}
+	U = *px - sip->wcstan.crpix[0];
+	V = *py - sip->wcstan.crpix[1];
+	sip_calc_inv_distortion(sip, U, V, &u, &v);
+    // Check that we're dealing with the right range of the polynomial be inverting it and
+    // checking that we end up back in the right place.
+    sip_calc_distortion(sip, u, v, &U2, &V2);
+    if (fabs(U2 - U) + fabs(V2 - V) > 10.0)
+        return FALSE;
+	*px = u + sip->wcstan.crpix[0];
+	*py = v + sip->wcstan.crpix[1];
+	return TRUE;
+}
+
 bool sip_xyzarr2pixelxy(sip_t* sip, const double* xyz, double *px, double *py) {
 	double ra, dec;
 	xyzarr2radecdeg(xyz, &ra, &dec);
