@@ -81,6 +81,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
     float* ink;
     int i, j, w;
     double *ravals, *decvals;
+    bl* wcslist = NULL;
 
 	logmsg("starting.\n");
 
@@ -95,6 +96,9 @@ int render_collection(unsigned char* img, render_args_t* args) {
 
     counts = calloc(args->W * args->H, sizeof(float));
     ink = calloc(3 * args->W * args->H, sizeof(float));
+
+    if (args->outline)
+        wcslist = bl_new(16, sizeof(sip_t));
 
     ravals  = malloc(args->W * sizeof(double));
     decvals = malloc(args->H * sizeof(double));
@@ -218,36 +222,14 @@ int render_collection(unsigned char* img, render_args_t* args) {
             dec = decvals[j];
             for (i=xlo; i<=xhi; i++) {
                 int pppx,pppy;
-                double dx, dy;
-                double sipdx, sipdy;
-                double sipx, sipy;
-                double unsipdx, unsipdy;
-                double unsipx, unsipy;
-                double tandx, tandy;
-                double tanx, tany;
 
                 ra = ravals[i];
-                //if (!sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey))
                 if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
                     continue;
                 pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
                 pppy = lround(imagey-1);
                 if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
                     continue;
-
-                // DEBUG
-                /*
-                 tan_radec2pixelxy(&(wcs.wcstan), ra, dec, &unsipx, &unsipy);
-                 unsipdx = unsipx - wcs.wcstan.crpix[0];
-                 unsipdy = unsipy - wcs.wcstan.crpix[1];
-                 sip_calc_inv_distortion(&wcs, unsipdx, unsipdy, &sipdx, &sipdy);
-                 sipx = sipdx + wcs.wcstan.crpix[0];
-                 sipy = sipdy + wcs.wcstan.crpix[1];
-                 sip_calc_distortion(&wcs, sipdx, sipdy, &tandx, &tandy);
-                 tanx = tandx + wcs.wcstan.crpix[0];
-                 tany = tandy + wcs.wcstan.crpix[1];
-                 */
-
 				// nearest neighbour. bilinear is for weenies.
 				ink[3*(j*w + i) + 0] += userimg[4*(pppy*W + pppx) + 0] * weight;
 				ink[3*(j*w + i) + 1] += userimg[4*(pppy*W + pppx) + 1] * weight;
@@ -259,34 +241,13 @@ int render_collection(unsigned char* img, render_args_t* args) {
 
         // 
         if (args->outline) {
-            // bottom, top, left, right
-            int offsetx[] = { 0, 0, 0, W };
-            int offsety[] = { 0, H, 0, 0 };
-            int stepx[] = { 1, 1, 0, 0 };
-            int stepy[] = { 0, 0, 1, 1 };
-            int Nsteps[] = { W, W, H, H };
-            int side;
-            for (side=0; side<4; side++) {
-                for (i=0; i<Nsteps[side]; i++) {
-                    int xin, yin;
-                    int xout, yout;
-                    xin = offsetx[side] + i * stepx[side];
-                    yin = offsety[side] + i * stepy[side];
-                    sip_pixelxy2radec(&wcs, xin, yin, &ra, &dec);
-                    xout = ra2pixel(ra, args);
-                    if (xout < 0 || xout >= args->W)
-                        continue;
-                    yout = dec2pixel(dec, args);
-                    if (yout < 0 || yout >= args->H)
-                        continue;
-                    ink[3*(yout*w + xout) + 0] = 255.0 * 1e20;
-                    ink[3*(yout*w + xout) + 1] = 255.0 * 1e20;
-                    ink[3*(yout*w + xout) + 2] = 255.0 * 1e20;
-                    counts[yout*w + xout] = 1e20;
-                }
-            }
+            bl_append(wcslist, &wcs);
         }
     }
+
+    sl_free2(imagefiles);
+    free(ravals);
+    free(decvals);
 
 	for (j=0; j<args->H; j++) {
 		for (i=0; i<w; i++) {
@@ -301,13 +262,80 @@ int render_collection(unsigned char* img, render_args_t* args) {
         }
     }
 
-    sl_free2(imagefiles);
-
-    free(ravals);
-    free(decvals);
-
     free(counts);
     free(ink);
+
+    // hmm, this is a bit silly...
+    if (args->outline) {
+        cairo_t* cairo;
+        cairo_surface_t* target;
+        double lw = 1.0;
+        int W = args->W;
+        int H = args->H;
+
+        // bottom, right, top, left
+        int offsetx[] = { 0, W, W, 0 };
+        int offsety[] = { 0, 0, H, H };
+        int stepx[] = { 1, 0, -1, 0 };
+        int stepy[] = { 0, 1, 0, -1 };
+        int Nsteps[] = { W, H, W, H };
+        int side;
+
+        double lastx, lasty;
+        bool lastvalid = FALSE;
+
+        sip_t* wcs;
+        int j;
+
+        cairoutils_rgba_to_argb32(img, args->W, args->H);
+
+        target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, args->W, args->H, args->W*4);
+        cairo = cairo_create(target);
+        cairo_set_line_width(cairo, lw);
+        cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
+        cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
+        cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+
+        for (j=0; j<bl_size(wcslist); j++) {
+            wcs = bl_access(wcslist, j);
+            for (side=0; side<4; side++) {
+                for (i=0; i<Nsteps[side]; i++) {
+                    int xin, yin;
+                    double xout, yout;
+                    double ra, dec;
+                    xin = offsetx[side] + i * stepx[side];
+                    yin = offsety[side] + i * stepy[side];
+                    sip_pixelxy2radec(wcs, xin, yin, &ra, &dec);
+                    xout = ra2pixelf(ra, args);
+                    if (xout < 0 || xout >= args->W) {
+                        lastvalid = FALSE;
+                        continue;
+                    }
+                    yout = dec2pixelf(dec, args);
+                    if (yout < 0 || yout >= args->H) {
+                        lastvalid = FALSE;
+                        continue;
+                    }
+
+                    if (lastvalid) {
+                        //cairo_move_to(cairo, lastx, lasty);
+                        cairo_line_to(cairo, xout, yout);
+                        cairo_stroke(cairo);
+                    } else {
+                        cairo_move_to(cairo, xout, yout);
+                    }
+                    lastx = xout;
+                    lasty = yout;
+                }
+            }
+        }
+
+        bl_free(wcslist);
+
+        cairoutils_argb32_to_rgba(img, args->W, args->H);
+        cairo_surface_destroy(target);
+        cairo_destroy(cairo);
+    }
 
 	return 0;
 }
