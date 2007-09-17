@@ -239,8 +239,9 @@ int render_collection(unsigned char* img, render_args_t* args) {
 		}
         free(userimg);
 
-        // 
         if (args->outline) {
+            wcs.wcstan.imagew = W;
+            wcs.wcstan.imageh = H;
             bl_append(wcslist, &wcs);
         }
     }
@@ -270,16 +271,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
         cairo_t* cairo;
         cairo_surface_t* target;
         double lw = 1.0;
-        int W = args->W;
-        int H = args->H;
-
-        // bottom, right, top, left
-        int offsetx[] = { 0, W, W, 0 };
-        int offsety[] = { 0, 0, H, H };
-        int stepx[] = { 1, 0, -1, 0 };
-        int stepy[] = { 0, 1, 0, -1 };
-        int Nsteps[] = { W, H, W, H };
-        int side;
 
         double lastx, lasty;
         bool lastvalid = FALSE;
@@ -297,35 +288,48 @@ int render_collection(unsigned char* img, render_args_t* args) {
         cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 
         for (j=0; j<bl_size(wcslist); j++) {
+            int W, H;
             wcs = bl_access(wcslist, j);
-            for (side=0; side<4; side++) {
-                for (i=0; i<Nsteps[side]; i++) {
-                    int xin, yin;
-                    double xout, yout;
-                    double ra, dec;
-                    xin = offsetx[side] + i * stepx[side];
-                    yin = offsety[side] + i * stepy[side];
-                    sip_pixelxy2radec(wcs, xin, yin, &ra, &dec);
-                    xout = ra2pixelf(ra, args);
-                    if (xout < 0 || xout >= args->W) {
-                        lastvalid = FALSE;
-                        continue;
-                    }
-                    yout = dec2pixelf(dec, args);
-                    if (yout < 0 || yout >= args->H) {
-                        lastvalid = FALSE;
-                        continue;
-                    }
+            W = wcs->wcstan.imagew;
+            H = wcs->wcstan.imageh;
+            {
+                // bottom, right, top, left
+                int offsetx[] = { 0, W, W, 0 };
+                int offsety[] = { 0, 0, H, H };
+                int stepx[] = { 1, 0, -1, 0 };
+                int stepy[] = { 0, 1, 0, -1 };
+                int Nsteps[] = { W, H, W, H };
+                int side;
 
-                    if (lastvalid) {
-                        //cairo_move_to(cairo, lastx, lasty);
-                        cairo_line_to(cairo, xout, yout);
-                        cairo_stroke(cairo);
-                    } else {
-                        cairo_move_to(cairo, xout, yout);
+                for (side=0; side<4; side++) {
+                    for (i=0; i<Nsteps[side]; i++) {
+                        int xin, yin;
+                        double xout, yout;
+                        double ra, dec;
+                        xin = offsetx[side] + i * stepx[side];
+                        yin = offsety[side] + i * stepy[side];
+                        sip_pixelxy2radec(wcs, xin, yin, &ra, &dec);
+                        xout = ra2pixelf(ra, args);
+                        if (xout < 0 || xout >= args->W) {
+                            lastvalid = FALSE;
+                            continue;
+                        }
+                        yout = dec2pixelf(dec, args);
+                        if (yout < 0 || yout >= args->H) {
+                            lastvalid = FALSE;
+                            continue;
+                        }
+
+                        if (lastvalid) {
+                            //cairo_move_to(cairo, lastx, lasty);
+                            cairo_line_to(cairo, xout, yout);
+                            cairo_stroke(cairo);
+                        } else {
+                            cairo_move_to(cairo, xout, yout);
+                        }
+                        lastx = xout;
+                        lasty = yout;
                     }
-                    lastx = xout;
-                    lasty = yout;
                 }
             }
         }
