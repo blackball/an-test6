@@ -266,11 +266,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
     free(counts);
     free(ink);
 
-    // hmm, this is a bit silly...
     if (args->outline) {
         cairo_t* cairo;
         cairo_surface_t* target;
-        double lw = 1.0;
+        double lw = 2.0;
 
         double lastx, lasty;
         bool lastvalid = FALSE;
@@ -321,14 +320,15 @@ int render_collection(unsigned char* img, render_args_t* args) {
                         }
 
                         if (lastvalid) {
-                            //cairo_move_to(cairo, lastx, lasty);
+                            cairo_move_to(cairo, lastx, lasty);
                             cairo_line_to(cairo, xout, yout);
                             cairo_stroke(cairo);
                         } else {
-                            cairo_move_to(cairo, xout, yout);
+                            //cairo_move_to(cairo, xout, yout);
                         }
                         lastx = xout;
                         lasty = yout;
+                        lastvalid = TRUE;
                     }
                 }
             }
