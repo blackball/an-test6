@@ -50,7 +50,7 @@ struct blind_params {
 	// List of WCS filenames to run verification on.
 	sl* verify_wcsfiles;
 
-	// WCS instances to verify.  (tan_t structs)
+	// WCS instances to verify.  (sip_t structs)
 	bl* verify_wcs_list;
 
 	// Output solved file.

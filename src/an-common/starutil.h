@@ -82,6 +82,7 @@ inline void radecdeg2xyz(double ra, double dec, double* x, double* y, double* z)
 inline void xyzarr2radecdeg(const double* xyz, double *ra, double *dec);
 inline void xyzarr2radecdegarr(double* xyz, double *radec);
 inline void radecdeg2xyzarr(double ra, double dec, double* xyz);
+inline void radecdegarr2xyzarr(double* radec, double* xyz);
 inline void radecdeg2xyzarrmany(double *ra, double *dec, double* xyz, int n);
 
 

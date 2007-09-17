@@ -123,6 +123,7 @@ void verify_field_free(verify_field_t* vf) {
 
 void verify_hit(startree* skdt,
                 MatchObj* mo,
+                sip_t* sip,
                 verify_field_t* vf,
                 double verify_pix2,
                 double distractors,
@@ -132,7 +133,7 @@ void verify_hit(startree* skdt,
                 bool do_gamma,
 				int dimquads) {
 	int i;
-	double fieldcenter[3];
+	double* fieldcenter;
 	double fieldr2;
 	kdtree_qres_t* res;
 	// number of stars in the index that are within the bounds of the field.
@@ -163,13 +164,13 @@ void verify_hit(startree* skdt,
 
 	double fieldr, fieldarcsec;
 
-	assert(mo->wcs_valid);
+	assert(mo->wcs_valid || sip);
 	assert(startree);
 	assert(skdt->sweep);
 
-	// find the center and radius of the field in xyz space.
-	star_midpoint(fieldcenter, mo->sMin, mo->sMax);
-	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
+	// center and radius of the field in xyz space:
+    fieldcenter = mo->center;
+    fieldr2 = square(mo->radius);
 
 	if (DEBUGVERIFY) {
 		debug("\nVerifying a match.\n");
@@ -192,11 +193,20 @@ void verify_hit(startree* skdt,
 	// Project index stars into pixel space.
 	indexpix = malloc(res->nres * 2 * sizeof(double));
 	NI = 0;
-	radecdeg2xyzarr(mo->wcstan.crval[0], mo->wcstan.crval[1], crvalxyz);
+    if (sip)
+        radecdegarr2xyzarr(sip->wcstan.crval, crvalxyz);
+    else
+        radecdegarr2xyzarr(mo->wcstan.crval, crvalxyz);
+        
 	for (i=0; i<res->nres; i++) {
 		double x, y;
-		if (!tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y))
-			continue;
+        if (sip) {
+            if (!sip_xyzarr2pixelxy(sip, res->results.d + i*3, &x, &y))
+                continue;
+        } else {
+            if (!tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y))
+                continue;
+        }
 		//debug("(x,y) = (%g,%g)", x, y);
 		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH)) {
 			//debug(" -> reject\n");
@@ -241,7 +251,7 @@ void verify_hit(startree* skdt,
 		// I don't know HOW this happens - at the very least, the four stars
 		// belonging to the quad that generated this hit should lie in the
 		// proposed field - but I've seen it happen!
-		fprintf(stderr, "Freakishly, NI=0.\n");
+		//fprintf(stderr, "Freakishly, NI=0.\n");
 		mo->nfield = 0;
 		mo->noverlap = 0;
 		matchobj_compute_overlap(mo);

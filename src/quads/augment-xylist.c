@@ -805,9 +805,41 @@ int main(int argc, char** args) {
             char key[64];
             char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
                              "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
+            int m, n, order;
             for (j = 0; j < 8; j++) {
                 sprintf(key, keys[j], I);
                 fits_header_add_double(hdr, key, vals[j], "");
+            }
+
+            if (sip.a_order) {
+                sprintf(key, "ANW%iSAO", I);
+                order = sip.a_order;
+                fits_header_add_int(hdr, key, order, "SIP forward polynomial order");
+                for (m=0; m<=order; m++) {
+                    for (n=0; (m+n)<=order; n++) {
+                        if (m+n < 1)
+                            continue;
+                        sprintf(key, "ANW%iA%i%i", I, m, n);
+                        fits_header_add_double(hdr, key, sip.a[m][n], "");
+                        sprintf(key, "ANW%iB%i%i", I, m, n);
+                        fits_header_add_double(hdr, key, sip.b[m][n], "");
+                    }
+                }
+            }
+            if (sip.ap_order) {
+                order = sip.ap_order;
+                sprintf(key, "ANW%iSAPO", I);
+                fits_header_add_int(hdr, key, order, "SIP reverse polynomial order");
+                for (m=0; m<=order; m++) {
+                    for (n=0; (m+n)<=order; n++) {
+                        if (m+n < 1)
+                            continue;
+                        sprintf(key, "ANW%iAP%i%i", I, m, n);
+                        fits_header_add_double(hdr, key, sip.ap[m][n], "");
+                        sprintf(key, "ANW%iBP%i%i", I, m, n);
+                        fits_header_add_double(hdr, key, sip.bp[m][n], "");
+                    }
+                }
             }
         }
     }

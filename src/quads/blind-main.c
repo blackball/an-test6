@@ -144,16 +144,43 @@ static int read_parameters(blind_t* bp)
 		} else if (is_word(line, "verify ", &nextword)) {
 			sl_append(bp->verify_wcsfiles, nextword);
 		} else if (is_word(line, "verify_wcs ", &nextword)) {
-			tan_t wcs;
+			sip_t wcs;
+            int nread;
 			memset(&wcs, 0, sizeof(wcs));
-			if (sscanf(nextword, "%lg %lg %lg %lg %lg %lg %lg %lg",
-			           &(wcs.crval[0]), &(wcs.crval[1]),
-			           &(wcs.crpix[0]), &(wcs.crpix[1]),
-			           &(wcs.cd[0][0]), &(wcs.cd[0][1]),
-			           &(wcs.cd[1][0]), &(wcs.cd[1][1])) != 8) {
+			if (sscanf(nextword, "%lg %lg %lg %lg %lg %lg %lg %lg%n",
+			           &(wcs.wcstan.crval[0]), &(wcs.wcstan.crval[1]),
+			           &(wcs.wcstan.crpix[0]), &(wcs.wcstan.crpix[1]),
+			           &(wcs.wcstan.cd[0][0]), &(wcs.wcstan.cd[0][1]),
+			           &(wcs.wcstan.cd[1][0]), &(wcs.wcstan.cd[1][1]),
+                       &nread) < 8) {
 				logerr("Failed to parse verify_wcs entry.\n");
 				continue;
 			}
+            nextword += nread;
+            if (sscanf(nextword, " %i %i%n", &(wcs.a_order), &(wcs.ap_order), &nread) >= 2) {
+                int m, n;
+                wcs.b_order = wcs.a_order;
+                wcs.bp_order = wcs.ap_order;
+                nextword += nread;
+                for (m=0; m<=wcs.a_order; m++) {
+                    for (n=0; (m+n)<=wcs.a_order; n++) {
+                        if (sscanf(nextword, " %lg %lg%n", &(wcs.a[m][n]), &(wcs.b[m][n]), &nread) < 2) {
+                            logerr("Failed to parse SIP terms: \"%s\"\n", nextword);
+                            continue;
+                        }
+                        nextword += nread;
+                    }
+                }
+                for (m=0; m<=wcs.ap_order; m++) {
+                    for (n=0; (m+n)<=wcs.ap_order; n++) {
+                        if (sscanf(nextword, " %lg %lg%n", &(wcs.ap[m][n]), &(wcs.bp[m][n]), &nread) < 2) {
+                            logerr("Failed to parse SIP terms: \"%s\"\n", nextword);
+                            continue;
+                        }
+                        nextword += nread;
+                    }
+                }
+            }
 			bl_append(bp->verify_wcs_list, &wcs);
 		} else if (is_word(line, "cpulimit ", &nextword)) {
 			bp->cpulimit = atoi(nextword);

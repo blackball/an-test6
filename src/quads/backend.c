@@ -348,7 +348,7 @@ struct job_t
 	double image_fraction;
 	double codetol;
 	double distractor_fraction;
-	// Contains tan_t structs.
+	// Contains sip_t structs.
 	bl* verify_wcs;
     bool include_default_scales;
     char* xcol;
@@ -377,7 +377,7 @@ static job_t* job_new()
 	job->image_fraction = 1.0;
 	job->codetol = 0.01;
 	job->distractor_fraction = 0.25;
-	job->verify_wcs = bl_new(8, sizeof(tan_t));
+	job->verify_wcs = bl_new(8, sizeof(sip_t));
 
 	return job;
 }
@@ -461,11 +461,11 @@ static void job_print(job_t* job)
 	printf("\n");
 	printf("Verify WCS:\n");
 	for (i = 0; i < bl_size(job->verify_wcs); i++) {
-		tan_t* wcs = bl_access(job->verify_wcs, i);
-		printf("  crpix (%g, %g)\n", wcs->crpix[0], wcs->crpix[1]);
-		printf("  crval (%g, %g)\n", wcs->crval[0], wcs->crval[1]);
-		printf("  cd  = ( %g, %g )\n", wcs->cd[0][0], wcs->cd[0][1]);
-		printf("        ( %g, %g )\n", wcs->cd[1][0], wcs->cd[1][1]);
+		sip_t* wcs = bl_access(job->verify_wcs, i);
+		printf("  crpix (%g, %g)\n", wcs->wcstan.crpix[0], wcs->wcstan.crpix[1]);
+		printf("  crval (%g, %g)\n", wcs->wcstan.crval[0], wcs->wcstan.crval[1]);
+		printf("  cd  = ( %g, %g )\n", wcs->wcstan.cd[0][0], wcs->wcstan.cd[0][1]);
+		printf("        ( %g, %g )\n", wcs->wcstan.cd[1][0], wcs->wcstan.cd[1][1]);
 	}
 	printf("Run: %s\n", (job->run ? "yes" : "no"));
 }
@@ -627,12 +627,29 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 
 			if (firsttime) {
 				for (k = 0; k < bl_size(job->verify_wcs); k++) {
-					tan_t* wcs = bl_access(job->verify_wcs, k);
-					WRITE(fout, "verify_wcs %g %g %g %g %g %g %g %g\n",
-					      wcs->crval[0], wcs->crval[1],
-					      wcs->crpix[0], wcs->crpix[1],
-					      wcs->cd[0][0], wcs->cd[0][1],
-					      wcs->cd[1][0], wcs->cd[1][1]);
+					sip_t* wcs = bl_access(job->verify_wcs, k);
+					WRITE(fout, "verify_wcs %g %g %g %g %g %g %g %g",
+					      wcs->wcstan.crval[0], wcs->wcstan.crval[1],
+					      wcs->wcstan.crpix[0], wcs->wcstan.crpix[1],
+					      wcs->wcstan.cd[0][0], wcs->wcstan.cd[0][1],
+					      wcs->wcstan.cd[1][0], wcs->wcstan.cd[1][1]);
+                    if (wcs->a_order || wcs->ap_order) {
+                        int m, n;
+                        assert(wcs->a_order == wcs->b_order);
+                        assert(wcs->ap_order == wcs->bp_order);
+                        WRITE(fout, " %i %i", wcs->a_order, wcs->ap_order);
+                        for (m=0; m<=wcs->a_order; m++) {
+                            for (n=0; (m+n)<=wcs->a_order; n++) {
+                                WRITE(fout, " %g %g", wcs->a[m][n], wcs->b[m][n]);
+                            }
+                        }
+                        for (m=0; m<=wcs->ap_order; m++) {
+                            for (n=0; (m+n)<=wcs->ap_order; n++) {
+                                WRITE(fout, " %g %g", wcs->ap[m][n], wcs->bp[m][n]);
+                            }
+                        }
+                    }
+                    WRITE(fout, "\n");
 				}
 				firsttime = FALSE;
 			}
@@ -862,15 +879,17 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	n = 1;
 	while (1) {
 		char key[64];
-		tan_t wcs;
+        sip_t wcs;
 		char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
 				 "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
-		double* vals[] = { &(wcs. crval[0]), &(wcs.crval[1]),
-				   &(wcs.crpix[0]), &(wcs.crpix[1]),
-				   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
-				   &(wcs.cd[1][0]), &(wcs.cd[1][1]) };
-		int j;
+		double* vals[] = { &(wcs.wcstan. crval[0]), &(wcs.wcstan.crval[1]),
+				   &(wcs.wcstan.crpix[0]), &(wcs.wcstan.crpix[1]),
+				   &(wcs.wcstan.cd[0][0]), &(wcs.wcstan.cd[0][1]),
+				   &(wcs.wcstan.cd[1][0]), &(wcs.wcstan.cd[1][1]) };
+		int i, j;
 		int bail = 0;
+        int order;
+        memset(&wcs, 0, sizeof(wcs));
 		for (j = 0; j < 8; j++) {
 			sprintf(key, keys[j], n);
 			*(vals[j]) = qfits_header_getdouble(hdr, key, dnil);
@@ -881,6 +900,40 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 		}
 		if (bail)
 			break;
+
+        // SIP terms
+        sprintf(key, "ANW%iSAO", n);
+        order = qfits_header_getint(hdr, key, -1);
+        if (order >= 2) {
+            if (order > 9)
+                order = 9;
+            for (i=0; i<=order; i++) {
+                for (j=0; (i+j)<=order; j++) {
+                    if (i+j < 1)
+                        continue;
+                    sprintf(key, "ANW%iA%i%i", n, i, j);
+                    wcs.a[i][j] = qfits_header_getdouble(hdr, key, 0.0);
+                    sprintf(key, "ANW%iB%i%i", n, i, j);
+                    wcs.b[i][j] = qfits_header_getdouble(hdr, key, 0.0);
+                }
+            }
+        }
+        sprintf(key, "ANW%iSAPO", n);
+        order = qfits_header_getint(hdr, key, -1);
+        if (order >= 2) {
+            if (order > 9)
+                order = 9;
+            for (i=0; i<=order; i++) {
+                for (j=0; (i+j)<=order; j++) {
+                    if (i+j < 1)
+                        continue;
+                    sprintf(key, "ANW%iAP%i%i", n, i, j);
+                    wcs.ap[i][j] = qfits_header_getdouble(hdr, key, 0.0);
+                    sprintf(key, "ANW%iBP%i%i", n, i, j);
+                    wcs.bp[i][j] = qfits_header_getdouble(hdr, key, 0.0);
+                }
+            }
+        }
 
 		bl_append(job->verify_wcs, &wcs);
 		n++;

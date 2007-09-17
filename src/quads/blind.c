@@ -59,7 +59,7 @@ static time_t timer_callback(void* user_data);
 static void add_blind_params(blind_t* bp, qfits_header* hdr);
 static void get_fields_from_solvedserver(blind_t* bp, solver_t* sp);
 static void load_and_parse_wcsfiles(blind_t* bp);
-static void solve_fields(blind_t* bp, tan_t* verify_wcs);
+static void solve_fields(blind_t* bp, sip_t* verify_wcs);
 static void remove_invalid_fields(il* fieldlist, int maxfield);
 static bool is_field_solved(blind_t* bp, int fieldnum);
 static int write_solutions(blind_t* bp);
@@ -168,22 +168,22 @@ void blind_run(blind_t* bp) {
 
 		for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
 			double quadlo, quadhi;
-			tan_t* wcs = bl_access(bp->verify_wcs_list, w);
+			sip_t* wcs = bl_access(bp->verify_wcs_list, w);
 			//logmsg("Verifying WCS with index %i of %i\n",  I + 1, sl_size(bp->indexnames));
 
 			// We don't want to try to verify a wide-field image using a narrow-
 			// field index, because it will contain a TON of index stars in the
 			// field.  We therefore only try to verify using indices that contain
 			// quads that could have been found in the image.
-			if (wcs->imagew == 0.0 && sp->field_maxx > 0.0)
-				wcs->imagew = sp->field_maxx;
-			if (wcs->imageh == 0.0 && sp->field_maxy > 0.0)
-				wcs->imageh = sp->field_maxy;
+			if (wcs->wcstan.imagew == 0.0 && sp->field_maxx > 0.0)
+				wcs->wcstan.imagew = sp->field_maxx;
+			if (wcs->wcstan.imageh == 0.0 && sp->field_maxy > 0.0)
+				wcs->wcstan.imageh = sp->field_maxy;
 
-			assert(wcs->imagew > 0.0);
-			assert(wcs->imageh > 0.0);
-			quadlo = 0.1 * MIN(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
-			quadhi = 1.0 * MAX(wcs->imagew, wcs->imageh) * tan_pixel_scale(wcs);
+			assert(wcs->wcstan.imagew > 0.0);
+			assert(wcs->wcstan.imageh > 0.0);
+			quadlo = 0.1 * MIN(wcs->wcstan.imagew, wcs->wcstan.imageh) * sip_pixel_scale(wcs);
+			quadhi = 1.0 * MAX(wcs->wcstan.imagew, wcs->wcstan.imageh) * sip_pixel_scale(wcs);
 			logmsg("Verifying WCS using indices with quads of size [%g, %g] arcmin\n",
 				   arcsec2arcmin(quadlo), arcsec2arcmin(quadhi));
 
@@ -403,7 +403,7 @@ void blind_init(blind_t* bp) {
 	bp->fieldlist = il_new(256);
     bp->solutions = bl_new(16, sizeof(MatchObj));
 	bp->indexnames = sl_new(16);
-	bp->verify_wcs_list = bl_new(1, sizeof(tan_t));
+	bp->verify_wcs_list = bl_new(1, sizeof(sip_t));
 	bp->verify_wcsfiles = sl_new(1);
 	bp->fieldid_key = strdup("FIELDID");
 	bp->xcolname = strdup("X");
@@ -501,7 +501,7 @@ static void get_fields_from_solvedserver(blind_t* bp, solver_t* sp) {
 static void load_and_parse_wcsfiles(blind_t* bp) {
 	int i;
 	for (i = 0; i < sl_size(bp->verify_wcsfiles); i++) {
-		tan_t wcs;
+		sip_t wcs;
 		qfits_header* hdr;
 		char* fn = sl_get(bp->verify_wcsfiles, i);
 		logmsg("Reading WCS header to verify from file %s\n", fn);
@@ -511,7 +511,7 @@ static void load_and_parse_wcsfiles(blind_t* bp) {
 			continue;
 		}
 		memset(&wcs, 0, sizeof(wcs));
-		if (!tan_read_header(hdr, &wcs)) {
+		if (!sip_read_header(hdr, &wcs)) {
 			logerr("Failed to parse WCS header from file %s\n", fn);
 			qfits_header_destroy(hdr);
 			continue;
@@ -863,7 +863,7 @@ static void remove_invalid_fields(il* fieldlist, int maxfield) {
     }
 }
 
-static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
+static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
 	solver_t* sp = &(bp->solver);
 	double last_utime, last_stime;
 	double utime, stime;
@@ -940,16 +940,23 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			// fabricate a match...
 			MatchObj mo;
 			memcpy(&mo, &template, sizeof(MatchObj));
-			memcpy(&(mo.wcstan), verify_wcs, sizeof(tan_t));
+			memcpy(&(mo.wcstan), &(verify_wcs->wcstan), sizeof(tan_t));
 			mo.wcs_valid = TRUE;
-			mo.scale = tan_pixel_scale(verify_wcs);
-			solver_transform_corners(sp, &mo);
+			mo.scale = sip_pixel_scale(verify_wcs);
+
+			//solver_transform_corners(sp, &mo);
+            sip_pixelxy2xyzarr(verify_wcs, sp->field_minx, sp->field_miny, mo.sMin);
+            sip_pixelxy2xyzarr(verify_wcs, sp->field_maxx, sp->field_maxy, mo.sMax);
+            sip_pixelxy2xyzarr(verify_wcs, sp->field_minx, sp->field_maxy, mo.sMinMax);
+            sip_pixelxy2xyzarr(verify_wcs, sp->field_maxx, sp->field_miny, mo.sMaxMin);
+            star_midpoint(mo.center, mo.sMin, mo.sMax);
+            mo.radius = sqrt(distsq(mo.center, mo.sMin, 3));
 
 			sp->distance_from_quad_bonus = FALSE;
 
 			logmsg("Verifying WCS of field %i.\n", fieldnum);
 
-			solver_inject_match(sp, &mo);
+			solver_inject_match(sp, &mo, verify_wcs);
 
 			// print it, if it hasn't been already.
 			if (mo.logodds < bp->logratio_toprint)

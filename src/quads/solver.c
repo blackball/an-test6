@@ -287,7 +287,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
                             uint* fstars, int dimquads,
                             solver_t* solver, bool current_parity);
 
-static int solver_handle_hit(solver_t* sp, MatchObj* mo);
+static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip);
 
 static void check_scale(pquad* pq, solver_t* solver)
 {
@@ -946,7 +946,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		solver_transform_corners(solver, &mo);
 
-		if (solver_handle_hit(solver, &mo))
+		if (solver_handle_hit(solver, &mo, NULL))
 			solver->quit_now = TRUE;
 
 		if (unlikely(solver->quit_now))
@@ -954,11 +954,11 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 	}
 }
 
-void solver_inject_match(solver_t* solver, MatchObj* mo) {
-	solver_handle_hit(solver, mo);
+void solver_inject_match(solver_t* solver, MatchObj* mo, sip_t* sip) {
+	solver_handle_hit(solver, mo, sip);
 }
 
-static int solver_handle_hit(solver_t* sp, MatchObj* mo)
+static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip)
 {
 	double match_distance_in_pixels2;
     bool solved;
@@ -966,13 +966,15 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 
 	mo->indexid = sp->index->indexid;
 	mo->healpix = sp->index->healpix;
+	mo->wcstan.imagew = sp->field_maxx;
+	mo->wcstan.imageh = sp->field_maxy;
 
 	match_distance_in_pixels2 = square(sp->verify_pix) +
 		square(sp->index->index_jitter / mo->scale);
 
 	dimquads = quadfile_dimquads(sp->index->quads);
 
-	verify_hit(sp->index->starkd, mo, sp->vf, match_distance_in_pixels2,
+	verify_hit(sp->index->starkd, mo, sip, sp->vf, match_distance_in_pixels2,
 	           sp->distractor_ratio, sp->field_maxx, sp->field_maxy,
 	           sp->logratio_bail_threshold, sp->distance_from_quad_bonus,
 			   dimquads);
@@ -980,9 +982,6 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 
 	if (mo->logodds >= sp->best_logodds)
 		sp->best_logodds = mo->logodds;
-
-	mo->wcstan.imagew = sp->field_maxx;
-	mo->wcstan.imageh = sp->field_maxy;
 
 	if (!sp->have_best_match || (mo->logodds > sp->best_match.logodds)) {
 		logmsg("Got a new best match: logodds %g.\n", mo->logodds);

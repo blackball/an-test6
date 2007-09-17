@@ -23,6 +23,7 @@
 #include "matchobj.h"
 #include "bl.h"
 #include "starkd.h"
+#include "sip.h"
 
 struct verify_field_t {
     double* field;
@@ -34,6 +35,7 @@ typedef struct verify_field_t verify_field_t;
 
 void verify_hit(startree* skdt,
                 MatchObj* mo,
+                sip_t* sip, // if non-NULL, verify this SIP WCS.
                 verify_field_t* vf,
                 double verify_pix2,
                 double distractors,

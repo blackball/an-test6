@@ -32,6 +32,7 @@
 #include "codekd.h"
 #include "index.h"
 #include "verify.h"
+#include "sip.h"
 
 enum {
 	PARITY_NORMAL,
@@ -203,6 +204,6 @@ void solver_free_field(solver_t* sp);
 void solver_uniformize_field(solver_t* solver, int NX, int NY);
 
 void      solver_transform_corners(solver_t* solver, MatchObj* mo);
-void      solver_inject_match(solver_t* solver, MatchObj* mo);
+void      solver_inject_match(solver_t* solver, MatchObj* mo, sip_t* sip);
 
 #endif
