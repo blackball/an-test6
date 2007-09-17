@@ -39,7 +39,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 
     N = constellations_n();
-	for (c=0;; c++) {
+	for (c=0; c<N; c++) {
 		const char* shortname;
 		const char* longname;
         il* lines;
