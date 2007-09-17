@@ -271,9 +271,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
         cairo_surface_t* target;
         double lw = 2.0;
 
-        double lastx, lasty;
-        bool lastvalid = FALSE;
-
         sip_t* wcs;
         int j;
 
@@ -299,6 +296,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
                 int stepy[] = { 0, 1, 0, -1 };
                 int Nsteps[] = { W, H, W, H };
                 int side;
+                double lastx, lasty;
+                bool lastvalid = FALSE;
 
                 for (side=0; side<4; side++) {
                     for (i=0; i<Nsteps[side]; i++) {
