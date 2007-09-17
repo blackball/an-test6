@@ -40,7 +40,6 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
     N = constellations_n();
 	for (c=0; c<N; c++) {
-		const char* shortname;
 		const char* longname;
         il* lines;
 		il* uniqstars;
@@ -64,10 +63,6 @@ int render_constellation(unsigned char* img, render_args_t* args) {
             double xyz[3];
             int star = il_get(uniqstars, i);
             constellations_get_star_radec(star, &ra, &dec);
-            px = ra2pixel(ra, args);
-            py = dec2pixel(dec, args);
-            if (px < 0 || py < 0 || px > args->W || py > args->H)
-                continue;
             radecdeg2xyzarr(ra, dec, xyz);
             cmass[0] += xyz[0];
             cmass[1] += xyz[1];
@@ -79,9 +74,8 @@ int render_constellation(unsigned char* img, render_args_t* args) {
         xyzarr2radecdeg(cmass, &ra, &dec);
 		px = ra2pixel(ra, args);
 		py = dec2pixel(dec, args);
-        shortname = constellations_get_shortname(c);
         longname = constellations_get_longname(c);
-        assert(shortname && longname);
+        assert(longname);
 
 		cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size(cairo, 14.0);
