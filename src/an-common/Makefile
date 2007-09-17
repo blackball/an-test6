@@ -54,7 +54,8 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB)
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
 
-ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
+ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o \
+	constellations.o
 ifndef NO_QFITS
 ANUTILS_OBJ += fitsbin.o fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
@@ -73,6 +74,10 @@ ANFILES_OBJ += starkd.o rdlist.o xylist.o an_catalog.o \
 ANFILES_DEPS += $(QFITS_LIB)
 endif
 
+MISC_OBJ := grab-stellarium-constellations.o 
+
+ALL_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)
+
 $(ANUTILS_LIB): $(ANUTILS_OBJ) $(ANUTILS_DEPS)
 	$(AR) rc $@ $(ANUTILS_OBJ)
 	$(RANLIB) $@
@@ -81,13 +86,21 @@ $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
 	$(AR) rc $@ $(ANFILES_OBJ)
 	$(RANLIB) $@
 
-DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ)
+DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)
 ifndef NO_QFITS
 DEP_PREREQS := $(QFITS_LIB)
 endif
 include $(COMMON)/makefile.deps
 
-# we'll just tack this on here...
+stellarium-constellations.c: grab-stellarium-constellations
+	-./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@
+
+grab-stellarium-constellations: grab-stellarium-constellations.o \
+		$(ANUTILS_OBJ) $(QFITS_LIB)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LIBKD_LIB) -lm
+
+# we'll just tack this on here... It depends on cairo, libjpeg, etc, so it's not part
+# of the anX.a libraries.
 ifeq ($(MAKECMDGOALS),cairoutils.o)
   include cairoutils.dep
 endif
@@ -95,5 +108,5 @@ cairoutils.o: cairoutils.c
 	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) $(JPEG_INC) $(PNG_INC) -c $< -o $@
 
 clean:
-	rm -f $(ANUTILS_LIB) $(ANUTILS_OBJ) $(ANFILES_LIB) $(ANFILES_OBJ) \
+	rm -f $(ANUTILS_LIB) $(ANFILES_LIB) $(ALL_OBJ) \
 		$(DEPS) deps cairoutils.o

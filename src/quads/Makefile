@@ -65,8 +65,8 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
-	plot-constellations.o constellations.o quadcenters.o startree2rdls.o \
-	brightstars.o grab-stellarium-constellations.o ngcic-accurate.o \
+	plot-constellations.o quadcenters.o startree2rdls.o \
+	brightstars.o ngcic-accurate.o \
 	ngc2000.o noisesim.o noise.o scriptutils.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
@@ -148,12 +148,6 @@ install-extra: $(INSTALL_CAIRO_EXECS)
 		echo cp $$x $(INSTALL_DIR)/bin; \
 		cp $$x $(INSTALL_DIR)/bin; \
 	done
-
-stellarium-constellations.c: grab-stellarium-constellations
-	-./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@
-
-grab-stellarium-constellations: grab-stellarium-constellations.o \
-		boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB)
 
 test-solver: test-solver.o solver_test.o idfile.o blind_wcs.o verify.o log.o \
 		matchfile.o tic.o svd.o \
@@ -368,7 +362,7 @@ plotquad: plotquad.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_INC) -c -o $@ $<
 
-plot-constellations: plot-constellations.o constellations.o $(COMMON)/cairoutils.o \
+plot-constellations: plot-constellations.o $(COMMON)/cairoutils.o \
 		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o svn.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB) $(JPEG_LIB)

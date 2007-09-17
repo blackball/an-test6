@@ -28,16 +28,15 @@
 #include <ctype.h>
 
 #include "an-bool.h"
-
 #include "starutil.h"
 #include "bl.h"
-#include "boilerplate.h"
+//#include "boilerplate.h"
 #include "mathutil.h"
 
 const char* OPTIONS = "h";
 
 void print_help(char* progname) {
-    boilerplate_help_header(stdout);
+    //boilerplate_help_header(stdout);
     printf("\nUsage: %s\n"
            "\n", progname);
 }
