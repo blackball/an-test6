@@ -31,7 +31,7 @@
 #include "ioutils.h"
 #include "boilerplate.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:gj:"
+#define OPTIONS "ho:i:N:n:m:M:H:d:e:ARBJb:gj:"
 
 static void print_help(char* progname) {
 	boilerplate_help_header(stdout);
@@ -43,10 +43,11 @@ static void print_help(char* progname) {
 		   "  [-n <max-stars-per-fine-healpix-grid>]    (ie, number of sweeps)\n"
 		   "  [-N <nside>]:   fine healpixelization grid; default 100.\n"
 		   "  [-d <dedup-radius>]: deduplication radius (arcseconds)\n"
-		   "  ( [-R] or [-G] or [-Z] )\n"
-		   "        R: SDSS r-band\n"
-		   "        G: Galex\n"
-		   "        Z: SDSS z-band\n"
+		   "  ( [-R] or [-B] or [-J] )\n"
+           "     Cut based on:\n"
+		   "        R: USNOB red bands, Tycho-2 V, H\n"
+		   "        B: USNOB blue bands, Tycho-2 V, B, H\n"
+		   "        J: 2MASS J band\n"
 		   "  [-j <jitter-in-arcseconds>]: set index jitter size (default: 1 arcsec)\n"
 		   "  [-b <boundary-size-in-healpixels>] (default 1) number of healpixes to add around the margins\n"
 		   "  [-m <minimum-magnitude-to-use>]\n"
@@ -72,9 +73,9 @@ struct stardata {
 typedef struct stardata stardata;
 
 // globals used by get_magnitude().
-static bool sdss = FALSE;
-static bool galex = FALSE;
-static bool zband = FALSE;
+static bool cutred = FALSE;
+static bool cutblue = FALSE;
+static bool cutj = FALSE;
 static double epsilon = 0.0;
 
 
@@ -140,66 +141,65 @@ static int get_magnitude(an_entry* an,
 
 	// dumbass magnitude averaging!
 
-	if (sdss || galex) {
-		if (sdss) {
-			for (j=0; j<an->nobs; j++) {
-				unsigned char band = an->obs[j].band;
-				if (an->obs[j].catalog == AN_SOURCE_USNOB) {
-					if (usnob_is_band_red(band)) {
-						redmag += an->obs[j].mag;
-						nred++;
-					}
-				} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
-					if (band == 'V' || band == 'H') {
-						redmag += an->obs[j].mag;
-						nred++;
-					}
-				}
-			}
-		} else if (galex) {
-			for (j=0; j<an->nobs; j++) {
-				unsigned char band = an->obs[j].band;
-				if (an->obs[j].catalog == AN_SOURCE_USNOB) {
-					if (usnob_is_band_blue(band)) {
-						bluemag += an->obs[j].mag;
-						nblue++;
-					} else if (usnob_is_band_red(band)) {
-						redmag += an->obs[j].mag;
-						nred++;
-					}
-				} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
-					if (band == 'B' || band == 'H') {
-						bluemag += an->obs[j].mag;
-						nblue++;
-					} else if (band == 'V') {
-						redmag += an->obs[j].mag;
-						nred++;
-					}
-				}
-			}
-		}
+    if (cutred) {
+        for (j=0; j<an->nobs; j++) {
+            unsigned char band = an->obs[j].band;
+            if (an->obs[j].catalog == AN_SOURCE_USNOB) {
+                if (usnob_is_band_red(band)) {
+                    redmag += an->obs[j].mag;
+                    nred++;
+                }
+            } else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
+                if (band == 'V' || band == 'H') {
+                    redmag += an->obs[j].mag;
+                    nred++;
+                }
+            }
+        }
+        if (!nred)
+            return 1;
 
+        redmag /= (double)nred;
+        mag = redmag;
+
+
+    } else if (cutblue) {
+        for (j=0; j<an->nobs; j++) {
+            unsigned char band = an->obs[j].band;
+            if (an->obs[j].catalog == AN_SOURCE_USNOB) {
+                if (usnob_is_band_blue(band)) {
+                    bluemag += an->obs[j].mag;
+                    nblue++;
+                } else if (usnob_is_band_red(band)) {
+                    redmag += an->obs[j].mag;
+                    nred++;
+                }
+            } else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
+                if (band == 'B' || band == 'H') {
+                    bluemag += an->obs[j].mag;
+                    nblue++;
+                } else if (band == 'V') {
+                    redmag += an->obs[j].mag;
+                    nred++;
+                }
+            }
+        }
 		if (nred)
 			redmag /= (double)nred;
 		if (nblue)
 			bluemag /= (double)nblue;
 
-		if (sdss) {
-			if (!nred)
-				return 1;
-			mag = redmag;
-		} else if (galex) {
-			if (nred) {
-				mag = redmag;
-				if (epsilon > 0 && nblue)
-					mag += epsilon * (bluemag - redmag);
-			} else if (nblue)
-				mag = bluemag;
-			else
-				return 1;
-		}
+        if (nred) {
+            mag = redmag;
+            if (epsilon > 0 && nblue)
+                mag += epsilon * (bluemag - redmag);
+        } else if (nblue)
+            mag = bluemag;
+        else
+            return 1;
 
-	} else if (zband) {
+
+	} else if (cutj) {
 		bool gotit = FALSE;
 		for (j=0; j<an->nobs; j++) {
 			if ((an->obs[j].catalog == AN_SOURCE_2MASS) &&
@@ -271,13 +271,13 @@ int main(int argc, char** args) {
 			allsky = TRUE;
 			break;
 		case 'R':
-			sdss = TRUE;
+			cutred = TRUE;
 			break;
-		case 'G':
-			galex = TRUE;
+		case 'B':
+			cutblue = TRUE;
 			break;
-		case 'Z':
-			zband = TRUE;
+		case 'J':
+			cutj = TRUE;
 			break;
 		case 'e':
 			epsilon = atof(optarg);
@@ -318,11 +318,11 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 	i=0;
-	if (sdss) i++;
-	if (galex) i++;
-	if (zband) i++;
+	if (cutred) i++;
+	if (cutblue) i++;
+	if (cutj) i++;
 	if (i != 1) {
-		printf("Must choose exactly one of SDSS r-band (-R), SDSS z-band (-Z), Galex (-G).\n");
+		printf("Must choose exactly one of red (-R), blue (-B), or J-band (-J) cuts.\n");
 		print_help(args[0]);
 		exit(-1);
 	}

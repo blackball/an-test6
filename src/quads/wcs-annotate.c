@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "sip_qfits.h"
 #include "an-bool.h"
@@ -53,7 +54,7 @@ int main(int argc, char** args) {
 	bool hassip = FALSE;
 	int i;
 	int N;
-	int W, H;
+    int W, H;
 	double scale;
 	double imsize;
 	bool pix = FALSE;
@@ -111,12 +112,14 @@ int main(int argc, char** args) {
 		fprintf(stderr, "IMAGEW, IMAGEH FITS headers not found.\n");
 		exit(-1);
 	}
+    W = sip.wcstan.imagew;
+    H = sip.wcstan.imageh;
 
 	// arcsec/pixel
 	scale = sip_pixel_scale(&sip);
 
 	// arcmin
-	imsize = scale * imin(W, H) / 60.0;
+	imsize = scale * MIN(W, H) / 60.0;
 
 	N = ngc_num_entries();
 	for (i=0; i<N; i++) {
@@ -144,16 +147,6 @@ int main(int argc, char** args) {
 		if (x < 0 || y < 0 || x > W || y > H)
 			continue;
 
-		// If the NGC object isn't near the center of the image...
-		/*
-		  if (x < (W * 0.25) ||
-		  x > (W * 0.75) ||
-		  y < (H * 0.25) ||
-		  y > (H * 0.75))
-		  continue;
-		*/
-
-		//printf("This image contains object %s %i",
 		printf("%s %i", (ngc->is_ngc ? "NGC" : "IC"), ngc->id);
 
 		names = ngc_get_names(ngc);

@@ -375,7 +375,6 @@ if (array_key_exists("send-email", $headers)) {
 	}
 
 	if (!mail("", $subject, $message, $headers)) {
-		phpinfo();
 		fail("Failed to send email.\n");
 	}
 	echo "Email sent.\n";
