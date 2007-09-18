@@ -27,7 +27,7 @@ whichcc:
 
 RANLIB := ranlib
 
-AWK := awk
+AWK := LC_ALL=C awk
 #AWK := gawk --lint --lint-old
 
 FLAGS_DEF := -g -Wall

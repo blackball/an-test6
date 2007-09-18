@@ -208,15 +208,15 @@ xylist2fits: xylist2fits.o boilerplate.o svn.o \
 ngc2000.o: ngc2000.c ngc2000names.c ngc2000entries.c
 
 ngc2000names.c: parse-ngc2000names.awk ngc2000names.dat
-	awk -f parse-ngc2000names.awk < ngc2000names.dat  > $@
+	$(AWK) -f parse-ngc2000names.awk < ngc2000names.dat  > $@
 
 ngc2000entries.c: parse-ngc2000.awk ngc2000.dat
-	awk -f parse-ngc2000.awk < ngc2000.dat  > $@
+	$(AWK) -f parse-ngc2000.awk < ngc2000.dat  > $@
 
 ngcic-accurate.c: ngcic-accurate.h ngcic-accurate-entries.c
 
 ngcic-accurate-entries.c: parse-ngcic-accurate.awk ngc2000_pos.txt ic2000_pos.txt
-	cat ngc2000_pos.txt ic2000_pos.txt | awk -f parse-ngcic-accurate.awk > $@
+	cat ngc2000_pos.txt ic2000_pos.txt | $(AWK) -f parse-ngcic-accurate.awk > $@
 
 certifiable: certifiable.o histogram.o matchfile.o solvedfile.o \
 		$(UTILS_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
