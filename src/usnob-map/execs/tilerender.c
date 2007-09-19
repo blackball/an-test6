@@ -511,6 +511,16 @@ void draw_segmented_line(double ra1, double dec1,
     }
 }
 
+static int cache_get_filename(render_args_t* args,
+                              const char* cachedomain, const char* key,
+                              char* fn, int fnlen) {
+    if (snprintf(fn, fnlen, "%s/%s/%s", args->cachedir, cachedomain, key) > fnlen) {
+        fprintf(stderr, "Filename truncated in cache_load/cache_save.\n");
+        return -1;
+    }
+    return 0;
+}
+
 void* cache_load(render_args_t* args,
                  const char* cachedomain, const char* key, int* length) {
     char fn[1024];
@@ -519,8 +529,7 @@ void* cache_load(render_args_t* args,
 
     if (!args->cachedir)
         return NULL;
-    if (snprintf(fn, sizeof(fn), "%s/%s/%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
-        fprintf(stderr, "Filename truncated in cache_load.\n");
+    if (cache_get_filename(args, cachedomain, key, fn, sizeof(fn))) {
         return NULL;
     }
 
@@ -542,8 +551,7 @@ int cache_save(render_args_t* args,
 
     if (!args->cachedir)
         return -1;
-    if (snprintf(fn, sizeof(fn), "%s/%s/%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
-        fprintf(stderr, "Filename truncated in cache_save.\n");
+    if (cache_get_filename(args, cachedomain, key, fn, sizeof(fn))) {
         return -1;
     }
     fid = fopen("wb", fn);
