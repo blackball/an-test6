@@ -9,6 +9,7 @@
 #include "sip_qfits.h"
 #include "cairoutils.h"
 #include "keywords.h"
+#include "md5.h"
 
 char* image_dir = "/home/gmaps/apod-solves";
 //char* image_dir = "/tmp/imgs";
@@ -70,6 +71,15 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
     if (pdecmax) *pdecmax = decmax;
 }
 
+static void add_ink(float* ink, float* counts, float* thisink, float* thiscounts,
+                    int W, int H) {
+    int i;
+    for (i=0; i<(3*W*H); i++)
+        ink[i] += thisink[i];
+    for (i=0; i<(W*H); i++)
+        thiscounts[i] += counts[i];
+}
+
 int render_collection(unsigned char* img, render_args_t* args) {
     int I;
     sl* imagefiles;
@@ -118,6 +128,9 @@ int render_collection(unsigned char* img, render_args_t* args) {
         int xlo, xhi, ylo, yhi;
         float pixeldensity, weight;
         bool fakesize = FALSE;
+        char cachekey[33];
+        float* cached;
+        int len;
 
         imgfn = sl_get(imagefiles, I);
         dot = strrchr(imgfn, '.');
@@ -182,58 +195,96 @@ int render_collection(unsigned char* img, render_args_t* args) {
             // No need to read the image!
             continue;
 
-        if (jpeg)
-            userimg = cairoutils_read_jpeg(imgfn, &W, &H);
-        else if (png)
-            userimg = cairoutils_read_png(imgfn, &W, &H);
-
-        if (!userimg)
-            logmsg("failed to read image file %s\n", imgfn);
-
-        logmsg("Image %s is %i x %i.\n", imgfn, W, H);
-
-        if (fakesize) {
-            // if we set fake image size, recompute...
-            get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
-            xlo = floor(ra2pixelf(ramin, args));
-            xhi = ceil (ra2pixelf(ramax, args));
-            // increasing DEC -> decreasing Y pixel coord
-            ylo = floor(dec2pixelf(decmax, args));
-            yhi = ceil (dec2pixelf(decmin, args));
+        // Check the cache...
+        {
+            md5_context md5;
+            md5_starts(&md5);
+            md5_update(&md5, imgfn, strlen(imgfn));
+            md5_update(&md5, &(args->ramin), sizeof(double));
+            md5_update(&md5, &(args->ramax), sizeof(double));
+            md5_update(&md5, &(args->decmin), sizeof(double));
+            md5_update(&md5, &(args->decmax), sizeof(double));
+            md5_update(&md5, &(args->W), sizeof(int));
+            md5_update(&md5, &(args->H), sizeof(int));
+            md5_finish_hex(&md5, cachekey);
         }
+        cached = cache_load(args, "apod", cachekey, &len);
+        if (len != (args->W * args->H * 4 * sizeof(float))) {
+            logmsg("Cached object was wrong size.\n");
+            free(cached);
+            cached = NULL;
+        }
+        if (cached) {
+            float* thisink = cached;
+            float* thiscounts = cached + args->W * args->H * 3;
+            add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
+            free(cached);
+        } else {
+            int sz;
+            float* chunk;
+            float* thisink;
+            float* thiscounts;
+            sz = args->W * args->H * 4 * sizeof(float);
+            // FIXME - realloc
+            chunk = calloc(sz, 1);
+            thisink = chunk;
+            thiscounts = chunk + args->W * args->H * 3;
 
-        // clamp to image bounds
-        xlo = MAX(0, xlo);
-        ylo = MAX(0, ylo);
-        xhi = MIN(args->W-1, xhi);
-        yhi = MIN(args->H-1, yhi);
+            // Compute ink for this image...
+            if (jpeg)
+                userimg = cairoutils_read_jpeg(imgfn, &W, &H);
+            else if (png)
+                userimg = cairoutils_read_png(imgfn, &W, &H);
+            if (!userimg) {
+                logmsg("failed to read image file %s\n", imgfn);
+                return -1;
+            }
+            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
 
-        logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+            if (fakesize) {
+                // if we set fake image size, recompute...
+                get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
+                xlo = floor(ra2pixelf(ramin, args));
+                xhi = ceil (ra2pixelf(ramax, args));
+                // increasing DEC -> decreasing Y pixel coord
+                ylo = floor(dec2pixelf(decmax, args));
+                yhi = ceil (dec2pixelf(decmin, args));
+            }
+            // clamp to image bounds
+            xlo = MAX(0, xlo);
+            ylo = MAX(0, ylo);
+            xhi = MIN(args->W-1, xhi);
+            yhi = MIN(args->H-1, yhi);
+            logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
-        pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
-        weight = pixeldensity;
+            pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
+            weight = pixeldensity;
 
-        // iterate over mercator space (ie, output pixels)
-        for (j=ylo; j<=yhi; j++) {
-            dec = decvals[j];
-            for (i=xlo; i<=xhi; i++) {
-                int pppx,pppy;
+            // iterate over mercator space (ie, output pixels)
+            for (j=ylo; j<=yhi; j++) {
+                dec = decvals[j];
+                for (i=xlo; i<=xhi; i++) {
+                    int pppx,pppy;
+                    ra = ravals[i];
+                    if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
+                        continue;
+                    pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
+                    pppy = lround(imagey-1);
+                    if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
+                        continue;
+                    // nearest neighbour. bilinear is for weenies.
+                    thisink[3*(j*w + i) + 0] = userimg[4*(pppy*W + pppx) + 0] * weight;
+                    thisink[3*(j*w + i) + 1] = userimg[4*(pppy*W + pppx) + 1] * weight;
+                    thisink[3*(j*w + i) + 2] = userimg[4*(pppy*W + pppx) + 2] * weight;
+                    thiscounts[j*w + i] = weight;
+                }
+            }
+            free(userimg);
 
-                ra = ravals[i];
-                if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
-                    continue;
-                pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
-                pppy = lround(imagey-1);
-                if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
-                    continue;
-				// nearest neighbour. bilinear is for weenies.
-				ink[3*(j*w + i) + 0] += userimg[4*(pppy*W + pppx) + 0] * weight;
-				ink[3*(j*w + i) + 1] += userimg[4*(pppy*W + pppx) + 1] * weight;
-				ink[3*(j*w + i) + 2] += userimg[4*(pppy*W + pppx) + 2] * weight;
-				counts[j*w + i] += weight;
-			}
-		}
-        free(userimg);
+            add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
+            cache_save(args, "apod", cachekey, chunk, sz);
+            free(chunk);
+        }
 
         if (args->outline) {
             wcs.wcstan.imagew = W;

@@ -48,9 +48,9 @@ LDFLAGS += $(CAIRO_LIB)
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
-USNOBMAP_EXECS := usnobcount usnobtile sdssfieldtile \
+USNOBMAP_EXECS := tilerender usnobcount usnobtile sdssfieldtile \
 	indexquad sdssquad render-mercator make-merctree make-merctree2 rdlstile \
-	indextile indexquad2 tychotile tilerender
+	indextile indexquad2 tychotile
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
 MISC_MAIN_OBJS := $(addsuffix .o,$(MISC_EXECS))

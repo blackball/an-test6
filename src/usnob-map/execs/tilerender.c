@@ -1,3 +1,20 @@
+/*
+  This file is part of the Astrometry.net suite.
+  Copyright 2007 Keir Mierle and Dustin Lang.
+
+  The Astrometry.net suite is free software; you can redistribute
+  it and/or modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation, version 2.
+
+  The Astrometry.net suite is distributed in the hope that it will be
+  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with the Astrometry.net suite ; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -13,6 +30,7 @@
 #include "tilerender.h"
 #include "starutil.h"
 #include "cairoutils.h"
+#include "ioutils.h"
 
 #include "render_image.h"
 #include "render_tycho.h"
@@ -34,7 +52,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:O";
+const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:OD:";
 
 
 /* All render layers must go in here */
@@ -110,6 +128,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'D':
+            args.cachedir = strdup(optarg);
+            break;
         case 'O':
             args.outline = TRUE;
             break;
@@ -489,4 +510,62 @@ void draw_segmented_line(double ra1, double dec1,
         }
     }
 }
+
+void* cache_load(render_args_t* args,
+                 const char* cachedomain, const char* key, int* length) {
+    char fn[1024];
+    char* buf;
+    size_t len;
+
+    if (!args->cachedir)
+        return NULL;
+    if (snprintf(fn, sizeof(fn), "%s/%s-%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
+        fprintf(stderr, "Filename truncated in cache_load.\n");
+        return NULL;
+    }
+
+    buf = file_get_contents(fn, &len, FALSE);
+    if (!buf) {
+        fprintf(stderr, "Failed to read file contents in cache_load.\n");
+        return NULL;
+    }
+    if (length)
+        *length = len;
+    return buf;
+}
+
+int cache_save(render_args_t* args,
+               const char* cachedomain, const char* key,
+               const void* data, int length) {
+    char fn[1024];
+    FILE* fid;
+
+    if (!args->cachedir)
+        return -1;
+    if (snprintf(fn, sizeof(fn), "%s/%s-%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
+        fprintf(stderr, "Filename truncated in cache_save.\n");
+        return -1;
+    }
+    fid = fopen("wb", fn);
+    if (!fid) {
+        fprintf(stderr, "Failed to open cache file \"%s\": %s\n", fn, strerror(errno));
+        goto cleanup;
+    }
+    if (fwrite(data, 1, length, fid) != length) {
+        fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+        goto cleanup;
+    }
+    if (fclose(fid)) {
+        fprintf(stderr, "Failed to close cache file \"%s\": %s\n", fn, strerror(errno));
+        goto cleanup;
+    }
+    return 0;
+
+ cleanup:
+    if (fid)
+        fclose(fid);
+    unlink(fn);
+    return -1;
+}
+
 

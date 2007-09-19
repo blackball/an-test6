@@ -78,6 +78,9 @@ struct render_args {
 	bool zoomdown;
 
 	char* constfn;
+
+    // caching
+    char* cachedir;
 };
 typedef struct render_args render_args_t;
 
@@ -140,5 +143,12 @@ void draw_segmented_line(double ra1, double dec1,
 // draw a line in Mercator space, handling wrap-around if necessary.
 void draw_line_merc(double mx1, double my1, double mx2, double my2,
 					cairo_t* cairo, render_args_t* args);
+
+void* cache_load(render_args_t* args,
+                 const char* cachedomain, const char* key, int* length);
+
+int cache_save(render_args_t* args,
+               const char* cachedomain, const char* key,
+               const void* data, int length);
 
 #endif
