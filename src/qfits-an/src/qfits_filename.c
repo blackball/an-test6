@@ -200,7 +200,7 @@ char * qfits_get_root_name(const char * filename)
     char * lastdot ;
 
     if (strlen(filename)>MAXNAMESZ) return NULL ;
-    memset(path, MAXNAMESZ, 0);
+    memset(path, 0, MAXNAMESZ+1);
     strcpy(path, filename);
     lastdot = strrchr(path, '.');
     if (lastdot == NULL) return path ;
