@@ -80,6 +80,8 @@ static void add_ink(float* ink, float* counts, float* thisink, float* thiscounts
         thiscounts[i] += counts[i];
 }
 
+const char* cachedomain = "apod";
+
 int render_collection(unsigned char* img, render_args_t* args) {
     int I;
     sl* imagefiles;
@@ -208,15 +210,16 @@ int render_collection(unsigned char* img, render_args_t* args) {
             md5_update(&md5, &(args->H), sizeof(int));
             md5_finish_hex(&md5, cachekey);
         }
-        cached = cache_load(args, "apod", cachekey, &len);
-        if (len != (args->W * args->H * 4 * sizeof(float))) {
-            logmsg("Cached object was wrong size.\n");
+        cached = cache_load(args, cachedomain, cachekey, &len);
+        if (cached && (len != (args->W * args->H * 4 * sizeof(float)))) {
+            logmsg("Cached object (%s/%s) was wrong size.\n", cachedomain, cachekey);
             free(cached);
             cached = NULL;
         }
         if (cached) {
             float* thisink = cached;
             float* thiscounts = cached + args->W * args->H * 3;
+            logmsg("Cache hit: %s/%s.\n", cachedomain, cachekey);
             add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
             free(cached);
         } else {
@@ -282,7 +285,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
             free(userimg);
 
             add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
-            cache_save(args, "apod", cachekey, chunk, sz);
+            logmsg("Caching: %s/%s.\n", cachedomain, cachekey);
+            cache_save(args, cachedomain, cachekey, chunk, sz);
             free(chunk);
         }
 

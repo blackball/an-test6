@@ -519,7 +519,7 @@ void* cache_load(render_args_t* args,
 
     if (!args->cachedir)
         return NULL;
-    if (snprintf(fn, sizeof(fn), "%s/%s-%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
+    if (snprintf(fn, sizeof(fn), "%s/%s/%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
         fprintf(stderr, "Filename truncated in cache_load.\n");
         return NULL;
     }
@@ -542,7 +542,7 @@ int cache_save(render_args_t* args,
 
     if (!args->cachedir)
         return -1;
-    if (snprintf(fn, sizeof(fn), "%s/%s-%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
+    if (snprintf(fn, sizeof(fn), "%s/%s/%s", args->cachedir, cachedomain, key) > sizeof(fn)) {
         fprintf(stderr, "Filename truncated in cache_save.\n");
         return -1;
     }
