@@ -532,7 +532,8 @@ void* cache_load(render_args_t* args,
     if (cache_get_filename(args, cachedomain, key, fn, sizeof(fn))) {
         return NULL;
     }
-
+    if (!file_exists(fn))
+        return NULL;
     buf = file_get_contents(fn, &len, FALSE);
     if (!buf) {
         fprintf(stderr, "Failed to read file contents in cache_load.\n");
