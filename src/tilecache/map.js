@@ -250,7 +250,7 @@ function startup() {
 	mylay.push('apod');
 	userTile.myLayers=mylay.join(",");
 	userTile.myFormat='image/png';
-	userTile.myBaseURL=TILE_URL + "&tag=apod";
+	userTile.myBaseURL=TILE_URL; // + "&tag=apod";
 	userTile.getTileUrl=CustomGetTileUrl;
 
 	var userTile2 = new GTileLayer(new GCopyrightCollection(""), 1, 17);
