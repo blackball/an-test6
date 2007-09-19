@@ -49,8 +49,7 @@ md5_context;
  * \brief          Write hex string representation of MD5(input) into hexstr.
  *                 The output string must have size >= 33.
  */
-void md5_hex( const unsigned char *input, int ilen,
-              char *hexstr );
+void md5_hex( const void *input, int ilen, char *hexstr );
 
 /**
  * \brief          MD5 context setup
@@ -66,7 +65,7 @@ void md5_starts( md5_context *ctx );
  * \param input    buffer holding the  data
  * \param ilen     length of the input data
  */
-void md5_update( md5_context *ctx, const unsigned char *input, int ilen );
+void md5_update( md5_context *ctx, const void *input, int ilen );
 
 /**
  * \brief          MD5 final digest
@@ -77,13 +76,19 @@ void md5_update( md5_context *ctx, const unsigned char *input, int ilen );
 void md5_finish( md5_context *ctx, unsigned char *output );
 
 /**
+ * \brief          Write hex string representation of MD5 into hexstr.
+ *                 The output string must have size >= 33.
+ */
+void md5_finish_hex( md5_context *ctx, char *hexstr );
+
+/**
  * \brief          Output = MD5( input buffer )
  *
  * \param input    buffer holding the  data
  * \param ilen     length of the input data
  * \param output   MD5 checksum result
  */
-void md5( const unsigned char *input, int ilen,
+void md5( const void *input, int ilen,
           unsigned char *output );
 
 /**
@@ -115,7 +120,7 @@ void md5_hmac_starts( md5_context *ctx,
  * \param ilen     length of the input data
  */
 void md5_hmac_update( md5_context *ctx,
-                      const unsigned char *input, int ilen );
+                      const void *input, int ilen );
 
 /**
  * \brief          MD5 HMAC final digest
@@ -135,7 +140,7 @@ void md5_hmac_finish( md5_context *ctx, unsigned char *output );
  * \param output   HMAC-MD5 result
  */
 void md5_hmac( const unsigned char *key, int keylen,
-               const unsigned char *input, int ilen,
+               const void *input, int ilen,
                unsigned char *output );
 
 /**
