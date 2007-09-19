@@ -1060,7 +1060,7 @@ function render_form($form, $headers) {
 	$form->accept($renderer);
 
 	//if ($headers['simple']) {
-	if (array_key_exists('simple', $headers)) {
+	if (!array_key_exists('advanced', $headers)) {
 		$template = file_get_contents($index_template_simple);
 		$replace = array();
 		$flds = array('imgurl', 'submit', 'MAX_FILE_SIZE', 'skippreview');
