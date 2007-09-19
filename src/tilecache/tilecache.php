@@ -30,6 +30,7 @@
  */
 
 $CACHEDIR = "/data1/tilecache2";
+$TRCACHEDIR = "/data2/tilerender-cache"
 $TILERENDER = "/home/gmaps/test/usnob-map/execs/tilerender";
 $LOGFILE = "/tmp/tilecache2.log";
 
@@ -85,6 +86,8 @@ if ((sscanf($ws, "%d", $w) != 1) ||
 }
 
 $cmdline .= sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
+
+$cmdline .= " -D " . escapeshellarg($TRCACHEDIR);
 
 // Layers
 $layers = explode(",", $lay);
