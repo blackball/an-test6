@@ -30,7 +30,7 @@
  */
 
 $CACHEDIR = "/data1/tilecache2";
-$TRCACHEDIR = "/data2/tilerender-cache"
+$TRCACHEDIR = "/data2/tilerender-cache";
 $TILERENDER = "/home/gmaps/test/usnob-map/execs/tilerender";
 $LOGFILE = "/tmp/tilecache2.log";
 
