@@ -5,6 +5,30 @@
 <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" href="favicon.png">
 <title>Astrometry.net Stellar Browser</title>
+<style type="text/css">
+	.dispnumber {
+		border: 1px solid black;
+		color: white;
+		background-color: black;
+		padding: 3px;
+	}
+	.editnumber {
+		border: 1px solid white;
+		color: white;
+		background-color: black;
+		padding: 3px;
+	}
+	#gobox {
+		position: absolute;
+		bottom: 10px;
+		left: 90px;
+		font-family: monospace;
+		color: white;
+	}
+	#map {
+		position: absolute; top:0; left:0;width: 100%; height: 100%
+	}
+</style>
 </head>
 
 <!-- This key is good for http://oven.cosmo.fas.nyu.edu/-->
@@ -19,34 +43,28 @@
 <body onload="startup()" onunload="GUnload()">
 <center>
 <!-- The map will go here:-->
-<div id="map" style="width: 100%; height: 600px"></div>
+<div id="map" style=""></div>
 </center>
 
 <br>
-<center>
+<div id="gobox">
 <FORM NAME="gotoform" ACTION="" METHOD="GET">
-Center RA:
-<INPUT TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
-DEC:
-<INPUT TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10>
+&nbsp;mouse ra: <INPUT class="dispnumber" TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
+dec:      <INPUT class="dispnumber" TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
+<br>
+center ra: <INPUT class="editnumber" TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
+dec:       <INPUT class="editnumber" TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10>
 degrees.
-&nbsp;
-Zoom level:
-<input TYPE="text" NAME="zoomlevel" VALUE="" onChange="moveCenter()" size=4>
-&nbsp;
-<INPUT TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()">
-&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
-<p>
-Mouse RA:
-<INPUT TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
-DEC:
-<INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
+zoom level: <input class="editnumber" TYPE="text" NAME="zoomlevel" VALUE="" onChange="moveCenter()" size=4>
+<INPUT class="editnumber" TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()">
+<input class="editnumber" type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
 </FORM>
+</div>
 
 <br>
 
+<!--
+<center>
 <!-- Add a textbox for printing debugging info.-->
 Debug:
   <FORM name="debugform" ACTION="" METHOD="GET">
@@ -55,7 +73,7 @@ Debug:
   </FORM>
 
 </center>
-</div>
+-->
 
 <!-- Include the map itself. -->
 <script SRC="map.js" TYPE="text/javascript"> </script>
