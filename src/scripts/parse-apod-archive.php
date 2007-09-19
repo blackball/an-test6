@@ -39,7 +39,7 @@ foreach ($matches as $m) {
      */
 
     // temp
-    if (substr($date, 0, 2) != "05")
+    if (substr($date, 0, 2) != "04")
         //if (substr($date, 0, 4) != "9601")
         continue;
 
@@ -64,7 +64,7 @@ foreach ($matches as $m) {
 		die("Couldn't get: " . $url);
 	}
 
-	$pat = "|<a href=" // link to...
+	$pat = "|<a href=" . // link to...
 		"\"(" . // start quote & capture
 		"?P<bigimgurl>" . // link to the big image:
 		"image/[^ \n]*?" . // (no spaces, newlines)

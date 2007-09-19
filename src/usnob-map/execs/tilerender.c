@@ -554,7 +554,7 @@ int cache_save(render_args_t* args,
     if (cache_get_filename(args, cachedomain, key, fn, sizeof(fn))) {
         return -1;
     }
-    fid = fopen("wb", fn);
+    fid = fopen(fn, "wb");
     if (!fid) {
         fprintf(stderr, "Failed to open cache file \"%s\": %s\n", fn, strerror(errno));
         goto cleanup;
