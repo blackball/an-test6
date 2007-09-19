@@ -324,7 +324,7 @@ char* file_get_contents_offset(const char* fn, int offset, int size) {
     return buf;
 }
 
-char* file_get_contents(const char* fn) {
+char* file_get_contents(const char* fn, size_t* len, bool addzero) {
     struct stat st;
     char* buf;
     FILE* fid;
@@ -339,7 +339,7 @@ char* file_get_contents(const char* fn) {
         fprintf(stderr, "file_get_contents: failed to open file \"%s\": %s\n", fn, strerror(errno));
         return NULL;
     }
-    buf = malloc(size);
+    buf = malloc(size + (addzero ? 1 : 0));
     if (!buf) {
         fprintf(stderr, "file_get_contents: couldn't malloc %lu bytes.\n", (long)size);
         return NULL;
@@ -350,6 +350,10 @@ char* file_get_contents(const char* fn) {
         return NULL;
     }
 	fclose(fid);
+    if (addzero)
+        buf[size] = '\0';
+    if (len)
+        *len = size;
     return buf;
 }
 

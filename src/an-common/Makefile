@@ -54,7 +54,8 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB)
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
 
-ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
+ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o \
+	md5.o
 
 # put this here to break the grab-stellarium-constellations <-> constellations.o
 # circular dependency.
