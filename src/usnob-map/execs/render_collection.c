@@ -190,13 +190,13 @@ int render_collection(unsigned char* img, render_args_t* args) {
         if (fakesize)
             logmsg("USING FAKESIZE\n");
 
-        logmsg("WCS image W,H = (%i, %i)%s\n", W, H, (fakesize ?" (fake)":""));
+//        logmsg("WCS image W,H = (%i, %i)%s\n", W, H, (fakesize ?" (fake)":""));
 
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
-        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
-               ramin, ramax, decmin, decmax);
+//        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
+//               ramin, ramax, decmin, decmax);
 
         xlo = floor(ra2pixelf(ramin, args));
         xhi = ceil (ra2pixelf(ramax, args));
@@ -204,7 +204,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
         ylo = floor(dec2pixelf(decmax, args));
         yhi = ceil (dec2pixelf(decmin, args));
 
-        logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+//        logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
         if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H))
             // No need to read the image!
@@ -255,7 +255,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
                 logmsg("failed to read image file %s\n", imgfn);
                 return -1;
             }
-            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
+//            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
 
             if (fakesize) {
                 // if we set fake image size, recompute...
@@ -271,7 +271,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
             ylo = MAX(0, ylo);
             xhi = MIN(args->W-1, xhi);
             yhi = MIN(args->H-1, yhi);
-            logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+//            logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
             pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
             weight = pixeldensity;
@@ -298,7 +298,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
             free(userimg);
 
             add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
-            logmsg("Caching: %s/%s.\n", cachedomain, cachekey);
+            logmsg("Caching: %s/%s (%d bytes).\n", cachedomain, cachekey, sz);
             cache_save(args, cachedomain, cachekey, chunk, sz);
             free(chunk);
         }
@@ -354,7 +354,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
     if (args->outline) {
         cairo_t* cairo;
         cairo_surface_t* target;
-        double lw = 1.0;
+        double lw = 2.0;
         sip_t* wcs;
         int j;
 
