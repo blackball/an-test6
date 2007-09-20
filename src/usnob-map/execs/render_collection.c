@@ -11,8 +11,8 @@
 #include "keywords.h"
 #include "md5.h"
 
-//char* image_dir = "/home/gmaps/apod-solves";
-char* image_dir = "/tmp/imgs";
+char* image_dir = "/home/gmaps/apod-solves";
+//char* image_dir = "/tmp/imgs";
 
 static void
 ATTRIB_FORMAT(printf,1,2)
