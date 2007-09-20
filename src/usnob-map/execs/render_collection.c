@@ -11,8 +11,8 @@
 #include "keywords.h"
 #include "md5.h"
 
-char* image_dir = "/home/gmaps/apod-solves";
-//char* image_dir = "/tmp/imgs";
+//char* image_dir = "/home/gmaps/apod-solves";
+char* image_dir = "/tmp/imgs";
 
 static void
 ATTRIB_FORMAT(printf,1,2)
@@ -77,7 +77,7 @@ static void add_ink(float* ink, float* counts, float* thisink, float* thiscounts
     for (i=0; i<(3*W*H); i++)
         ink[i] += thisink[i];
     for (i=0; i<(W*H); i++)
-        thiscounts[i] += counts[i];
+        counts[i] += thiscounts[i];
 }
 
 const char* cachedomain = "apod";
@@ -97,6 +97,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
     imagefiles = dir_get_contents(image_dir, NULL, TRUE, FALSE);
     if (!imagefiles) {
         logmsg("error getting image file list.\n");
+        return -1;
     }
     logmsg("found %i files in image directory %s.\n", sl_size(imagefiles), image_dir);
 
