@@ -243,7 +243,7 @@ if ($tag) {
     }
     $tilefile = "$tilecachedir/tile-$tilehash.png";
     if (!file_exists($tilefile)) {
-        $cmdline .= " > " . $tilefile . " 2> " . $LOGFILE;
+        $cmdline .= " > " . $tilefile . " 2>> " . $LOGFILE;
         loggit("cmdline: " . $cmdline . "\n");
         $rtn = system($cmdline);
         if ($rtn) {
@@ -267,6 +267,7 @@ if ($tag) {
     fpassthru($fp);
 } else {
     loggit("cmdline: " . $cmdline . "\n");
+    $cmdline .= " 2>> " . $LOGFILE;
     // No cache, just run it.
     passthru($cmdline);
 }
