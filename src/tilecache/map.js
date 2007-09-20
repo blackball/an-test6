@@ -34,12 +34,11 @@ var map;
 // Base URL of the tile and quad servers.
 var BASE_URL;
 var TILE_URL;
-var QUAD_URL;
 
 var getdata;
 
 // are we showing the overview?
-var overview = true;
+var overview = false;
 
 // args that we pass on.
 var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
@@ -49,7 +48,6 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
                  'outline', 'density'
 				 ]; // 'clean'
 
-var usnobMapType;
 //var cleanMapType;
 
 /*
@@ -193,9 +191,7 @@ function startup() {
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
-	//BASE_URL = "http://monte.ai.toronto.edu:8080/tilecache/";
 	TILE_URL = BASE_URL + "tilecache.php?";
-	//QUAD_URL = BASE_URL + "quad.php?";
 
 	// Add pass-thru args
 	for (var i=0; i<passargs.length; i++) {
@@ -204,85 +200,39 @@ function startup() {
 		}
 	}
 
-	// Describe the tile server...
+	// start the map out empty
+	map.getMapTypes().length = 0;
+
+	/////////////////////////////////// LAYERS /////////////////////////
+
+	var linedrawingsTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	linedrawingsTile.myLayers='messier,constellation,grid';
+	linedrawingsTile.myFormat='image/png';
+	linedrawingsTile.myBaseURL=TILE_URL; // + "&tag=apod";
+	linedrawingsTile.getTileUrl=CustomGetTileUrl;
+	var linedrawingsMapType = new GMapType([linedrawingsTile], G_SATELLITE_MAP.getProjection(), "Line Drawings", G_SATELLITE_MAP);
+	map.addMapType(linedrawingsMapType);
+
+	var apodTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	apodTile.myLayers='apod';
+	apodTile.myFormat='image/png';
+	apodTile.myBaseURL=TILE_URL; // + "&tag=apod";
+	apodTile.getTileUrl=CustomGetTileUrl;
+	var apodMapType = new GMapType([apodTile], G_SATELLITE_MAP.getProjection(), "APOD", G_SATELLITE_MAP);
+	map.addMapType(apodMapType);
+
 	// USNOB underneath
 	var usnobTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	usnobTile.myLayers='usnob';
 	usnobTile.myFormat='image/png';
 	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
-
-	lay = [];
-
-    lay.push("solid");
-	if ("tycho" in getdata) {
-		lay.push('tycho') ;
-	}
-	if ("grid" in getdata) {
-		lay.push('grid');
-	}
-	if (("imagefn" in getdata) && ("imwcsfn" in getdata)) {
-		lay.push('image');
-	}
-	if ("wcsfn" in getdata) {
-		lay.push('boundary');
-	}
-	if ("const" in getdata) {
-		lay.push('constellation');
-	}
-	if ("rdlsfn" in getdata) {
-		lay.push('rdls');
-	}
-	if ("clean" in getdata) {
-		lay.push('clean');
-	}
-	if ("dirty" in getdata) {
-		lay.push('dirty');
-	}
-	/*if ("apod" in getdata) {
-	  lay.push('apod');
-	  }
-	*/
-	layers = lay.join(",");
-
-	var userTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	var mylay = lay;
-	mylay.push('apod');
-	userTile.myLayers=mylay.join(",");
-	userTile.myFormat='image/png';
-	userTile.myBaseURL=TILE_URL; // + "&tag=apod";
-	userTile.getTileUrl=CustomGetTileUrl;
-
-	var userTile2 = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	userTile2.myLayers=layers;
-	userTile2.myFormat='image/png';
-	userTile2.myBaseURL=TILE_URL + "&version=20070911";
-	userTile2.getTileUrl=CustomGetTileUrl;
-
-	//var userUsnobMapType = new GMapType([usnobTile, userTile], G_SATELLITE_MAP.getProjection(), "User+", G_SATELLITE_MAP);
-
-	var userMapType = new GMapType([userTile], G_SATELLITE_MAP.getProjection(), "APOD", G_SATELLITE_MAP);
-	var userMapType2 = new GMapType([userTile2], G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
-
-		usnobMapType = new GMapType([usnobTile],
+	var usnobMapType = new GMapType([usnobTile],
 									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
-        /*
-         cleanMapType = new GMapType([cleanTile],
-         G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
-         */
-
-	map.getMapTypes().length = 0;
-	/*
-	  map.addMapType(myMapType);
-	  map.setMapType(myMapType);
-	*/
 	map.addMapType(usnobMapType);
-	//map.addMapType(cleanMapType);
-	map.addMapType(userMapType);
-	map.addMapType(userMapType2);
-	//map.addMapType(userUsnobMapType);
+	/////////////////////////////////// END LAYERS /////////////////////////
 
-    map.setMapType(userMapType);
+    map.setMapType(usnobMapType);
 
 	// Show an overview map?
 	if (("over" in getdata) && (getdata["over"] == "no")) {
