@@ -324,7 +324,7 @@ char* file_get_contents_offset(const char* fn, int offset, int size) {
     return buf;
 }
 
-char* file_get_contents(const char* fn, size_t* len, bool addzero) {
+void* file_get_contents(const char* fn, size_t* len, bool addzero) {
     struct stat st;
     char* buf;
     FILE* fid;
