@@ -39,7 +39,7 @@ foreach ($matches as $m) {
      */
 
     // temp
-    if (substr($date, 0, 2) != "04")
+    if (substr($date, 0, 2) != "03")
         //if (substr($date, 0, 4) != "9601")
         continue;
 
