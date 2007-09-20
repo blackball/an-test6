@@ -33,6 +33,7 @@ $CACHEDIR = "/data1/tilecache2";
 $TRCACHEDIR = "/data2/tilerender-cache";
 $TILERENDER = "/home/gmaps/test/usnob-map/execs/tilerender";
 $LOGFILE = "/tmp/tilecache2.log";
+$RCDIR = "/data2/apod-solves";
 
 // Write a message to the log file.
 function loggit($mesg) {
@@ -106,6 +107,22 @@ if (array_key_exists('outline', $_REQUEST)) {
 
 if (array_key_exists('density', $_REQUEST)) {
     $cmdline .= " -n";
+}
+
+if (array_key_exists('apod', $layers)) {
+    $files = scandir($RCDIR);
+    $goodfiles = array();
+    foreach ($files as $f) {
+        if (is_dir($f))
+            continue;
+        array_push($goodfiles, $RCDIR . '/' . $f);
+    }
+    $filelist = implode("\n", $goodfiles);
+    $fn = md5($filelist);
+    $dir = sys_get_temp_dir();
+    $path = $dir . '/' . $fn;
+    file_put_contents($path, $filelist);
+    $cmdline .= " -S " . $path;
 }
 
 //////////////////////

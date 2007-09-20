@@ -40,6 +40,7 @@ struct render_args {
     char* currentlayer;
 
     // render_collection:
+    char* filelist;
     bool outline;
     bool density;
 

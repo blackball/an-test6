@@ -54,7 +54,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:OD:n";
+const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:OD:nS:";
 
 
 /* All render layers must go in here */
@@ -130,6 +130,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'S':
+            args.filelist = strdup(optarg);
+            break;
         case 'n':
             args.density = TRUE;
             break;
