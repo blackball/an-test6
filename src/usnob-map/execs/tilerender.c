@@ -549,7 +549,7 @@ void* cache_load(render_args_t* args,
 	}
 	if (!file_exists(fn))
 		return NULL;
-	buf = (unsigned char*)file_get_contents(fn, &len, FALSE);
+	buf = file_get_contents(fn, &len, FALSE);
 	if (!buf) {
 		fprintf(stderr, "Failed to read file contents in cache_load.\n");
 		return NULL;
@@ -572,7 +572,6 @@ void* cache_load(render_args_t* args,
 	}
 	// Grab original (uncompressed) length.
 	ulen = ubuf[1];
-//	ulen *= 2;
 	uncomplen = ulen;
 	uncomp = malloc(ulen);
 	if (!uncomp) {
@@ -623,10 +622,6 @@ int cache_save(render_args_t* args,
 		fprintf(stderr, "Failed to allocate compressed cache buffer\n");
 		goto cleanup;
 	}
-//	uint32_t* blah = (uint32_t*) compressed;
-//	int i=0;
-//	for (i=0; i<complen/4; i++) 
-//		blah[i] = 0xdeadbeef;
 
 	// first four bytes: type id
 	typeid = 1;
@@ -654,24 +649,6 @@ int cache_save(render_args_t* args,
 		goto cleanup;
 	}
 
-	FILE* saved = fopen(fn, "rb");
-	unsigned char* myotherbuf = malloc(complen+8);
-	int sz = fread(myotherbuf, 1, complen+8, saved);
-	assert (sz == complen+8);
-	assert(memcmp(myotherbuf+8, compressed, complen) == 0);
-	int ret = uncompress(data, &length, compressed, complen);
-	assert(ret == Z_OK);
-
-	int mywhackylength;
-	char* mywhackybuf = file_get_contents(fn, &mywhackylength, FALSE);
-	assert(mywhackylength==complen+8);
-	assert(memcmp(mywhackybuf, myotherbuf, complen+8)==0);
-
-	int mylength;
-	void* mycache = cache_load(args, cachedomain, key, &mylength);
-	assert(mylength == length);
-	assert(memcmp(mycache, data, mylength) == 0);
-
 	free(compressed);
 	return 0;
 
@@ -679,7 +656,7 @@ cleanup:
 	free(compressed);
 	if (fid)
 		fclose(fid);
-//	unlink(fn);
+	unlink(fn);
 	return -1;
 }
 
