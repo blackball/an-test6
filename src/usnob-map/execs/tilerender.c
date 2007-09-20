@@ -26,6 +26,8 @@
 
 #include <png.h>
 
+#include <zlib.h>
+
 #include "an-bool.h"
 #include "tilerender.h"
 #include "starutil.h"
@@ -524,8 +526,14 @@ static int cache_get_filename(render_args_t* args,
 void* cache_load(render_args_t* args,
                  const char* cachedomain, const char* key, int* length) {
     char fn[1024];
-    char* buf;
+    unsigned char* buf;
     size_t len;
+    uint32_t typeid;
+    uint32_t ulen;
+    unsigned char* uncomp;
+    int hdrsize = 8;
+    int rtn;
+    uLong uncomplen;
 
     if (!args->cachedir)
         return NULL;
@@ -534,14 +542,49 @@ void* cache_load(render_args_t* args,
     }
     if (!file_exists(fn))
         return NULL;
-    buf = file_get_contents(fn, &len, FALSE);
+    buf = (unsigned char*)file_get_contents(fn, &len, FALSE);
     if (!buf) {
         fprintf(stderr, "Failed to read file contents in cache_load.\n");
         return NULL;
     }
+
+    if (len < hdrsize) {
+        fprintf(stderr, "Cache file too small: \"%s\n", fn);
+        free(buf);
+        return NULL;
+    }
+
+    // Grab typeid.
+    memcpy(&typeid, buf, sizeof(uint32_t));
+    if (typeid != 1) {
+        fprintf(stderr, "File \"%s\" does not have typeid 1.\n", fn);
+        free(buf);
+        return NULL;
+    }
+    // Grab original (uncompressed) length.
+    memcpy(&ulen, buf+sizeof(uint32_t), sizeof(uint32_t));
+    uncomp = malloc(ulen);
+    if (!uncomp) {
+        fprintf(stderr, "Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", ulen, fn);
+        free(buf);
+        return NULL;
+    }
+    rtn = uncompress(uncomp, &uncomplen, buf + hdrsize, len - hdrsize);
+    free(buf);
+    if (rtn != Z_OK) {
+        fprintf(stderr, "Failed to uncompress() file \"%s\": %s\n", fn, zError(rtn));
+        free(uncomp);
+        return NULL;
+    }
     if (length)
-        *length = len;
-    return buf;
+        *length = uncomplen;
+    return uncomp;
+
+    /*
+     if (length)
+     *length = len;
+     return buf;
+     */
 }
 
 int cache_save(render_args_t* args,
@@ -549,6 +592,7 @@ int cache_save(render_args_t* args,
                const void* data, int length) {
     char fn[1024];
     FILE* fid;
+    uint32_t typeid;
 
     if (!args->cachedir)
         return -1;
@@ -560,10 +604,47 @@ int cache_save(render_args_t* args,
         fprintf(stderr, "Failed to open cache file \"%s\": %s\n", fn, strerror(errno));
         goto cleanup;
     }
-    if (fwrite(data, 1, length, fid) != length) {
-        fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
-        goto cleanup;
+
+    if (1) {
+        unsigned char* compressed;
+        uLong complen;
+        uint32_t ulen;
+        int rtn;
+        int hdrsize = 8;
+
+        complen = compressBound(length);
+        compressed = malloc(complen + hdrsize);
+
+        // first four bytes: type id
+        typeid = 1;
+        memcpy(compressed, &typeid, sizeof(uint32_t));
+        // next four bytes: uncompressed data length.
+        ulen = length;
+        memcpy(compressed + sizeof(uint32_t), &ulen, sizeof(uint32_t));
+
+        rtn = compress(compressed + hdrsize, &complen, data, length);
+        if (rtn != Z_OK) {
+            fprintf(stderr, "compress() error: %s\n", zError(rtn));
+            return -1;
+        }
+        if (fwrite(compressed, 1, complen + hdrsize, fid) != complen + hdrsize) {
+            fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+            goto cleanup;
+        }
+
+    } else if (0) {
+        typeid = 0;
+        if (fwrite(&typeid, 1, sizeof(uint32_t), fid) != sizeof(uint32_t)) {
+            fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+            goto cleanup;
+        }
+        if (fwrite(data, 1, length, fid) != length) {
+            fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+            goto cleanup;
+        }
     }
+
+
     if (fclose(fid)) {
         fprintf(stderr, "Failed to close cache file \"%s\": %s\n", fn, strerror(errno));
         goto cleanup;
