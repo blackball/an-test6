@@ -104,6 +104,10 @@ if (array_key_exists('outline', $_REQUEST)) {
     $cmdline .= " -O";
 }
 
+if (array_key_exists('density', $_REQUEST)) {
+    $cmdline .= " -n";
+}
+
 //////////////////////
 // render_image layer:
 

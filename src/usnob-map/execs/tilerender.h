@@ -41,6 +41,7 @@ struct render_args {
 
     // render_collection:
     bool outline;
+    bool density;
 
 	// Args for render_image:
 	char* imagefn;

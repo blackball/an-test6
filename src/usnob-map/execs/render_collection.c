@@ -302,15 +302,32 @@ int render_collection(unsigned char* img, render_args_t* args) {
     free(ravals);
     free(decvals);
 
-	for (j=0; j<args->H; j++) {
-		for (i=0; i<w; i++) {
-            uchar* pix;
-            pix = pixel(i, j, img, args);
-            if (counts[j*w + i]) {
-                pix[0] = MAX(0, MIN(255, ink[3 * (j*w + i) + 0] / counts[j*w + i]));
-                pix[1] = MAX(0, MIN(255, ink[3 * (j*w + i) + 1] / counts[j*w + i]));
-                pix[2] = MAX(0, MIN(255, ink[3 * (j*w + i) + 2] / counts[j*w + i]));
-                pix[3] = 255;
+    if (args->density) {
+        for (j=0; j<args->H; j++) {
+            for (i=0; i<w; i++) {
+                uchar* pix;
+                double den;
+                pix = pixel(i, j, img, args);
+                den = counts[j*w + i];
+                den *= pow(4.0, args->zoomlevel);
+                den *= exp(args->gain * log(4.0));
+                if (den > 0.0) {
+                    pix[0] = pix[1] = pix[2] = MAX(0, MIN(255, den));
+                    pix[3] = 255;
+                }
+            }
+        }
+    } else {
+        for (j=0; j<args->H; j++) {
+            for (i=0; i<w; i++) {
+                uchar* pix;
+                pix = pixel(i, j, img, args);
+                if (counts[j*w + i]) {
+                    pix[0] = MAX(0, MIN(255, ink[3 * (j*w + i) + 0] / counts[j*w + i]));
+                    pix[1] = MAX(0, MIN(255, ink[3 * (j*w + i) + 1] / counts[j*w + i]));
+                    pix[2] = MAX(0, MIN(255, ink[3 * (j*w + i) + 2] / counts[j*w + i]));
+                    pix[3] = 255;
+                }
             }
         }
     }
