@@ -103,17 +103,31 @@ function moveCenter() {
 */
 function linktohere() {
 	var url=new String(window.location);
-	var qm=url.search(/\?/);
+	if (url.charAt(url.length - 1) == '#')
+		url = url.substr(0, url.length - 1);
+	var qm = url.search(/\?/);
 	if (qm!=-1) {
 		url = url.substr(0, qm);
 	}
 	center = map.getCenter();
 	url += "?ra=" + center.lng() + "&dec=" + center.lat()
 		+ "&zoom=" + map.getZoom();
-	/*
-	  var mt = map.getCurrentMapType().getName();
-	  url += "&maptype=" + mt.toLowerCase();
-	*/
+
+	var show = [];
+	if (tychoShowing)
+		show.push("tycho");
+	if (usnobShowing)
+		show.push("usnob");
+	if (apodShowing)
+		show.push("apod");
+	if (gridShowing)
+		show.push("grid");
+	if (messierShowing)
+		show.push("messier");
+	if (constellationShowing)
+		show.push("constellation");
+	url += "&show=" + show.join(",");
+
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
 			url += "&" + passargs[i];
@@ -156,17 +170,30 @@ function buttonStyleCommon(button) {
 	buttonStyleOn(button);
 }
 
+var gridOverlay;
+var gridShowing = 0;
+var messierOverlay;
+var messierShowing = 0;
+var constellationOverlay;
+var constellationShowing = 0;
+var tychoOverlay;
+var tychoShowing = 0;
+var usnobOverlay;
+var usnobShowing = 0;
+var apodOverlay;
+var apodShowing = 0;
+
 function toggleOverlay(overlayName) {
 	overlay = eval(overlayName+"Overlay");
 	button = document.getElementById(overlayName+"ToggleButton");
 	if (eval(overlayName+"Showing")) {
-		map.removeOverlay(overlay);
 		eval(overlayName+"Showing = 0");
 		button.style.color = "#666";
+		map.removeOverlay(overlay);
 	} else {
-		map.addOverlay(overlay);
 		eval(overlayName+"Showing = 1");
 		button.style.color = "white";
+		map.addOverlay(overlay);
 	}
 }
 
@@ -174,13 +201,6 @@ function toggleOverlayRestack(overlayName) {
 	toggleOverlay(overlayName);
 	restackOverlays();
 }
-
-var gridOverlay;
-var gridShowing = 0;
-var messierOverlay;
-var messierShowing = 0;
-var constellationOverlay;
-var constellationShowing = 0;
 
 function makeTile(layers, tag) {
 	var newTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
@@ -195,20 +215,12 @@ function makeMapType(tiles, label) {
 	return new GMapType(tiles, G_SATELLITE_MAP.getProjection(), label, G_SATELLITE_MAP);
 }
 
-var tychoOverlay;
-var tychoShowing = 0;
-
 var tychoGain = 0; // must match HTML
 var tychoArcsinh = 1; // must match HTML
-
-var usnobOverlay;
-var usnobShowing = 0;
 
 var usnobGain = 0; // must match HTML
 var usnobArcsinh = 1; // must match HTML
 
-var apodOverlay;
-var apodShowing = 0;
 var apodOutline = 0;
 
 function restackOverlays() {
@@ -227,15 +239,6 @@ function restackOverlays() {
 		map.addOverlay(constellationOverlay);
 }
 
-function updateApod() {
-	var tag = "&tag=apod";
-	if (apodOutline) {
-		tag += "&outline";
-	}
-	var apodTile = makeTile('apod', tag);
-	apodOverlay = new GTileLayerOverlay(apodTile);
-}
-
 function toggleApodOutline() {
 	button = document.getElementById("apodOutlineToggleButton");
 	if (apodOutline) {
@@ -249,14 +252,21 @@ function toggleApodOutline() {
 	restackOverlays();
 }
 
+function updateApod() {
+	var tag = "&tag=apod";
+	if (apodOutline) {
+		tag += "&outline";
+	}
+	apodOverlay = new GTileLayerOverlay(makeTile('apod', tag));
+}
+
 function updateTycho() {
 	var tag = "&tag=tycho";
 	tag += "&gain=" + tychoGain;
 	if (tychoArcsinh) {
 		tag += "&arcsinh";
 	}
-	var tychoTile = makeTile('tycho', tag);
-	tychoOverlay = new GTileLayerOverlay(tychoTile);
+	tychoOverlay = new GTileLayerOverlay(makeTile('tycho', tag));
 }
 
 function updateUsnob() {
@@ -266,8 +276,7 @@ function updateUsnob() {
 	if (usnobArcsinh) {
 		tag += "&arcsinh";
 	}
-	var usnobTile = makeTile('usnob', tag);
-	usnobOverlay = new GTileLayerOverlay(usnobTile);
+	usnobOverlay = new GTileLayerOverlay(makeTile('usnob', tag));
 }
 
 function changeArcsinh() {
@@ -358,24 +367,25 @@ function startup() {
 	/////////////////////////////////// END LAYERS /////////////////////////
 
     map.setMapType(apodMapType);
-	/*
-	  if ('maptype' in getdata) {
-	  var mt = getdata['maptype'];
-	  if (mt == 'apod') {
-	  map.setMapType(apodMapType);
-	  } else if (mt == 'tycho') {
-	  map.setMapType(tychoMapType);
-	  } else if (mt == 'usnob') {
-	  map.setMapType(usnobMapType);
-	  }
-	  }
-	*/
 
 	updateTycho();
 	updateUsnob();
 	updateApod();
-	toggleOverlay('tycho');
-	toggleOverlay('apod');
+
+	if ('show' in getdata) {
+		var showstr = getdata['show'];
+		var ss = showstr.split(',');
+		var show = [];
+		for (i=0; i<ss.length; i++)
+			show[ss[i]] = 1;
+		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier' ];
+		for (i=0; i<layers.length; i++)
+			if (layers[i] in show)
+				toggleOverlay(layers[i]);
+	} else {
+		toggleOverlay('tycho');
+		toggleOverlay('apod');
+	}
 	restackOverlays();
 
 	// Connect up the event listeners...
@@ -386,7 +396,7 @@ function startup() {
 	GEvent.bindDom(window, "resize", map, map.onResize);
 
 	map.addControl(new GLargeMapControl());
-	map.addControl(new GMapTypeControl());
+	//map.addControl(new GMapTypeControl());
 
 	moveended();
 	mapzoomed(map.getZoom(), map.getZoom());
