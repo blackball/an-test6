@@ -31,9 +31,48 @@
  * Find non-zero objects in a binary image.
  *
  * Mike Blanton
- * 1/2006 */
+ * 1/2006
+ *
+ * dfind2() Keir Mierle 2007
+ */
 
 #define MAX_GROUPS 10000
+
+/*
+ * This code does connected component analysis, but instead of returning a list
+ * of components, it does the following crazy thing: it returns an image where
+ * each component is all numbered the same. For example, if your input is:
+ *
+ *  . . . . . . . . .
+ *  . . . 1 . . . . .
+ *  . . 1 1 1 . . . .
+ *  . . . 1 . . . . .
+ *  . . . . . . . . .
+ *  . 1 1 . . . 1 . .
+ *  . 1 1 . . 1 1 1 .
+ *  . 1 1 . . . 1 . .
+ *  . . . . . . . . .
+ *
+ * where . is 0. Then your output is:
+ *
+ *  . . . . . . . . .
+ *  . . . 0 . . . . .
+ *  . . 0 0 0 . . . .
+ *  . . . 0 . . . . .
+ *  . . . . . . . . .
+ *  . 1 1 . . . 2 . .
+ *  . 1 1 . . 2 2 2 .
+ *  . 1 1 . . . 2 . .
+ *  . . . . . . . . .
+ *
+ * where . is now -1. Diagonals are considered connections, so the following is
+ * a single component:
+ *  . . . . .
+ *  . 1 . 1 .
+ *  . . 1 . .
+ *  . 1 . 1 .
+ *  . . . . .
+ */
 
 int dfind2(int *image,
           int nx,

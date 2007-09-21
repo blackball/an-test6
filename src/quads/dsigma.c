@@ -63,6 +63,8 @@ int dsigma(float *image,
 	if (dy <= 0)
 		dy = 1;
 
+	/* get a bunch of noise 'samples' by looking at the differences between two
+	 * diagonally spaced pixels (usually 5) */
 	diff = (float *) malloc(2 * nx * ny * sizeof(float));
 	ndiff = 0;
 	for (j = 0;j < ny-sp;j += dy) {
@@ -85,6 +87,13 @@ int dsigma(float *image,
 		return (0);
 	}
 
+	/* estimate sigma in a clever way to avoid having our estimate biased by
+	 * outliers. outliers come into the diff list when we sampled a point where
+	 * the upper point was on a source, but the lower one was not. since the
+	 * sample variance involves squaring the already-large outliers, they
+	 * drastically affect the final sigma estimate. by sorting, the outliers go
+	 * to the top and only affect the final value very slightly, because they
+	 * are a small fraction of the total entries in diff (or so we hope!) */
 	(*sigma) = (dselip((int) floor(ndiff * 0.68), ndiff, diff)) / sqrt(2.);
 
 	FREEVEC(diff);

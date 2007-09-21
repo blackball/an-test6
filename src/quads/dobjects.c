@@ -45,11 +45,18 @@ int dobjects(float *image,
 	float limit, sigma;
 	int* mask;
 
+	/* smooth by the point spread function  */
 	dsmooth(image, nx, ny, dpsf, smooth);
 
+	/* check how much noise is left after running a median filter and a point
+	 * spread smooth */
 	dsigma(smooth, nx, ny, (int)(10*dpsf), &sigma);
+
+	/* limit is the threshold at which to pay attention to a pixel */
 	limit = sigma * plim;
 
+	/* This makes a mask which dfind uses when looking at the pixels; it
+	 * ignores any pixels the mask flagged as uninteresting. */
 	mask = (int *) malloc(nx * ny * sizeof(int));
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
@@ -62,6 +69,9 @@ int dobjects(float *image,
 		if (jnd > ny - 1)
 			jnd = ny - 1;
 		for (i = 0;i < nx;i++) {
+			/* this pixel looks interesting; note that we've already median
+			 * subtracted so it's valid to directly compare the image value to
+			 * sigma*significance without adding a mean */
 			if (smooth[i + j*nx] > limit) {
 				ist = i - (long) (3 * dpsf);
 				if (ist < 0)
@@ -69,6 +79,9 @@ int dobjects(float *image,
 				ind = i + (long) (3 * dpsf);
 				if (ind > nx - 1)
 					ind = nx - 1;
+				/* now that we found a single interesting pixel, flag a box
+				 * around it so the object finding code will be able to
+				 * accurately estimate the center. */
 				for (jp = jst;jp <= jnd;jp++)
 					for (ip = ist;ip <= ind;ip++)
 						mask[ip + jp*nx] = 1;
@@ -76,6 +89,11 @@ int dobjects(float *image,
 		}
 	}
 
+	/* the mask now looks almost all black, except it's been painted with a
+	 * bunch of white boxes (each box 6*point spread width) on parts of the
+	 * image that have statistically significant 'events', aka sources. */
+
+	/* now run connected component analysis to find and number each blob */
 	dfind(mask, nx, ny, objects);
 
 	FREEVEC(mask);

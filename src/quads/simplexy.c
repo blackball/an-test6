@@ -71,7 +71,9 @@ int simplexy(float *image,
                 maxper, maxnpeaks, maxsize, halfbox);
     }
 
-	/* determine sigma */
+	/* determine an estimate of the noise in the image (sigma) assuming the
+	 * noise is iid gaussian, by sampling at regular intervals, and comparing
+	 * the difference between pixels separated by a 5-pixel diagonal gap. */
 	dsigma(image, nx, ny, 5, sigma);
 	invvar = (float *) malloc(nx * ny * sizeof(float));
     for (j = 0;j < ny;j++)

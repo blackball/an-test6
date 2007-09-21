@@ -81,6 +81,10 @@ int dallpeaks(float *image,
 	int *xc = NULL;
 	int *yc = NULL;
 
+	/* Make a list which contains the indexes of each connected component next
+	 * to each other. */
+	/* FIXME this can be done muuuch smarter by running in two passes */
+	/* first calc histogram; then fill in indx array. */
 	indx = (int *) malloc(sizeof(int) * nx * ny);
 	dobject = (int *) malloc(sizeof(int) * (nx * ny + 1));
 	for (j = 0;j < ny;j++)
@@ -89,8 +93,10 @@ int dallpeaks(float *image,
 	for (i = 0;i < nx*ny;i++)
 		indx[i] = i;
 	qsort_r((void *) indx, (size_t) nx*ny, sizeof(int), dobject, objects_compare);
+	/* skip over the uninformative pixels */
 	for (l = 0;l < nx*ny && dobject[indx[l]] == -1; l++)
 		;
+
 	nobj = 0;
 	(*npeaks) = 0;
 	oimage = (float *) malloc(sizeof(float) * nx * ny);
@@ -130,12 +136,16 @@ int dallpeaks(float *image,
 					oimage[oi + oj*onx] = 0.;
 					i = oi + xmin;
 					j = oj + ymin;
+					/* if the object number of this pixel matches the current
+					 * object, then copy the pixel into our cutout. */
 					if (dobject[i + j*nx] == nobj) {
 						oimage[oi + oj*onx] = image[i + j * nx];
 					}
 				}
 
 			/* find peaks in cutout */
+			/* note that despite oimage and simage being sizeof(image), they
+			 * are only used as big buffers; only a portion of each are used */
 			dsmooth(oimage, onx, ony, dpsf, simage);
 			dpeaks(simage, onx, ony, &nc, xc, yc,
 			       sigma, dlim, saddle, maxper, 0, 1, minpeak);
