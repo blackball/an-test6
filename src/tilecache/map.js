@@ -29,16 +29,15 @@ function debug(txt) {
 	document.debugform.debug.value += txt;
 }
 
+// The GMap2
 var map;
 
 // Base URL of the tile and quad servers.
 var BASE_URL;
 var TILE_URL;
 
+// The arguments in the HTTP request
 var getdata;
-
-// are we showing the overview?
-var overview = false;
 
 // args that we pass on.
 var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
@@ -47,8 +46,6 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
     'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
 				 'outline', 'density'
     ];
-
-//var cleanMapType;
 
 /*
   This function gets called as the user moves the map.
@@ -124,13 +121,6 @@ function linktohere() {
 			}
 		}
 	}
-
-    /*
-     if (map.getCurrentMapType() == cleanMapType) {
-     url = url + "&clean";
-     }
-     */
-
 	window.location = url;
 }
 
@@ -212,7 +202,8 @@ function startup() {
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
 	// Base URL of the tile and quad servers.
-	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
+	//BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
+	BASE_URL = "http://explore.astrometry.net/";
 	TILE_URL = BASE_URL + "tilecache.php?";
 
 	// Add pass-thru args
@@ -222,7 +213,7 @@ function startup() {
 		}
 	}
 
-	// start the map out empty
+	// Clear the set of map types.
 	map.getMapTypes().length = 0;
 
 	function makeTile(layers, tag) {
@@ -257,25 +248,13 @@ function startup() {
 	var apodTile = makeTile('apod', "&tag=apod");
 	var apodMapType = makeMapType([tychoTile, apodTile], "APOD");
 
-	//map.addMapType(linedrawingsMapType);
 	map.addMapType(apodMapType);
 	map.addMapType(usnobMapType);
 	map.addMapType(tychoMapType);
 
 	/////////////////////////////////// END LAYERS /////////////////////////
 
-  map.setMapType(apodMapType);
-
-	// Show an overview map?
-	if (("over" in getdata) && (getdata["over"] == "no")) {
-		overview = false;
-	}
-	if (overview) {
-		var ow = 150;
-		var oh = 150;
-		overviewControl = new GOverviewMapControl(new GSize(ow,oh));
-		map.addControl(overviewControl);
-	}
+    map.setMapType(apodMapType);
 
 	// Connect up the event listeners...
 	GEvent.addListener(map, "move", mapmoved);

@@ -29,11 +29,7 @@
  * already rendered.
  */
 
-$CACHEDIR = "/data1/tilecache2";
-$TRCACHEDIR = "/data2/tilerender-cache";
-$TILERENDER = "/home/gmaps/test/usnob-map/execs/tilerender";
-$LOGFILE = "/tmp/tilecache2.log";
-$RCDIR = "/data2/apod-solves";
+include 'config.php';
 
 // Write a message to the log file.
 function loggit($mesg) {
