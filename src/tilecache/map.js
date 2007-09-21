@@ -202,8 +202,12 @@ function startup() {
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
 	// Base URL of the tile and quad servers.
-	//BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
-	BASE_URL = "http://explore.astrometry.net/";
+	var myurl = new String(window.location);
+	if (myurl.toLowerCase().indexOf("explore.astrometry.net") > -1) {
+		BASE_URL = "http://explore.astrometry.net/";
+	} else {
+		BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
+	}
 	TILE_URL = BASE_URL + "tilecache.php?";
 
 	// Add pass-thru args
