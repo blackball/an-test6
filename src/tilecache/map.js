@@ -40,7 +40,7 @@ var TILE_URL;
 var getdata;
 
 // args that we pass on.
-var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
+var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', //'gain',
     'dashbox', 'cmap',
     'rdlsfn', 'rdlsfield', 'rdlsstyle',
     'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
@@ -228,6 +228,8 @@ var tychoArcsinh = 1; // must match HTML
 var usnobGain = 0; // must match HTML
 var usnobArcsinh = 1; // must match HTML
 
+var apodGain = 0; // must match HTML
+
 function restackOverlays() {
 	map.clearOverlays();
 	if (tychoShowing)
@@ -264,6 +266,7 @@ function updateApod() {
 	if (apodOutlineShowing) {
 		tag += "&outline";
 	}
+	tag += "&gain=" + apodGain;
 	apodOverlay = new GTileLayerOverlay(makeTile('apod', tag));
 }
 
@@ -293,8 +296,13 @@ function changeArcsinh() {
 }
 
 function changeGain() {
-	tychoGain = Number(document.gotoform.gain.value);
+	var gain = Number(document.gotoform.gain.value);
+	tychoGain = gain;
 	updateTycho();
+	usnobGain = gain;
+	updateUsnob();
+	apodGain = gain;
+	updateApod();
 	restackOverlays();
 }
 
@@ -350,6 +358,11 @@ function startup() {
 	updateTycho();
 	updateUsnob();
 	updateApod();
+
+	if ('gain' in getdata) {
+		document.gotoform.gain.value = getdata['gain'];
+		changeGain();
+	}
 
 	if ('show' in getdata) {
 		var showstr = getdata['show'];

@@ -24,6 +24,23 @@ logmsg(char* format, ...) {
     va_end(args);
 }
 
+static void heatmap(float inpix, unsigned char* outpix) {
+	inpix = MAX(0.0, MIN(255.0, inpix));
+	if (inpix <= 96.0) {
+		outpix[0] = inpix * 255.0 / 96.0;
+		outpix[1] = 0;
+		outpix[2] = 0;
+	} else if (inpix <= 192.0) {
+		outpix[0] = 255;
+		outpix[1] = (inpix - 96.0) * 255.0 / 96.0;
+		outpix[2] = 0;
+	} else {
+		outpix[0] = 255;
+		outpix[1] = 255;
+		outpix[2] = (inpix - 192.0) * 255.0 / 63.0;
+	}
+}
+
 static void get_radec_bounds(sip_t* wcs, int W, int H,
                              double* pramin, double* pramax,
                              double* pdecmin, double* pdecmax) {
@@ -74,8 +91,10 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
 static void add_ink(float* ink, float* counts, float* thisink, float* thiscounts,
                     int W, int H) {
     int i;
-    for (i=0; i<(3*W*H); i++)
-        ink[i] += thisink[i];
+	if (thisink) {
+		for (i=0; i<(3*W*H); i++)
+			ink[i] += thisink[i];
+	}
     for (i=0; i<(W*H); i++)
         counts[i] += thiscounts[i];
 }
@@ -139,7 +158,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
         double ramin, ramax, decmin, decmax;
         int xlo, xhi, ylo, yhi;
         float pixeldensity, weight;
-        bool fakesize = FALSE;
+        //bool fakesize = FALSE;
         char cachekey[33];
         float* cached;
         int len;
@@ -178,25 +197,25 @@ int render_collection(unsigned char* img, render_args_t* args) {
         // HACK - some of my 2006 APOD solves seem to not have IMAGEW,H in the WCS...
         W = wcs.wcstan.imagew;
         H = wcs.wcstan.imageh;
-        if (!W) {
-            W = 10000;
-            fakesize = TRUE;
-        }
-        if (!H) {
-            H = 10000;
-            fakesize = TRUE;
-        }
-
-        if (fakesize)
-            logmsg("USING FAKESIZE\n");
-
-//        logmsg("WCS image W,H = (%i, %i)%s\n", W, H, (fakesize ?" (fake)":""));
+		/*
+		  if (!W) {
+		  W = 10000;
+		  fakesize = TRUE;
+		  }
+		  if (!H) {
+		  H = 10000;
+		  fakesize = TRUE;
+		  }
+		  if (fakesize)
+		  logmsg("USING FAKESIZE\n");
+		*/
+		//        logmsg("WCS image W,H = (%i, %i)%s\n", W, H, (fakesize ?" (fake)":""));
 
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
-//        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
-//               ramin, ramax, decmin, decmax);
+		//        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
+		//               ramin, ramax, decmin, decmax);
 
         xlo = floor(ra2pixelf(ramin, args));
         xhi = ceil (ra2pixelf(ramax, args));
@@ -204,7 +223,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
         ylo = floor(dec2pixelf(decmax, args));
         yhi = ceil (dec2pixelf(decmin, args));
 
-//        logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+		//        logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
         if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H))
             // No need to read the image!
@@ -246,57 +265,75 @@ int render_collection(unsigned char* img, render_args_t* args) {
             thisink = chunk;
             thiscounts = chunk + args->W * args->H * 3;
 
-            // Compute ink for this image...
-			logmsg("Opening image \"%s\".\n", imgfn);
-            if (jpeg)
-                userimg = cairoutils_read_jpeg(imgfn, &W, &H);
-            else if (png)
-                userimg = cairoutils_read_png(imgfn, &W, &H);
-            if (!userimg) {
-                logmsg("failed to read image file %s\n", imgfn);
-                return -1;
-            }
-//            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
-
-            if (fakesize) {
-                // if we set fake image size, recompute...
-                get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
-                xlo = floor(ra2pixelf(ramin, args));
-                xhi = ceil (ra2pixelf(ramax, args));
-                // increasing DEC -> decreasing Y pixel coord
-                ylo = floor(dec2pixelf(decmax, args));
-                yhi = ceil (dec2pixelf(decmin, args));
-            }
             // clamp to image bounds
             xlo = MAX(0, xlo);
             ylo = MAX(0, ylo);
             xhi = MIN(args->W-1, xhi);
             yhi = MIN(args->H-1, yhi);
-//            logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
             pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
             weight = pixeldensity;
 
-            // iterate over mercator space (ie, output pixels)
-            for (j=ylo; j<=yhi; j++) {
-                dec = decvals[j];
-                for (i=xlo; i<=xhi; i++) {
-                    int pppx,pppy;
-                    ra = ravals[i];
-                    if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
-                        continue;
-                    pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
-                    pppy = lround(imagey-1);
-                    if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
-                        continue;
-                    // nearest neighbour. bilinear is for weenies.
-                    thisink[3*(j*w + i) + 0] = userimg[4*(pppy*W + pppx) + 0] * weight;
-                    thisink[3*(j*w + i) + 1] = userimg[4*(pppy*W + pppx) + 1] * weight;
-                    thisink[3*(j*w + i) + 2] = userimg[4*(pppy*W + pppx) + 2] * weight;
-                    thiscounts[j*w + i] = weight;
-                }
-            }
-            free(userimg);
+			if (args->density) {
+				// iterate over mercator space (ie, output pixels)
+				for (j=ylo; j<=yhi; j++) {
+					dec = decvals[j];
+					for (i=xlo; i<=xhi; i++) {
+						ra = ravals[i];
+						if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
+							continue;
+						thiscounts[j*w+i] = weight;
+					}
+				}
+				thisink = NULL;
+			} else {
+
+				// Compute ink for this image...
+				logmsg("Opening image \"%s\".\n", imgfn);
+				if (jpeg)
+					userimg = cairoutils_read_jpeg(imgfn, &W, &H);
+				else if (png)
+					userimg = cairoutils_read_png(imgfn, &W, &H);
+				if (!userimg) {
+					logmsg("failed to read image file %s\n", imgfn);
+					return -1;
+				}
+				//            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
+				
+				/*
+				  if (fakesize) {
+				  // if we set fake image size, recompute...
+				  get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
+				  xlo = floor(ra2pixelf(ramin, args));
+				  xhi = ceil (ra2pixelf(ramax, args));
+				  // increasing DEC -> decreasing Y pixel coord
+				  ylo = floor(dec2pixelf(decmax, args));
+				  yhi = ceil (dec2pixelf(decmin, args));
+				  }
+				*/
+				//            logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+				
+				// iterate over mercator space (ie, output pixels)
+				for (j=ylo; j<=yhi; j++) {
+					dec = decvals[j];
+					for (i=xlo; i<=xhi; i++) {
+						int pppx,pppy;
+						ra = ravals[i];
+						if (!sip_radec2pixelxy_check(&wcs, ra, dec, &imagex, &imagey))
+							continue;
+						pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
+						pppy = lround(imagey-1);
+						if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
+							continue;
+						// nearest neighbour. bilinear is for weenies.
+						thisink[3*(j*w + i) + 0] = userimg[4*(pppy*W + pppx) + 0] * weight;
+						thisink[3*(j*w + i) + 1] = userimg[4*(pppy*W + pppx) + 1] * weight;
+						thisink[3*(j*w + i) + 2] = userimg[4*(pppy*W + pppx) + 2] * weight;
+						thiscounts[j*w + i] = weight;
+					}
+				}
+				free(userimg);
+			}
 
             add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
             logmsg("Caching: %s/%s (%d bytes).\n", cachedomain, cachekey, sz);
@@ -316,23 +353,34 @@ int render_collection(unsigned char* img, render_args_t* args) {
     free(decvals);
 
     if (args->density) {
-        double maxden = 0.0;
+		double mincounts = 1e100;
+		double maxcounts = 0;
+        double maxden = -1e100;
         for (j=0; j<args->H; j++) {
             for (i=0; i<w; i++) {
                 uchar* pix;
                 double den;
                 pix = pixel(i, j, img, args);
-                den = log(counts[j*w + i]);
+
+                mincounts = MIN(counts[j*w + i], mincounts);
+                maxcounts = MAX(counts[j*w + i], maxcounts);
+
+                //den = log(counts[j*w + i]);
+                //den = counts[j*w + i];
+                den = sqrt(counts[j*w + i]);
                 den *= pow(4.0, args->zoomlevel);
                 den *= exp(args->gain * log(4.0));
+				//den = log(den);
                 if (den > maxden)
                     maxden = den;
                 if (den > 0.0) {
-                    pix[0] = pix[1] = pix[2] = MAX(0, MIN(255, den));
+                    //pix[0] = pix[1] = pix[2] = MAX(0, MIN(255, den));
+					heatmap(den, pix);
                     pix[3] = 255;
                 }
             }
         }
+        logmsg("range of counts: [%g, %g]\n", mincounts, maxcounts);
         logmsg("max density value: %g\n", maxden);
     } else {
         for (j=0; j<args->H; j++) {
