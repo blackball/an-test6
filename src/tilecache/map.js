@@ -363,8 +363,8 @@ function startup() {
 			if (layers[i] in show)
 				toggleButton(layers[i]);
 	} else {
-		toggleOverlay('tycho');
-		toggleOverlay('apod');
+		toggleButton('tycho');
+		toggleButton('apod');
 	}
 	updateLine();
 	restackOverlays();
