@@ -44,17 +44,15 @@
 </style>
 </head>
 
-<!-- This key is good for http://oven.cosmo.fas.nyu.edu/-->
-<!-- FIXME make this depend on the hostname
-<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA" type="text/javascript"> </script>
--->
-
-<!-- This key is good for http://explore.astrometry.net/-->
-<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w" type="text/javascript"> </script>
-
-<!-- This key is good for monte
-<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRR1JoRd_1pNOqDIWUdo91Wez-jZ5xR12nwZ4kKO-gqCye6FWDJNkhYxRA" TYPE="text/javascript"> </script>
--->
+<?php
+if (strcasecmp($_SERVER['HTTP_HOST'], "oven.cosmo.fas.nyu.edu") == 0) {
+	echo '<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA" type="text/javascript"> </script>';
+} else if (strcasecmp($_SERVER['HTTP_HOST'], "explore.astrometry.net") == 0) {
+	echo '<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w" type="text/javascript"> </script>';
+} else {
+	echo "No Google Maps key for you!";
+}
+?>
 
 <script SRC="wms236.js" TYPE="text/javascript"> </script>
 
