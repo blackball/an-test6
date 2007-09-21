@@ -28,7 +28,24 @@
 /*
  * simplexy.c
  *
- * Get simple x and y values
+ * Find sources in a float image.
+ *
+ * Algorithm outline:
+ * 1. Estimate image noise
+ * 2. Median filter and subtract to eliminate low-frequence sky gradient
+ * 3. Find statistically significant pixels
+ *    - Mask those pixels and a box around them
+ * 4. Do connected components analysis on the resulting mask to find each
+ *    component (source)
+ * 5. Find the peaks in each object
+ *    For each object:
+ *       - Find the objects boundary
+ *       - Cut it out
+ *       - Smooth it
+ *       - Find peaks in resulting cutout
+ *       - Chose the most representative peak
+ *       - Estimate flux for this object
+ * 6. Sort peaks by flux and return
  *
  * BUGS:
  *
