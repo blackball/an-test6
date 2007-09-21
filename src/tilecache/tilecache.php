@@ -109,7 +109,7 @@ if (array_key_exists('density', $_REQUEST)) {
     $cmdline .= " -n";
 }
 
-if (array_key_exists('apod', $layers)) {
+if (in_array('apod', $layers)) {
     $files = scandir($RCDIR);
     $goodfiles = array();
     foreach ($files as $f) {

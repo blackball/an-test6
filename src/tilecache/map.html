@@ -26,13 +26,31 @@
 		color: white;
 	}
 	#map {
-		position: absolute; top:0; left:0;width: 100%; height: 100%
+		position: absolute; top:0; left:0; width: 100%; height: 100%;
+		background-color: black;
+	}
+	#toggles {
+		position: absolute;
+		right:10px;
+		top:40px;
+		color:white;
+		z-index:10000;
+		font-size: 12px;
+		font-weight: bold;
+	}
+	#toggles a {
+		color: #666;
 	}
 </style>
 </head>
 
 <!-- This key is good for http://oven.cosmo.fas.nyu.edu/-->
+<!-- FIXME make this depend on the hostname
 <script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA" type="text/javascript"> </script>
+-->
+
+<!-- This key is good for http://explore.astrometry.net/-->
+<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w" type="text/javascript"> </script>
 
 <!-- This key is good for monte
 <script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRR1JoRd_1pNOqDIWUdo91Wez-jZ5xR12nwZ4kKO-gqCye6FWDJNkhYxRA" TYPE="text/javascript"> </script>
@@ -59,6 +77,12 @@ zoom level: <input class="editnumber" TYPE="text" NAME="zoomlevel" VALUE="" onCh
 <INPUT class="editnumber" TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()">
 <input class="editnumber" type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
 </FORM>
+</div>
+
+<div id="toggles">
+	<a id="constellationToggleButton" href="#" onClick="toggleOverlay('constellation')"> constellations</a> | 
+	<a id="gridToggleButton" href="#" onClick="toggleOverlay('grid')"> grid</a> | 
+	<a id="messierToggleButton" href="#" onClick="toggleOverlay('messier')"> messier objects</a>
 </div>
 
 <br>

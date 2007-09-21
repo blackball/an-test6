@@ -42,11 +42,11 @@ var overview = false;
 
 // args that we pass on.
 var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
-				 'dashbox', 'cmap',
- 				 'rdlsfn', 'rdlsfield', 'rdlsstyle',
- 				 'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
-                 'outline', 'density'
-				 ]; // 'clean'
+    'dashbox', 'cmap',
+    'rdlsfn', 'rdlsfield', 'rdlsstyle',
+    'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
+				 'outline', 'density'
+    ];
 
 //var cleanMapType;
 
@@ -151,10 +151,10 @@ function buttonStyleOff(button) {
 }
 
 function buttonStyleCommon(button) {
-	button.style.color = "#000000";
-	button.style.backgroundColor = "white";
+	button.style.color = "white";
+	button.style.backgroundColor = "#000000";
 	button.style.fontSize = "x-small";
-	button.style.fontFamily = "Arial";
+	button.style.fontFamily = "monospace";
 	button.style.borderStyle = "solid";
 	button.style.borderWidth = "1px";
 	button.style.marginBottom = "1px";
@@ -165,6 +165,28 @@ function buttonStyleCommon(button) {
 	buttonStyleOn(button);
 }
 
+function toggleOverlay(overlayName) {
+	overlay = eval(overlayName+"Overlay");
+	button = document.getElementById(overlayName+"ToggleButton");
+	if (eval(overlayName+"Showing")) {
+		map.removeOverlay(overlay);
+		eval(overlayName+"Showing = 0");
+		button.style.color = "#666";
+	} else {
+		map.addOverlay(overlay);
+		eval(overlayName+"Showing = 1");
+		button.style.color = "white";
+	}
+}
+
+var gridOverlay;
+var gridShowing = 0;
+var messierOverlay;
+var messierShowing = 0;
+var constellationOverlay;
+var constellationShowing = 0;
+
+
 /*
   This function gets called when the page loads.
 */
@@ -172,11 +194,11 @@ function startup() {
 	getdata = getGetData();
 
 	// Create a new Google Maps client in the "map" <div>.
-	map = new GMap(document.getElementById("map"));
+	map = new GMap2(document.getElementById("map"));
 
 	var ra=0;
 	var dec=0;
-	var zoom=0;
+	var zoom=2;
 
 	if ("ra" in getdata) {
 		ra = Number(getdata["ra"]);
@@ -203,36 +225,46 @@ function startup() {
 	// start the map out empty
 	map.getMapTypes().length = 0;
 
+	function makeTile(layers, tag) {
+		var newTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+		newTile.myLayers=layers;
+		newTile.myFormat='image/png';
+		newTile.myBaseURL=TILE_URL + tag;
+		newTile.getTileUrl=CustomGetTileUrl;
+		return newTile;
+	}
+
+	function makeMapType(tiles, label) {
+		return new GMapType(tiles, G_SATELLITE_MAP.getProjection(), label, G_SATELLITE_MAP);
+	}
+
 	/////////////////////////////////// LAYERS /////////////////////////
 
-	var linedrawingsTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	linedrawingsTile.myLayers='messier,constellation,grid';
-	linedrawingsTile.myFormat='image/png';
-	linedrawingsTile.myBaseURL=TILE_URL; // + "&tag=apod";
-	linedrawingsTile.getTileUrl=CustomGetTileUrl;
-	var linedrawingsMapType = new GMapType([linedrawingsTile], G_SATELLITE_MAP.getProjection(), "Line Drawings", G_SATELLITE_MAP);
-	map.addMapType(linedrawingsMapType);
+	// overlays
+	var gridTile = makeTile('grid', "&tag=grid");
+	gridOverlay = new GTileLayerOverlay(gridTile);
+	var messierTile = makeTile('messier', "&tag=messier");
+	messierOverlay = new GTileLayerOverlay(messierTile);
+	var constellationTile = makeTile('constellation', "&tag=constellation");
+	constellationOverlay = new GTileLayerOverlay(constellationTile);
 
-	var apodTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	apodTile.myLayers='apod';
-	apodTile.myFormat='image/png';
-	apodTile.myBaseURL=TILE_URL; // + "&tag=apod";
-	apodTile.getTileUrl=CustomGetTileUrl;
-	var apodMapType = new GMapType([apodTile], G_SATELLITE_MAP.getProjection(), "APOD", G_SATELLITE_MAP);
+	var usnobTile = makeTile('usnob', "&tag=usnob");
+	var usnobMapType = makeMapType([usnobTile], "USNOB");
+
+	var tychoTile = makeTile('tycho', "&tag=tycho&arcsinh&gain=-2");
+	var tychoMapType = makeMapType([tychoTile], "Tycho");
+
+	var apodTile = makeTile('apod', "&tag=apod");
+	var apodMapType = makeMapType([tychoTile, apodTile], "APOD");
+
+	//map.addMapType(linedrawingsMapType);
 	map.addMapType(apodMapType);
-
-	// USNOB underneath
-	var usnobTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	usnobTile.myLayers='usnob';
-	usnobTile.myFormat='image/png';
-	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
-	usnobTile.getTileUrl=CustomGetTileUrl;
-	var usnobMapType = new GMapType([usnobTile],
-									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
 	map.addMapType(usnobMapType);
+	map.addMapType(tychoMapType);
+
 	/////////////////////////////////// END LAYERS /////////////////////////
 
-    map.setMapType(usnobMapType);
+  map.setMapType(apodMapType);
 
 	// Show an overview map?
 	if (("over" in getdata) && (getdata["over"] == "no")) {
