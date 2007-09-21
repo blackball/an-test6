@@ -29,7 +29,7 @@ DEP_ARGS += $(shell ($(CC) $(DEP_ARGS) -E -o /dev/null -x c $(TEST_OPTION) - < /
 # -MF is new in gcc-3.0
 TEST_OPTION := "-MF"
 TEST_FAIL_OPTION := "\>"
-DEP_OUT := $(shell ($(CC) $(DEP_ARGS) -E -x c -MF out.dep - < /dev/null > /dev/null 2>&1 && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
+DEP_OUT := $(shell ($(CC) $(DEP_ARGS) -E -x c -MF out.dep - < /dev/null > /dev/null 2>&1 && rm out.dep && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
 
 %.dep : %.c
 	$(CC) $(DEP_ARGS) $< $(DEP_OUT) $@

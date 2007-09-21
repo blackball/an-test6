@@ -536,11 +536,10 @@ void* cache_load(render_args_t* args,
 	unsigned char* buf;
 	size_t len;
 	uint32_t typeid;
-	uint32_t ulen;
-	unsigned char* uncomp;
-	int hdrsize = 8;
+	unsigned char* orig;
 	int rtn;
-	uLong uncomplen;
+	uLong origlen;
+	uint32_t* ubuf;
 
 	if (!args->cachedir)
 		return NULL;
@@ -554,44 +553,42 @@ void* cache_load(render_args_t* args,
 		fprintf(stderr, "Failed to read file contents in cache_load.\n");
 		return NULL;
 	}
-
-	if (len < hdrsize) {
+	if (len < 2*sizeof(uint32_t)) {
 		fprintf(stderr, "Cache file too small: \"%s\n", fn);
 		free(buf);
 		return NULL;
 	}
 
-	uint32_t* ubuf = (uint32_t*) buf;
-
+    // Pull the two header values off the front...
+    ubuf = (uint32_t*)buf;
 	// Grab typeid.
 	typeid = ubuf[0];
+	// Grab original (uncompressed) length.
+	origlen = ubuf[1];
+
 	if (typeid != 1) {
 		fprintf(stderr, "File \"%s\" does not have typeid 1.\n", fn);
 		free(buf);
 		return NULL;
 	}
-	// Grab original (uncompressed) length.
-	ulen = ubuf[1];
-	uncomplen = ulen;
-	uncomp = malloc(ulen);
-	if (!uncomp) {
-		fprintf(stderr, "Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", ulen, fn);
+	orig = malloc(origlen);
+	if (!orig) {
+		fprintf(stderr, "Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", origlen, fn);
 		free(buf);
 		return NULL;
 	}
 	if (length)
-		*length = uncomplen;
-	fprintf(stderr, "Uncomplen as described by the cache file: %d\n", ulen);
-	fprintf(stderr, "File size as determined by file_get_contents() = %d\n", len);
-	rtn = uncompress(uncomp, &uncomplen, buf + 2*sizeof(uint32_t), len - 2*sizeof(uint32_t));
+		*length = origlen;
+	//fprintf(stderr, "Origlen as described by the cache file: %d\n", ulen);
+	//fprintf(stderr, "File size as determined by file_get_contents() = %d\n", len);
+    rtn = uncompress(orig, &origlen, buf + 2*sizeof(uint32_t), len - 2*sizeof(uint32_t));
 	free(buf);
 	if (rtn != Z_OK) {
 		fprintf(stderr, "Failed to uncompress() file \"%s\": %s\n", fn, zError(rtn));
-		free(uncomp);
+		free(orig);
 		return NULL;
 	}
-	assert(uncomplen == ulen);
-	return uncomp;
+	return orig;
 }
 
 int cache_save(render_args_t* args,
@@ -643,7 +640,6 @@ int cache_save(render_args_t* args,
 		fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
 	}
-
 	if (fclose(fid)) {
 		fprintf(stderr, "Failed to close cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
