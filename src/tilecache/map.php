@@ -32,7 +32,7 @@
 	#toggles {
 		position: absolute;
 		right:10px;
-		top:40px;
+		top:10px;
 		color:white;
 		z-index:10000;
 		font-size: 12px;
@@ -74,13 +74,19 @@ degrees.
 zoom level: <input class="editnumber" TYPE="text" NAME="zoomlevel" VALUE="" onChange="moveCenter()" size=4>
 <INPUT class="editnumber" TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()">
 <input class="editnumber" type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
+Gain: <input type="text" name="gain" value="0" onChange="changeGain()" size=4 />
+Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onChange="changeArcsinh()" />
 </FORM>
 </div>
 
 <div id="toggles">
-	<a id="constellationToggleButton" href="#" onClick="toggleOverlay('constellation')"> constellations</a> | 
-	<a id="gridToggleButton" href="#" onClick="toggleOverlay('grid')"> grid</a> | 
-	<a id="messierToggleButton" href="#" onClick="toggleOverlay('messier')"> messier objects</a>
+	<a id="constellationToggleButton" href="#" onClick="toggleOverlay('constellation')"> Constellations</a> | 
+	<a id="gridToggleButton" href="#" onClick="toggleOverlay('grid')"> Grid</a> | 
+	<a id="messierToggleButton" href="#" onClick="toggleOverlay('messier')"> Messier objects</a> |
+    <a id="apodToggleButton" href="#" onClick="toggleOverlayRestack('apod')">Images </a> |
+    <a id="apodOutlineToggleButton" href="#" onClick="toggleApodOutline()"> Image outlines</a> |
+    <a id="tychoToggleButton" href="#" onClick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
+    <a id="usnobToggleButton" href="#" onClick="toggleOverlayRestack('usnob')"> USNO-B </a>
 </div>
 
 <br>

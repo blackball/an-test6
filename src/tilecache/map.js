@@ -110,8 +110,10 @@ function linktohere() {
 	center = map.getCenter();
 	url += "?ra=" + center.lng() + "&dec=" + center.lat()
 		+ "&zoom=" + map.getZoom();
-    var mt = map.getCurrentMapType().getName();
-    url += "&maptype=" + mt.toLowerCase();
+	/*
+	  var mt = map.getCurrentMapType().getName();
+	  url += "&maptype=" + mt.toLowerCase();
+	*/
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
 			url += "&" + passargs[i];
@@ -168,6 +170,11 @@ function toggleOverlay(overlayName) {
 	}
 }
 
+function toggleOverlayRestack(overlayName) {
+	toggleOverlay(overlayName);
+	restackOverlays();
+}
+
 var gridOverlay;
 var gridShowing = 0;
 var messierOverlay;
@@ -175,6 +182,105 @@ var messierShowing = 0;
 var constellationOverlay;
 var constellationShowing = 0;
 
+function makeTile(layers, tag) {
+	var newTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	newTile.myLayers=layers;
+	newTile.myFormat='image/png';
+	newTile.myBaseURL=TILE_URL + tag;
+	newTile.getTileUrl=CustomGetTileUrl;
+	return newTile;
+}
+
+function makeMapType(tiles, label) {
+	return new GMapType(tiles, G_SATELLITE_MAP.getProjection(), label, G_SATELLITE_MAP);
+}
+
+var tychoOverlay;
+var tychoShowing = 0;
+
+var tychoGain = 0; // must match HTML
+var tychoArcsinh = 1; // must match HTML
+
+var usnobOverlay;
+var usnobShowing = 0;
+
+var usnobGain = 0; // must match HTML
+var usnobArcsinh = 1; // must match HTML
+
+var apodOverlay;
+var apodShowing = 0;
+var apodOutline = 0;
+
+function restackOverlays() {
+	map.clearOverlays();
+	if (tychoShowing)
+		map.addOverlay(tychoOverlay);
+	if (usnobShowing)
+		map.addOverlay(usnobOverlay);
+	if (apodShowing)
+		map.addOverlay(apodOverlay);
+	if (gridShowing)
+		map.addOverlay(gridOverlay);
+	if (messierShowing)
+		map.addOverlay(messierOverlay);
+	if (constellationShowing)
+		map.addOverlay(constellationOverlay);
+}
+
+function updateApod() {
+	var tag = "&tag=apod";
+	if (apodOutline) {
+		tag += "&outline";
+	}
+	var apodTile = makeTile('apod', tag);
+	apodOverlay = new GTileLayerOverlay(apodTile);
+}
+
+function toggleApodOutline() {
+	button = document.getElementById("apodOutlineToggleButton");
+	if (apodOutline) {
+		apodOutline = 0;
+		button.style.color = "#666";
+	} else {
+		apodOutline = 1;
+		button.style.color = "white";
+	}
+	updateApod();
+	restackOverlays();
+}
+
+function updateTycho() {
+	var tag = "&tag=tycho";
+	tag += "&gain=" + tychoGain;
+	if (tychoArcsinh) {
+		tag += "&arcsinh";
+	}
+	var tychoTile = makeTile('tycho', tag);
+	tychoOverlay = new GTileLayerOverlay(tychoTile);
+}
+
+function updateUsnob() {
+	var tag = "&tag=usnob";
+	tag += "&gain=" + usnobGain;
+	tag += "&cmap=rb";
+	if (usnobArcsinh) {
+		tag += "&arcsinh";
+	}
+	var usnobTile = makeTile('usnob', tag);
+	usnobOverlay = new GTileLayerOverlay(usnobTile);
+}
+
+function changeArcsinh() {
+	tychoArcsinh = document.gotoform.arcsinh.checked;
+	updateTycho();
+	restackOverlays();
+}
+
+function changeGain() {
+	tychoGain = Number(document.gotoform.gain.value);
+	updateTycho();
+	restackOverlays();
+}
 
 /*
   This function gets called when the page loads.
@@ -219,19 +325,6 @@ function startup() {
 	// Clear the set of map types.
 	map.getMapTypes().length = 0;
 
-	function makeTile(layers, tag) {
-		var newTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-		newTile.myLayers=layers;
-		newTile.myFormat='image/png';
-		newTile.myBaseURL=TILE_URL + tag;
-		newTile.getTileUrl=CustomGetTileUrl;
-		return newTile;
-	}
-
-	function makeMapType(tiles, label) {
-		return new GMapType(tiles, G_SATELLITE_MAP.getProjection(), label, G_SATELLITE_MAP);
-	}
-
 	/////////////////////////////////// LAYERS /////////////////////////
 
 	// overlays
@@ -242,32 +335,48 @@ function startup() {
 	var constellationTile = makeTile('constellation', "&tag=constellation");
 	constellationOverlay = new GTileLayerOverlay(constellationTile);
 
-	var usnobTile = makeTile('usnob', "&tag=usnob");
-	var usnobMapType = makeMapType([usnobTile], "USNOB");
+	//var usnobTile = makeTile('usnob', "&tag=usnob");
+	//var usnobMapType = makeMapType([usnobTile], "USNOB");
 
 	var tychoTile = makeTile('tycho', "&tag=tycho&arcsinh&gain=-2");
 	var tychoMapType = makeMapType([tychoTile], "Tycho");
 
 	var apodTile = makeTile('apod', "&tag=apod");
-	var apodMapType = makeMapType([tychoTile, apodTile], "APOD");
+	//apodOverlay = new GTileLayerOverlay(apodTile);
+	//var apodMapType = makeMapType([tychoTile, apodTile], "APOD");
+	//var apodMapType = makeMapType([apodTile], "APOD");
+
+	var blackTile = makeTile('solid', '');
+
+	var apodMapType = makeMapType([blackTile], "APOD");
+	//apodMapType.addOverlay(apodOverlay);
 
 	map.addMapType(apodMapType);
-	map.addMapType(usnobMapType);
-	map.addMapType(tychoMapType);
+	//map.addMapType(usnobMapType);
+	//map.addMapType(tychoMapType);
 
 	/////////////////////////////////// END LAYERS /////////////////////////
 
     map.setMapType(apodMapType);
-	if ('maptype' in getdata) {
-        var mt = getdata['maptype'];
-        if (mt == 'apod') {
-            map.setMapType(apodMapType);
-        } else if (mt == 'tycho') {
-            map.setMapType(tychoMapType);
-        } else if (mt == 'usnob') {
-            map.setMapType(usnobMapType);
-        }
-    }
+	/*
+	  if ('maptype' in getdata) {
+	  var mt = getdata['maptype'];
+	  if (mt == 'apod') {
+	  map.setMapType(apodMapType);
+	  } else if (mt == 'tycho') {
+	  map.setMapType(tychoMapType);
+	  } else if (mt == 'usnob') {
+	  map.setMapType(usnobMapType);
+	  }
+	  }
+	*/
+
+	updateTycho();
+	updateUsnob();
+	updateApod();
+	toggleOverlay('tycho');
+	toggleOverlay('apod');
+	restackOverlays();
 
 	// Connect up the event listeners...
 	GEvent.addListener(map, "move", mapmoved);

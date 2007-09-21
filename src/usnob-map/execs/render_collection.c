@@ -247,6 +247,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
             thiscounts = chunk + args->W * args->H * 3;
 
             // Compute ink for this image...
+			logmsg("Opening image \"%s\".\n", imgfn);
             if (jpeg)
                 userimg = cairoutils_read_jpeg(imgfn, &W, &H);
             else if (png)
