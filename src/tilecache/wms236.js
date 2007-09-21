@@ -50,71 +50,25 @@
  *     map.addMapType(custommap);
  */
 
-var MAGIC_NUMBER=6356752.3142;
-var WGS84_SEMI_MAJOR_AXIS = 6378137.0;
-var WGS84_ECCENTRICITY = 0.0818191913108718138;
-
-var DEG2RAD=0.0174532922519943;
-var PI=3.14159267;
-
-//Default image format, used if none is specified
 var FORMAT_DEFAULT="image/png";
-
-//Google Maps Zoom level at which we switch from Mercator to Lat/Long.
-var MERC_ZOOM_DEFAULT = 15;
-function dd2MercMetersLng(p_lng) {
-	return WGS84_SEMI_MAJOR_AXIS * (p_lng*DEG2RAD);
-}
-
-function dd2MercMetersLat(p_lat) {
-	var lat_rad = p_lat * DEG2RAD;
-	return WGS84_SEMI_MAJOR_AXIS * Math.log(Math.tan((lat_rad + PI / 2) / 2) * Math.pow( ((1 - WGS84_ECCENTRICITY * Math.sin(lat_rad)) / (1 + WGS84_ECCENTRICITY * Math.sin(lat_rad))), (WGS84_ECCENTRICITY/2)));
-}
-
 CustomGetTileUrl=function(a,b,c) {
-	if (this.myMercZoomLevel == undefined) {
-    	this.myMercZoomLevel = MERC_ZOOM_DEFAULT;
-	}
-
 	if (this.myFormat == undefined) {
     	this.myFormat = FORMAT_DEFAULT;
 	}
-
 	if (typeof(window['this.myStyles'])=="undefined") this.myStyles="";
 	var lULP = new GPoint(a.x*256,(a.y+1)*256);
 	var lLRP = new GPoint((a.x+1)*256,a.y*256);
 	var lUL = G_NORMAL_MAP.getProjection().fromPixelToLatLng(lULP,b,c);
 	var lLR = G_NORMAL_MAP.getProjection().fromPixelToLatLng(lLRP,b,c);
-
-	// switch between Mercator and DD if merczoomlevel is set
-	// NOTE -it is now safe to use Mercator exclusively for all zoom levels (if your WMS supports it)
-	// so you can just use the two lines of code below the IF (& delete the ELSE)
-	/*
-		if (this.myMercZoomLevel!=0 && map.getZoom() < this.myMercZoomLevel) {
-		var lBbox=dd2MercMetersLng(lUL.x)+","+dd2MercMetersLat(lUL.y)+","+dd2MercMetersLng(lLR.x)+","+dd2MercMetersLat(lLR.y);
-		//Change for GeoServer - 41001 is mercator and installed by default.
-		var lSRS="EPSG:54004";
-		} else {
-	*/
 	var lBbox=lUL.x+","+lUL.y+","+lLR.x+","+lLR.y;
-	//var lSRS="EPSG:4326";
-	//} 
 	var lURL=this.myBaseURL;
-	//lURL+="&REQUEST=GetMap";
-	//lURL+="&SERVICE=WMS";
-	//lURL+="&VERSION=1.1.1";
 	lURL+="&LAYERS="+this.myLayers;
-	//lURL+="&STYLES="+this.myStyles;
 	//lURL+="&FORMAT="+this.myFormat;
 	//lURL+="&BGCOLOR=0xFFFFFF";
 	//lURL+="&TRANSPARENT=TRUE";
-	//lURL+="&SRS="+lSRS;
 	lURL+="&BBOX="+lBbox;
 	lURL+="&WIDTH=256";
 	lURL+="&HEIGHT=256";
-	//lURL+="&reaspect=false";
-	//document.write(lURL + "<br/>")
-	//alert(" url is " + lURL);
 	return lURL;
 }
 

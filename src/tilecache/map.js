@@ -108,16 +108,15 @@ function linktohere() {
 		url = url.substr(0, qm);
 	}
 	center = map.getCenter();
-	url = url + "?ra=" + center.lng() + "&dec=" + center.lat()
+	url += "?ra=" + center.lng() + "&dec=" + center.lat()
 		+ "&zoom=" + map.getZoom();
-    if (!overview) {
-		url = url + "&over=no";
-    }
+    var mt = map.getCurrentMapType().getName();
+    url += "&maptype=" + mt.toLowerCase();
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
-			url = url + "&" + passargs[i];
+			url += "&" + passargs[i];
 			if (getdata[passargs[i]] != undefined) {
-				url = url + "=" + getdata[passargs[i]];
+				url += "=" + getdata[passargs[i]];
 			}
 		}
 	}
@@ -259,6 +258,16 @@ function startup() {
 	/////////////////////////////////// END LAYERS /////////////////////////
 
     map.setMapType(apodMapType);
+	if ('maptype' in getdata) {
+        var mt = getdata['maptype'];
+        if (mt == 'apod') {
+            map.setMapType(apodMapType);
+        } else if (mt == 'tycho') {
+            map.setMapType(tychoMapType);
+        } else if (mt == 'usnob') {
+            map.setMapType(usnobMapType);
+        }
+    }
 
 	// Connect up the event listeners...
 	GEvent.addListener(map, "move", mapmoved);
