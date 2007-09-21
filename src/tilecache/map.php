@@ -80,9 +80,9 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onChang
 </div>
 
 <div id="toggles">
-	<a id="constellationToggleButton" href="#" onClick="toggleOverlay('constellation')"> Constellations</a> | 
-	<a id="gridToggleButton" href="#" onClick="toggleOverlay('grid')"> Grid</a> | 
-	<a id="messierToggleButton" href="#" onClick="toggleOverlay('messier')"> Messier objects</a> |
+	<a id="constellationToggleButton" href="#" onClick="toggleLineOverlay('constellation')"> Constellations</a> | 
+	<a id="gridToggleButton" href="#" onClick="toggleLineOverlay('grid')"> Grid</a> | 
+	<a id="messierToggleButton" href="#" onClick="toggleLineOverlay('messier')"> Messier objects</a> |
     <a id="apodToggleButton" href="#" onClick="toggleOverlayRestack('apod')">Images </a> |
     <a id="apodOutlineToggleButton" href="#" onClick="toggleApodOutline()"> Image outlines</a> |
     <a id="tychoToggleButton" href="#" onClick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |

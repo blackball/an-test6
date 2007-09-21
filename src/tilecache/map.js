@@ -170,35 +170,38 @@ function buttonStyleCommon(button) {
 	buttonStyleOn(button);
 }
 
-var gridOverlay;
-var gridShowing = 0;
-var messierOverlay;
-var messierShowing = 0;
-var constellationOverlay;
-var constellationShowing = 0;
+var lineOverlay;
 var tychoOverlay;
-var tychoShowing = 0;
 var usnobOverlay;
-var usnobShowing = 0;
 var apodOverlay;
-var apodShowing = 0;
 
-function toggleOverlay(overlayName) {
-	overlay = eval(overlayName+"Overlay");
+var gridShowing = 0;
+var messierShowing = 0;
+var constellationShowing = 0;
+var tychoShowing = 0;
+var usnobShowing = 0;
+var apodShowing = 0;
+var apodOutlineShowing = 0;
+
+function toggleButton(overlayName) {
 	button = document.getElementById(overlayName+"ToggleButton");
 	if (eval(overlayName+"Showing")) {
 		eval(overlayName+"Showing = 0");
 		button.style.color = "#666";
-		map.removeOverlay(overlay);
 	} else {
 		eval(overlayName+"Showing = 1");
 		button.style.color = "white";
-		map.addOverlay(overlay);
 	}
 }
 
 function toggleOverlayRestack(overlayName) {
-	toggleOverlay(overlayName);
+	toggleButton(overlayName);
+	restackOverlays();
+}
+
+function toggleLineOverlay(overlayName) {
+	toggleButton(overlayName);
+	updateLine();
 	restackOverlays();
 }
 
@@ -215,13 +218,15 @@ function makeMapType(tiles, label) {
 	return new GMapType(tiles, G_SATELLITE_MAP.getProjection(), label, G_SATELLITE_MAP);
 }
 
+function getBlackUrl(tile, zoom) {
+	return BASE_URL + "black.png";
+}
+
 var tychoGain = 0; // must match HTML
 var tychoArcsinh = 1; // must match HTML
 
 var usnobGain = 0; // must match HTML
 var usnobArcsinh = 1; // must match HTML
-
-var apodOutline = 0;
 
 function restackOverlays() {
 	map.clearOverlays();
@@ -231,30 +236,32 @@ function restackOverlays() {
 		map.addOverlay(usnobOverlay);
 	if (apodShowing)
 		map.addOverlay(apodOverlay);
-	if (gridShowing)
-		map.addOverlay(gridOverlay);
-	if (messierShowing)
-		map.addOverlay(messierOverlay);
-	if (constellationShowing)
-		map.addOverlay(constellationOverlay);
+	if (gridShowing || messierShowing || constellationShowing)
+		map.addOverlay(lineOverlay);
 }
 
 function toggleApodOutline() {
-	button = document.getElementById("apodOutlineToggleButton");
-	if (apodOutline) {
-		apodOutline = 0;
-		button.style.color = "#666";
-	} else {
-		apodOutline = 1;
-		button.style.color = "white";
-	}
+	toggleButton("apodOutline");
 	updateApod();
 	restackOverlays();
 }
 
+function updateLine() {
+	var tag = "&tag=line";
+	var layers = [];
+	if (constellationShowing)
+		layers.push('constellation');
+	if (messierShowing)
+		layers.push('messier');
+	if (gridShowing)
+		layers.push('grid');
+	layerstr = layers.join(",");
+	lineOverlay = new GTileLayerOverlay(makeTile(layerstr, tag));
+}
+
 function updateApod() {
 	var tag = "&tag=apod";
-	if (apodOutline) {
+	if (apodOutlineShowing) {
 		tag += "&outline";
 	}
 	apodOverlay = new GTileLayerOverlay(makeTile('apod', tag));
@@ -333,40 +340,12 @@ function startup() {
 
 	// Clear the set of map types.
 	map.getMapTypes().length = 0;
-
-	/////////////////////////////////// LAYERS /////////////////////////
-
-	// overlays
-	var gridTile = makeTile('grid', "&tag=grid");
-	gridOverlay = new GTileLayerOverlay(gridTile);
-	var messierTile = makeTile('messier', "&tag=messier");
-	messierOverlay = new GTileLayerOverlay(messierTile);
-	var constellationTile = makeTile('constellation', "&tag=constellation");
-	constellationOverlay = new GTileLayerOverlay(constellationTile);
-
-	//var usnobTile = makeTile('usnob', "&tag=usnob");
-	//var usnobMapType = makeMapType([usnobTile], "USNOB");
-
-	var tychoTile = makeTile('tycho', "&tag=tycho&arcsinh&gain=-2");
-	var tychoMapType = makeMapType([tychoTile], "Tycho");
-
-	var apodTile = makeTile('apod', "&tag=apod");
-	//apodOverlay = new GTileLayerOverlay(apodTile);
-	//var apodMapType = makeMapType([tychoTile, apodTile], "APOD");
-	//var apodMapType = makeMapType([apodTile], "APOD");
-
-	var blackTile = makeTile('solid', '');
-
-	var apodMapType = makeMapType([blackTile], "APOD");
-	//apodMapType.addOverlay(apodOverlay);
-
-	map.addMapType(apodMapType);
-	//map.addMapType(usnobMapType);
-	//map.addMapType(tychoMapType);
-
-	/////////////////////////////////// END LAYERS /////////////////////////
-
-    map.setMapType(apodMapType);
+	
+	var blackTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	blackTile.getTileUrl = getBlackUrl;
+	var blackMapType = makeMapType([blackTile], "Map");
+	map.addMapType(blackMapType);
+    map.setMapType(blackMapType);
 
 	updateTycho();
 	updateUsnob();
@@ -378,14 +357,16 @@ function startup() {
 		var show = [];
 		for (i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
+
 		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier' ];
 		for (i=0; i<layers.length; i++)
 			if (layers[i] in show)
-				toggleOverlay(layers[i]);
+				toggleButton(layers[i]);
 	} else {
 		toggleOverlay('tycho');
 		toggleOverlay('apod');
 	}
+	updateLine();
 	restackOverlays();
 
 	// Connect up the event listeners...
@@ -396,7 +377,6 @@ function startup() {
 	GEvent.bindDom(window, "resize", map, map.onResize);
 
 	map.addControl(new GLargeMapControl());
-	//map.addControl(new GMapTypeControl());
 
 	moveended();
 	mapzoomed(map.getZoom(), map.getZoom());
