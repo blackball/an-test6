@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 
+#include "math.h"
 #include "usnob_fits.h"
 #include "usnob.h"
 #include "starutil.h"
@@ -44,6 +45,7 @@ int main(int argc, char** args) {
 	char pointfilename[255];
 	char bandfilename[255];
 	char tilefilename[255];
+	char motionfilename[255];
 	usnob_fits* usnob;
 	int i, j, N;
 	int hp, Nside;
@@ -52,11 +54,13 @@ int main(int argc, char** args) {
 	FILE *point_file;
 	FILE *band_file;
 	FILE *tile_file;
+	FILE *motion_file;
 	int galaxyBuffer[5];
 	double pointbuffer[3];
 	double bandbuffer[5];
 	unsigned int tilebuffer[5];
 	double xyz[3];
+	int motionbuffer[2];
 	int numMags;
 	usnob_entry* star;
 	int doProject;
@@ -106,21 +110,25 @@ int main(int argc, char** args) {
 	strcpy(pointfilename, filepath);
 	strcpy(bandfilename, filepath);
 	strcpy(tilefilename, filepath);
+	strcpy(motionfilename, filepath);
 
 	strcat(galaxyfilename, "_galaxy.bin");
 	strcat(pointfilename, "_points.bin");
 	strcat(bandfilename, "_bands.bin");
 	strcat(tilefilename, "_tiles.bin");
+	strcat(motionfilename, "_motion.bin");
 
 	fprintf(stderr, "Writing point info to %s\n", pointfilename);
 	fprintf(stderr, "Writing band info to %s\n", bandfilename);
 	fprintf(stderr, "Writing tile info to %s\n", tilefilename);
 	fprintf(stderr, "Writing galaxy info to %s\n", galaxyfilename);
+	fprintf(stderr, "Writing proper motions to %s\n", motionfilename);
 
 	galaxy_file = fopen(galaxyfilename, "wb");
 	point_file = fopen(pointfilename, "wb");
 	band_file = fopen(bandfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
+	motion_file = fopen(motionfilename, "wb");
 
 	doProject = 1;
 	if(argc >= 4){
@@ -175,6 +183,11 @@ int main(int argc, char** args) {
 	  if (numMags > 0){
 	    pointbuffer[2] = pointbuffer[2] / (double)numMags;
 	  }
+
+	  motionbuffer[0] = round(1000*star->mu_ra);
+	  motionbuffer[1] = round(1000*star->mu_dec);
+	  
+	  fwrite(motionbuffer, sizeof(int), 2, motion_file);
 	  fwrite(galaxyBuffer, sizeof(int),5,galaxy_file);
 	  fwrite(pointbuffer, sizeof(double), 3, point_file);
 	  fwrite(bandbuffer, sizeof(double), 5, band_file);
