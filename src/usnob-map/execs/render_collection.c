@@ -336,8 +336,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
 			}
 
             add_ink(ink, counts, thisink, thiscounts, args->W, args->H);
-            logmsg("Caching: %s/%s (%d bytes).\n", cachedomain, cachekey, sz);
-            cache_save(args, cachedomain, cachekey, chunk, sz);
+			if (thisink && thiscounts) {
+				logmsg("Caching: %s/%s (%d bytes).\n", cachedomain, cachekey, sz);
+				cache_save(args, cachedomain, cachekey, chunk, sz);
+			}
             free(chunk);
         }
 
