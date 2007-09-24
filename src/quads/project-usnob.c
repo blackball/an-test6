@@ -24,14 +24,13 @@
 #include "healpix.h"
 #include "boilerplate.h"
 
-#define OPTIONS "h" //H:N:"
+#define OPTIONS "h"
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage:\n"
-		   "  %s <usnob-file.fits> <output-dir>\n"
+		   "  %s <usnob-file.fits> <output-dir> [FLAT]\n"
 		   , progname);
-	//-H <healpix> -N <nside>
 }
 
 extern char *optarg;
@@ -60,7 +59,7 @@ int main(int argc, char** args) {
 	double xyz[3];
 	int numMags;
 	usnob_entry* star;
-
+	int doProject;
 
 	while ((c = getopt(argc, args, OPTIONS)) != -1) {
 		switch (c) {
@@ -72,7 +71,7 @@ int main(int argc, char** args) {
 	}
 
 	// make sure there is one non-option argument: the usnob fits filename.
-	if (argc <3) {
+	if (argc < 3) {
 		print_help(args[0]);
 		exit(-1);
 	}
@@ -123,19 +122,37 @@ int main(int argc, char** args) {
 	band_file = fopen(bandfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
 
+	doProject = 1;
+	if(argc >= 4){
+	  if(strcmp(args[3], "FLAT") == 0){
+	    doProject = 0;
+	  }
+	}
+
+	if(doProject == 1){
+	  fprintf(stderr, "Projecting coords to plane\n");
+	}
+	else{
+	  fprintf(stderr, "Not projecting coords to plane, output = (RA,Dec) in radians\n");
+	}
+
 	for (i=0; i<N; i++) {
 	  numMags = 0;
 	  pointbuffer[2] = 0.0;
 	  // grab the star...
 	  star = usnob_fits_read_entry(usnob);
-	  
-	  // find its xyz position
-	  radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
-	  // project it around the center
-	  star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
-	  //		fprintf(stderr, "%g, %g,", px, py);
-	  
-	  
+
+	  if(doProject){
+	    // find its xyz position
+	    radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
+	    // project it around the center
+	    star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
+	  }
+	  else{
+	    pointbuffer[0] = deg2rad(star->ra);
+	    pointbuffer[1] = deg2rad(star->dec);
+	  }
+
 	  for (j=0; j<5; j++){
 	    if(usnob_is_observation_valid(&star->obs[j])){
 	      galaxyBuffer[j] = star->obs[j].star_galaxy;
