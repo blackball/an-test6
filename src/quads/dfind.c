@@ -22,8 +22,11 @@
 #include <string.h>
 #include <math.h>
 #include <sys/param.h>
+#include <assert.h>
 
 #include "simplexy-common.h"
+
+#include <valgrind/memcheck.h>
 
 /*
  * dfind.c
@@ -36,7 +39,9 @@
  * dfind2() Keir Mierle 2007
  */
 
-#define MAX_GROUPS 10000
+#define DEBUG_DFIND 0
+
+int initial_max_groups = 500;
 
 /*
  * This code does connected component analysis, but instead of returning a list
@@ -80,8 +85,9 @@ int dfind2(int *image,
           int *object)
 {
 	int ix, iy, i, j;
-	short int *equivs = malloc(sizeof(short int)*MAX_GROUPS);
-	short int *number = malloc(sizeof(short int)*MAX_GROUPS);
+	int maxgroups = initial_max_groups; // this is how much room we allocate for groups
+	short int *equivs = malloc(sizeof(short int)*maxgroups);
+	short int *number = malloc(sizeof(short int)*maxgroups);
 	short int maxlabel=0;
 	short int maxcontiguouslabel=0;
 
@@ -100,8 +106,17 @@ int dfind2(int *image,
 
 			} else {
 				/* New blob */
-				object[nx*iy+ix] = maxlabel++;
-				equivs[object[nx*iy+ix]] = object[nx*iy+ix];
+				if (maxlabel >= maxgroups) {
+//					printf("simplexy: exceeded %d groups; allocating.\n", maxgroups);
+					maxgroups *= 2;
+					equivs = realloc(equivs, sizeof(short int)*maxgroups);
+					assert(equivs);
+					number = realloc(number, sizeof(short int)*maxgroups);
+					assert(number);
+				}
+				object[nx*iy+ix] = maxlabel;
+				equivs[maxlabel] = maxlabel;
+				maxlabel++;
 			}
 
 			thislabel  = object[nx*iy + ix];
@@ -125,12 +140,13 @@ int dfind2(int *image,
 						if (thislabelmin != otherlabelmin) {
 							int oldlabelmin = MAX(thislabelmin, otherlabelmin);
 							int newlabelmin = MIN(thislabelmin, otherlabelmin);
-							printf("RELABEL:\n");
-							for (j=0; j<maxlabel; j++) 
+//							printf("RELABEL:\n");
+							for (j=0; j<maxlabel; j++) {
 								if (equivs[j] == oldlabelmin) {
-									printf("ix%d iy%d making equivs[%d] = %d, was %d\n", ix, iy, j, newlabelmin, equivs[j]);
+//									printf("ix%d iy%d making equivs[%d] = %d, was %d\n", ix, iy, j, newlabelmin, equivs[j]);
 									equivs[j] = newlabelmin;
 								}
+							}
 							thislabelmin = newlabelmin;
 							equivs[object[nx*iy+ix]] = newlabelmin;
 						}
@@ -145,6 +161,7 @@ int dfind2(int *image,
 	}
 	
 	/* debug print */
+#if DEBUG_DFIND
 	for (iy=0; iy<ny; iy++) {
 		for (ix=0; ix<nx; ix++) {
 			int n = object[nx*iy+ix];
@@ -156,6 +173,7 @@ int dfind2(int *image,
 		printf("\n");
 	}
 		printf("... \n");
+#endif
 
 	/* Re-label the groups */
 	for (iy=0; iy<ny; iy++) {
@@ -171,6 +189,7 @@ int dfind2(int *image,
 		}
 	}
 
+#if DEBUG_DFIND
 	/* debug print */
 	for (iy=0; iy<ny; iy++) {
 		for (ix=0; ix<nx; ix++) {
@@ -182,6 +201,7 @@ int dfind2(int *image,
 		}
 		printf("\n");
 	}
+#endif
 
 	free(equivs);
 	free(number);
@@ -200,10 +220,10 @@ int dfind(int *image,
 	int* matches = (int *) malloc((size_t) nx * ny * 9 * sizeof(int));
 	int* nmatches = (int *) malloc((size_t) nx * ny * sizeof(int));
 
-        if (!mapgroup || !matches || !nmatches) {
-            fprintf(stderr, "Failed to allocate memory in dfind.c\n");
-            exit(-1);
-        }
+	if (!mapgroup || !matches || !nmatches) {
+		fprintf(stderr, "Failed to allocate memory in dfind.c\n");
+		exit(-1);
+	}
 
 	for (k = 0;k < nx*ny;k++)
 		object[k] = -1;
@@ -299,6 +319,9 @@ int dfind(int *image,
 			}
 		}
 	}
+	
+	if (ngroups == 0)
+		goto bail;
 
 	for (i = 0;i < nx*ny;i++)
 		object[i] = mapgroup[object[i]];
@@ -319,6 +342,7 @@ int dfind(int *image,
 		else
 			object[i] = -1;
 
+bail:
 	FREEVEC(matches);
 	FREEVEC(nmatches);
 	FREEVEC(mapgroup);

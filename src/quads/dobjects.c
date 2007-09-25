@@ -94,7 +94,7 @@ int dobjects(float *image,
 	 * image that have statistically significant 'events', aka sources. */
 
 	/* now run connected component analysis to find and number each blob */
-	dfind(mask, nx, ny, objects);
+	dfind2(mask, nx, ny, objects);
 
 	FREEVEC(mask);
 

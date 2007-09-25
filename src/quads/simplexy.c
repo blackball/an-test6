@@ -44,8 +44,7 @@
  *       - Smooth it
  *       - Find peaks in resulting cutout
  *       - Chose the most representative peak
- *       - Estimate flux for this object
- * 6. Sort peaks by flux and return
+ * 6. Extract the flux of each object as the value of the image at the peak
  *
  * BUGS:
  *

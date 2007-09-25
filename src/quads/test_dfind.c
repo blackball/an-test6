@@ -22,6 +22,8 @@
 
 #include "cutest.h"
 
+extern int initial_max_groups;
+
 int dfind(int *image, int nx, int ny, int *object);
 int dfind2(int *image, int nx, int ny, int *object);
 int compare_inputs(int *test_data, int nx, int ny) {
@@ -46,6 +48,7 @@ int compare_inputs(int *test_data, int nx, int ny) {
 
 
 void test_empty(CuTest* tc) {
+	initial_max_groups = 1;
 	int test_data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -59,6 +62,7 @@ void test_empty(CuTest* tc) {
 }
 
 void test_medium(CuTest* tc) {
+	initial_max_groups = 1;
 	int test_data[] = {1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1,
 	                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0,
@@ -72,6 +76,7 @@ void test_medium(CuTest* tc) {
 }
 
 void test_tricky(CuTest* tc) {
+	initial_max_groups = 1;
 	int test_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	                   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -85,6 +90,7 @@ void test_tricky(CuTest* tc) {
 }
 
 void test_nasty(CuTest* tc) {
+	initial_max_groups = 1;
 	int test_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	                   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -98,6 +104,7 @@ void test_nasty(CuTest* tc) {
 }
 
 void test_very_nasty(CuTest* tc) {
+	initial_max_groups = 1;
 	int test_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	                   1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	                   1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0,
