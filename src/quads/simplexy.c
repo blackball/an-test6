@@ -72,7 +72,7 @@ int simplexy(float *image,
              int *npeaks,
              int verbose) {
 	float minpeak;
-	int i, j;
+	int i;
 
 	float *simage = NULL;
 	int *oimage = NULL;
@@ -98,9 +98,8 @@ int simplexy(float *image,
 	/* NB: over-write simage to save malloc */
 	simage = (float *) malloc(nx * ny * sizeof(float));
 	dmedsmooth(image, 1. / ((*sigma) * (*sigma)), nx, ny, halfbox, simage);
-	for (j = 0;j < ny;j++)
-		for (i = 0;i < nx;i++)
-			simage[i + j*nx] = image[i + j*nx] - simage[i + j*nx];
+	for (i=0; i<nx*ny; i++)
+		simage[i] = image[i] - simage[i];
     if (verbose)
         fprintf(stderr, "simplexy: finished dmedsmooth().\n");
 
