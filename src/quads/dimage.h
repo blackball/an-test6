@@ -66,7 +66,7 @@ int deblend(float *image,
             int dontsettemplates);
 int dcen3x3(float *image, float *xcen, float *ycen);
 int dsigma(float *image, int nx, int ny, int sp, float *sigma);
-int dmedsmooth(float *image, float *invvar, int nx, int ny, int halfbox,
+int dmedsmooth(float *image, float invvar, int nx, int ny, int halfbox,
                float *smooth);
 int dallpeaks(float *image, int nx, int ny, int *objects, float *xcen,
               float *ycen, int *npeaks, float dpsf, float sigma,

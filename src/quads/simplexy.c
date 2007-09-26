@@ -74,7 +74,6 @@ int simplexy(float *image,
 	float minpeak;
 	int i, j;
 
-	float *invvar = NULL;
 	float *simage = NULL;
 	int *oimage = NULL;
 	float *smooth = NULL;
@@ -91,10 +90,6 @@ int simplexy(float *image,
 	 * noise is iid gaussian, by sampling at regular intervals, and comparing
 	 * the difference between pixels separated by a 5-pixel diagonal gap. */
 	dsigma(image, nx, ny, 5, sigma);
-	invvar = (float *) malloc(nx * ny * sizeof(float));
-    for (j = 0;j < ny;j++)
-		for (i = 0;i < nx;i++)
-			invvar[i + j*nx] = 1. / ((*sigma) * (*sigma));
 	minpeak = (*sigma);
     if (verbose)
         fprintf(stderr, "simplexy: dsigma() found sigma=%g.\n", *sigma);
@@ -102,13 +97,12 @@ int simplexy(float *image,
 	/* median smooth */
 	/* NB: over-write simage to save malloc */
 	simage = (float *) malloc(nx * ny * sizeof(float));
-	dmedsmooth(image, invvar, nx, ny, halfbox, simage);
+	dmedsmooth(image, 1. / ((*sigma) * (*sigma)), nx, ny, halfbox, simage);
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
 			simage[i + j*nx] = image[i + j*nx] - simage[i + j*nx];
     if (verbose)
         fprintf(stderr, "simplexy: finished dmedsmooth().\n");
-	FREEVEC(invvar);
 
 	/* find objects */
 	smooth = (float *) malloc(nx * ny * sizeof(float));

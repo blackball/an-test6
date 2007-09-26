@@ -36,7 +36,7 @@
 float dselip(unsigned long k, unsigned long n, float *arr);
 
 int dmedsmooth(float *image,
-               float *invvar,
+               float invvar,
                int nx,
                int ny,
                int halfbox,
@@ -112,7 +112,7 @@ int dmedsmooth(float *image,
 			nb = 0;
 			for (jp = jst;jp <= jnd;jp++)
 				for (ip = ist;ip <= ind;ip++) {
-					if (invvar[ip + jp*nx] > 0.) {
+					if (invvar > 0.) {
 						arr[nb] = image[ip + jp * nx];
 						nb++;
 					}
