@@ -80,6 +80,7 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
                 ramin = MIN(ramin, ra);
                 ramax = MAX(ramax, ra);
             }
+            lastra = ra;
         }
     }
     if (pramin) *pramin = ramin;

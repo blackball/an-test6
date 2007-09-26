@@ -20,6 +20,21 @@ logmsg(char* format, ...) {
     va_end(args);
 }
 
+static double fmod_pos(double a, double b) {
+    double fm = fmod(a, b);
+    if (fm < 0.0)
+        fm += b;
+    return fm;
+}
+
+static double shift(double ra) {
+    return fmod_pos(ra + 180.0, 360.0);
+}
+
+static double unshift(double ra) {
+    return fmod_pos(ra - 180.0, 360.0);
+}
+
 static void get_radec_bounds(sip_t* wcs, int W, int H,
                              double* pramin, double* pramax,
                              double* pdecmin, double* pdecmax) {
@@ -34,10 +49,17 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
     int stepy[] = { 0, +STEP, 0, -STEP };
     int Nsteps[] = { (W/STEP)-1, H/STEP, W/STEP, H/STEP };
     double lastra, lastdec;
+    bool wrap = FALSE;
 
     sip_pixelxy2radec(wcs, 0, 0, &lastra, &lastdec);
     ramin = ramax = lastra;
     decmin = decmax = lastdec;
+
+    /*
+     We handle RA wrap-around in a hackish way here: if we detect wrap-around,
+     we just shift the RA values by 180 degrees so that MIN() and MAX() still
+     work in the right way.
+     */
 
     for (side=0; side<4; side++) {
         for (i=0; i<Nsteps[side]; i++) {
@@ -51,14 +73,28 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
             decmax = MAX(decmax, dec);
 
             // Did we just walk over the RA wrap-around line?
-            if ((lastra < 90 && ra > 270) ||
+            if (!wrap &&
+                (lastra < 90 && ra > 270) ||
                 (lastra > 270 && ra < 90)) {
-                ramin = 0.0;
-                ramax = 360.0;
-            } else {
-                ramin = MIN(ramin, ra);
-                ramax = MAX(ramax, ra);
+                wrap = TRUE;
+                ramin = shift(ramin);
+                ramax = shift(ramax);
             }
+            if (wrap)
+                ra = shift(ra);
+
+            ramin = MIN(ramin, ra);
+            ramax = MAX(ramax, ra);
+
+            lastra = ra;
+        }
+    }
+    if (wrap) {
+        ramin = ramin - 180.0;
+        ramax = ramax - 180.0;
+        if (ramin < 0.0) {
+            ramin += 360.0;
+            ramax += 360.0;
         }
     }
     if (pramin) *pramin = ramin;
@@ -67,30 +103,28 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
     if (pdecmax) *pdecmax = decmax;
 }
 
+const char* OPTIONS = "";
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 int main(int argc, char** args) {
 	int argchar;
-
     int I;
     sl* wcsfiles;
-    float* counts;
-    float* ink;
-    int i, j, w;
-    double *ravals, *decvals;
+    int i;
 
-	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
         }
 
-    wcsfile = sl_new(16);
+    wcsfiles = sl_new(16);
 
     for (i=optind; i<argc; i++) {
-        sl_append(wcsfile, args[i]);
+        sl_append(wcsfiles, args[i]);
     }
 
-    for (I=0; I<sl_size(imagefiles); I++) {
+    for (I=0; I<sl_size(wcsfiles); I++) {
         char* imgfn;
         char* wcsfn;
         char* dot;
@@ -98,13 +132,12 @@ int main(int argc, char** args) {
         qfits_header* hdr;
         sip_t wcs;
         sip_t* res;
-        double ra, dec;
-        double imagex, imagey;
         double ramin, ramax, decmin, decmax;
         float pixeldensity;
         char fn[1024];
+        double W, H;
 
-        wcsfn = sl_get(imagefiles, I);
+        wcsfn = sl_get(wcsfiles, I);
         dot = strrchr(wcsfn, '.');
         if (!dot) {
             logmsg("filename %s has no suffix.\n", wcsfn);
@@ -150,8 +183,9 @@ int main(int argc, char** args) {
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
-        logmsg("Reading WCS %s and image %s\n", wcsfn, imgfn);
-
+        logmsg("Reading WCS file %s.\n", wcsfn);
+        logmsg("Image file is    %s.\n", imgfn);
+        logmsg("Image size: %i x %i, type %s\n", (int)W, (int)H, (jpeg ? "jpeg" : "png"));
         logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
                ramin, ramax, decmin, decmax);
 

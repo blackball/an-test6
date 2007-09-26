@@ -48,7 +48,7 @@ LDFLAGS += $(CAIRO_LIB)
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
-USNOBMAP_EXECS := tilerender usnobcount usnobtile sdssfieldtile \
+USNOBMAP_EXECS := tilerender load-db usnobcount usnobtile sdssfieldtile \
 	indexquad sdssquad render-mercator make-merctree make-merctree2 rdlstile \
 	indextile indexquad2 tychotile
 
@@ -63,6 +63,9 @@ all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 
 $(COMMON)/cairoutils.o:
 	$(MAKE) -C $(COMMON) cairoutils.o
+
+load-db: load-db.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
 
 #.PHONY: remake-cairoutils
 #remake-cairoutils:
