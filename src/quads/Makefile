@@ -184,6 +184,12 @@ test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(ANUTILS_LIB)
 # END OF KEIR'S SUPER SIMPLE TESTING FRAMEWORK
 ######################################################
 
+# This is Jon ignoring the awesome testing framework
+test_simplexy: test_simplexy.o dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
+	dselip.o dsigma.o dsmooth.o simplexy.o radix.o qsort_reentrant.o  \
+	$(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
+
 image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
 
 fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
