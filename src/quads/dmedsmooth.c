@@ -110,13 +110,13 @@ int dmedsmooth(float *image,
 			ind = xhi[i];
 			nxt = ind - ist + 1;
 			nb = 0;
-			for (jp = jst;jp <= jnd;jp++)
-				for (ip = ist;ip <= ind;ip++) {
-					if (invvar > 0.) {
+            if (invvar > 0.) {
+                for (jp = jst;jp <= jnd;jp++)
+                    for (ip = ist;ip <= ind;ip++) {
 						arr[nb] = image[ip + jp * nx];
 						nb++;
 					}
-				}
+            }
 //			printf("j=%d over nygrid i=%d over nxgrid\n", j, i);
 			if (nb > 1) {
 				nm = nb / 2;
