@@ -92,6 +92,12 @@ foreach ($layers as $l) {
     $cmdline .= " -l " . escapeshellarg($l);
 }
 
+// JPEG?
+$jpeg = array_key_exists('jpeg', $_REQUEST);
+if ($jpeg) {
+    $cmdline .= " -J";
+}
+
 // ***************************************************
 // Collect arguments for the renderer
 // ***************************************************
@@ -244,8 +250,11 @@ $tilestring = $cmdline;
 $tilehash = hash('sha256', $tilestring);
 
 // Here we go...
-header("Content-type: image/png");
-
+if ($jpeg) {
+    header("Content-type: image/jpeg");
+} else {
+    header("Content-type: image/png");
+}
 if ($tag) {
     if (!preg_match("/[a-zA-Z0-9-]+/", $tag)) {
         loggit("Naughty tag: \"" . $tag . "\"\n");
@@ -258,7 +267,7 @@ if ($tag) {
             exit;
         }
     }
-    $tilefile = "$tilecachedir/tile-$tilehash.png";
+    $tilefile = "$tilecachedir/tile-$tilehash." . ($jpeg ? "jpg" : "png");
     if (!file_exists($tilefile)) {
         $cmdline .= " > " . $tilefile . " 2>> " . $LOGFILE;
         loggit("cmdline: " . $cmdline . "\n");
