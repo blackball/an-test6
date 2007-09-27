@@ -58,7 +58,7 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
     /*
      We handle RA wrap-around in a hackish way here: if we detect wrap-around,
      we just shift the RA values by 180 degrees so that MIN() and MAX() still
-     work in the right way.
+     work, then shift the resulting min and max values back by 180 at the end.
      */
 
     for (side=0; side<4; side++) {
@@ -74,8 +74,8 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
 
             // Did we just walk over the RA wrap-around line?
             if (!wrap &&
-                (lastra < 90 && ra > 270) ||
-                (lastra > 270 && ra < 90)) {
+                (((lastra < 90) && (ra > 270)) ||
+                 ((lastra > 270) && (ra < 90)))) {
                 wrap = TRUE;
                 ramin = shift(ramin);
                 ramax = shift(ramax);
@@ -90,12 +90,10 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
         }
     }
     if (wrap) {
-        ramin = ramin - 180.0;
-        ramax = ramax - 180.0;
-        if (ramin < 0.0) {
+        ramin = unshift(ramin);
+        ramax = unshift(ramax);
+        if (ramin > ramax)
             ramin += 360.0;
-            ramax += 360.0;
-        }
     }
     if (pramin) *pramin = ramin;
     if (pramax) *pramax = ramax;
@@ -190,6 +188,8 @@ int main(int argc, char** args) {
                ramin, ramax, decmin, decmax);
 
         pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
+
+        // insert into readimgdb_image(basefilename,imageformat,ramin,ramax,decmin,decmax,imagew,imageh) values ("img1", "jpeg", 90, 120, -10, 10, 800, 600);
     }
 
     sl_free2(wcsfiles);

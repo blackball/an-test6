@@ -26,6 +26,13 @@
 
 #include "cairoutils.h"
 
+enum imgformat {
+    PPM,
+    PNG,
+    JPEG,
+};
+typedef enum imgformat imgformat;
+
 char* cairoutils_get_color_name(int i) {
     switch (i) {
     case 0: return "red";
@@ -50,36 +57,6 @@ int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
         return -1;
     }
     return 0;
-}
-
-// fires an ALPHA png out to fout
-static void write_png(unsigned char * img, int w, int h, FILE* fout)
-{
-    png_bytepp image_rows;
-    png_structp png_ptr;
-    png_infop png_info;
-    int n;
-
-    image_rows = malloc(sizeof(png_bytep)*h);
-    for (n = 0; n < h; n++)
-        image_rows[n] = (unsigned char *) img + 4*n*w;
-
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    png_info = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, fout);
-    png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
-    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-
-    png_set_IHDR(png_ptr, png_info, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-    png_write_info(png_ptr, png_info);
-
-    png_write_image(png_ptr, image_rows);
-    png_write_end(png_ptr, png_info);
-
-    free(image_rows);
-
-    png_destroy_write_struct(&png_ptr, &png_info);
 }
 
 unsigned char* cairoutils_read_jpeg(const char* fn, int* pW, int* pH) {
@@ -225,10 +202,10 @@ unsigned char* cairoutils_read_jpeg_stream(FILE* fid, int* pW, int* pH) {
     return outimg;
 }
 
-static int streamout(FILE* fout, unsigned char* img, int W, int H, int ppm) {
-    if (ppm) {
-        int i;
+static int streamout(FILE* fout, unsigned char* img, int W, int H, int format) {
+    if (format == PPM) {
         // PPM...
+        int i;
         fprintf(fout, "P6 %i %i %i\n", W, H, 255);
         for (i=0; i<(H*W); i++) {
             unsigned char* pix = img + 4*i;
@@ -237,13 +214,63 @@ static int streamout(FILE* fout, unsigned char* img, int W, int H, int ppm) {
                 return -1;
             }
         }
-    } else {
-        write_png(img, W, H, fout);
+    } else if (format == PNG) {
+        // fires an ALPHA png out to fout
+        png_bytepp image_rows;
+        png_structp png_ptr;
+        png_infop png_info;
+        int n;
+        
+        image_rows = malloc(sizeof(png_bytep)*H);
+        for (n = 0; n < H; n++)
+            image_rows[n] = (unsigned char *) img + 4*n*W;
+        png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+        png_info = png_create_info_struct(png_ptr);
+        png_init_io(png_ptr, fout);
+        png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
+        png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+        png_set_IHDR(png_ptr, png_info, W, H, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
+                     PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+        png_write_info(png_ptr, png_info);
+        png_write_image(png_ptr, image_rows);
+        png_write_end(png_ptr, png_info);
+        free(image_rows);
+        png_destroy_write_struct(&png_ptr, &png_info);
+    } else if (format == JPEG) {
+        struct jpeg_compress_struct cinfo;
+        struct jpeg_error_mgr jerr;
+        JSAMPLE* buffer;
+        int r;
+        cinfo.err = jpeg_std_error(&jerr);
+        jpeg_create_compress(&cinfo);
+        jpeg_stdio_dest(&cinfo, fout);
+        cinfo.image_width = W;
+        cinfo.image_height = H;
+        cinfo.input_components = 3;
+        cinfo.in_color_space = JCS_RGB;
+        jpeg_set_defaults(&cinfo);
+        jpeg_set_colorspace(&cinfo, JCS_RGB);
+        jpeg_simple_progression(&cinfo);
+        jpeg_set_linear_quality(&cinfo, 70, FALSE);
+        jpeg_start_compress(&cinfo, TRUE);
+        buffer = malloc(W * 3);
+        for (r=0; r<H; r++) {
+            int i;
+            for (i=0; i<W; i++) {
+                buffer[i*3 + 0] = img[i*4 + 0];
+                buffer[i*3 + 1] = img[i*4 + 1];
+                buffer[i*3 + 2] = img[i*4 + 2];
+            }
+            jpeg_write_scanlines(&cinfo, &buffer, 1);
+        }
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+        free(buffer);
     }
     return 0;
 }
 
-static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm) {
+static int writeout(const char* outfn, unsigned char* img, int W, int H, int format) {
     FILE* fout;
     int rtn;
     int outstdout = !strcmp(outfn, "-");
@@ -256,11 +283,9 @@ static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm
             return -1;
         }
     }
-
-    rtn = streamout(fout, img, W, H, ppm);
+    rtn = streamout(fout, img, W, H, format);
     if (rtn)
         return rtn;
-
     if (!outstdout) {
         if (fclose(fout)) {
             fprintf(stderr, "Failed to close output file %s: %s\n", outfn, strerror(errno));
@@ -277,19 +302,27 @@ void cairoutils_fake_ppm_init() {
 }
 
 int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H) {
-    return writeout(outfn, img, W, H, 1);
+    return writeout(outfn, img, W, H, PPM);
 }
 
 int cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H) {
-    return writeout(outfn, img, W, H, 0);
+    return writeout(outfn, img, W, H, PNG);
+}
+
+int cairoutils_write_jpeg(const char* outfn, unsigned char* img, int W, int H) {
+    return writeout(outfn, img, W, H, JPEG);
 }
 
 int cairoutils_stream_ppm(FILE* fout, unsigned char* img, int W, int H) {
-    return streamout(fout, img, W, H, 1);
+    return streamout(fout, img, W, H, PPM);
 }
 
 int cairoutils_stream_png(FILE* fout, unsigned char* img, int W, int H) {
-    return streamout(fout, img, W, H, 0);
+    return streamout(fout, img, W, H, PNG);
+}
+
+int cairoutils_stream_jpeg(FILE* fout, unsigned char* img, int W, int H) {
+    return streamout(fout, img, W, H, JPEG);
 }
 
 void cairoutils_argb32_to_rgba(unsigned char* img, int W, int H) {

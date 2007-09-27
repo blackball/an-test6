@@ -44,9 +44,13 @@ int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H);
 
 int cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H);
 
+int cairoutils_write_jpeg(const char* outfn, unsigned char* img, int W, int H);
+
 int cairoutils_stream_ppm(FILE* fout, unsigned char* img, int W, int H);
 
 int cairoutils_stream_png(FILE* fout, unsigned char* img, int W, int H);
+
+int cairoutils_stream_jpeg(FILE* fout, unsigned char* img, int W, int H);
 
 int cairoutils_parse_color(const char* color, float* r, float* g, float* b);
 

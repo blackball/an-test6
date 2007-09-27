@@ -55,7 +55,7 @@
   The width and height in pixels are  -w <width> -h <height>
   */
 
-const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:OD:nS:";
+const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:OD:nS:J";
 
 
 /* All render layers must go in here */
@@ -114,6 +114,7 @@ int main(int argc, char *argv[]) {
 	pl* layers;
 	int i;
 	bool inmerc = 0;
+    bool writejpeg = FALSE;
 
 	memset(&args, 0, sizeof(render_args_t));
 
@@ -131,7 +132,10 @@ int main(int argc, char *argv[]) {
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-			case 'S':
+        case 'J':
+            writejpeg = TRUE;
+            break;
+        case 'S':
 				args.filelist = strdup(optarg);
 				break;
 			case 'n':
@@ -348,7 +352,10 @@ int main(int argc, char *argv[]) {
 		fwrite(args.rawfloatimg, sizeof(float), args.W * args.H * 3, stdout);
 		free(args.rawfloatimg);
 	} else {
-		cairoutils_stream_png(stdout, img, args.W, args.H);
+        if (writejpeg)
+            cairoutils_stream_jpeg(stdout, img, args.W, args.H);
+		else
+            cairoutils_stream_png(stdout, img, args.W, args.H);
 	}
 
 	free(img);
@@ -573,7 +580,7 @@ void* cache_load(render_args_t* args,
 	}
 	orig = malloc(origlen);
 	if (!orig) {
-		fprintf(stderr, "Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", origlen, fn);
+		fprintf(stderr, "Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", (int)origlen, fn);
 		free(buf);
 		return NULL;
 	}
