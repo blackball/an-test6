@@ -2,8 +2,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+<link rel="icon" type="image/png" href="favicon.png" />
 <title>Astrometry.net Stellar Browser</title>
 <style type="text/css">
 	.dispnumber {
@@ -44,37 +44,35 @@
 </style>
 </head>
 
+<body onload="startup()" onunload="GUnload()">
+
 <?php
 if (strcasecmp($_SERVER['HTTP_HOST'], "oven.cosmo.fas.nyu.edu") == 0) {
-	echo '<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA" type="text/javascript"> </script>';
+	echo '<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA" type="text/javascript"> </script>';
 } else if (strcasecmp($_SERVER['HTTP_HOST'], "explore.astrometry.net") == 0) {
-	echo '<script src="http://maps.google.com/maps?file=api&v=2&key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w" type="text/javascript"> </script>';
+	echo '<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w" type="text/javascript"> </script>';
 } else {
 	echo "No Google Maps key for you!";
 }
 ?>
 
-<script SRC="wms236.js" TYPE="text/javascript"> </script>
+<script src="wms236.js" type="text/javascript"> </script>
 
-<body onload="startup()" onunload="GUnload()">
-<center>
 <!-- The map will go here:-->
-<div id="map" style=""></div>
-</center>
+<div id="map"></div>
 
-<br>
 <div id="gobox">
-<FORM NAME="gotoform" ACTION="" METHOD="GET">
-&nbsp;mouse ra: <INPUT class="dispnumber" TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
-dec:      <INPUT class="dispnumber" TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
+<form name="gotoform" action="" method="get">
+&nbsp;mouse ra: <input class="dispnumber" type="text" name="ra_mouse" value="" readonly="readonly" size="10" />
+dec:      <input class="dispnumber" type="text" name="dec_mouse" value="" readonly="readonly" size="10" /> degrees
 <br>
-center ra: <INPUT class="editnumber" TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
-dec:       <INPUT class="editnumber" TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10>
+center ra: <input class="editnumber" type="text" name="ra_center" value="" onChange="moveCenter()" size="10" />
+dec:       <input class="editnumber" type="text" name="dec_center" value="" onChange="moveCenter()" size="10" />
 degrees.
-zoom level: <input class="editnumber" TYPE="text" NAME="zoomlevel" VALUE="" onChange="moveCenter()" size=4>
-<INPUT class="editnumber" TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()">
+zoom level: <input class="editnumber" type="text" name="zoomlevel" value="" onChange="moveCenter()" size="4" />
+<input class="editnumber" type="button" name="set_center" value="Go!" onClick="moveCenter()">
 <input class="editnumber" type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
-Gain: <input type="text" name="gain" value="0" onChange="changeGain()" size=4 />
+Gain: <input type="text" name="gain" value="0" onChange="changeGain()" size="4" />
 Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onChange="changeArcsinh()" />
 </FORM>
 </div>
@@ -95,8 +93,8 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onChang
 <center>
 <!-- Add a textbox for printing debugging info.-->
 Debug:
-  <FORM name="debugform" ACTION="" METHOD="GET">
-  <textarea COLS=100 ROWS=10 NAME="debug" READONLY>
+  <form name="debugform" action="" method="get">
+  <textarea cols="100" rows="10" name="debug" readonly="readonly">
   </textarea>
   </FORM>
 
@@ -104,7 +102,7 @@ Debug:
 -->
 
 <!-- Include the map itself. -->
-<script SRC="map.js" TYPE="text/javascript"> </script>
+<script src="map.js" type="text/javascript"> </script>
 
 </body>
 </html>
