@@ -61,43 +61,41 @@ if (strcasecmp($_SERVER['HTTP_HOST'], "oven.cosmo.fas.nyu.edu") == 0) {
 <!-- The map will go here:-->
 <div id="map"></div>
 
+<form id="gotoform" action="" method="get">
 <div id="gobox">
-<form name="gotoform" action="" method="get">
 &nbsp;mouse ra: <input class="dispnumber" type="text" name="ra_mouse" value="" readonly="readonly" size="10" />
 dec:      <input class="dispnumber" type="text" name="dec_mouse" value="" readonly="readonly" size="10" /> degrees
-<br>
-center ra: <input class="editnumber" type="text" name="ra_center" value="" onChange="moveCenter()" size="10" />
-dec:       <input class="editnumber" type="text" name="dec_center" value="" onChange="moveCenter()" size="10" />
+<br />
+center ra: <input class="editnumber" type="text" name="ra_center" value="" onchange="moveCenter()" size="10" />
+dec:       <input class="editnumber" type="text" name="dec_center" value="" onchange="moveCenter()" size="10" />
 degrees.
-zoom level: <input class="editnumber" type="text" name="zoomlevel" value="" onChange="moveCenter()" size="4" />
-<input class="editnumber" type="button" name="set_center" value="Go!" onClick="moveCenter()">
-<input class="editnumber" type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
-Gain: <input type="text" name="gain" value="0" onChange="changeGain()" size="4" />
-Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onChange="changeArcsinh()" />
-</FORM>
+zoom level: <input class="editnumber" type="text" name="zoomlevel" value="" onchange="moveCenter()" size="4" />
+<input class="editnumber" type="button" name="set_center" value="Go!" onclick="moveCenter()" />
+<input class="editnumber" type="button" name="linkhere" value="Link to this view" onclick="linktohere()" />
+Gain: <input type="text" name="gain" value="0" onchange="changeGain()" size="4" />
+Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onchange="changeArcsinh()" />
 </div>
+</form>
 
 <div id="toggles">
-	<a id="constellationToggleButton" href="#" onClick="toggleLineOverlay('constellation')"> Constellations</a> | 
-	<a id="gridToggleButton" href="#" onClick="toggleLineOverlay('grid')"> Grid</a> | 
-	<a id="messierToggleButton" href="#" onClick="toggleLineOverlay('messier')"> Messier objects</a> |
-    <a id="apodToggleButton" href="#" onClick="toggleOverlayRestack('apod')">Images </a> |
-    <a id="apodOutlineToggleButton" href="#" onClick="toggleApodOutline()"> Image outlines</a> |
-    <a id="tychoToggleButton" href="#" onClick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
-    <a id="usnobToggleButton" href="#" onClick="toggleOverlayRestack('usnob')"> USNO-B </a>
+	<a id="constellationToggleButton" href="#" onclick="toggleLineOverlay('constellation')"> Constellations</a> | 
+	<a id="gridToggleButton" href="#" onclick="toggleLineOverlay('grid')"> Grid</a> | 
+	<a id="messierToggleButton" href="#" onclick="toggleLineOverlay('messier')"> Messier objects</a> |
+    <a id="apodToggleButton" href="#" onclick="toggleOverlayRestack('apod')">Images </a> |
+    <a id="apodOutlineToggleButton" href="#" onclick="toggleApodOutline()"> Image outlines</a> |
+    <a id="tychoToggleButton" href="#" onclick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
+    <a id="usnobToggleButton" href="#" onclick="toggleOverlayRestack('usnob')"> USNO-B </a>
 </div>
 
-<br>
+<p />
 
 <!--
 <center>
-<!-- Add a textbox for printing debugging info.-->
 Debug:
   <form name="debugform" action="" method="get">
   <textarea cols="100" rows="10" name="debug" readonly="readonly">
   </textarea>
   </FORM>
-
 </center>
 -->
 
