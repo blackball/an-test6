@@ -849,6 +849,7 @@ function process_data ($vals) {
 				"ratio_tokeep 1e9\n" .
 				"ratio_tosolve 1e9\n" .
 				"ratio_tobail 1e-100\n" .
+                "quadsize_min " . (0.1 * min($W, $H)) . "\n" .
 				"fieldw " . $W . "\n" .
 				"fieldh " . $H . "\n" .
 				(($maxquads > 0) ? "maxquads " . $maxquads . "\n" : "") .
