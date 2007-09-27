@@ -74,7 +74,7 @@ unsigned char* to_cairo_bw(float *image_bw, int imW, int imH){
 int main(void)
 {
   struct dirent **namelist;
-  int n, N;
+  int n, N, peak;
   unsigned char *image;
   float *image_bw;
   char fullpath[255];
@@ -113,15 +113,15 @@ int main(void)
       outpath[strlen(outpath)-4] = '\0';
       strcat(outpath, ".png");
 
-      printf("--- processing %s ", fullpath);
+      fprintf(stderr, "--- processing %s ", fullpath);
 
       if(is_png(namelist[n])){
-	printf("as a PNG");
+	fprintf(stderr, "as a PNG");
 	image = cairoutils_read_png(fullpath, &imW, &imH);
       }
 
       if(is_jpeg(namelist[n])){
-	printf("as a JPEG ");
+	fprintf(stderr, "as a JPEG ");
 	image = cairoutils_read_jpeg(fullpath, &imW, &imH);
       }
 
@@ -129,7 +129,7 @@ int main(void)
       
       //      cairoutils_write_png(outpath, to_cairo_bw(image_bw, imW, imH), imW, imH);
 
-      printf(" ---\n");
+      fprintf(stderr, " ---\n");
       
       x = malloc(maxnpeaks * sizeof(float));
       y = malloc(maxnpeaks * sizeof(float));
@@ -137,6 +137,9 @@ int main(void)
       
       simplexy(image_bw, imW, imH, dpsf, plim, dlim, saddle, maxper,
 	       maxnpeaks, maxsize, halfbox, &sigma, x, y, flux, &npeaks, 1);
+      for(peak = 0; peak < npeaks; peak++){
+	fprintf(stderr, "%.2f %.2f\n", x[peak], y[peak]);
+      }
       
       free(namelist[n]);
       free(image);
