@@ -140,6 +140,9 @@ double ra2pixelf(double ra, render_args_t* args);
 // DEC in degrees
 double dec2pixelf(double dec, render_args_t* args);
 
+double xpixel2mercf(double pix, render_args_t* args);
+double ypixel2mercf(double pix, render_args_t* args);
+
 int in_image(int x, int y, render_args_t* args);
 
 // Like in_image, but with a margin around the outside.

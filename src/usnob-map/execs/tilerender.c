@@ -266,11 +266,6 @@ int main(int argc, char *argv[]) {
 		args.ramax  = merc2radeg(args.ramax);
 		args.decmin = merc2decdeg(args.decmin);
 		args.decmax = merc2decdeg(args.decmax);
-	} else {
-        // Flip RA.
-        double tmp = -args.ramax;
-        args.ramax = -args.ramin;
-        args.ramin = tmp;
     }
 
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
@@ -281,9 +276,8 @@ int main(int argc, char *argv[]) {
 		args.ramax += 360.0;
 	}
 
-	// min RA -> max merc
-	args.xmercmax =  radeg2merc(args.ramin);
-	args.xmercmin =  radeg2merc(args.ramax);
+	args.xmercmin =  radeg2merc(args.ramin);
+	args.xmercmax =  radeg2merc(args.ramax);
 	args.ymercmin = decdeg2merc(args.decmin);
 	args.ymercmax = decdeg2merc(args.decmax);
 
@@ -299,7 +293,7 @@ int main(int argc, char *argv[]) {
 	args.ymercperpixel = 1.0 / args.ypixelpermerc;
 
 	xzoom = args.xpixelpermerc / 256.0;
-	args.zoomlevel = (int)rint(log(xzoom) / log(2.0));
+	args.zoomlevel = (int)rint(log(fabs(xzoom)) / log(2.0));
 	fprintf(stderr, "tilecache: zoomlevel: %d\n", args.zoomlevel);
 
 	// Allocate a black image.
@@ -395,10 +389,10 @@ int main(int argc, char *argv[]) {
 /*
  We need to flip RA somewhere...
 
- We choose to insert the flip during the conversion from RA to
- Mercator coordinates, which means that the Mercator to pixel conversion is
- unchanged.
- */
+ We convert Longitude to RA to Mercator to Pixels.
+
+ We choose to insert the flip in the conversion from Mercator to Pixels.
+*/
 
 // RA in degrees
 int ra2pixel(double ra, render_args_t* args) {
@@ -422,8 +416,7 @@ double dec2pixelf(double dec, render_args_t* args) {
 
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
 double ra2merc(double ra) {
-    // here's the flip!
-	return 1.0 - ra / (2.0 * M_PI);
+	return ra / (2.0 * M_PI);
 }
 
 // Converts from RA in degrees to Mercator X coordinate in [0, 1].
@@ -434,7 +427,7 @@ double radeg2merc(double ra) {
 // Converts from Mercator X coordinate [0, 1] to RA in radians.
 double merc2ra(double x) {
     // here's the flip!
-	return (1.0 - x) * (2.0 * M_PI);
+	return x * (2.0 * M_PI);
 }
 
 // Converts from Mercator X coordinate [0, 1] to RA in degrees.
@@ -464,30 +457,38 @@ double merc2decdeg(double y) {
 
 // to RA in degrees
 double pixel2ra(double pix, render_args_t* args) {
-	double mpx = args->xmercmin + pix * args->xmercperpixel;
-	return merc2radeg(mpx);
+	return merc2radeg(xpixel2mercf(pix, args));
 }
 
 // to DEC in degrees
 double pixel2dec(double pix, render_args_t* args) {
-	double mpy = args->ymercmax - pix * args->ymercperpixel;
-	return merc2decdeg(mpy);
+	return merc2decdeg(ypixel2mercf(pix, args));
 }
 
-int xmerc2pixel(double x, render_args_t* args) {
-	return (int)floor(args->xpixelpermerc * (x - args->xmercmin));
+double xpixel2mercf(double pix, render_args_t* args) {
+	return args->xmercmax - pix * args->xmercperpixel;
 }
 
-int ymerc2pixel(double y, render_args_t* args) {
-	return (args->H-1) - (int)floor(args->ypixelpermerc * (y - args->ymercmin));
+double ypixel2mercf(double pix, render_args_t* args) {
+	return args->ymercmax - pix * args->ymercperpixel;
 }
 
 double xmerc2pixelf(double x, render_args_t* args) {
-	return args->xpixelpermerc * (x - args->xmercmin);
+	return (args->xmercmax - x) * args->xpixelpermerc;
+	//return (args->W-1) - (args->xpixelpermerc * (x - args->xmercmin));
 }
 
 double ymerc2pixelf(double y, render_args_t* args) {
-	return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
+	return (args->ymercmax - y) * args->ypixelpermerc;
+	//return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
+}
+
+int xmerc2pixel(double x, render_args_t* args) {
+	return (int)floor(xmerc2pixelf(x, args));
+}
+
+int ymerc2pixel(double y, render_args_t* args) {
+	return (int)floor(ymerc2pixelf(y, args));
 }
 
 int in_image(int x, int y, render_args_t* args) {
