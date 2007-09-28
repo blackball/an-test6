@@ -93,7 +93,9 @@ int simplexy(float *image,
   /* median smooth */
   /* NB: over-write simage to save malloc */
   simage = (float *) malloc(nx * ny * sizeof(float));
-  dmedsmooth(image, 1. / ((*sigma) * (*sigma)), nx, ny, halfbox, simage);
+  dmedsmooth(image,
+	     //1. / ((*sigma) * (*sigma)),
+	     nx, ny, halfbox, simage);
   for (i=0; i<nx*ny; i++)
     simage[i] = image[i] - simage[i];
   if (verbose)

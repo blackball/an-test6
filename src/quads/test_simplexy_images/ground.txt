@@ -2,7 +2,7 @@
 simplexy: nx=900, ny=606
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0175621.
+simplexy: dsigma() found sigma=4.47834.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 273 peaks.
@@ -275,7 +275,7 @@ simplexy: dallpeaks() found 273 peaks.
 451.01 564.07
 523.95 563.03
 616.81 564.33
-166.94 565.33
+166.93 565.33
 737.58 579.21
 803.30 580.68
 207.10 587.63
@@ -283,7 +283,7 @@ simplexy: dallpeaks() found 273 peaks.
 simplexy: nx=1600, ny=1067
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0138648.
+simplexy: dsigma() found sigma=3.53553.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 256 peaks.
@@ -547,7 +547,7 @@ simplexy: dallpeaks() found 256 peaks.
 simplexy: nx=1440, ny=720
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.025881.
+simplexy: dsigma() found sigma=6.59967.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 1762 peaks.
@@ -2317,15 +2317,24 @@ simplexy: dallpeaks() found 1762 peaks.
 simplexy: nx=2400, ny=3000
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0138648.
+simplexy: dsigma() found sigma=3.53553.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
-simplexy: dallpeaks() found 0 peaks.
+simplexy: dallpeaks() found 9 peaks.
+2169.03 94.08
+2179.40 98.42
+2170.68 102.16
+2193.63 102.91
+2117.23 93.44
+2186.18 91.17
+1946.16 109.49
+2132.57 94.65
+1776.31 99.13
 --- processing test_simplexy_images/astropix1.png as a PNG ---
 simplexy: nx=453, ny=680
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0471404.
+simplexy: dsigma() found sigma=12.0208.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 69 peaks.
@@ -2402,7 +2411,7 @@ simplexy: dallpeaks() found 69 peaks.
 simplexy: nx=827, ny=551
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.14327.
+simplexy: dsigma() found sigma=36.5338.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 27 peaks.
@@ -2437,7 +2446,7 @@ simplexy: dallpeaks() found 27 peaks.
 simplexy: nx=827, ny=551
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.00924323.
+simplexy: dsigma() found sigma=2.35702.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 185 peaks.
@@ -2630,7 +2639,7 @@ simplexy: dallpeaks() found 185 peaks.
 simplexy: nx=827, ny=551
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.00924323.
+simplexy: dsigma() found sigma=2.35702.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 789 peaks.
@@ -3427,7 +3436,7 @@ simplexy: dallpeaks() found 789 peaks.
 simplexy: nx=827, ny=551
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0341999.
+simplexy: dsigma() found sigma=8.72098.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 26 peaks.
@@ -3461,7 +3470,7 @@ simplexy: dallpeaks() found 26 peaks.
 simplexy: nx=1076, ny=1366
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0277297.
+simplexy: dsigma() found sigma=7.07107.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 1030 peaks.
@@ -4499,7 +4508,7 @@ simplexy: dallpeaks() found 1030 peaks.
 simplexy: nx=499, ny=793
 simplexy: dpsf=1.000000, plim=8.000000, dlim=1.000000, saddle=5.000000
 simplexy: maxper=1000, maxnpeaks=10000, maxsize=1000, halfbox=100
-simplexy: dsigma() found sigma=0.0471404.
+simplexy: dsigma() found sigma=12.0208.
 simplexy: finished dmedsmooth().
 simplexy: finished dobjects().
 simplexy: dallpeaks() found 233 peaks.

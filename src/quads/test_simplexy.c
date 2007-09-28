@@ -4,10 +4,12 @@
 #include <dirent.h>
 #include <regex.h>
 #include <cairo.h>
+#include <math.h>
 
 #include "cairoutils.h"
 #include "dimage.h"
 
+#define PEAKDIST 4
 
 int is_png(const struct dirent *de){
   regex_t preq;
@@ -43,9 +45,9 @@ float* to_bw(unsigned char *image, int imW, int imH){
   image_bw = malloc(sizeof(float) * imW * imH);
   for(w = 0; w < imW; w++){
     for(h = 0; h < imH; h++){
-      v = 0;
+      v = 0.0;
       for(c = 0; c <= 2; c++){
-	v = v + ((float)(image[4*(w*imH+h) + c])) / 765.0;
+	v = v + ((float)(image[4*(w*imH+h) + c])) / 3.0;
       }
       image_bw[w*imH + h] = v;
     }
@@ -62,7 +64,7 @@ unsigned char* to_cairo_bw(float *image_bw, int imW, int imH){
   for(w = 0; w < imW; w++){
     for(h = 0; h < imH; h++){
       for(c = 0; c <= 2; c++){
-	image_cairo[4*(w*imH + h) + c] = (unsigned char)(image_bw[w*imH + h]*255);
+	image_cairo[4*(w*imH + h) + c] = (unsigned char)(image_bw[w*imH + h]);
       }
       image_cairo[4*(w*imH + h) + 3] = 255;
     }
@@ -77,9 +79,11 @@ int main(void)
   int n, N, peak;
   unsigned char *image;
   float *image_bw;
+  unsigned char *image_out;
   char fullpath[255];
   char outpath[255];
   int imW, imH;
+  int peakX, peakY, peakXi, peakYi, peakDist;
 
   float dpsf, plim, dlim, saddle;
   int maxper, maxsize, halfbox, maxnpeaks;
@@ -126,8 +130,6 @@ int main(void)
       }
 
       image_bw = to_bw(image, imW, imH);
-      
-      //      cairoutils_write_png(outpath, to_cairo_bw(image_bw, imW, imH), imW, imH);
 
       fprintf(stderr, " ---\n");
       
@@ -137,13 +139,41 @@ int main(void)
       
       simplexy(image_bw, imW, imH, dpsf, plim, dlim, saddle, maxper,
 	       maxnpeaks, maxsize, halfbox, &sigma, x, y, flux, &npeaks, 1);
+
+      image_out = malloc(sizeof(unsigned char)*imW*imH*4);
+      memcpy(image_out, image, imW*imH*4);
+      //      image_out = to_cairo_bw(image_bw, imW, imH);
+
       for(peak = 0; peak < npeaks; peak++){
 	fprintf(stderr, "%.2f %.2f\n", x[peak], y[peak]);
+	
+	for(peakXi = -PEAKDIST; peakXi <= PEAKDIST; peakXi++){
+	  for(peakYi = -PEAKDIST; peakYi <= PEAKDIST; peakYi++){
+	    peakX = ((int)round(x[peak])) + peakXi;
+	    peakY = ((int)round(y[peak])) + peakYi;
+	    peakDist = peakXi*peakXi + peakYi*peakYi;
+	    
+	    if(  abs(peakDist - PEAKDIST*PEAKDIST) > 3 ||
+		 peakX <= 0 ||
+		 peakY <= 0 ||
+		 peakX >= imW ||
+		 peakY >= imH){
+	      continue;
+	    }
+
+	    image_out[4*(peakY*imW + peakX) + 0] = 0;
+	    image_out[4*(peakY*imW + peakX) + 1] = 255;
+	    image_out[4*(peakY*imW + peakX) + 2] = 0;
+	  }
+	}
       }
       
+      cairoutils_write_png(outpath, image_out, imW, imH);
+
       free(namelist[n]);
       free(image);
       free(image_bw);
+      free(image_out);
       free(x);
       free(y);
       free(flux);
