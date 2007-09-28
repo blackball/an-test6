@@ -76,6 +76,13 @@ int simplexy(float *image, int nx, int ny, float dpsf, float plim,
              float dlim, float saddle, int maxper, int maxnpeaks,
 	     int maxsize, int halfbox,
              float *sigma, float *x, float *y, float *flux, int *npeaks, int verbose);
+
+int simplexy_continue(float *image, int nx, int ny, float dpsf, float plim,
+             float dlim, float saddle, int maxper, int maxnpeaks,
+	     int maxsize, int halfbox,
+             float *sigma, float *x, float *y, float *flux, int *npeaks, int verbose,
+	     float *simage);
+
 int dtemplates(float *image, int nx, int ny, int *ntemplates, int *xcen,
                int *ycen, float *templates, float sigma, float parallel);
 
