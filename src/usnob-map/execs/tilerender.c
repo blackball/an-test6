@@ -251,12 +251,10 @@ int main(int argc, char *argv[]) {
 
 	default_rdls_args(&args);
 
-	/*
-	   if (args.W > 1024 || args.H > 1024) {
-	   fprintf(stderr, "tilecache: Width or height too large (limit 1024)\n");
-	   exit(-1);
-	   }
-	   */
+    if (args.W > 1024 || args.H > 1024) {
+        fprintf(stderr, "tilecache: Width or height too large (limit 1024)\n");
+        exit(-1);
+    }
 
 	fprintf(stderr, "tilecache: BEGIN TILECACHE\n");
 
@@ -264,11 +262,16 @@ int main(int argc, char *argv[]) {
 		// -x -X -y -Y were given in Mercator coordinates - convert to deg.
 		// this is for cases where it's more convenient to specify the coords
 		// in Merc coords (eg prerendering)
-		args.ramin = rad2deg(merc2ra(args.ramin));
-		args.ramax = rad2deg(merc2ra(args.ramax));
-		args.decmin = rad2deg(merc2dec(args.decmin));
-		args.decmax = rad2deg(merc2dec(args.decmax));
-	}
+		args.ramin  = merc2radeg(args.ramin);
+		args.ramax  = merc2radeg(args.ramax);
+		args.decmin = merc2decdeg(args.decmin);
+		args.decmax = merc2decdeg(args.decmax);
+	} else {
+        // Flip RA.
+        double tmp = -args.ramax;
+        args.ramax = -args.ramin;
+        args.ramin = tmp;
+    }
 
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
@@ -278,10 +281,10 @@ int main(int argc, char *argv[]) {
 		args.ramax += 360.0;
 	}
 
-	args.xmercmin =  ra2merc(deg2rad(args.ramin));
-	args.xmercmax =  ra2merc(deg2rad(args.ramax));
-	args.ymercmin = dec2merc(deg2rad(args.decmin));
-	args.ymercmax = dec2merc(deg2rad(args.decmax));
+	args.xmercmin =  radeg2merc(args.ramin);
+	args.xmercmax =  radeg2merc(args.ramax);
+	args.ymercmin = decdeg2merc(args.decmin);
+	args.ymercmax = decdeg2merc(args.decmax);
 
 	// The y mercator position can end up *near* but not exactly
 	// equal to the boundary conditions... clamp.
@@ -388,53 +391,86 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+/*
+ We need to flip RA somewhere...
+
+ We choose to insert the flip during the conversion from RA to
+ Mercator coordinates, which means that the Mercator to pixel conversion is
+ unchanged.
+ */
+
 // RA in degrees
 int ra2pixel(double ra, render_args_t* args) {
-	return xmerc2pixel(ra2merc(deg2rad(ra)), args);
+	return xmerc2pixel(radeg2merc(ra), args);
 }
 
 // DEC in degrees
 int dec2pixel(double dec, render_args_t* args) {
-	return ymerc2pixel(dec2merc(deg2rad(dec)), args);
+	return ymerc2pixel(decdeg2merc(dec), args);
 }
 
 // RA in degrees
 double ra2pixelf(double ra, render_args_t* args) {
-	return xmerc2pixelf(ra2merc(deg2rad(ra)), args);
+	return xmerc2pixelf(radeg2merc(ra), args);
 }
 
 // DEC in degrees
 double dec2pixelf(double dec, render_args_t* args) {
-	return ymerc2pixelf(dec2merc(deg2rad(dec)), args);
+	return ymerc2pixelf(decdeg2merc(dec), args);
 }
 
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
 double ra2merc(double ra) {
-	return ra / (2.0 * M_PI);
+    // here's the flip!
+	return 1.0 - ra / (2.0 * M_PI);
 }
+
+// Converts from RA in degrees to Mercator X coordinate in [0, 1].
+double radeg2merc(double ra) {
+	return ra2merc(deg2rad(ra));
+}
+
 // Converts from Mercator X coordinate [0, 1] to RA in radians.
 double merc2ra(double x) {
-	return x * (2.0 * M_PI);
+    // here's the flip!
+	return (1.0 - x) * (2.0 * M_PI);
 }
-// Converts from DEC in radians to Mercator Y coordinate in [0, 1].
+
+// Converts from Mercator X coordinate [0, 1] to RA in degrees.
+double merc2radeg(double x) {
+	return rad2deg(merc2ra(x));
+}
+
+// Converts from Dec in radians to Mercator Y coordinate in [0, 1].
 double dec2merc(double dec) {
 	return 0.5 + (asinh(tan(dec)) / (2.0 * M_PI));
 }
+
+// Converts from Dec in degrees to Mercator X coordinate in [0, 1].
+double decdeg2merc(double ra) {
+	return dec2merc(deg2rad(ra));
+}
+
 // Converts from Mercator Y coordinate [0, 1] to DEC in radians.
 double merc2dec(double y) {
 	return atan(sinh((y - 0.5) * (2.0 * M_PI)));
 }
 
+// Converts from Mercator Y coordinate [0, 1] to DEC in degrees.
+double merc2decdeg(double y) {
+	return rad2deg(merc2dec(y));
+}
+
 // to RA in degrees
 double pixel2ra(double pix, render_args_t* args) {
 	double mpx = args->xmercmin + pix * args->xmercperpixel;
-	return rad2deg(merc2ra(mpx));
+	return merc2radeg(mpx);
 }
 
 // to DEC in degrees
 double pixel2dec(double pix, render_args_t* args) {
 	double mpy = args->ymercmax - pix * args->ymercperpixel;
-	return rad2deg(merc2dec(mpy));
+	return merc2decdeg(mpy);
 }
 
 int xmerc2pixel(double x, render_args_t* args) {
@@ -464,7 +500,6 @@ int in_image_margin(int x, int y, int margin, render_args_t* args) {
 uchar* pixel(int x, int y, uchar* img, render_args_t* args) {
 	return img + 4*(y*args->W + x);
 }
-
 
 // draw a line in Mercator space, handling wrap-around if necessary.
 void draw_line_merc(double mx1, double my1, double mx2, double my2,

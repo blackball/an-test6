@@ -99,14 +99,26 @@ double pixel2dec(double pix, render_args_t* args);
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
 double ra2merc(double ra);
 
+// Converts from RA in degrees to Mercator X coordinate in [0, 1].
+double radeg2merc(double ra);
+
 // Converts from Mercator X coordinate [0, 1] to RA in radians.
 double merc2ra(double x);
+
+// Converts from Mercator X coordinate [0, 1] to RA in degrees.
+double merc2radeg(double x);
 
 // Converts from DEC in radians to Mercator Y coordinate in [0, 1].
 double dec2merc(double dec);
 
+// Converts from DEC in degrees to Mercator Y coordinate in [0, 1].
+double decdeg2merc(double dec);
+
 // Converts from Mercator Y coordinate [0, 1] to DEC in radians.
 double merc2dec(double y);
+
+// Converts from Mercator Y coordinate [0, 1] to DEC in degrees.
+double merc2decdeg(double y);
 
 int xmerc2pixel(double x, render_args_t* args);
 

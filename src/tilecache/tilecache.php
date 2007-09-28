@@ -48,7 +48,7 @@ $headers = $_REQUEST;
 foreach ($headers as $header => $value) {
     loggit("  $header: $value\n");
 }
-	
+
 // The variables we need...
 $needed = array("WIDTH", "HEIGHT", "BBOX");
 foreach ($needed as $n => $val) {
