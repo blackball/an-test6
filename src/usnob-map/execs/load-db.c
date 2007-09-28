@@ -132,8 +132,9 @@ int main(int argc, char** args) {
         sip_t* res;
         double ramin, ramax, decmin, decmax;
         float pixeldensity;
-        char fn[1024];
-        double W, H;
+        char* basefn;
+        char* fn;
+        int W, H;
 
         wcsfn = sl_get(wcsfiles, I);
         dot = strrchr(wcsfn, '.');
@@ -143,22 +144,26 @@ int main(int argc, char** args) {
         }
 
         jpeg = png = FALSE;
-        snprintf(fn, sizeof(fn), "%.*s.%s", dot-wcsfn, wcsfn, "jpg");
+        asprintf(&fn, "%.*s.%s", dot-wcsfn, wcsfn, "jpg");
         if (file_exists(fn)) {
             jpeg = TRUE;
         } else {
-            snprintf(fn, sizeof(fn), "%.*s.%s", dot-wcsfn, wcsfn, "jpeg");
+            free(fn);
+            asprintf(&fn, "%.*s.%s", dot-wcsfn, wcsfn, "jpeg");
             if (file_exists(fn)) {
                 jpeg = TRUE;
             } else {
-                snprintf(fn, sizeof(fn), "%.*s.%s", dot-wcsfn, wcsfn, "png");
+                free(fn);
+                asprintf(&fn, "%.*s.%s", dot-wcsfn, wcsfn, "png");
                 if (file_exists(fn)) {
                     png = TRUE;
+                } else {
+                    free(fn);
                 }
             }
         }
         imgfn = fn;
-
+        
         if (!(jpeg || png)) {
             logmsg("Image file corresponding to WCS file \"%s\" not found.\n", wcsfn);
             continue;
@@ -175,8 +180,8 @@ int main(int argc, char** args) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
             continue;
         }
-        W = wcs.wcstan.imagew;
-        H = wcs.wcstan.imageh;
+        W = (int)wcs.wcstan.imagew;
+        H = (int)wcs.wcstan.imageh;
 
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
@@ -189,7 +194,13 @@ int main(int argc, char** args) {
 
         pixeldensity = 1.0 / square(sip_pixel_scale(&wcs));
 
+        asprintf(&basefn, "%.*s", dot-wcsfn, wcsfn);
+
         // insert into readimgdb_image(basefilename,imageformat,ramin,ramax,decmin,decmax,imagew,imageh) values ("img1", "jpeg", 90, 120, -10, 10, 800, 600);
+        printf("INSERT INTO readimgdb_image(basefilename, imageformat, ramin, ramax, decmin, decmax, imagew, image) VALUES ("
+               "\"%s\", \"%s\", %g, %g, %g, %g, %i, %i);\n", basefn, (jpeg ? "jpeg" : "png"), ramin, ramax, decmin, decmax, W, H);
+
+        free(basefn);
     }
 
     sl_free2(wcsfiles);
