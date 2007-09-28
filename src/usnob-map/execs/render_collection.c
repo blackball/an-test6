@@ -159,7 +159,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
         double ramin, ramax, decmin, decmax;
         int xlo, xhi, ylo, yhi;
         float pixeldensity, weight;
-        //bool fakesize = FALSE;
         char cachekey[33];
         float* cached;
         int len;
@@ -195,22 +194,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
             continue;
         }
 
-        // HACK - some of my 2006 APOD solves seem to not have IMAGEW,H in the WCS...
         W = wcs.wcstan.imagew;
         H = wcs.wcstan.imageh;
-		/*
-		  if (!W) {
-		  W = 10000;
-		  fakesize = TRUE;
-		  }
-		  if (!H) {
-		  H = 10000;
-		  fakesize = TRUE;
-		  }
-		  if (fakesize)
-		  logmsg("USING FAKESIZE\n");
-		*/
-		//        logmsg("WCS image W,H = (%i, %i)%s\n", W, H, (fakesize ?" (fake)":""));
+
+		//        logmsg("WCS image W,H = (%i, %i)\n", W, H);
 
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
@@ -302,18 +289,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 				}
 				//            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
 				
-				/*
-				  if (fakesize) {
-				  // if we set fake image size, recompute...
-				  get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
-				  xlo = floor(ra2pixelf(ramin, args));
-				  xhi = ceil (ra2pixelf(ramax, args));
-				  // increasing DEC -> decreasing Y pixel coord
-				  ylo = floor(dec2pixelf(decmax, args));
-				  yhi = ceil (dec2pixelf(decmin, args));
-				  }
-				*/
-				logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+				//logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 				
 				// iterate over mercator space (ie, output pixels)
 				for (j=ylo; j<=yhi; j++) {
