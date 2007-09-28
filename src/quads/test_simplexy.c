@@ -1,3 +1,19 @@
+/*
+ A test suite for simplexy.
+Processes every jpeg or png in test_simplexy_images, and outputs
+the verbose debugging data, as well as a list of the coordinates,
+and annotated images into the same folder (each beginning with "out_").
+Annotated images (those beginning with "out_") are not processed.
+
+I recommend running this:
+make test_simplexy ; test_simplexy > & test_simplexy_images/output.txt ; diff test_simplexy_images/ground.txt test_simplexy_images/output.txt
+
+Diff returns the differences between the current run and the "ground truth"
+stored in ground.txt.
+
+Jon Barron, 2007
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +53,7 @@ int is_input_image(const struct dirent *de){
   return is_image(de) && !is_output(de);
 }
 
-float* to_bw(unsigned char *image, int imW, int imH){
+float* to_bw_f(unsigned char *image, int imW, int imH){
   int w, h, c;
   float *image_bw;
   float v;
@@ -50,6 +66,25 @@ float* to_bw(unsigned char *image, int imW, int imH){
 	v = v + ((float)(image[4*(w*imH+h) + c])) / 3.0;
       }
       image_bw[w*imH + h] = v;
+    }
+  }
+
+  return image_bw;
+}
+
+unsigned char* to_bw_u8(unsigned char *image, int imW, int imH){
+  int w, h, c;
+  unsigned char *image_bw;
+  float v;
+
+  image_bw = malloc(sizeof(unsigned char) * imW * imH);
+  for(w = 0; w < imW; w++){
+    for(h = 0; h < imH; h++){
+      v = 0.0;
+      for(c = 0; c <= 2; c++){
+	v = v + ((float)(image[4*(w*imH+h) + c])) / 3.0;
+      }
+      image_bw[w*imH + h] = (unsigned char)v;
     }
   }
 
@@ -76,9 +111,10 @@ unsigned char* to_cairo_bw(float *image_bw, int imW, int imH){
 int main(void)
 {
   struct dirent **namelist;
-  int n, N, peak;
+  int i, n, N, peak;
   unsigned char *image;
-  float *image_bw;
+  float *image_bw_f;
+  unsigned char *image_bw_u8;
   unsigned char *image_out;
   char fullpath[255];
   char outpath[255];
@@ -129,15 +165,20 @@ int main(void)
 	image = cairoutils_read_jpeg(fullpath, &imW, &imH);
       }
 
-      image_bw = to_bw(image, imW, imH);
-
+      //      image_bw_f = to_bw_f(image, imW, imH);
+      image_bw_u8 = to_bw_u8(image, imW, imH);
+      image_bw_f = malloc(sizeof(float)*imW*imH);
+      for(i = 0; i < imW*imH; i++){
+	image_bw_f[i] = (float)image_bw_u8[i];
+      }
+      
       fprintf(stderr, " ---\n");
       
       x = malloc(maxnpeaks * sizeof(float));
       y = malloc(maxnpeaks * sizeof(float));
       flux = malloc(maxnpeaks * sizeof(float));
       
-      simplexy(image_bw, imW, imH, dpsf, plim, dlim, saddle, maxper,
+      simplexy_u8(image_bw_u8, imW, imH, dpsf, plim, dlim, saddle, maxper,
 	       maxnpeaks, maxsize, halfbox, &sigma, x, y, flux, &npeaks, 1);
 
       image_out = malloc(sizeof(unsigned char)*imW*imH*4);
@@ -172,7 +213,8 @@ int main(void)
 
       free(namelist[n]);
       free(image);
-      free(image_bw);
+      free(image_bw_f);
+      free(image_bw_u8);
       free(image_out);
       free(x);
       free(y);
