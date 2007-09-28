@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with the Astrometry.net suite ; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-   */
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -24,9 +24,9 @@
 #include <unistd.h>
 #include <sys/param.h>
 #include <assert.h>
+#include <stdarg.h>
 
-#include <png.h>
-
+//#include <png.h>
 #include <zlib.h>
 
 #include "an-bool.h"
@@ -91,6 +91,16 @@ render_func_t renderers[] = {
 
 	render_collection
 };
+
+static void
+ATTRIB_FORMAT(printf,1,2)
+logmsg(char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, "tilerender: ");
+    vfprintf(stderr, format, args);
+    va_end(args);
+}
 
 static void default_rdls_args(render_args_t* args) {
 	// Set the other RDLS-related args if they haven't been set already.
@@ -238,25 +248,25 @@ int main(int argc, char *argv[]) {
 		}
 
 	if (!(gotx && goty && gotX && gotY && gotw && goth)) {
-		fprintf(stderr, "tilecache: Invalid inputs: need ");
-		if (!gotx) fprintf(stderr, "-x ");
-		if (!gotX) fprintf(stderr, "-X ");
-		if (!goty) fprintf(stderr, "-y ");
-		if (!gotY) fprintf(stderr, "-Y ");
-		if (!gotw) fprintf(stderr, "-w ");
-		if (!goth) fprintf(stderr, "-h ");
-		fprintf(stderr, "\n");
+		logmsg("tilecache: Invalid inputs: need ");
+		if (!gotx) logmsg("-x ");
+		if (!gotX) logmsg("-X ");
+		if (!goty) logmsg("-y ");
+		if (!gotY) logmsg("-Y ");
+		if (!gotw) logmsg("-w ");
+		if (!goth) logmsg("-h ");
+		logmsg("\n");
 		exit(-1);
 	}
 
 	default_rdls_args(&args);
 
     if (args.W > 1024 || args.H > 1024) {
-        fprintf(stderr, "tilecache: Width or height too large (limit 1024)\n");
+        logmsg("tilecache: Width or height too large (limit 1024)\n");
         exit(-1);
     }
 
-	fprintf(stderr, "tilecache: BEGIN TILECACHE\n");
+	logmsg("tilecache: BEGIN TILECACHE\n");
 
 	if (inmerc) {
 		// -x -X -y -Y were given in Mercator coordinates - convert to deg.
@@ -266,7 +276,12 @@ int main(int argc, char *argv[]) {
 		args.ramax  = merc2radeg(args.ramax);
 		args.decmin = merc2decdeg(args.decmin);
 		args.decmax = merc2decdeg(args.decmax);
-    }
+    } else {
+		// Flip RA!
+		double tmp = -args.ramin;
+		args.ramin = -args.ramax;
+		args.ramax  = tmp;
+	}
 
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
@@ -276,8 +291,9 @@ int main(int argc, char *argv[]) {
 		args.ramax += 360.0;
 	}
 
-	args.xmercmin =  radeg2merc(args.ramin);
-	args.xmercmax =  radeg2merc(args.ramax);
+	// min ra -> max merc.
+	args.xmercmax =  radeg2merc(args.ramin);
+	args.xmercmin =  radeg2merc(args.ramax);
 	args.ymercmin = decdeg2merc(args.decmin);
 	args.ymercmax = decdeg2merc(args.decmax);
 
@@ -292,16 +308,64 @@ int main(int argc, char *argv[]) {
 	args.xmercperpixel = 1.0 / args.xpixelpermerc;
 	args.ymercperpixel = 1.0 / args.ypixelpermerc;
 
+	// TEST
+	{
+		double x, y;
+		double mx, my;
+		double ra, dec;
+		double ra2, dec2;
+		double mx2, my2;
+		double x2, y2;
+		double x3, y3;
+
+		x = y = 0;
+		mx = xpixel2mercf(x, &args);
+		my = ypixel2mercf(y, &args);
+		ra = merc2radeg(mx);
+		dec = merc2decdeg(my);
+		ra2 = pixel2ra(x, &args);
+		dec2 = pixel2dec(y, &args);
+		mx2 = radeg2merc(ra);
+		my2 = decdeg2merc(dec);
+		x2 = xmerc2pixelf(mx2, &args);
+		y2 = ymerc2pixelf(my2, &args);
+		x3 = ra2pixelf(ra, &args);
+		y3 = dec2pixelf(dec, &args);
+
+		logmsg("Pixel (%g,%g) -> Merc (%g, %g) -> RA,Dec (%g, %g) or (%g, %g)\n"
+			   "  -> Merc (%g, %g) -> Pixel (%g, %g) or (%g, %g).\n",
+			   x, y, mx, my, ra, dec, ra2, dec2, mx2, my2, x2, y2, x3, y3);
+
+		x = y = 255;
+		mx = xpixel2mercf(x, &args);
+		my = ypixel2mercf(y, &args);
+		ra = merc2radeg(mx);
+		dec = merc2decdeg(my);
+		ra2 = pixel2ra(x, &args);
+		dec2 = pixel2dec(y, &args);
+		mx2 = radeg2merc(ra);
+		my2 = decdeg2merc(dec);
+		x2 = xmerc2pixelf(mx2, &args);
+		y2 = ymerc2pixelf(my2, &args);
+		x3 = ra2pixelf(ra, &args);
+		y3 = dec2pixelf(dec, &args);
+
+		logmsg("Pixel (%g,%g) -> Merc (%g, %g) -> RA,Dec (%g, %g) or (%g, %g)\n"
+			   "  -> Merc (%g, %g) -> Pixel (%g, %g) or (%g, %g).\n",
+			   x, y, mx, my, ra, dec, ra2, dec2, mx2, my2, x2, y2, x3, y3);
+	}
+
+
 	xzoom = args.xpixelpermerc / 256.0;
 	args.zoomlevel = (int)rint(log(fabs(xzoom)) / log(2.0));
-	fprintf(stderr, "tilecache: zoomlevel: %d\n", args.zoomlevel);
+	logmsg("tilecache: zoomlevel: %d\n", args.zoomlevel);
 
 	// Allocate a black image.
 	img = calloc(4 * args.W * args.H, 1);
 
 	// Rescue boneheads.
 	if (!pl_size(layers)) {
-		fprintf(stderr, "tilecache: Do you maybe want to try rendering some layers?\n");
+		logmsg("tilecache: Do you maybe want to try rendering some layers?\n");
 	}
 
 	for (i=0; i<pl_size(layers); i++) {
@@ -315,9 +379,9 @@ int main(int argc, char *argv[]) {
 			if (!strcmp(layer, layernames[j])) {
 				args.currentlayer = layernames[j];
 				if (renderers[j](thisimg, &args)) {
-					fprintf(stderr, "tilecache: Renderer \"%s\" failed.\n", layernames[j]);
+					logmsg("tilecache: Renderer \"%s\" failed.\n", layernames[j]);
 				} else {
-					fprintf(stderr, "tilecache: Renderer \"%s\" succeeded.\n", layernames[j]);
+					logmsg("tilecache: Renderer \"%s\" succeeded.\n", layernames[j]);
 				}
 				gotit = TRUE;
 				break;
@@ -325,7 +389,7 @@ int main(int argc, char *argv[]) {
 		}
 		// Save a different kind of bonehead.
 		if (!gotit) {
-			fprintf(stderr, "tilecache: No renderer found for layer \"%s\".\n", layer);
+			logmsg("tilecache: No renderer found for layer \"%s\".\n", layer);
 		}
 
 		// Composite.
@@ -381,7 +445,7 @@ int main(int argc, char *argv[]) {
 	}
 	pl_free(layers);
 
-	fprintf(stderr, "tilecache: END TILECACHE\n");
+	logmsg("tilecache: END TILECACHE\n");
 
 	return 0;
 }
@@ -391,8 +455,30 @@ int main(int argc, char *argv[]) {
 
  We convert Longitude to RA to Mercator to Pixels.
 
- We choose to insert the flip in the conversion from Mercator to Pixels.
+ We choose to insert the flip in the conversion from RA to Mercator.
 */
+
+double xpixel2mercf(double pix, render_args_t* args) {
+	return args->xmercmin + pix * args->xmercperpixel;
+	//return args->xmercmax - pix * args->xmercperpixel;
+}
+
+double ypixel2mercf(double pix, render_args_t* args) {
+	return args->ymercmax - pix * args->ymercperpixel;
+}
+
+double xmerc2pixelf(double x, render_args_t* args) {
+	return (x - args->xmercmin) * args->xpixelpermerc;
+	//return (args->xmercmax - x) * args->xpixelpermerc;
+	//return (args->W-1) - (args->xpixelpermerc * (x - args->xmercmin));
+}
+
+double ymerc2pixelf(double y, render_args_t* args) {
+	return (args->ymercmax - y) * args->ypixelpermerc;
+	//return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
+}
+
+////// The following are just composed of simpler conversions.
 
 // RA in degrees
 int ra2pixel(double ra, render_args_t* args) {
@@ -414,47 +500,6 @@ double dec2pixelf(double dec, render_args_t* args) {
 	return ymerc2pixelf(decdeg2merc(dec), args);
 }
 
-// Converts from RA in radians to Mercator X coordinate in [0, 1].
-double ra2merc(double ra) {
-	return ra / (2.0 * M_PI);
-}
-
-// Converts from RA in degrees to Mercator X coordinate in [0, 1].
-double radeg2merc(double ra) {
-	return ra2merc(deg2rad(ra));
-}
-
-// Converts from Mercator X coordinate [0, 1] to RA in radians.
-double merc2ra(double x) {
-    // here's the flip!
-	return x * (2.0 * M_PI);
-}
-
-// Converts from Mercator X coordinate [0, 1] to RA in degrees.
-double merc2radeg(double x) {
-	return rad2deg(merc2ra(x));
-}
-
-// Converts from Dec in radians to Mercator Y coordinate in [0, 1].
-double dec2merc(double dec) {
-	return 0.5 + (asinh(tan(dec)) / (2.0 * M_PI));
-}
-
-// Converts from Dec in degrees to Mercator X coordinate in [0, 1].
-double decdeg2merc(double ra) {
-	return dec2merc(deg2rad(ra));
-}
-
-// Converts from Mercator Y coordinate [0, 1] to DEC in radians.
-double merc2dec(double y) {
-	return atan(sinh((y - 0.5) * (2.0 * M_PI)));
-}
-
-// Converts from Mercator Y coordinate [0, 1] to DEC in degrees.
-double merc2decdeg(double y) {
-	return rad2deg(merc2dec(y));
-}
-
 // to RA in degrees
 double pixel2ra(double pix, render_args_t* args) {
 	return merc2radeg(xpixel2mercf(pix, args));
@@ -463,27 +508,6 @@ double pixel2ra(double pix, render_args_t* args) {
 // to DEC in degrees
 double pixel2dec(double pix, render_args_t* args) {
 	return merc2decdeg(ypixel2mercf(pix, args));
-}
-
-double xpixel2mercf(double pix, render_args_t* args) {
-	return args->xmercmin + pix * args->xmercperpixel;
-	//return args->xmercmax - pix * args->xmercperpixel;
-}
-
-double ypixel2mercf(double pix, render_args_t* args) {
-	return args->ymercmax - pix * args->ymercperpixel;
-}
-
-double xmerc2pixelf(double x, render_args_t* args) {
-	return (x - args->xmercmin) * args->xpixelpermerc;
-
-	//return (args->xmercmax - x) * args->xpixelpermerc;
-	//return (args->W-1) - (args->xpixelpermerc * (x - args->xmercmin));
-}
-
-double ymerc2pixelf(double y, render_args_t* args) {
-	return (args->ymercmax - y) * args->ypixelpermerc;
-	//return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
 }
 
 int xmerc2pixel(double x, render_args_t* args) {
@@ -571,7 +595,7 @@ static int cache_get_filename(render_args_t* args,
 		const char* cachedomain, const char* key,
 		char* fn, int fnlen) {
 	if (snprintf(fn, fnlen, "%s/%s/%s", args->cachedir, cachedomain, key) > fnlen) {
-		fprintf(stderr, "Filename truncated in cache_load/cache_save.\n");
+		logmsg("Filename truncated in cache_load/cache_save.\n");
 		return -1;
 	}
 	return 0;
@@ -597,11 +621,11 @@ void* cache_load(render_args_t* args,
 		return NULL;
 	buf = file_get_contents(fn, &len, FALSE);
 	if (!buf) {
-		fprintf(stderr, "Failed to read file contents in cache_load.\n");
+		logmsg("Failed to read file contents in cache_load.\n");
 		return NULL;
 	}
 	if (len < 2*sizeof(uint32_t)) {
-		fprintf(stderr, "Cache file too small: \"%s\n", fn);
+		logmsg("Cache file too small: \"%s\n", fn);
 		free(buf);
 		return NULL;
 	}
@@ -614,24 +638,24 @@ void* cache_load(render_args_t* args,
 	origlen = ubuf[1];
 
 	if (typeid != 1) {
-		fprintf(stderr, "File \"%s\" does not have typeid 1.\n", fn);
+		logmsg("File \"%s\" does not have typeid 1.\n", fn);
 		free(buf);
 		return NULL;
 	}
 	orig = malloc(origlen);
 	if (!orig) {
-		fprintf(stderr, "Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", (int)origlen, fn);
+		logmsg("Failed to allocate %i bytes for uncompressed cache file \"%s\".\n", (int)origlen, fn);
 		free(buf);
 		return NULL;
 	}
 	if (length)
 		*length = origlen;
-	//fprintf(stderr, "Origlen as described by the cache file: %d\n", ulen);
-	//fprintf(stderr, "File size as determined by file_get_contents() = %d\n", len);
+	//logmsg("Origlen as described by the cache file: %d\n", ulen);
+	//logmsg("File size as determined by file_get_contents() = %d\n", len);
     rtn = uncompress(orig, &origlen, buf + 2*sizeof(uint32_t), len - 2*sizeof(uint32_t));
 	free(buf);
 	if (rtn != Z_OK) {
-		fprintf(stderr, "Failed to uncompress() file \"%s\": %s\n", fn, zError(rtn));
+		logmsg("Failed to uncompress() file \"%s\": %s\n", fn, zError(rtn));
 		free(orig);
 		return NULL;
 	}
@@ -656,39 +680,39 @@ int cache_save(render_args_t* args,
 	}
 	fid = fopen(fn, "wb");
 	if (!fid) {
-		fprintf(stderr, "Failed to open cache file \"%s\": %s\n", fn, strerror(errno));
+		logmsg("Failed to open cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
 	}
 
 	complen = compressBound(length);
 	compressed = malloc(complen + 2*sizeof(uint32_t));
 	if (!compressed) {
-		fprintf(stderr, "Failed to allocate compressed cache buffer\n");
+		logmsg("Failed to allocate compressed cache buffer\n");
 		goto cleanup;
 	}
 
 	// first four bytes: type id
 	typeid = 1;
 	if (fwrite(&typeid, sizeof(uint32_t), 1, fid) != 1) {
-		fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+		logmsg("Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
 	}
 	ulen = length;
 	if (fwrite(&ulen, sizeof(uint32_t), 1, fid) != 1) {
-		fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+		logmsg("Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
 	}
 	rtn = compress(compressed, &complen, data, length);
 	if (rtn != Z_OK) {
-		fprintf(stderr, "compress() error: %s\n", zError(rtn));
+		logmsg("compress() error: %s\n", zError(rtn));
 		goto cleanup;
 	}
 	if (fwrite(compressed, 1, complen, fid) != complen) {
-		fprintf(stderr, "Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
+		logmsg("Failed to write cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
 	}
 	if (fclose(fid)) {
-		fprintf(stderr, "Failed to close cache file \"%s\": %s\n", fn, strerror(errno));
+		logmsg("Failed to close cache file \"%s\": %s\n", fn, strerror(errno));
 		goto cleanup;
 	}
 

@@ -49,14 +49,24 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', //'gain',
 
 var gotoform = document.getElementById("gotoform");
 
+function ra2long(ra) {
+	return 360 - ra;
+}
+
+function long2ra(lng) {
+	ra = -lng;
+	if (ra < 0.0) { ra += 360.0; }
+	if (ra > 360.0) { ra -= 360.0; }
+	return ra;
+}
+
 /*
   This function gets called as the user moves the map.
 */
 function mapmoved() {
 	center = map.getCenter();
 	// update the center ra,dec textboxes.
-	ra = center.lng();
-	if (ra < 0.0) { ra += 360.0; }
+	ra = long2ra(center.lng());
 	gotoform.ra_center.value  = "" + ra;
 	gotoform.dec_center.value = "" + center.lat();
 }
@@ -82,8 +92,7 @@ function moveended() {
   This function gets called when the mouse is moved.
 */
 function mousemoved(latlong) {
-	var ra = latlong.lng();
-	if (ra < 0.0) { ra += 360.0; }
+	var ra = long2ra(latlong.lng());
 	gotoform.ra_mouse.value  = "" + ra;
 	gotoform.dec_mouse.value = "" + latlong.lat();
 }
@@ -97,7 +106,7 @@ function moveCenter() {
 	var dec  = gotoform.dec_center.value;
 	var zoom = gotoform.zoomlevel.value;
 	//debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ", old zoom " + map.getZoom() + "\n");
-	map.setCenter(new GLatLng(dec, ra), Number(zoom));
+	map.setCenter(new GLatLng(dec, ra2long(ra)), Number(zoom));
 }
 
 /*
@@ -112,7 +121,7 @@ function linktohere() {
 		url = url.substr(0, qm);
 	}
 	center = map.getCenter();
-	url += "?ra=" + center.lng() + "&dec=" + center.lat()
+	url += "?ra=" + long2ra(center.lng()) + "&dec=" + center.lat()
 		+ "&zoom=" + map.getZoom();
 
 	var show = [];
@@ -330,7 +339,7 @@ function startup() {
 	if ("zoom" in getdata) {
 		zoom = Number(getdata["zoom"]);
 	}
-	map.setCenter(new GLatLng(dec, ra), zoom);
+	map.setCenter(new GLatLng(dec, ra2long(ra)), zoom);
 
 	// Base URL of the tile and quad servers.
 	var myurl = new String(window.location);

@@ -81,7 +81,8 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_constellation.o \
 		render_messier.o \
 		render_solid.o \
-		render_collection.o
+		render_collection.o \
+		merc.o
 
 MISC_OBJS := merctree.o pnmutils.o
 
@@ -100,7 +101,7 @@ render-mercator: render-mercator.o \
 make-merctree: make-merctree.o merctree.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-make-merctree2: make-merctree2.o merctree.o \
+make-merctree2: make-merctree2.o merctree.o merc.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 	$(CC) -o $@ $^ $(LDFLAGS_DEF) -lm
 

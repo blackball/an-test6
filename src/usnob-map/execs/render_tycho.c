@@ -12,8 +12,9 @@
 #include "mercrender.h"
 
 static char* merc_files[] = {
-	"/home/gmaps/usnob-images/tycho.mkdt.fits",
-	"/h/260/dstn/local/tycho-maps/tycho.mkdt.fits",
+	"/data2/test-merc/tycho.mkdt.fits",
+	//"/home/gmaps/usnob-images/tycho.mkdt.fits",
+	//"/h/260/dstn/local/tycho-maps/tycho.mkdt.fits",
 };
 
 static void logmsg(char* format, ...) {

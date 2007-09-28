@@ -218,13 +218,14 @@ int render_collection(unsigned char* img, render_args_t* args) {
 		//        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
 		//               ramin, ramax, decmin, decmax);
 
-        xlo = floor(ra2pixelf(ramin, args));
-        xhi = ceil (ra2pixelf(ramax, args));
+		// min ra -> max pixel
+        xlo = floor(ra2pixelf(ramax, args));
+        xhi = ceil (ra2pixelf(ramin, args));
         // increasing DEC -> decreasing Y pixel coord
         ylo = floor(dec2pixelf(decmax, args));
         yhi = ceil (dec2pixelf(decmin, args));
 
-		//        logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+		//logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
         if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H))
             // No need to read the image!
@@ -312,7 +313,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 				  yhi = ceil (dec2pixelf(decmin, args));
 				  }
 				*/
-				//            logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+				logmsg("Clamped to pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 				
 				// iterate over mercator space (ie, output pixels)
 				for (j=ylo; j<=yhi; j++) {

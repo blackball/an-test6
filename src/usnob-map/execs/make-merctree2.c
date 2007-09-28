@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -30,6 +30,7 @@
 #include "an_catalog.h"
 #include "mathutil.h"
 #include "healpix.h"
+#include "merc.h"
 
 #define OPTIONS "ho:l:m:t:d:bsScM:N:i:H:I"
 
@@ -52,17 +53,6 @@ void printHelp(char* progname) {
 			"\n"
 			"    (Input files are Astrometry.net catalogs.)\n"
 			"\n", progname);
-}
-
-// dec in radians
-// returns [0,1] for mercator [-pi,pi]
-static double dec2merc(double dec) {
-	return (asinh(tan(dec)) + M_PI) / (2.0 * M_PI);
-}
-
-// ra in radians.
-static double ra2merc(double ra) {
-	return ra / (2.0 * M_PI);
 }
 
 extern char *optarg;
@@ -293,10 +283,10 @@ int main(int argc, char** args) {
 			if (!entry)
 				break;
 
-			x =  ra2merc(deg2rad(entry->ra ));
+			x =  radeg2merc(entry->ra );
 			if (x < xlo || x > xhi)
 				continue;
-			y = dec2merc(deg2rad(entry->dec));
+			y = decdeg2merc(entry->dec);
 			if (y < ylo || y > yhi)
 				continue;
 			vertscale = 1.0 / cos(deg2rad(entry->dec));
