@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdarg.h>
+#include <sys/param.h>
 
 #include "tilerender.h"
 #include "render_tycho.h"
@@ -9,9 +10,6 @@
 #include "merctree.h"
 #include "keywords.h"
 #include "mercrender.h"
-
-#define max(a, b)  ((a)>(b)?(a):(b))
-#define min(a, b)  ((a)<(b)?(a):(b))
 
 static char* merc_files[] = {
 	"/home/gmaps/usnob-images/tycho.mkdt.fits",
@@ -45,7 +43,7 @@ int render_tycho(unsigned char* img, render_args_t* args) {
 	}
 
 	// brightness amplification factor
-	amp = pow(4.0, min(5, args->zoomlevel)) * 32.0 * exp(args->gain * log(4.0));
+	amp = pow(4.0, MIN(5, args->zoomlevel)) * 32.0 * exp(args->gain * log(4.0));
 
 	for (j=0; j<args->H; j++) {
 		for (i=0; i<args->W; i++) {
@@ -76,7 +74,7 @@ int render_tycho(unsigned char* img, render_args_t* args) {
 				R = f*r/I;
 				G = f*g/I;
 				B = f*b/I;
-				maxRGB = max(R, max(G, B));
+				maxRGB = MAX(R, MAX(G, B));
 				if (maxRGB > 1.0) {
 					R /= maxRGB;
 					G /= maxRGB;
@@ -85,9 +83,9 @@ int render_tycho(unsigned char* img, render_args_t* args) {
 			}
 			pix = pixel(i, j, img, args);
 
-			pix[0] = min(255, 255.0*R);
-			pix[1] = min(255, 255.0*G);
-			pix[2] = min(255, 255.0*B);
+			pix[0] = MIN(255, 255.0*R);
+			pix[1] = MIN(255, 255.0*G);
+			pix[2] = MIN(255, 255.0*B);
 			pix[3] = 255;
 		}
 	}

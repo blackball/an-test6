@@ -47,6 +47,8 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', //'gain',
 				 'outline', 'density'
     ];
 
+var gotoform = document.getElementById("gotoform");
+
 /*
   This function gets called as the user moves the map.
 */
@@ -55,8 +57,8 @@ function mapmoved() {
 	// update the center ra,dec textboxes.
 	ra = center.lng();
 	if (ra < 0.0) { ra += 360.0; }
-	document.gotoform.ra_center.value  = "" + ra;
-	document.gotoform.dec_center.value = "" + center.lat();
+	gotoform.ra_center.value  = "" + ra;
+	gotoform.dec_center.value = "" + center.lat();
 }
 
 /*
@@ -64,7 +66,7 @@ function mapmoved() {
 */
 function mapzoomed(oldzoom, newzoom) {
 	// update the "zoom" textbox.
-	document.gotoform.zoomlevel.value = "" + newzoom;
+	gotoform.zoomlevel.value = "" + newzoom;
 	mapmoved();
 }
 
@@ -82,8 +84,8 @@ function moveended() {
 function mousemoved(latlong) {
 	var ra = latlong.lng();
 	if (ra < 0.0) { ra += 360.0; }
-	document.gotoform.ra_mouse.value  = "" + ra;
-	document.gotoform.dec_mouse.value = "" + latlong.lat();
+	gotoform.ra_mouse.value  = "" + ra;
+	gotoform.dec_mouse.value = "" + latlong.lat();
 }
 
 /*
@@ -91,9 +93,9 @@ function mousemoved(latlong) {
   is hit in one of the ra/dec/zoom textfields.
 */
 function moveCenter() {
-	var ra   = document.gotoform.ra_center.value;
-	var dec  = document.gotoform.dec_center.value;
-	var zoom = document.gotoform.zoomlevel.value;
+	var ra   = gotoform.ra_center.value;
+	var dec  = gotoform.dec_center.value;
+	var zoom = gotoform.zoomlevel.value;
 	//debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ", old zoom " + map.getZoom() + "\n");
 	map.setCenter(new GLatLng(dec, ra), Number(zoom));
 }
@@ -290,13 +292,13 @@ function updateUsnob() {
 }
 
 function changeArcsinh() {
-	tychoArcsinh = document.gotoform.arcsinh.checked;
+	tychoArcsinh = gotoform.arcsinh.checked;
 	updateTycho();
 	restackOverlays();
 }
 
 function changeGain() {
-	var gain = Number(document.gotoform.gain.value);
+	var gain = Number(gotoform.gain.value);
 	tychoGain = gain;
 	updateTycho();
 	usnobGain = gain;
@@ -360,7 +362,7 @@ function startup() {
 	updateApod();
 
 	if ('gain' in getdata) {
-		document.gotoform.gain.value = getdata['gain'];
+		gotoform.gain.value = getdata['gain'];
 		changeGain();
 	}
 

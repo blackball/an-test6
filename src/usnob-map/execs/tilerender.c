@@ -281,8 +281,9 @@ int main(int argc, char *argv[]) {
 		args.ramax += 360.0;
 	}
 
-	args.xmercmin =  radeg2merc(args.ramin);
-	args.xmercmax =  radeg2merc(args.ramax);
+	// min RA -> max merc
+	args.xmercmax =  radeg2merc(args.ramin);
+	args.xmercmin =  radeg2merc(args.ramax);
 	args.ymercmin = decdeg2merc(args.decmin);
 	args.ymercmax = decdeg2merc(args.decmax);
 
