@@ -466,7 +466,8 @@ double pixel2dec(double pix, render_args_t* args) {
 }
 
 double xpixel2mercf(double pix, render_args_t* args) {
-	return args->xmercmax - pix * args->xmercperpixel;
+	return args->xmercmin + pix * args->xmercperpixel;
+	//return args->xmercmax - pix * args->xmercperpixel;
 }
 
 double ypixel2mercf(double pix, render_args_t* args) {
@@ -474,7 +475,9 @@ double ypixel2mercf(double pix, render_args_t* args) {
 }
 
 double xmerc2pixelf(double x, render_args_t* args) {
-	return (args->xmercmax - x) * args->xpixelpermerc;
+	return (x - args->xmercmin) * args->xpixelpermerc;
+
+	//return (args->xmercmax - x) * args->xpixelpermerc;
 	//return (args->W-1) - (args->xpixelpermerc * (x - args->xmercmin));
 }
 
@@ -544,8 +547,8 @@ void draw_segmented_line(double ra1, double dec1,
 			for (k=0; k<3; k++)
 				xyz[k] = xyz1[k]*(1.0-frac) + xyz2[k]*frac;
 			normalize_3(xyz);
-			xyzarr2radec(xyz, &ra, &dec);
-			mx = ra2merc(ra);
+			xyzarr2radecdeg(xyz, &ra, &dec);
+			mx = radeg2merc(ra);
 
 			if (wrap) {
 				// in the first pass we draw the left side (mx>0.5)
@@ -554,7 +557,7 @@ void draw_segmented_line(double ra1, double dec1,
 				if ((i==1) && (mx > 0.5)) mx -= 1.0;
 			}
 			px = xmerc2pixelf(mx, args);
-			py = dec2pixelf(rad2deg(dec), args);
+			py = dec2pixelf(dec, args);
 
 			if (s==0)
 				cairo_move_to(cairo, px, py);
