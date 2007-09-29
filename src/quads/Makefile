@@ -176,6 +176,10 @@ test_bl: cutest.o test_bl-main.o test_bl.o $(ANUTILS_LIB)
 test_bl-main.c: make-tests.sh test_bl.c
 	bash make-tests.sh test_bl.c > test_bl-main.c
 
+test_ctmf: cutest.o ctmf.o test_ctmf-main.o test_ctmf.o
+test_ctmf-main.c: make-tests.sh test_dfind.c
+	bash make-tests.sh test_ctmf.c > test_ctmf-main.c
+
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
 	bash make-tests.sh $(ALL_TEST_FILES_C) > test.c
