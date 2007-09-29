@@ -196,16 +196,21 @@ int simplexy_u8(unsigned char *image,
 		fimage[i] = (float)image[i];
 	}
 
+	if(nx < 2*halfbox+1){
+	  halfbox = floor(((float)ny-1.0)/2.0);
+	}
 	ctmf(image, simage_u8, nx, ny, nx, nx, halfbox, 1, 512*1024);
 
+	
 	/* it's so purdy */
-	simage_cairo = malloc(sizeof(unsigned char) * nx * ny * 4);
+	/*simage_cairo = malloc(sizeof(unsigned char) * nx * ny * 4);
 	for(i=0; i<nx*ny; i++) {
 		for (c=0; c<3; c++)
 			simage_cairo[4*i+c] = simage_u8[i];
 		simage_cairo[4*i+3] = 255;
 	}
 	cairoutils_write_png("test_simplexy_images/out_median_smoothed.png", simage_cairo, nx, ny);
+	*/
 
 	for (i=0; i<nx*ny; i++){
 		simage[i] = fimage[i] - ((float)simage_u8[i]);
