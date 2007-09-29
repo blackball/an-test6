@@ -26,7 +26,7 @@
 
 #include "simplexy-common.h"
 
-#include <valgrind/memcheck.h>
+//#include <valgrind/memcheck.h>
 
 /*
  * dfind.c
