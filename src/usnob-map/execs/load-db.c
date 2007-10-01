@@ -196,9 +196,16 @@ int main(int argc, char** args) {
 
         asprintf(&basefn, "%.*s", dot-wcsfn, wcsfn);
 
+		/*
+		  char* cpy;
+		  char* base;
+		  cpy = strdup(basefn);
+		  base = strdup(basename(cpy));
+		  free(cpy);
+		*/
         // insert into readimgdb_image(basefilename,imageformat,ramin,ramax,decmin,decmax,imagew,imageh) values ("img1", "jpeg", 90, 120, -10, 10, 800, 600);
-        printf("INSERT INTO readimgdb_image(basefilename, imageformat, ramin, ramax, decmin, decmax, imagew, image) VALUES ("
-               "\"%s\", \"%s\", %g, %g, %g, %g, %i, %i);\n", basefn, (jpeg ? "jpeg" : "png"), ramin, ramax, decmin, decmax, W, H);
+        printf("INSERT INTO tile_image(origfilename, origformat, filename, ramin, ramax, decmin, decmax, imagew, imageh) VALUES ("
+               "\"%s\", \"%s\", \"%s\", %g, %g, %g, %g, %i, %i);\n", basefn, (jpeg ? "jpeg" : "png"), basefn, ramin, ramax, decmin, decmax, W, H);
 
         free(basefn);
     }

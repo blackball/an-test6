@@ -26,7 +26,6 @@
 #include <assert.h>
 #include <stdarg.h>
 
-//#include <png.h>
 #include <zlib.h>
 
 #include "an-bool.h"

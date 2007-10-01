@@ -145,9 +145,10 @@ int render_collection(unsigned char* img, render_args_t* args) {
     for (j=0; j<args->H; j++)
         decvals[j] = pixel2dec(j, args);
     for (I=0; I<sl_size(imagefiles); I++) {
+		char* basefn;
+		char* basepath;
         char* imgfn;
         char* wcsfn;
-        char* dot;
         bool jpeg, png;
         qfits_header* hdr;
         sip_t wcs;
@@ -163,47 +164,70 @@ int render_collection(unsigned char* img, render_args_t* args) {
         float* cached;
         int len;
 
-        imgfn = sl_get(imagefiles, I);
-        dot = strrchr(imgfn, '.');
-        if (!dot) {
-            logmsg("filename %s has no suffix.\n", imgfn);
+		imgfn = wcsfn = basepath = NULL;
+
+        basefn = sl_get(imagefiles, I);
+		if (!strlen(basefn)) {
+            logmsg("empty filename.\n");
             continue;
-        }
-        jpeg = png = FALSE;
-        if (!strcasecmp(dot+1, "jpg") ||
-            !strcasecmp(dot+1, "jpeg")) {
-            jpeg = TRUE;
-        } else if (!strcasecmp(dot+1, "png")) {
-            png = TRUE;
-        } else {
-            //logmsg("filename %s doesn't end with jpeg or png.\n", imgfn);
-            continue;
-        }
-        asprintf_safe(&wcsfn, "%.*s.wcs", dot - imgfn, imgfn);
+		}
+
+		if (args->filelist) {
+			asprintf_safe(&basepath, "%s/%s", image_dir, basefn);
+			basefn = basepath;
+		}
+
+        asprintf_safe(&wcsfn, "%s.wcs", basefn);
+		if (!file_readable(wcsfn)) {
+			logmsg("filename %s: WCS file %s not readable.\n", basefn, wcsfn);
+			goto nextimage;
+		}
+
+		{
+			char* suffixes[] = { "jpeg", "jpg", "png" };
+			bool isjpegs[] = { TRUE,  TRUE,  FALSE };
+			bool ispngs[]  = { FALSE, FALSE, TRUE  };
+			bool gotit = FALSE;
+			for (i=0; i<sizeof(suffixes)/sizeof(char*); i++) {
+				asprintf_safe(&imgfn, "%s.%s", basefn, suffixes[i]);
+				if (file_readable(imgfn)) {
+					jpeg = isjpegs[i];
+					png = ispngs[i];
+					gotit = TRUE;
+					break;
+				}
+				free(imgfn);
+			}
+			if (!gotit) {
+				logmsg("Found no image file for basename \"%s\".\n", basefn);
+				imgfn = NULL;
+				goto nextimage;
+			}
+		}
 
         hdr = qfits_header_read(wcsfn);
         if (!hdr) {
             logmsg("failed to read WCS header from %s\n", wcsfn);
-            continue;
+			goto nextimage;
         }
         free(wcsfn);
+		wcsfn = NULL;
         res = sip_read_header(hdr, &wcs);
         qfits_header_destroy(hdr);
         if (!res) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
-            continue;
+			goto nextimage;
         }
-
         W = wcs.wcstan.imagew;
         H = wcs.wcstan.imageh;
 
-		//        logmsg("WCS image W,H = (%i, %i)\n", W, H);
+		// logmsg("WCS image W,H = (%i, %i)\n", W, H);
 
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
-		//        logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
-		//               ramin, ramax, decmin, decmax);
+		// logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
+		// ramin, ramax, decmin, decmax);
 
 		// min ra -> max pixel
         xlo = floor(ra2pixelf(ramax, args));
@@ -216,7 +240,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 
         if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H))
             // No need to read the image!
-            continue;
+			goto nextimage;
 
         // Check the cache...
         {
@@ -285,7 +309,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 					userimg = cairoutils_read_png(imgfn, &W, &H);
 				if (!userimg) {
 					logmsg("failed to read image file %s\n", imgfn);
-					return -1;
+					goto nextimage;
 				}
 				//            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
 				
@@ -326,6 +350,12 @@ int render_collection(unsigned char* img, render_args_t* args) {
             wcs.wcstan.imageh = H;
             bl_append(wcslist, &wcs);
         }
+
+	nextimage:
+		free(wcsfn);
+		free(imgfn);
+		free(basepath);
+
     }
 
     sl_free2(imagefiles);
