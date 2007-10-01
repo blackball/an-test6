@@ -13,6 +13,7 @@ import popen2
 #import md5
 import sha
 import logging
+import commands
 
 logfile = "/home/gmaps/test/tilecache-django.log"
 
@@ -197,17 +198,27 @@ def query(request):
 	else:
 		cmd = cmdline + ' 2>> ' + logfile
 		logging.debug('no caching: just running command ' + cmd)
-		child = popen2.Popen3(cmd, False)
-		child.tochild.close()
-		rtn = child.wait()
+		#child = popen2.Popen3(cmd, False)
+		#child.tochild.close()
+		#rtn = child.wait()
+		#if not(os.WIFEXITED(rtn) and (os.WEXITSTATUS(rtn) == 0)):
+		#	if (os.WIFEXITED(rtn)):
+		#		logging.debug('exited with status %d' % os.WEXITSTATUS(rtn))
+		#	else:
+		#		logging.debug('command did not exit.')
+		#	return HttpResponse('tilerender command failed.')
+		#res.write(child.fromchild.read())
+		#child.fromchild.close()
+		(rtn, out) = commands.getstatusoutput(cmd)
 		if not(os.WIFEXITED(rtn) and (os.WEXITSTATUS(rtn) == 0)):
 			if (os.WIFEXITED(rtn)):
 				logging.debug('exited with status %d' % os.WEXITSTATUS(rtn))
 			else:
 				logging.debug('command did not exit.')
 			return HttpResponse('tilerender command failed.')
-		res.write(child.fromchild.read())
-		child.fromchild.close()
+		res.write(out)
+		
+
 
 	logging.debug('finished.')
 	return res
