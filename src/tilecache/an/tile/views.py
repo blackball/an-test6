@@ -76,14 +76,12 @@ def query(request):
 			cmdline += (" -l " + lay)
 
 	#logging.debug('1: cmdline ' + cmdline)
-
 	if ('apod' in layers):
 		# filelist: -S
 		# Compute list of files via DB query
 		# In the database, any image that spans the RA=0 line has its bounds
 		# bumped up by 360; therefore every "ramin" value is > 0, but some
 		# "ramax" values are > 360.
-
 		dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
 		Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
 		raminwrap = ramin + 360
@@ -111,15 +109,10 @@ def query(request):
 		fn = tempdir + '/' + digest
 		#logging.debug('1.55: done')
 		# Write to that filename
-		#logging.debug('1.6: fn ' + fn)
 		try:
-			#logging.debug('1.61: open')
 			f = open(fn, 'wb')
-			#logging.debug('1.62: write')
 			f.write(files)
-			#logging.debug('1.63: close')
 			f.close()
-			#logging.debug('1.64: done')
 		except (IOError):
 			return HttpResponse('Failed to write file list.')
 		cmdline += (" -S " + fn)
@@ -217,17 +210,6 @@ def query(request):
 	else:
 		cmd = cmdline + ' 2>> ' + logfile
 		logging.debug('no caching: just running command ' + cmd)
-		#child = popen2.Popen3(cmd, False)
-		#child.tochild.close()
-		#rtn = child.wait()
-		#if not(os.WIFEXITED(rtn) and (os.WEXITSTATUS(rtn) == 0)):
-		#	if (os.WIFEXITED(rtn)):
-		#		logging.debug('exited with status %d' % os.WEXITSTATUS(rtn))
-		#	else:
-		#		logging.debug('command did not exit.')
-		#	return HttpResponse('tilerender command failed.')
-		#res.write(child.fromchild.read())
-		#child.fromchild.close()
 		(rtn, out) = commands.getstatusoutput(cmd)
 		if not(os.WIFEXITED(rtn) and (os.WEXITSTATUS(rtn) == 0)):
 			if (os.WIFEXITED(rtn)):

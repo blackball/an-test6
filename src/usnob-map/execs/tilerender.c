@@ -275,25 +275,7 @@ int main(int argc, char *argv[]) {
 		args.ramax  = merc2radeg(args.ramax);
 		args.decmin = merc2decdeg(args.decmin);
 		args.decmax = merc2decdeg(args.decmax);
-
-		/*
-		  } else {
-		  // Flip RA!
-		  double tmp = -args.ramin;
-		  args.ramin = -args.ramax;
-		  args.ramax  = tmp;
-		*/
 	}
-
-	// The Google Maps client treat RA as going from -180 to +180; we prefer to
-	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
-	// it around...
-	/*
-	  if (args.ramin < 0.0) {
-	  args.ramin += 360.0;
-	  args.ramax += 360.0;
-	  }
-	*/
 
 	// min ra -> max merc.
 	args.xmercmax =  radeg2merc(args.ramin);
@@ -308,7 +290,6 @@ int main(int argc, char *argv[]) {
 
 	args.xpixelpermerc = (double)args.W / (args.xmercmax - args.xmercmin);
 	args.ypixelpermerc = (double)args.H / (args.ymercmax - args.ymercmin);
-
 	args.xmercperpixel = 1.0 / args.xpixelpermerc;
 	args.ymercperpixel = 1.0 / args.ypixelpermerc;
 
@@ -465,7 +446,6 @@ int main(int argc, char *argv[]) {
 
 double xpixel2mercf(double pix, render_args_t* args) {
 	return args->xmercmin + pix * args->xmercperpixel;
-	//return args->xmercmax - pix * args->xmercperpixel;
 }
 
 double ypixel2mercf(double pix, render_args_t* args) {
@@ -474,13 +454,10 @@ double ypixel2mercf(double pix, render_args_t* args) {
 
 double xmerc2pixelf(double x, render_args_t* args) {
 	return (x - args->xmercmin) * args->xpixelpermerc;
-	//return (args->xmercmax - x) * args->xpixelpermerc;
-	//return (args->W-1) - (args->xpixelpermerc * (x - args->xmercmin));
 }
 
 double ymerc2pixelf(double y, render_args_t* args) {
 	return (args->ymercmax - y) * args->ypixelpermerc;
-	//return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
 }
 
 ////// The following are just composed of simpler conversions.
