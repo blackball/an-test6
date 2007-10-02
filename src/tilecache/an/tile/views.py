@@ -45,10 +45,22 @@ def query(request):
 		return HttpResponse('Bad WIDTH or HEIGHT')
 	if (len(layers) == 0):
 		return HttpResponse('No LAYERs')
-	ramin  = float(bbvals[0])
-	decmin = float(bbvals[1])
-	ramax  = float(bbvals[2])
-	decmax = float(bbvals[3])
+
+	longmin  = float(bbvals[0])
+	latmin = float(bbvals[1])
+	longmax  = float(bbvals[2])
+	latmax = float(bbvals[3])
+
+	# Flip RA!
+	(ramin,  ramax ) = (-longmax, -longmin)
+	(decmin, decmax) = ( latmin,   latmax )
+
+	# The Google Maps client treats RA as going from -180 to +180; we prefer
+	# to think of it as going from 0 to 360.  In the low value is negative,
+	# wrap it around...
+	if (ramin < 0.0):
+		ramin += 360
+		ramax += 360
 
 	# Build tilerender command-line.
 	# RA,Dec range; image size.
@@ -68,15 +80,22 @@ def query(request):
 	if ('apod' in layers):
 		# filelist: -S
 		# Compute list of files via DB query
+		# In the database, any image that spans the RA=0 line has its bounds
+		# bumped up by 360; therefore every "ramin" value is > 0, but some
+		# "ramax" values are > 360.
+
 		dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
 		Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
-		raminwrap = ramin - 360
-		ramaxwrap = ramax - 360
+		raminwrap = ramin + 360
+		ramaxwrap = ramax + 360
 		Q_wrap   = Q(ramin__lte=ramaxwrap) & Q(ramax__gte=raminwrap)
 		imgs = dec_ok.filter(Q_normal | Q_wrap)
 		# Get list of filenames
 		filenames = [img.filename for img in imgs]
 		files = "\n".join(filenames) + "\n"
+
+		logging.debug("For RA in [%f, %f] or [%f, %f] and Dec in [%f, %f], found %i files." %
+					  (ramin, ramax, raminwrap, ramaxwrap, decmin, decmax, len(filenames)))
 
 		#logging.debug('1.5: files ' + files)
 		# Compute filename
@@ -123,7 +142,7 @@ def query(request):
 	for opt,arg in optnum.iteritems():
 		if (opt in request.GET):
 			num = float(request.GET[opt])
-			cmdline += (" %s %f" % arg, num)
+			cmdline += (" %s %f" % (arg, num))
 
 	#logging.debug('3: cmdline ' + cmdline)
 
@@ -153,7 +172,7 @@ def query(request):
 
 	if ('tag' in request.GET):
 		tag = request.GET['tag']
-		if not re.match('^\w+$'):
+		if not re.match('^\w+$', tag):
 			return HttpResponse('Bad tag')
 		tilecachedir = cachedir + '/' + tag
 		if not os.path.exists(tilecachedir):

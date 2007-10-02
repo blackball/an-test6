@@ -93,7 +93,7 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
         ramin = unshift(ramin);
         ramax = unshift(ramax);
         if (ramin > ramax)
-            ramin += 360.0;
+            ramax += 360.0;
     }
     if (pramin) *pramin = ramin;
     if (pramax) *pramax = ramax;

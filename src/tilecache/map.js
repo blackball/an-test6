@@ -32,9 +32,9 @@ function debug(txt) {
 // The GMap2
 var map;
 
-// Base URL of the tile and quad servers.
-var BASE_URL;
+// URL of tileserver
 var TILE_URL;
+var BLACK_URL;
 
 // The arguments in the HTTP request
 var getdata;
@@ -230,7 +230,7 @@ function makeMapType(tiles, label) {
 }
 
 function getBlackUrl(tile, zoom) {
-	return BASE_URL + "black.png";
+	return BLACK_URL;
 }
 
 var tychoGain = 0; // must match HTML
@@ -345,15 +345,22 @@ function startup() {
 	var myurl = new String(window.location);
 	if (myurl.toLowerCase().indexOf("explore.astrometry.net") > -1) {
 		BASE_URL = "http://explore.astrometry.net/";
+		TILE_URL = BASE_URL + "tilecache.php?";
+		BLACK_URL = BASE_URL + "black.png";
 	} else {
-		BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
+		BASE_URL = "http://oven.cosmo.fas.nyu.edu/";
+		TILE_URL = BASE_URL + "tile/get/?";
+		BLACK_URL = BASE_URL + "tilecache2/black.png";
 	}
-	TILE_URL = BASE_URL + "tilecache.php?";
 
 	// Add pass-thru args
+	firstone = true;
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
-			TILE_URL = TILE_URL + "&" + passargs[i] + "=" + getdata[passargs[i]];
+			if (!firstone)
+				TILE_URL += "&";
+			TILE_URL += passargs[i] + "=" + getdata[passargs[i]];
+			firstone = false;
 		}
 	}
 

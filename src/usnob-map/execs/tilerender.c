@@ -275,20 +275,25 @@ int main(int argc, char *argv[]) {
 		args.ramax  = merc2radeg(args.ramax);
 		args.decmin = merc2decdeg(args.decmin);
 		args.decmax = merc2decdeg(args.decmax);
-    } else {
-		// Flip RA!
-		double tmp = -args.ramin;
-		args.ramin = -args.ramax;
-		args.ramax  = tmp;
+
+		/*
+		  } else {
+		  // Flip RA!
+		  double tmp = -args.ramin;
+		  args.ramin = -args.ramax;
+		  args.ramax  = tmp;
+		*/
 	}
 
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
 	// it around...
-	if (args.ramin < 0.0) {
-		args.ramin += 360.0;
-		args.ramax += 360.0;
-	}
+	/*
+	  if (args.ramin < 0.0) {
+	  args.ramin += 360.0;
+	  args.ramax += 360.0;
+	  }
+	*/
 
 	// min ra -> max merc.
 	args.xmercmax =  radeg2merc(args.ramin);
@@ -308,52 +313,53 @@ int main(int argc, char *argv[]) {
 	args.ymercperpixel = 1.0 / args.ypixelpermerc;
 
 	// TEST
-	{
-		double x, y;
-		double mx, my;
-		double ra, dec;
-		double ra2, dec2;
-		double mx2, my2;
-		double x2, y2;
-		double x3, y3;
+	/*
+	  {
+	  double x, y;
+	  double mx, my;
+	  double ra, dec;
+	  double ra2, dec2;
+	  double mx2, my2;
+	  double x2, y2;
+	  double x3, y3;
 
-		x = y = 0;
-		mx = xpixel2mercf(x, &args);
-		my = ypixel2mercf(y, &args);
-		ra = merc2radeg(mx);
-		dec = merc2decdeg(my);
-		ra2 = pixel2ra(x, &args);
-		dec2 = pixel2dec(y, &args);
-		mx2 = radeg2merc(ra);
-		my2 = decdeg2merc(dec);
-		x2 = xmerc2pixelf(mx2, &args);
-		y2 = ymerc2pixelf(my2, &args);
-		x3 = ra2pixelf(ra, &args);
-		y3 = dec2pixelf(dec, &args);
+	  x = y = 0;
+	  mx = xpixel2mercf(x, &args);
+	  my = ypixel2mercf(y, &args);
+	  ra = merc2radeg(mx);
+	  dec = merc2decdeg(my);
+	  ra2 = pixel2ra(x, &args);
+	  dec2 = pixel2dec(y, &args);
+	  mx2 = radeg2merc(ra);
+	  my2 = decdeg2merc(dec);
+	  x2 = xmerc2pixelf(mx2, &args);
+	  y2 = ymerc2pixelf(my2, &args);
+	  x3 = ra2pixelf(ra, &args);
+	  y3 = dec2pixelf(dec, &args);
 
-		logmsg("Pixel (%g,%g) -> Merc (%g, %g) -> RA,Dec (%g, %g) or (%g, %g)\n"
-			   "  -> Merc (%g, %g) -> Pixel (%g, %g) or (%g, %g).\n",
-			   x, y, mx, my, ra, dec, ra2, dec2, mx2, my2, x2, y2, x3, y3);
+	  logmsg("Pixel (%g,%g) -> Merc (%g, %g) -> RA,Dec (%g, %g) or (%g, %g)\n"
+	  "  -> Merc (%g, %g) -> Pixel (%g, %g) or (%g, %g).\n",
+	  x, y, mx, my, ra, dec, ra2, dec2, mx2, my2, x2, y2, x3, y3);
 
-		x = y = 255;
-		mx = xpixel2mercf(x, &args);
-		my = ypixel2mercf(y, &args);
-		ra = merc2radeg(mx);
-		dec = merc2decdeg(my);
-		ra2 = pixel2ra(x, &args);
-		dec2 = pixel2dec(y, &args);
-		mx2 = radeg2merc(ra);
-		my2 = decdeg2merc(dec);
-		x2 = xmerc2pixelf(mx2, &args);
-		y2 = ymerc2pixelf(my2, &args);
-		x3 = ra2pixelf(ra, &args);
-		y3 = dec2pixelf(dec, &args);
+	  x = y = 255;
+	  mx = xpixel2mercf(x, &args);
+	  my = ypixel2mercf(y, &args);
+	  ra = merc2radeg(mx);
+	  dec = merc2decdeg(my);
+	  ra2 = pixel2ra(x, &args);
+	  dec2 = pixel2dec(y, &args);
+	  mx2 = radeg2merc(ra);
+	  my2 = decdeg2merc(dec);
+	  x2 = xmerc2pixelf(mx2, &args);
+	  y2 = ymerc2pixelf(my2, &args);
+	  x3 = ra2pixelf(ra, &args);
+	  y3 = dec2pixelf(dec, &args);
 
-		logmsg("Pixel (%g,%g) -> Merc (%g, %g) -> RA,Dec (%g, %g) or (%g, %g)\n"
-			   "  -> Merc (%g, %g) -> Pixel (%g, %g) or (%g, %g).\n",
-			   x, y, mx, my, ra, dec, ra2, dec2, mx2, my2, x2, y2, x3, y3);
-	}
-
+	  logmsg("Pixel (%g,%g) -> Merc (%g, %g) -> RA,Dec (%g, %g) or (%g, %g)\n"
+	  "  -> Merc (%g, %g) -> Pixel (%g, %g) or (%g, %g).\n",
+	  x, y, mx, my, ra, dec, ra2, dec2, mx2, my2, x2, y2, x3, y3);
+	  }
+	*/
 
 	xzoom = args.xpixelpermerc / 256.0;
 	args.zoomlevel = (int)rint(log(fabs(xzoom)) / log(2.0));

@@ -54,11 +54,11 @@ static void get_radec_bounds(sip_t* wcs, int W, int H,
     int stepx[] = { +STEP, 0, -STEP, 0 };
     int stepy[] = { 0, +STEP, 0, -STEP };
     int Nsteps[] = { (W/STEP)-1, H/STEP, W/STEP, H/STEP };
-    double lastra, lastdec;
+    double lastra;
 
-    sip_pixelxy2radec(wcs, 0, 0, &lastra, &lastdec);
+    sip_pixelxy2radec(wcs, 0, 0, &lastra, &decmin);
     ramin = ramax = lastra;
-    decmin = decmax = lastdec;
+    decmax = decmin;
 
     for (side=0; side<4; side++) {
         for (i=0; i<Nsteps[side]; i++) {
@@ -171,10 +171,12 @@ int render_collection(unsigned char* img, render_args_t* args) {
             logmsg("empty filename.\n");
             continue;
 		}
+		logmsg("Base filename: \"%s\"\n", basefn);
 
 		if (args->filelist) {
 			asprintf_safe(&basepath, "%s/%s", image_dir, basefn);
 			basefn = basepath;
+			logmsg("Base path: \"%s\"\n", basefn);
 		}
 
         asprintf_safe(&wcsfn, "%s.wcs", basefn);
@@ -182,6 +184,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 			logmsg("filename %s: WCS file %s not readable.\n", basefn, wcsfn);
 			goto nextimage;
 		}
+		logmsg("WCS: \"%s\"\n", wcsfn);
 
 		{
 			char* suffixes[] = { "jpeg", "jpg", "png" };
@@ -193,6 +196,7 @@ int render_collection(unsigned char* img, render_args_t* args) {
 				if (file_readable(imgfn)) {
 					jpeg = isjpegs[i];
 					png = ispngs[i];
+					logmsg("Image: \"%s\"\n", imgfn);
 					gotit = TRUE;
 					break;
 				}
@@ -226,8 +230,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
         // find the bounds in RA,Dec of this image.
         get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
 
-		// logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
-		// ramin, ramax, decmin, decmax);
+		logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
+			   ramin, ramax, decmin, decmax);
 
 		// min ra -> max pixel
         xlo = floor(ra2pixelf(ramax, args));
@@ -236,11 +240,13 @@ int render_collection(unsigned char* img, render_args_t* args) {
         ylo = floor(dec2pixelf(decmax, args));
         yhi = ceil (dec2pixelf(decmin, args));
 
-		//logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
+		logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
-        if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H))
+        if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H)) {
             // No need to read the image!
+			logmsg("No overlap between this image and the requested RA,Dec region.\n");
 			goto nextimage;
+		}
 
         // Check the cache...
         {
