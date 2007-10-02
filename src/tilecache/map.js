@@ -1,4 +1,43 @@
 /*
+  This file is part of the Astrometry.net suite.
+  Copyright 2006, 2007 Dustin Lang and Keir Mierle.
+
+  The Astrometry.net suite is free software; you can redistribute
+  it and/or modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation, version 2.
+
+  The Astrometry.net suite is distributed in the hope that it will be
+  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with the Astrometry.net suite ; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+*/
+
+/*
+  This function was borrowed from the file "wms236.js" by John Deck,
+  UC Berkeley, which interfaces the Google Maps client to a WMS
+  (Web Mapping Service) server.
+ */
+CustomGetTileUrl = function(a,b,c) {
+	var lULP = new GPoint(a.x*256,(a.y+1)*256);
+	var lLRP = new GPoint((a.x+1)*256,a.y*256);
+	var lUL = G_NORMAL_MAP.getProjection().fromPixelToLatLng(lULP,b,c);
+	var lLR = G_NORMAL_MAP.getProjection().fromPixelToLatLng(lLRP,b,c);
+	var lBbox=lUL.x+","+lUL.y+","+lLR.x+","+lLR.y;
+	var lURL=this.myBaseURL;
+	lURL+="&layers=" + this.myLayers;
+	if (this.jpeg)
+		lURL += "&jpeg";
+	lURL+="&bb="+lBbox;
+	lURL+="&w=256";
+	lURL+="&h=256";
+	return lURL;
+}
+
+/*
   Pulls entries out of the GET line and puts them in an array.
   ie, if the current URL is:
   .  http://wherever.com/map.html?a=b&x=4&z=9
@@ -216,13 +255,12 @@ function toggleLineOverlay(overlayName) {
 	restackOverlays();
 }
 
-function makeTile(layers, tag) {
+function makeOverlay(layers, tag) {
 	var newTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	newTile.myLayers=layers;
-	newTile.myFormat='image/png';
 	newTile.myBaseURL=TILE_URL + tag;
 	newTile.getTileUrl=CustomGetTileUrl;
-	return newTile;
+	return new GTileLayerOverlay(newTile);
 }
 
 function makeMapType(tiles, label) {
@@ -269,7 +307,7 @@ function updateLine() {
 	if (gridShowing)
 		layers.push('grid');
 	layerstr = layers.join(",");
-	lineOverlay = new GTileLayerOverlay(makeTile(layerstr, tag));
+	lineOverlay = makeOverlay(layerstr, tag);
 }
 
 function updateApod() {
@@ -278,7 +316,7 @@ function updateApod() {
 		tag += "&outline";
 	}
 	tag += "&gain=" + apodGain;
-	apodOverlay = new GTileLayerOverlay(makeTile('apod', tag));
+	apodOverlay = makeOverlay('apod', tag);
 }
 
 function updateTycho() {
@@ -287,7 +325,7 @@ function updateTycho() {
 	if (tychoArcsinh) {
 		tag += "&arcsinh";
 	}
-	tychoOverlay = new GTileLayerOverlay(makeTile('tycho', tag));
+	tychoOverlay = makeOverlay('tycho', tag);
 }
 
 function updateUsnob() {
@@ -297,7 +335,7 @@ function updateUsnob() {
 	if (usnobArcsinh) {
 		tag += "&arcsinh";
 	}
-	usnobOverlay = new GTileLayerOverlay(makeTile('usnob', tag));
+	usnobOverlay = makeOverlay('usnob', tag);
 }
 
 function changeArcsinh() {

@@ -56,8 +56,6 @@ if (strcasecmp($_SERVER['HTTP_HOST'], "oven.cosmo.fas.nyu.edu") == 0) {
 }
 ?>
 
-<script src="wms236.js" type="text/javascript"> </script>
-
 <!-- The map will go here:-->
 <div id="map"></div>
 

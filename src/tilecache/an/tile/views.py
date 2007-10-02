@@ -32,19 +32,19 @@ def query(request):
 	logging.debug('starting')
 
 	try:
-		bb = request.GET['BBOX']
-		imw = int(request.GET['WIDTH'])
-		imh = int(request.GET['HEIGHT'])
-		layers = request.GET['LAYERS'].split(',')
+		bb = request.GET['bb']
+		imw = int(request.GET['w'])
+		imh = int(request.GET['h'])
+		layers = request.GET['layers'].split(',')
 	except (KeyError):
-		return HttpResponse('No BBOX/WIDTH/HEIGHT/LAYERS')
+		return HttpResponse('No bb/w/h/layers')
 	bbvals = bb.split(',')
 	if (len(bbvals) != 4):
-		return HttpResponse('Bad BBOX')
+		return HttpResponse('Bad bb')
 	if (imw == 0 or imh == 0):
-		return HttpResponse('Bad WIDTH or HEIGHT')
+		return HttpResponse('Bad w or h')
 	if (len(layers) == 0):
-		return HttpResponse('No LAYERs')
+		return HttpResponse('No layers')
 
 	longmin  = float(bbvals[0])
 	latmin = float(bbvals[1])
