@@ -98,8 +98,6 @@ int main(int argc, char** args) {
         for (z=1;; z++) {
             halfW = (W + 1) / 2;
             halfH = (H + 1) / 2;
-            if (halfW < 10 || halfH < 10)
-                break;
             halfimg = malloc(4 * halfW * halfH);
             for (j=0; j<halfH; j++) {
                 for (i=0; i<halfW; i++) {
@@ -140,6 +138,9 @@ int main(int argc, char** args) {
             img = halfimg;
             W = halfW;
             H = halfH;
+
+            if (halfW ==1 && halfH == 1)
+                break;
         }
         free(img);
         free(basefn);

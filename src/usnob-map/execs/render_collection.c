@@ -323,16 +323,93 @@ int render_collection(unsigned char* img, render_args_t* args) {
 				}
 				thisink = NULL;
 			} else {
+				/*
+				  In order to use an image pyramid, we need to have some idea of how many
+				  pixels in the original image will cover each pixel in the output image.
+				  In principle this could be quite different over the range of the image,
+				  but let's just ignore that for now...
 
-				// Compute ink for this image...
-				logmsg("Opening image \"%s\".\n", imgfn);
-				if (jpeg)
-					userimg = cairoutils_read_jpeg(imgfn, &W, &H);
-				else if (png)
-					userimg = cairoutils_read_png(imgfn, &W, &H);
+				  We need to convert:
+				  -one pixel in the output image
+				  -to a change in Mercator coordinates
+				  -to a change in RA,Dec (or distance on the unit sphere)
+				  -through the CD matrix to pixels in the input image.
+				*/
+				//double mx, my;
+				double xyzA[3];
+				double xyzB[3];
+				double raB, decB;
+				double arcsec;
+				double inpix;
+				double zoom;
+				int ir, id;
+				int izoom;
+				int zoomscale;
+				int zoomW, zoomH;
+
+				// find the RA,Dec at the middle of the range of output pixels...
+				ir = (xlo + xhi + 1) / 2;
+				id = (ylo + yhi + 1) / 2;
+				ra  =  ravals[ir];
+				dec = decvals[id];
+				radecdeg2xyzarr(ra, dec, xyzA);
+				/*
+				  mx =  radeg2merc(ra);
+				  my = decdeg2merc(dec);
+				  raB  = merc2radeg (mx + args->xmercperpixel);
+				  decB = merc2decdeg(my + args->ymercperpixel);
+				*/
+				raB  = ravals [ir + ((ir == W-1) ? -1 : +1)];
+				decB = decvals[id + ((id == H-1) ? -1 : +1)];
+				radecdeg2xyzarr(raB, decB, xyzB);
+				// divide distsq by half because I added one pixel in x and y.
+				arcsec = distsq2arcsec(distsq(xyzA, xyzB, 3) / 2.0);
+				inpix = arcsec / sip_pixel_scale(&wcs);
+				zoom = log(inpix) / log(2.0);
+				izoom = floor(zoom);
+
+				logmsg("One output pixel covers %g arcsec, %g input pixels (zoom %i)\n",
+					   arcsec, inpix, izoom);
+
+				userimg = NULL;
+				zoomscale = 1;
+				zoomW = W;
+
+				if (izoom > 0) {
+					char* pyrfn;
+					zoomscale = (1 << izoom);
+					// Look for image pyramid.
+					while (izoom > 0) {
+						asprintf_safe(&pyrfn, "%s-%i.jpg", basefn, izoom);
+						if (file_readable(pyrfn)) {
+							userimg = cairoutils_read_jpeg(pyrfn, &zoomW, &zoomH);
+							if (userimg)
+								break;
+							else
+								logmsg("failed to read image file %s\n", pyrfn);
+						} else
+							logmsg("no such file %s\n", pyrfn);
+						free(pyrfn);
+						izoom--;
+						zoomscale /= 2;
+					}
+					if (userimg) {
+						logmsg("Found pyramid image: %s, size %i x %i (full size %i x %i), zoom scale %i.\n",
+							   pyrfn, zoomW, zoomH, W, H, zoomscale);
+						free(pyrfn);
+					}
+				}
+
 				if (!userimg) {
-					logmsg("failed to read image file %s\n", imgfn);
-					goto nextimage;
+					logmsg("Opening image \"%s\".\n", imgfn);
+					if (jpeg)
+						userimg = cairoutils_read_jpeg(imgfn, &W, &H);
+					else if (png)
+						userimg = cairoutils_read_png(imgfn, &W, &H);
+					if (!userimg) {
+						logmsg("failed to read image file %s\n", imgfn);
+						goto nextimage;
+					}
 				}
 				//            logmsg("Image %s is %i x %i.\n", imgfn, W, H);
 				
@@ -351,9 +428,11 @@ int render_collection(unsigned char* img, render_args_t* args) {
 						if (pppx < 0 || pppx >= W || pppy < 0 || pppy >= H)
 							continue;
 						// nearest neighbour. bilinear is for weenies.
-						thisink[3*(j*w + i) + 0] = userimg[4*(pppy*W + pppx) + 0] * weight;
-						thisink[3*(j*w + i) + 1] = userimg[4*(pppy*W + pppx) + 1] * weight;
-						thisink[3*(j*w + i) + 2] = userimg[4*(pppy*W + pppx) + 2] * weight;
+						pppx /= zoomscale;
+						pppy /= zoomscale;
+						thisink[3*(j*w + i) + 0] = userimg[4*(pppy*zoomW + pppx) + 0] * weight;
+						thisink[3*(j*w + i) + 1] = userimg[4*(pppy*zoomW + pppx) + 1] * weight;
+						thisink[3*(j*w + i) + 2] = userimg[4*(pppy*zoomW + pppx) + 2] * weight;
 						thiscounts[j*w + i] = weight;
 					}
 				}
