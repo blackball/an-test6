@@ -94,27 +94,30 @@ int main(int argc, char** args) {
                     for (jj=0; jj<2; jj++) {
                         for (ii=0; ii<2; ii++) {
                             int px, py;
-                            py = j*2 + jj;
                             px = i*2 + ii;
+                            py = j*2 + jj;
                             if ((py < H) && (px < W)) {
                                 np++;
                                 rsum += img[4*(py*W + px) + 0];
                                 gsum += img[4*(py*W + px) + 1];
                                 bsum += img[4*(py*W + px) + 2];
-                            }
-                            halfimg[4*(j*halfW + i) + 0] = (int)rintf(rsum/(float)np);
-                            halfimg[4*(j*halfW + i) + 1] = (int)rintf(gsum/(float)np);
-                            halfimg[4*(j*halfW + i) + 2] = (int)rintf(bsum/(float)np);
-                        }
+                            } 
+                       }
                     }
+                    halfimg[4*(j*halfW + i) + 0] = (int)rintf(rsum/(float)np);
+                    halfimg[4*(j*halfW + i) + 1] = (int)rintf(gsum/(float)np);
+                    halfimg[4*(j*halfW + i) + 2] = (int)rintf(bsum/(float)np);
+                    halfimg[4*(j*halfW + i) + 3] = 255;
                 }
             }
 
             asprintf_safe(&outfn, "%s-%i.jpg", basefn, z);
+            //asprintf_safe(&outfn, "%s-%i.png", basefn, z);
 
             printf("Writing file %s: %i x %i.\n", outfn, halfW, halfH);
 
             if (cairoutils_write_jpeg(outfn, halfimg, halfW, halfH)) {
+                //if (cairoutils_write_png(outfn, halfimg, halfW, halfH)) {
                 fprintf(stderr, "Failed to write JPEG output %s.\n", outfn);
                 exit(-1);
             }

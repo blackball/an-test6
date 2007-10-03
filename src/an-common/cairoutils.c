@@ -257,9 +257,9 @@ static int streamout(FILE* fout, unsigned char* img, int W, int H, int format) {
         for (r=0; r<H; r++) {
             int i;
             for (i=0; i<W; i++) {
-                buffer[i*3 + 0] = img[i*4 + 0];
-                buffer[i*3 + 1] = img[i*4 + 1];
-                buffer[i*3 + 2] = img[i*4 + 2];
+                buffer[i*3 + 0] = img[(r*W + i)*4 + 0];
+                buffer[i*3 + 1] = img[(r*W + i)*4 + 1];
+                buffer[i*3 + 2] = img[(r*W + i)*4 + 2];
             }
             jpeg_write_scanlines(&cinfo, &buffer, 1);
         }
