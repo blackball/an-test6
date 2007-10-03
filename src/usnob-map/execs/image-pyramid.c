@@ -26,7 +26,7 @@
 #include "ioutils.h"
 #include "cairoutils.h"
 
-const char* OPTIONS = "";
+const char* OPTIONS = "f";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -34,8 +34,13 @@ extern int optind, opterr, optopt;
 int main(int argc, char** args) {
 	int argchar;
     int I;
+    bool fullsize = FALSE;
+
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'f':
+            fullsize = TRUE;
+            break;
         }
 
     for (I=optind; I<argc; I++) {
@@ -49,6 +54,7 @@ int main(int argc, char** args) {
         char* dot;
         char* basefn;
         bool jpeg, png;
+        char* outfn;
 
         fn = args[I];
         dot = strrchr(fn, '.');
@@ -79,8 +85,17 @@ int main(int argc, char** args) {
             exit(-1);
         }
 
+        if (!jpeg && fullsize) {
+            asprintf_safe(&outfn, "%s.jpg", basefn);
+            printf("Writing file %s: %i x %i.\n", outfn, W, H);
+            if (cairoutils_write_jpeg(outfn, halfimg, W, H)) {
+                fprintf(stderr, "Failed to write JPEG output %s.\n", outfn);
+                exit(-1);
+            }
+            free(outfn);
+        }
+
         for (z=1;; z++) {
-            char* outfn;
             halfW = (W + 1) / 2;
             halfH = (H + 1) / 2;
             if (halfW < 10 || halfH < 10)
@@ -112,12 +127,10 @@ int main(int argc, char** args) {
             }
 
             asprintf_safe(&outfn, "%s-%i.jpg", basefn, z);
-            //asprintf_safe(&outfn, "%s-%i.png", basefn, z);
 
             printf("Writing file %s: %i x %i.\n", outfn, halfW, halfH);
 
             if (cairoutils_write_jpeg(outfn, halfimg, halfW, halfH)) {
-                //if (cairoutils_write_png(outfn, halfimg, halfW, halfH)) {
                 fprintf(stderr, "Failed to write JPEG output %s.\n", outfn);
                 exit(-1);
             }
