@@ -164,9 +164,9 @@ solver_test.o: solver.c
 # KEIR'S SUPER SIMPLE TESTING FRAMEWORK
 # 1. Add your file's test_blah.c and corresponding files needed to compile it
 #    to the all tests executable 'test' by editing the three variables below:
-ALL_TEST_FILES_C := test_dfind.c test_bl.c
-ALL_TEST_FILES_O := test_dfind.o test_bl.o
-TESTED_FILES := dfind.o
+ALL_TEST_FILES_C := test_dfind.c test_bl.c test_ctmf.c
+ALL_TEST_FILES_O := test_dfind.o test_bl.o test_ctmf.o
+TESTED_FILES := dfind.o ctmf.o
 
 # 2. Add your individual test case like the ones below
 test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
