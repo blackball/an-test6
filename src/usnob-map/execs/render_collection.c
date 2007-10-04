@@ -172,14 +172,16 @@ int render_collection(unsigned char* img, render_args_t* args) {
 			logmsg("Failed to find user image or WCS file.\n");
 			return -1;
 		}
-    } else {
-        // Find images in the image directory.
-        imagefiles = dir_get_contents(image_dir, NULL, TRUE, FALSE);
-        if (!imagefiles) {
-            logmsg("error getting image file list.\n");
-            return -1;
-        }
-        logmsg("found %i files in image directory %s.\n", sl_size(imagefiles), image_dir);
+		/*
+		  } else {
+		  // Find images in the image directory.
+		  imagefiles = dir_get_contents(image_dir, NULL, TRUE, FALSE);
+		  if (!imagefiles) {
+		  logmsg("error getting image file list.\n");
+		  return -1;
+		  }
+		  logmsg("found %i files in image directory %s.\n", sl_size(imagefiles), image_dir);
+		*/
     }
 
     w = args->W;

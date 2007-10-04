@@ -11,10 +11,11 @@
 #include "render_boundary.h"
 #include "sip_qfits.h"
 #include "cairoutils.h"
+#include "ioutils.h"
 
 char* wcs_dirs[] = {
 	"/home/gmaps/ontheweb-data/",
-	".",
+	"/home/gmaps/apod-solves",
 };
 
 static void logmsg(char* format, ...) {
@@ -26,133 +27,187 @@ static void logmsg(char* format, ...) {
 }
 
 int render_boundary(unsigned char* img, render_args_t* args) {
-	// read wcs.
-	sip_t wcs;
-	int imw, imh;
-	int i;
+	int i, I;
 	cairo_t* cairo;
 	cairo_surface_t* target;
 	double lw = args->linewidth;
-	// the line endpoints.
-	double ends[8];
-	int SEGS=10;
-	qfits_header* wcshead = NULL;
+	sl* wcsfiles = NULL;
+	qfits_header* hdr = NULL;
+	bool fullfilename = TRUE;
 
 	logmsg("Starting.\n");
 
-	for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
-		char fn[256];
-                char realfn[1024];
-		snprintf(fn, sizeof(fn), "%s/%s", wcs_dirs[i], args->wcsfn);
-                if (!realpath(fn, realfn)) {
-                    logmsg("Failed to get realpath() of wcs file %s: %s\n", fn, strerror(errno));
-                    if (getcwd(realfn, sizeof(realfn))) {
-                        logmsg("(cwd is %s)\n", realfn);
-                    }
-                    continue;
-                }
-		logmsg("Trying wcs file: %s (%s)\n", fn, realfn);
-		wcshead = qfits_header_read(fn);
-		if (wcshead) {
-			logmsg("wcs opened ok\n");
-			break;
-		} else {
-			logmsg("wcs didn't open\n");
-		}
+    if (args->filelist) {
+		fullfilename = FALSE;
+        wcsfiles = file_get_lines(args->filelist, FALSE);
+        if (!wcsfiles) {
+            logmsg("failed to read filelist \"%s\".\n", args->filelist);
+            return -1;
+        }
+        logmsg("read %i filenames from the file \"%s\".\n", sl_size(wcsfiles), args->filelist);
+	} else if (args->imwcsfn) {
+		wcsfiles = sl_new(4);
+		fullfilename = TRUE;
+		sl_appendf(wcsfiles, args->imwcsfn);
 	}
-	if (!wcshead) {
-		logmsg("couldn't open any wcs files\n");
+	if (!sl_size(wcsfiles)) {
+		logmsg("No WCS files specified.\n");
 		return -1;
 	}
-
-	if (!sip_read_header(wcshead, &wcs)) {
-		logmsg("failed to read WCS file.\n");
-		return -1;
-	}
-
-	imw = qfits_header_getint(wcshead, "IMAGEW", -1);
-	imh = qfits_header_getint(wcshead, "IMAGEH", -1);
-	if ((imw == -1) || (imh == -1)) {
-		logmsg("failed to find IMAGE{W,H} in WCS file.\n");
-		return -1;
-	}
-
-        qfits_header_destroy(wcshead);
-
-	ends[0] = 0.0;
-	ends[1] = 0.0;
-	ends[2] = 0.0;
-	ends[3] = (double)imh;
-	ends[4] = (double)imw;
-	ends[5] = (double)imh;
-	ends[6] = (double)imw;
-	ends[7] = 0.0;
-
-	//logmsg("ra: [%g,%g], dec: [%g,%g]\n", args->ramin, args->ramax, args->decmin, args->decmax);
 
 	target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 												 args->W, args->H, args->W*4);
 	cairo = cairo_create(target);
 	cairo_set_line_width(cairo, lw);
-	cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
+	cairo_set_line_join(cairo, CAIRO_LINE_JOIN_ROUND);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
 	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 
-	// Four edges...
-	for (i=0; i<4; i++) {
-		double* ep1 = ends + i*2;
-		double* ep2 = ends + ((i+1)%4)*2;
-		double ra1, dec1, ra2, dec2;
+    for (I=0; I<sl_size(wcsfiles); I++) {
+		char* basefn;
+        char* wcsfn;
+        sip_t* res;
+		sip_t wcs;
+		int W, H;
 
-		sip_pixelxy2radec(&wcs, ep1[0], ep1[1], &ra1, &dec1);
-		sip_pixelxy2radec(&wcs, ep2[0], ep2[1], &ra2, &dec2);
+        basefn = sl_get(wcsfiles, I);
+		if (!strlen(basefn)) {
+            logmsg("empty filename.\n");
+            continue;
+		}
+		logmsg("Base filename: \"%s\"\n", basefn);
 
-		//logmsg("endpoint %i: ra,dec %g,%g\n", i, ra1, dec1);
+		for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
+			asprintf_safe(&wcsfn, "%s/%s%s", wcs_dirs[i], basefn, (fullfilename ? "" : ".wcs"));
+			if (file_readable(wcsfn))
+				break;
+			free(wcsfn);
+			wcsfn = NULL;
+		}
+		if (!wcsfn) {
+			logmsg("Failed to find WCS file with basename \"%s\".\n", basefn);
+			goto nextfile;
+		}
 
-		draw_segmented_line(ra1, dec1, ra2, dec2, SEGS, cairo, args);
-	}
-	cairo_stroke(cairo);
+        hdr = qfits_header_read(wcsfn);
+        if (!hdr) {
+            logmsg("failed to read WCS header from %s\n", wcsfn);
+			goto nextfile;
+        }
+        free(wcsfn);
+		wcsfn = NULL;
+        res = sip_read_header(hdr, &wcs);
+        qfits_header_destroy(hdr);
+        if (!res) {
+            logmsg("failed to parse SIP header from %s\n", wcsfn);
+			goto nextfile;
+        }
+        W = wcs.wcstan.imagew;
+        H = wcs.wcstan.imageh;
 
-	if (args->dashbox > 0.0) {
-		double ra, dec;
-		double mx, my;
-		double dm = 0.5 * args->dashbox;
-		double dashes[] = {5, 5};
+		{
+			// bottom, right, top, left, close.
+			int offsetx[] = { 0, W, W, 0, 0 };
+			int offsety[] = { 0, 0, H, H, 0 };
+			int stepx[] = { 10, 0, -10, 0, 0 };
+			int stepy[] = { 0, 10, 0, -10, 0 };
+			int Nsteps[] = { W/10, H/10, W/10, H/10, 1 };
+			int side;
+			double lastx=0, lasty=0;
+			bool lastvalid = FALSE;
 
-		// merc coordinate of field center:
-		sip_pixelxy2radec(&wcs, 0.5 * imw, 0.5 * imh, &ra, &dec);
-		mx = ra2merc(deg2rad(ra));
-		my = dec2merc(deg2rad(dec));
+			for (side=0; side<5; side++) {
+				for (i=0; i<Nsteps[side]; i++) {
+					int xin, yin;
+					double xout, yout;
+					double ra, dec;
+					bool first = (!side && !i);
+					bool thisvalid;
 
-		cairo_set_dash(cairo, dashes, sizeof(dashes)/sizeof(double), 0.0);
-		draw_line_merc(mx-dm, my-dm, mx-dm, my+dm, cairo, args);
-		draw_line_merc(mx-dm, my+dm, mx+dm, my+dm, cairo, args);
-		draw_line_merc(mx+dm, my+dm, mx+dm, my-dm, cairo, args);
-		draw_line_merc(mx+dm, my-dm, mx-dm, my-dm, cairo, args);
-		cairo_stroke(cairo);
+					xin = offsetx[side] + i * stepx[side];
+					yin = offsety[side] + i * stepy[side];
+					sip_pixelxy2radec(&wcs, xin, yin, &ra, &dec);
+					xout = ra2pixelf(ra, args);
+					yout = dec2pixelf(dec, args);
+					thisvalid = (yout > 0 && xout > 0 && yout < args->H && xout < args->W);
 
-		if (args->zoomright) {
-			cairo_set_line_width(cairo, lw/2.0);
-
-			// draw lines from the left edge of the dashed box to the
-			// right-hand edge of the image.
-			cairo_set_dash(cairo, dashes, 0, 0.0);
-			draw_line_merc(mx-dm, my-dm, args->xmercmax, args->ymercmin,
-						   cairo, args);
-			draw_line_merc(mx-dm, my+dm, args->xmercmax, args->ymercmax,
-						   cairo, args);
+					if (thisvalid && !lastvalid && !first)
+						cairo_move_to(cairo, lastx, lasty);
+					if (thisvalid)
+						cairo_line_to(cairo, xout, yout);
+					if (!thisvalid && lastvalid) {
+						cairo_line_to(cairo, xout, yout);
+						cairo_stroke(cairo);
+					}
+					/*
+					  if (!side && !i) {
+					  cairo_move_to(cairo, xout, yout);
+					  } else {
+					  cairo_line_to(cairo, xout, yout);
+					  }
+					*/
+					/*
+					  if ((thisvalid || lastvalid) && (side || i)) {
+					  cairo_move_to(cairo, lastx, lasty);
+					  cairo_line_to(cairo, xout, yout);
+					  cairo_stroke(cairo);
+					  }
+					*/
+					lastx = xout;
+					lasty = yout;
+					lastvalid = thisvalid;
+                }
+            }
 			cairo_stroke(cairo);
 		}
-		if (args->zoomdown) {
-			cairo_set_line_width(cairo, lw/2.0);
-			cairo_set_dash(cairo, dashes, 0, 0.0);
-			draw_line_merc(mx-dm, my+dm, args->xmercmin, args->ymercmin,
-						   cairo, args);
-			draw_line_merc(mx+dm, my+dm, args->xmercmax, args->ymercmin,
-						   cairo, args);
+
+
+		if (args->dashbox > 0.0) {
+			double ra, dec;
+			double mx, my;
+			double dm = 0.5 * args->dashbox;
+			double dashes[] = {5, 5};
+
+			// merc coordinate of field center:
+			sip_pixelxy2radec(&wcs, 0.5 * W, 0.5 * H, &ra, &dec);
+			mx = ra2merc(deg2rad(ra));
+			my = dec2merc(deg2rad(dec));
+
+			cairo_set_dash(cairo, dashes, sizeof(dashes)/sizeof(double), 0.0);
+			draw_line_merc(mx-dm, my-dm, mx-dm, my+dm, cairo, args);
+			draw_line_merc(mx-dm, my+dm, mx+dm, my+dm, cairo, args);
+			draw_line_merc(mx+dm, my+dm, mx+dm, my-dm, cairo, args);
+			draw_line_merc(mx+dm, my-dm, mx-dm, my-dm, cairo, args);
 			cairo_stroke(cairo);
+
+			if (args->zoomright) {
+				cairo_set_line_width(cairo, lw/2.0);
+
+				// draw lines from the left edge of the dashed box to the
+				// right-hand edge of the image.
+				cairo_set_dash(cairo, dashes, 0, 0.0);
+				draw_line_merc(mx-dm, my-dm, args->xmercmax, args->ymercmin,
+							   cairo, args);
+				draw_line_merc(mx-dm, my+dm, args->xmercmax, args->ymercmax,
+							   cairo, args);
+				cairo_stroke(cairo);
+			}
+			if (args->zoomdown) {
+				cairo_set_line_width(cairo, lw/2.0);
+				cairo_set_dash(cairo, dashes, 0, 0.0);
+				draw_line_merc(mx-dm, my+dm, args->xmercmin, args->ymercmin,
+							   cairo, args);
+				draw_line_merc(mx+dm, my+dm, args->xmercmax, args->ymercmin,
+							   cairo, args);
+				cairo_stroke(cairo);
+			}
 		}
+
+	nextfile:
+		free(wcsfn);
 	}
+
+	sl_free2(wcsfiles);
 
     cairoutils_argb32_to_rgba(img, args->W, args->H);
 

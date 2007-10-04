@@ -48,11 +48,15 @@ CustomGetTileUrl = function(a,b,c) {
 */
 function getGetData(){
 	GET_DATA=new Object();
-	var getDataString=new String(window.location);
-	var questionMarkLocation=getDataString.search(/\?/);
+	var myurl=new String(window.location);
+	// Strip off trailing "#"
+	if (myurl.charAt(myurl.length-1) == '#') {
+		myurl = myurl.substr(0, myurl.length-1);
+	}
+	var questionMarkLocation=myurl.search(/\?/);
 	if (questionMarkLocation!=-1){
-		getDataString=getDataString.substr(questionMarkLocation+1);
-		var getDataArray=getDataString.split(/&/g);
+		myurl=myurl.substr(questionMarkLocation+1);
+		var getDataArray=myurl.split(/&/g);
 		for (var i=0;i<getDataArray.length;i++){
 			var nameValuePair=getDataArray[i].split(/=/);
 			GET_DATA[unescape(nameValuePair[0])]=unescape(nameValuePair[1]);
@@ -234,6 +238,7 @@ var usnobShowing = 0;
 var apodShowing = 0;
 var apodOutlineShowing = 0;
 var userImageShowing = 0;
+var userOutlineShowing = 0;
 
 function toggleButton(overlayName) {
 	button = document.getElementById(overlayName+"ToggleButton");
@@ -289,7 +294,7 @@ function restackOverlays() {
 		map.addOverlay(usnobOverlay);
 	if (apodShowing)
 		map.addOverlay(apodOverlay);
-	if (userImageShowing)
+	if (userImageShowing || userOutlineShowing)
 		map.addOverlay(userImageOverlay);
 	if (gridShowing || messierShowing || constellationShowing)
 		map.addOverlay(lineOverlay);
@@ -298,6 +303,18 @@ function restackOverlays() {
 function toggleApodOutline() {
 	toggleButton("apodOutline");
 	updateApod();
+	restackOverlays();
+}
+
+function toggleUserOutline() {
+	toggleButton("userOutline");
+	updateUserImage();
+	restackOverlays();
+}
+
+function toggleUserImage() {
+	toggleButton("userImage");
+	updateUserImage();
 	restackOverlays();
 }
 
@@ -324,12 +341,16 @@ function updateApod() {
 }
 
 function updateUserImage() {
-	var tag = "";
 	var jobid = getdata['userimage'];
 	var image = jobid + '/fullsize.png';
 	var wcs = jobid + '/wcs.fits';
-	tag += "&imagefn=" + image + "&wcsfn=" + wcs;
-	userImageOverlay = makeOverlay('userimage', tag);
+	var tag = "&imagefn=" + image + "&wcsfn=" + wcs;
+	var lay = [];
+	if (userImageShowing)
+		lay.push('userimage');
+	if (userOutlineShowing)
+		lay.push('boundary');
+	userImageOverlay = makeOverlay(lay.join(","), tag);
 }
 
 function updateTycho() {
@@ -418,24 +439,25 @@ function startup() {
 	// Handle user images.
 	if ('userimage' in getdata) {
 		var holder = document.getElementById("userImageToggleButtonHolder");
-		//var newdiv=document.createElement("div");
-		//var newspan=document.createElement("span");
 		var link = document.createElement("a");
 		link.setAttribute('href', '#');
-		link.setAttribute('onclick', 'toggleOverlayRestack("userImage")');
+		link.setAttribute('onclick', 'toggleUserImage()');
 		link.setAttribute('id', 'userImageToggleButton');
-		var button = document.createTextNode("User Image");
+		var button = document.createTextNode("My Image");
 		var bar = document.createTextNode(" | ");
-		//newspan.appendChild(button);
-		//holder.appendChild(newspan);
-		//holder.appendChild(button);
 		link.appendChild(button);
 		holder.appendChild(link);
 		holder.appendChild(bar);
-		//newdiv.appendChild(button);
-		//holder.appendChild(newdiv);
-		//holder.appendChild(button);
-		updateUserImage();
+
+		var link2 = document.createElement("a");
+		link2.setAttribute('href', '#');
+		link2.setAttribute('onclick', 'toggleUserOutline()');
+		link2.setAttribute('id', 'userOutlineToggleButton');
+		var button2 = document.createTextNode("My Image Outline");
+		var bar2 = document.createTextNode(" | ");
+		link2.appendChild(button2);
+		holder.appendChild(link2);
+		holder.appendChild(bar2);
 	}
 
 	// Clear the set of map types.
@@ -449,7 +471,6 @@ function startup() {
 
 	updateTycho();
 	updateUsnob();
-	updateApod();
 
 	if ('gain' in getdata) {
 		gotoform.gain.value = getdata['gain'];
@@ -463,7 +484,7 @@ function startup() {
 		for (i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
 
-		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier', 'userImage' ];
+		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier', 'userImage', 'userOutline' ];
 		for (i=0; i<layers.length; i++)
 			if (layers[i] in show)
 				toggleButton(layers[i]);
@@ -472,9 +493,12 @@ function startup() {
 		toggleButton('apod');
 		if ('userimage' in getdata) {
 			toggleButton('userImage');
+			toggleButton('userOutline');
 		}
 	}
 	updateLine();
+	updateUserImage();
+	updateApod();
 	restackOverlays();
 
 	// Connect up the event listeners...
