@@ -156,22 +156,24 @@ int dfind2(int *image,
 			/* Compute minimum equivalence label for this pixel */
 			thislabelmin = collapsing_find_minlabel(thislabel, equivs);
 
-			if (iy) {
-				for (i = MAX(0, ix - 1); i < MIN(ix + 2, nx); i++) {
-					if (image[nx*(iy-1)+i]) {
-						int otherlabel = object[nx*(iy-1) + i];
+			if (iy == 0)
+				continue;
 
-						/* Find min of the other */
-						int otherlabelmin = collapsing_find_minlabel(otherlabel, equivs);
+			/* Check three pixels above this one which are 'neighbours' */
+			for (i = MAX(0, ix - 1); i < MIN(ix + 2, nx); i++) {
+				if (image[nx*(iy-1)+i]) {
+					int otherlabel = object[nx*(iy-1) + i];
 
-						/* Merge groups if necessary */
-						if (thislabelmin != otherlabelmin) {
-							int oldlabelmin = MAX(thislabelmin, otherlabelmin);
-							int newlabelmin = MIN(thislabelmin, otherlabelmin);
-							equivs[oldlabelmin] = newlabelmin;
-							thislabelmin = newlabelmin;
-							equivs[object[nx*iy+ix]] = newlabelmin;
-						}
+					/* Find min of the other */
+					int otherlabelmin = collapsing_find_minlabel(otherlabel, equivs);
+
+					/* Merge groups if necessary */
+					if (thislabelmin != otherlabelmin) {
+						int oldlabelmin = MAX(thislabelmin, otherlabelmin);
+						int newlabelmin = MIN(thislabelmin, otherlabelmin);
+						equivs[oldlabelmin] = newlabelmin;
+						thislabelmin = newlabelmin;
+						equivs[object[nx*iy+ix]] = newlabelmin;
 					}
 				}
 			}
