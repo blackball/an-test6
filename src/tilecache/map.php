@@ -80,7 +80,7 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onchang
 	<a id="gridToggleButton" href="#" onclick="toggleLineOverlay('grid')"> Grid</a> | 
 	<a id="messierToggleButton" href="#" onclick="toggleLineOverlay('messier')"> Messier objects</a> |
 <span id="userImageToggleButtonHolder"></span>
-    <a id="apodToggleButton" href="#" onclick="toggleOverlayRestack('apod')">Images </a> |
+<a id="apodToggleButton" href="#" onclick="toggleApod()">Images </a> |
     <a id="apodOutlineToggleButton" href="#" onclick="toggleApodOutline()"> Image outlines</a> |
     <a id="tychoToggleButton" href="#" onclick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
     <a id="usnobToggleButton" href="#" onclick="toggleOverlayRestack('usnob')"> USNO-B </a>

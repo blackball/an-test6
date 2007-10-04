@@ -87,7 +87,8 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', //'gain',
     'dashbox', 'cmap',
     'rdlsfn', 'rdlsfield', 'rdlsstyle',
     'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
-				 'outline', 'density'
+				 //'outline', 
+				 'density'
     ];
 
 var gotoform = document.getElementById("gotoform");
@@ -174,13 +175,23 @@ function linktohere() {
 		show.push("usnob");
 	if (apodShowing)
 		show.push("apod");
+	if (apodOutlineShowing)
+		show.push("apodOutline");
 	if (gridShowing)
 		show.push("grid");
 	if (messierShowing)
 		show.push("messier");
 	if (constellationShowing)
 		show.push("constellation");
+	if (userImageShowing)
+		show.push('userImage');
+	if (userOutlineShowing)
+		show.push('userOutline');
 	url += "&show=" + show.join(",");
+
+	if ('userimage' in getdata) {
+		url += "&userimage=" + getdata['userimage'];
+	}
 
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
@@ -292,7 +303,7 @@ function restackOverlays() {
 		map.addOverlay(tychoOverlay);
 	if (usnobShowing)
 		map.addOverlay(usnobOverlay);
-	if (apodShowing)
+	if (apodShowing || apodOutlineShowing)
 		map.addOverlay(apodOverlay);
 	if (userImageShowing || userOutlineShowing)
 		map.addOverlay(userImageOverlay);
@@ -302,6 +313,12 @@ function restackOverlays() {
 
 function toggleApodOutline() {
 	toggleButton("apodOutline");
+	updateApod();
+	restackOverlays();
+}
+
+function toggleApod() {
+	toggleButton("apod");
 	updateApod();
 	restackOverlays();
 }
@@ -333,11 +350,13 @@ function updateLine() {
 
 function updateApod() {
 	var tag = "&tag=apod";
-	if (apodOutlineShowing) {
-		tag += "&outline";
-	}
 	tag += "&gain=" + apodGain;
-	apodOverlay = makeOverlay('apod', tag);
+	var lay = [];
+	if (apodShowing)
+		lay.push('apod');
+	if (apodOutlineShowing)
+		lay.push('boundary');
+	apodOverlay = makeOverlay(lay.join(","), tag);
 }
 
 function updateUserImage() {
@@ -484,7 +503,7 @@ function startup() {
 		for (i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
 
-		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier', 'userImage', 'userOutline' ];
+		var layers = [ 'tycho', 'usnob', 'apod', 'apodOutline', 'grid', 'constellation', 'messier', 'userImage', 'userOutline' ];
 		for (i=0; i<layers.length; i++)
 			if (layers[i] in show)
 				toggleButton(layers[i]);
