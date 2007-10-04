@@ -72,7 +72,8 @@ char* layernames[] = {
 	"dirty",
 	"solid",
 
-	"apod"
+	"apod",
+	"userimage"
 };
 render_func_t renderers[] = {
 	render_image,
@@ -88,7 +89,8 @@ render_func_t renderers[] = {
 	render_usnob,
 	render_solid,
 
-	render_collection
+	render_collection,
+	render_collection,
 };
 
 static void

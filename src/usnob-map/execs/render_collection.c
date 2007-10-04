@@ -31,6 +31,11 @@
 char* image_dir = "/home/gmaps/apod-solves";
 //char* image_dir = "/tmp/imgs";
 
+char* user_image_dirs[] = {
+	"/home/gmaps/ontheweb-data/",
+	"/home/gmaps/gmaps-rdls/",
+};
+
 static void
 ATTRIB_FORMAT(printf,1,2)
 logmsg(char* format, ...) {
@@ -122,21 +127,51 @@ const char* cachedomain = "apod";
 int render_collection(unsigned char* img, render_args_t* args) {
     int I;
     sl* imagefiles;
+	sl* wcsfiles = NULL;
     float* counts;
     float* ink;
     int i, j, w;
     double *ravals, *decvals;
     bl* wcslist = NULL;
+	bool fullfilename = TRUE;
 
 	logmsg("starting.\n");
 
     if (args->filelist) {
+		fullfilename = FALSE;
         imagefiles = file_get_lines(args->filelist, FALSE);
         if (!imagefiles) {
             logmsg("failed to read filelist \"%s\".\n", args->filelist);
             return -1;
         }
         logmsg("read %i filenames from the file \"%s\".\n", sl_size(imagefiles), args->filelist);
+	} else if ((args->imagefn) && (args->imwcsfn)) {
+		imagefiles = sl_new(4);
+		wcsfiles = sl_new(4);
+		for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
+			char* fn = sl_appendf(imagefiles, "%s/%s", user_image_dirs[i], args->imagefn);
+			if (!file_readable(fn)) {
+				sl_pop(imagefiles);
+				free(fn);
+				continue;
+			}
+			logmsg("Found user image %s.\n", fn);
+			break;
+		}
+		for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
+			char* fn = sl_appendf(wcsfiles, "%s/%s", user_image_dirs[i], args->imwcsfn);
+			if (!file_readable(fn)) {
+				sl_pop(wcsfiles);
+				free(fn);
+				continue;
+			}
+			logmsg("Found user WCS %s.\n", fn);
+			break;
+		}
+		if (!sl_size(imagefiles) || !sl_size(wcsfiles)) {
+			logmsg("Failed to find user image or WCS file.\n");
+			return -1;
+		}
     } else {
         // Find images in the image directory.
         imagefiles = dir_get_contents(image_dir, NULL, TRUE, FALSE);
@@ -195,11 +230,24 @@ int render_collection(unsigned char* img, render_args_t* args) {
 			basefn = basepath;
 			logmsg("Base path: \"%s\"\n", basefn);
 		}
+		if (fullfilename) {
+			// HACK - strip off the filename suffix... only to reappend it below...
+			char* dot = strrchr(basefn, '.');
+			if (!dot) {
+				logmsg("no filename suffix: %s\n", basefn);
+				continue;
+			}
+			*dot = '\0';
+		}
 
-        asprintf_safe(&wcsfn, "%s.wcs", basefn);
-		if (!file_readable(wcsfn)) {
-			logmsg("filename %s: WCS file %s not readable.\n", basefn, wcsfn);
-			goto nextimage;
+		if (wcsfiles) {
+			wcsfn = sl_get(wcsfiles, I);
+		} else {
+			asprintf_safe(&wcsfn, "%s.wcs", basefn);
+			if (!file_readable(wcsfn)) {
+				logmsg("filename %s: WCS file %s not readable.\n", basefn, wcsfn);
+				goto nextimage;
+			}
 		}
 		logmsg("WCS: \"%s\"\n", wcsfn);
 
@@ -461,6 +509,8 @@ int render_collection(unsigned char* img, render_args_t* args) {
     }
 
     sl_free2(imagefiles);
+	if (wcsfiles)
+		sl_free_nonrecursive(wcsfiles);
     free(ravals);
     free(decvals);
 
