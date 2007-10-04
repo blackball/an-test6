@@ -41,7 +41,7 @@
 
 #define DEBUG_DFIND 0
 
-int initial_max_groups = 500;
+int initial_max_groups = 50;
 
 /*
  * This code does connected component analysis, but instead of returning a list
@@ -79,26 +79,58 @@ int initial_max_groups = 500;
  *  . . . . .
  */
 
-int dfind2(int *image,
-          int nx,
-          int ny,
-          int *object)
+/* Finds the root of this set (which is the min label) but collapses
+ * intermediate labels as it goes. */
+inline short int collapsing_find_minlabel(short int label, short int *equivs)
 {
-	int ix, iy, i, j;
+	int min;
+	min = label;
+	while (equivs[min] != min)
+		min = equivs[min];
+	while (label != min) {
+		int next = equivs[label];
+		equivs[label] = min;
+		label = next;
+	}
+	return min;
+}
+
+int dfind2(int *image,
+           int nx,
+           int ny,
+           int *object) {
+	int ix, iy, i;
 	int maxgroups = initial_max_groups; // this is how much room we allocate for groups
-	short int *equivs = malloc(sizeof(short int)*maxgroups);
-	short int *number = malloc(sizeof(short int)*maxgroups);
-	short int maxlabel=0;
-	short int maxcontiguouslabel=0;
+	short int *equivs = malloc(sizeof(short int) * maxgroups);
+	short int *number = malloc(sizeof(short int) * maxgroups);
+	short int maxlabel = 0;
+	short int maxcontiguouslabel = 0;
+
+	// we keep track of the pixels we hit; pay memory to avoid rescanning
+	int num_on_pixels = 0;
+	int max_num_on_pixels = 100;
+	int **on_pixels = malloc(sizeof(int*)*max_num_on_pixels);
+
+//	printf("simplexy: dfind2: nx=%d, ny=%d\n",nx,ny);
 
 	/* Find blobs and track equivalences */
-	for (iy=0; iy<ny; iy++) {
-		for (ix=0; ix<nx; ix++) {
-		  int thislabel,thislabelmin;
+	for (iy = 0; iy < ny; iy++) {
+		for (ix = 0; ix < nx; ix++) {
+			int thislabel, thislabelmin;
 
 			object[nx*iy+ix] = -1;
 			if (!image[nx*iy+ix])
 				continue;
+
+			/* Store location of each 'on' pixel. May be inefficient on 64 bit with large ptrs */
+			if (num_on_pixels >= max_num_on_pixels) {
+//				printf("simplexy: max on pixels %d; allocating.\n", max_num_on_pixels);
+				max_num_on_pixels *= 2;
+				on_pixels = realloc(on_pixels, sizeof(int*) * max_num_on_pixels);
+				assert(on_pixels);
+			}
+			on_pixels[num_on_pixels] = object + nx*iy+ix;
+			num_on_pixels++;
 
 			if (ix && image[nx*iy+ix-1]) {
 				/* Old group */
@@ -107,11 +139,11 @@ int dfind2(int *image,
 			} else {
 				/* New blob */
 				if (maxlabel >= maxgroups) {
-//					printf("simplexy: exceeded %d groups; allocating.\n", maxgroups);
+					//	printf("simplexy: exceeded %d groups; allocating.\n", maxgroups);
 					maxgroups *= 2;
-					equivs = realloc(equivs, sizeof(short int)*maxgroups);
+					equivs = realloc(equivs, sizeof(short int) * maxgroups);
 					assert(equivs);
-					number = realloc(number, sizeof(short int)*maxgroups);
+					number = realloc(number, sizeof(short int) * maxgroups);
 					assert(number);
 				}
 				object[nx*iy+ix] = maxlabel;
@@ -122,48 +154,38 @@ int dfind2(int *image,
 			thislabel  = object[nx*iy + ix];
 
 			/* Compute minimum equivalence label for this pixel */
-			thislabelmin = thislabel;
-			while (equivs[thislabelmin] != thislabelmin)
-				thislabelmin = equivs[thislabelmin];
+			thislabelmin = collapsing_find_minlabel(thislabel, equivs);
 
 			if (iy) {
-				for (i=MAX(0,ix-1); i<MIN(ix+2,nx); i++) {
+				for (i = MAX(0, ix - 1); i < MIN(ix + 2, nx); i++) {
 					if (image[nx*(iy-1)+i]) {
 						int otherlabel = object[nx*(iy-1) + i];
 
 						/* Find min of the other */
-						int otherlabelmin = otherlabel;
-						while (equivs[otherlabelmin] != otherlabelmin)
-							otherlabelmin = equivs[otherlabelmin];
+						int otherlabelmin = collapsing_find_minlabel(otherlabel, equivs);
 
 						/* Merge groups if necessary */
 						if (thislabelmin != otherlabelmin) {
 							int oldlabelmin = MAX(thislabelmin, otherlabelmin);
 							int newlabelmin = MIN(thislabelmin, otherlabelmin);
-//							printf("RELABEL:\n");
-							for (j=0; j<maxlabel; j++) {
-								if (equivs[j] == oldlabelmin) {
-//									printf("ix%d iy%d making equivs[%d] = %d, was %d\n", ix, iy, j, newlabelmin, equivs[j]);
-									equivs[j] = newlabelmin;
-								}
-							}
+							equivs[oldlabelmin] = newlabelmin;
 							thislabelmin = newlabelmin;
 							equivs[object[nx*iy+ix]] = newlabelmin;
 						}
-					} 
+					}
 				}
 			}
 		}
 	}
 
-	for (i=0; i<maxlabel; i++) {
+	for (i = 0; i < maxlabel; i++) {
 		number[i] = -1;
 	}
-	
+
 	/* debug print */
 #if DEBUG_DFIND
-	for (iy=0; iy<ny; iy++) {
-		for (ix=0; ix<nx; ix++) {
+	for (iy = 0; iy < ny; iy++) {
+		for (ix = 0; ix < nx; ix++) {
 			int n = object[nx*iy+ix];
 			if (n == -1)
 				printf("  ");
@@ -172,27 +194,22 @@ int dfind2(int *image,
 		}
 		printf("\n");
 	}
-		printf("... \n");
+	printf("... \n");
 #endif
 
 	/* Re-label the groups */
-	for (iy=0; iy<ny; iy++) {
-		for (ix=0; ix<nx; ix++) {
-			int origlabel = object[nx*iy+ix];
-			if (origlabel != -1) {
-				int minlabel = equivs[origlabel];
-				if (number[minlabel] == -1) {
-					number[minlabel] = maxcontiguouslabel++;
-				}
-				object[nx*iy+ix] = number[minlabel];
-			}
+	for (i=0; i<num_on_pixels; i++) {
+		int minlabel = collapsing_find_minlabel(*on_pixels[i], equivs);
+		if (number[minlabel] == -1) {
+			number[minlabel] = maxcontiguouslabel++;
 		}
+		*on_pixels[i] = number[minlabel];
 	}
 
 #if DEBUG_DFIND
 	/* debug print */
-	for (iy=0; iy<ny; iy++) {
-		for (ix=0; ix<nx; ix++) {
+	for (iy = 0; iy < ny; iy++) {
+		for (ix = 0; ix < nx; ix++) {
 			int n = object[nx*iy+ix];
 			if (n == -1)
 				printf(" . ");
@@ -205,14 +222,14 @@ int dfind2(int *image,
 
 	free(equivs);
 	free(number);
+	free(on_pixels);
 	return 1;
 }
 
 int dfind(int *image,
           int nx,
           int ny,
-          int *object)
-{
+          int *object) {
 	int i, ip, j, jp, k, kp, l, ist, ind, jst, jnd, igroup, minearly, checkearly, tmpearly;
 	int ngroups;
 
@@ -319,7 +336,7 @@ int dfind(int *image,
 			}
 		}
 	}
-	
+
 	if (ngroups == 0)
 		goto bail;
 

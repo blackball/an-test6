@@ -180,7 +180,7 @@ int main(void) {
 
 		/* draw the peaks */
 		for (peak = 0; peak < npeaks; peak++) {
-			fprintf(stderr, "%.2f %.2f\n", x[peak], y[peak]);
+//			fprintf(stderr, "%.2f %.2f\n", x[peak], y[peak]);
 
 			for (peakXi = -PEAKDIST; peakXi <= PEAKDIST; peakXi++) {
 				for (peakYi = -PEAKDIST; peakYi <= PEAKDIST; peakYi++) {
