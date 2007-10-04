@@ -79,9 +79,14 @@ int initial_max_groups = 50;
  *  . . . . .
  */
 
+struct uf_t {
+	short int maxlabel;
+	short int *equivs;
+};
+
 /* Finds the root of this set (which is the min label) but collapses
  * intermediate labels as it goes. */
-inline short int collapsing_find_minlabel(short int label, short int *equivs)
+inline short unsigned int collapsing_find_minlabel(short unsigned int label, short unsigned int *equivs)
 {
 	int min;
 	min = label;
@@ -100,18 +105,16 @@ int dfind2(int *image,
            int ny,
            int *object) {
 	int ix, iy, i;
-	int maxgroups = initial_max_groups; // this is how much room we allocate for groups
-	short int *equivs = malloc(sizeof(short int) * maxgroups);
-	short int *number = malloc(sizeof(short int) * maxgroups);
-	short int maxlabel = 0;
-	short int maxcontiguouslabel = 0;
+	int maxgroups = initial_max_groups;
+	short unsigned int *equivs = malloc(sizeof(short unsigned int) * maxgroups);
+	short unsigned int *number;
+	int maxlabel = 0;
+	short unsigned int maxcontiguouslabel = 0;
 
-	// we keep track of the pixels we hit; pay memory to avoid rescanning
+	/* Keep track of 'on' pixels to avoid later rescanning */
 	int num_on_pixels = 0;
 	int max_num_on_pixels = 100;
 	int **on_pixels = malloc(sizeof(int*)*max_num_on_pixels);
-
-//	printf("simplexy: dfind2: nx=%d, ny=%d\n",nx,ny);
 
 	/* Find blobs and track equivalences */
 	for (iy = 0; iy < ny; iy++) {
@@ -124,7 +127,6 @@ int dfind2(int *image,
 
 			/* Store location of each 'on' pixel. May be inefficient on 64 bit with large ptrs */
 			if (num_on_pixels >= max_num_on_pixels) {
-//				printf("simplexy: max on pixels %d; allocating.\n", max_num_on_pixels);
 				max_num_on_pixels *= 2;
 				on_pixels = realloc(on_pixels, sizeof(int*) * max_num_on_pixels);
 				assert(on_pixels);
@@ -139,16 +141,18 @@ int dfind2(int *image,
 			} else {
 				/* New blob */
 				if (maxlabel >= maxgroups) {
-					//	printf("simplexy: exceeded %d groups; allocating.\n", maxgroups);
 					maxgroups *= 2;
-					equivs = realloc(equivs, sizeof(short int) * maxgroups);
+					equivs = realloc(equivs, sizeof(short unsigned int) * maxgroups);
 					assert(equivs);
-					number = realloc(number, sizeof(short int) * maxgroups);
-					assert(number);
 				}
 				object[nx*iy+ix] = maxlabel;
 				equivs[maxlabel] = maxlabel;
 				maxlabel++;
+
+				if (maxlabel == 0xFFFF) {
+					fprintf(stderr, "simplexy: ERROR: Exceeded labels. Shrink your image.\n");
+					exit(1);
+				}
 			}
 
 			thislabel  = object[nx*iy + ix];
@@ -171,56 +175,29 @@ int dfind2(int *image,
 					if (thislabelmin != otherlabelmin) {
 						int oldlabelmin = MAX(thislabelmin, otherlabelmin);
 						int newlabelmin = MIN(thislabelmin, otherlabelmin);
-						equivs[oldlabelmin] = newlabelmin;
 						thislabelmin = newlabelmin;
-						equivs[object[nx*iy+ix]] = newlabelmin;
-					}
+						equivs[oldlabelmin] = newlabelmin;
+						equivs[thislabel] = newlabelmin;
+						/* Update other pixel too */
+						object[nx*(iy-1) + i] = newlabelmin;
+					} 
 				}
 			}
+			object[nx*iy + ix] = thislabelmin;
 		}
 	}
-
-	for (i = 0; i < maxlabel; i++) {
-		number[i] = -1;
-	}
-
-	/* debug print */
-#if DEBUG_DFIND
-	for (iy = 0; iy < ny; iy++) {
-		for (ix = 0; ix < nx; ix++) {
-			int n = object[nx*iy+ix];
-			if (n == -1)
-				printf("  ");
-			else
-				printf(" %d", n);
-		}
-		printf("\n");
-	}
-	printf("... \n");
-#endif
 
 	/* Re-label the groups */
+	number = malloc(sizeof(short unsigned int) * maxlabel);
+	assert(number);
+	for (i = 0; i < maxlabel; i++)
+		number[i] = 0xFFFF;
 	for (i=0; i<num_on_pixels; i++) {
 		int minlabel = collapsing_find_minlabel(*on_pixels[i], equivs);
-		if (number[minlabel] == -1) {
+		if (number[minlabel] == 0xFFFF)
 			number[minlabel] = maxcontiguouslabel++;
-		}
 		*on_pixels[i] = number[minlabel];
 	}
-
-#if DEBUG_DFIND
-	/* debug print */
-	for (iy = 0; iy < ny; iy++) {
-		for (ix = 0; ix < nx; ix++) {
-			int n = object[nx*iy+ix];
-			if (n == -1)
-				printf(" . ");
-			else
-				printf("%3d", n);
-		}
-		printf("\n");
-	}
-#endif
 
 	free(equivs);
 	free(number);
