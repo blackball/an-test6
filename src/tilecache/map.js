@@ -224,6 +224,7 @@ var lineOverlay;
 var tychoOverlay;
 var usnobOverlay;
 var apodOverlay;
+var userImageOverlay;
 
 var gridShowing = 0;
 var messierShowing = 0;
@@ -232,6 +233,7 @@ var tychoShowing = 0;
 var usnobShowing = 0;
 var apodShowing = 0;
 var apodOutlineShowing = 0;
+var userImageShowing = 0;
 
 function toggleButton(overlayName) {
 	button = document.getElementById(overlayName+"ToggleButton");
@@ -287,6 +289,8 @@ function restackOverlays() {
 		map.addOverlay(usnobOverlay);
 	if (apodShowing)
 		map.addOverlay(apodOverlay);
+	if (userImageShowing)
+		map.addOverlay(userImageOverlay);
 	if (gridShowing || messierShowing || constellationShowing)
 		map.addOverlay(lineOverlay);
 }
@@ -317,6 +321,15 @@ function updateApod() {
 	}
 	tag += "&gain=" + apodGain;
 	apodOverlay = makeOverlay('apod', tag);
+}
+
+function updateUserImage() {
+	var tag = "";
+	var jobid = getdata['userimage'];
+	var image = jobid + '/fullsize.png';
+	var wcs = jobid + '/wcs.fits';
+	tag += "&imagefn=" + image + "&wcsfn=" + wcs;
+	userImageOverlay = makeOverlay('userimage', tag);
 }
 
 function updateTycho() {
@@ -402,6 +415,29 @@ function startup() {
 		}
 	}
 
+	// Handle user images.
+	if ('userimage' in getdata) {
+		var holder = document.getElementById("userImageToggleButtonHolder");
+		//var newdiv=document.createElement("div");
+		//var newspan=document.createElement("span");
+		var link = document.createElement("a");
+		link.setAttribute('href', '#');
+		link.setAttribute('onclick', 'toggleOverlayRestack("userImage")');
+		link.setAttribute('id', 'userImageToggleButton');
+		var button = document.createTextNode("User Image");
+		var bar = document.createTextNode(" | ");
+		//newspan.appendChild(button);
+		//holder.appendChild(newspan);
+		//holder.appendChild(button);
+		link.appendChild(button);
+		holder.appendChild(link);
+		holder.appendChild(bar);
+		//newdiv.appendChild(button);
+		//holder.appendChild(newdiv);
+		//holder.appendChild(button);
+		updateUserImage();
+	}
+
 	// Clear the set of map types.
 	map.getMapTypes().length = 0;
 	
@@ -434,6 +470,9 @@ function startup() {
 	} else {
 		toggleButton('tycho');
 		toggleButton('apod');
+		if ('userimage' in getdata) {
+			toggleButton('userImage');
+		}
 	}
 	updateLine();
 	restackOverlays();

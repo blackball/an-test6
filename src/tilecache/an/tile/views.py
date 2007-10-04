@@ -77,7 +77,7 @@ def query(request):
 
 	#if ('userimage' in layers) and ('imagefn' in request.GET) and ('wcsfn' in request.GET):
 	if ('imagefn' in request.GET) and ('wcsfn' in request.GET):
-		cmdline += (" -l " + "userimage")
+		#cmdline += (" -l " + "userimage")
 		# HACK - shell-escape these filenames!!
 		cmdline += (" -i " + request.GET['imagefn'] + " -I " + request.GET['wcsfn'])
 
