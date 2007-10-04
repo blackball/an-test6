@@ -77,9 +77,14 @@ def query(request):
 
 	#if ('userimage' in layers) and ('imagefn' in request.GET) and ('wcsfn' in request.GET):
 	if ('imagefn' in request.GET) and ('wcsfn' in request.GET):
-		#cmdline += (" -l " + "userimage")
+		filenameRE = re.compile(r'^[A-Za-z0-9\./_]+$')
+		img = request.GET['imagefn']
+		wcs = request.GET['wcsfn']
+		if not (filenameRE.match(img) and filenameRE.match(wcs)):
+			logging.debug("Bad image or WCS filename: \"" + img + "\", \"" + wcs + "\".")
+			return HttpResponse('bad filename.')
 		# HACK - shell-escape these filenames!!
-		cmdline += (" -i " + request.GET['imagefn'] + " -I " + request.GET['wcsfn'])
+		cmdline += (" -i " + img + " -I " + wcs)
 
 	#logging.debug('1: cmdline ' + cmdline)
 	if ('apod' in layers):

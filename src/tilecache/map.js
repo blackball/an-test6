@@ -463,7 +463,7 @@ function startup() {
 		for (i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
 
-		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier' ];
+		var layers = [ 'tycho', 'usnob', 'apod', 'grid', 'constellation', 'messier', 'userImage' ];
 		for (i=0; i<layers.length; i++)
 			if (layers[i] in show)
 				toggleButton(layers[i]);
