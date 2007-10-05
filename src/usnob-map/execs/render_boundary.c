@@ -114,6 +114,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 			int Nsteps[] = { W/10, H/10, W/10, H/10, 1 };
 			int side;
 			double lastx=0, lasty=0;
+			double lastra = 180.0;
 			bool lastvalid = FALSE;
 
 			for (side=0; side<5; side++) {
@@ -122,6 +123,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 					double xout, yout;
 					double ra, dec;
 					bool first = (!side && !i);
+					bool wrapped;
 					bool thisvalid;
 
 					xin = offsetx[side] + i * stepx[side];
@@ -130,13 +132,16 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 					xout = ra2pixelf(ra, args);
 					yout = dec2pixelf(dec, args);
 					thisvalid = (yout > 0 && xout > 0 && yout < args->H && xout < args->W);
+					wrapped = ((lastra < 90 && ra > 270) || 
+							   (lastra > 270 && ra < 90));
 
-					if (thisvalid && !lastvalid && !first)
+					if (thisvalid && !lastvalid && !first && !wrapped)
 						cairo_move_to(cairo, lastx, lasty);
 					if (thisvalid)
 						cairo_line_to(cairo, xout, yout);
 					if (!thisvalid && lastvalid) {
-						cairo_line_to(cairo, xout, yout);
+						if (!wrapped)
+							cairo_line_to(cairo, xout, yout);
 						cairo_stroke(cairo);
 					}
 					/*
@@ -153,6 +158,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 					  cairo_stroke(cairo);
 					  }
 					*/
+					lastra = ra;
 					lastx = xout;
 					lasty = yout;
 					lastvalid = thisvalid;
