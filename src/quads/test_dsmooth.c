@@ -162,14 +162,15 @@ int main(void) {
 		for (i = 0; i < imW*imH; i++) {
 			err += fabs(image_out_old[i]-image_out_new[i]);
 		}
+		err = err / (imW*imH);
 		
-		fprintf(stderr, "test_dsmooth: error between smooths = %f\n", err);
+		fprintf(stderr, "test_dsmooth: error between smooths: %f per pixel\n", err);
 
-		fprintf(stderr, "test_dsmooth: writing old dsmoothed image to %s\n", outpath_old);
-		cairoutils_write_png(outpath_old, to_cairo_bw(image_out_old, imW, imH), imW, imH);
+		//		fprintf(stderr, "test_dsmooth: writing old dsmoothed image to %s\n", outpath_old);
+		//		cairoutils_write_png(outpath_old, to_cairo_bw(image_out_old, imW, imH), imW, imH);
 
-		fprintf(stderr, "test_dsmooth: writing new dsmoothed image to %s\n", outpath_new);
-		cairoutils_write_png(outpath_new, to_cairo_bw(image_out_new, imW, imH), imW, imH);
+		//		fprintf(stderr, "test_dsmooth: writing new dsmoothed image to %s\n", outpath_new);
+		//		cairoutils_write_png(outpath_new, to_cairo_bw(image_out_new, imW, imH), imW, imH);
 
 		free(namelist[n]);
 		free(image);
