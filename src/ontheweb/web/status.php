@@ -568,19 +568,11 @@ if ($didsolve) {
 	echo "<p>Your field on the sky (click for larger image):</p>\n";
 
 	$tileurl = $tiles_url . "?" .
-		"LAYERS=tycho,grid,boundary" .
-		"&FORMAT=image/png" .
+		"layers=tycho,grid,boundary" .
 		"&arcsinh" .
 		"&wcsfn=" . $myreldir . "/wcs.fits";
-	// "tag=test-tag&" .
 
-	$url = $tileurl .
-		"&gain=-0.5" .
-		"&BBOX=0,-85,360,85";
-
-	//$fldsz = $pixscale * max($fullW, $fullH);
 	$fldsz = $pixscale * sqrt($fullW * $fullH);
-	//loggit("Field size: " . $fldsz . "\n");
 	$zoomin = ($fldsz < (3600*18));
 	$zoomin2 = ($fldsz < (3600*1.8));
 	//$zoomin3 = ($fldsz < (3600*0.36));
@@ -589,88 +581,70 @@ if ($didsolve) {
 	if ($zoomin) {
 		echo "<p>(Your field is small so we have drawn a dashed box" .
 			" around your field and zoomed in on that region.)</p>\n";
-		$url .= "&dashbox=0.1";
 	}
 
-	echo "<a href=\"" . htmlentities($url .
-		"&WIDTH=1024&HEIGHT=1024&lw=5") .
-		"\">";
-	echo "<img src=\"" . htmlentities($url . 
-		"&WIDTH=300&HEIGHT=300&lw=3") .
-		"\" alt=\"An image of your field shown in an image of the whole sky.\" /></a>\n";
+	$smallstyle = "&w=300&h=300&lw=3";
+	$largestyle = "&w=1024&h=1024&lw=5";
 
+	$zooms = array();
+	array_push($zooms, array('gain'  => -0.5,
+							 'dashbox' => 0.1,
+							 'center' => FALSE,
+							 'alt' => "An image of your field shown in an image of the whole sky.",
+							 ));
+	if ($fldsz < 3600 * 18) {
+		array_push($zooms, array('gain'  => -0.25,
+								 'dashbox' => 0.01,
+								 'dm' => 0.05,
+								 'center' => TRUE,
+								 'alt' => "A zoomed-in image of your field on the sky.",
+								 ));
+	}
+	if ($fldsz < 3600 * 1.8) {
+		array_push($zooms, array('gain'  => 0.5,
+								 'dashbox' => 0.001,
+								 'dm' => 0.005,
+								 'center' => TRUE,
+								 'alt' => "A really zoomed-in image of your field on the sky.",
+								 ));
+	}
+	/*
+	if ($fldsz < 3600 * 0.36) {
+		array_push($zooms, array('gain'  => 1,
+								 'dm' => 0.0005;
+								 'center' => TRUE,
+								 'alt' => "A really-really zoomed-in image of your field on the sky.",
+								 ));
+	}
+	*/
 
-	if ($zoomin) {
-		//$rac_merc
-		$xmerc = ra2merc($rac_merc);
-		$ymerc = dec2merc($decc_merc);
-		$dm = 0.05;
-		$ymerc = max($dm, min(1-$dm, $ymerc));
-		$ralo = merc2ra($xmerc - $dm);
-		$rahi = merc2ra($xmerc + $dm);
-		$declo = merc2dec($ymerc - $dm);
-		$dechi = merc2dec($ymerc + $dm);
-
-		$url = $tileurl .
-			"&gain=-0.25" .
-			"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
-		if ($zoomin2) {
-			$url .= "&dashbox=0.01";
-		}
-
-		echo "<a href=\"" . htmlentities($url .
-										 "&WIDTH=1024&HEIGHT=1024&lw=5") .
-			"\">";
-		echo "<img src=\"" . htmlentities($url . 
-										  "&WIDTH=300&HEIGHT=300&lw=3") .
-			"\" alt=\"A zoomed-in image of your field on the sky.\" /></a>\n";
-
-		if ($zoomin2) {
-			$dm = 0.005;
+	for ($i=0; $i<count($zooms); $i++) {
+		$lastone = ($i == count($zooms)-1);
+		$vals = $zooms[$i];
+		$url = $tileurl . "&gain=" . $vals['gain'];
+		if ($vals['center']) {
+			$xmerc = ra2merc(360.0 - $rac_merc);
+			$ymerc = dec2merc($decc_merc);
+			$dm = $vals['dm'];
 			$ymerc = max($dm, min(1-$dm, $ymerc));
-			$ralo = merc2ra($xmerc - $dm);
-			$rahi = merc2ra($xmerc + $dm);
+			$rahi = merc2ra($xmerc - $dm);
+			$ralo = merc2ra($xmerc + $dm);
 			$declo = merc2dec($ymerc - $dm);
 			$dechi = merc2dec($ymerc + $dm);
-
-			$url = $tileurl .
-				"&gain=0.5" .
-				"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
-
-			echo "<a href=\"" . htmlentities($url .
-											 "&WIDTH=1024&HEIGHT=1024&lw=5") .
-				"\">";
-			echo "<img src=\"" . htmlentities($url . 
-											  "&WIDTH=300&HEIGHT=300&lw=3") .
-				"\" alt=\"A really zoomed-in image of your field on the sky.\" /></a>\n";
-
-			if ($zoomin3) {
-				$dm = 0.0005;
-				$ymerc = max($dm, min(1-$dm, $ymerc));
-				$ralo = merc2ra($xmerc - $dm);
-				$rahi = merc2ra($xmerc + $dm);
-				$declo = merc2dec($ymerc - $dm);
-				$dechi = merc2dec($ymerc + $dm);
-
-				$url = $tileurl .
-					"&gain=1" .
-					"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
-
-				echo "<a href=\"" . htmlentities($url .
-												 "&WIDTH=1024&HEIGHT=1024&lw=5") .
-					"\">";
-				echo "<img src=\"" . htmlentities($url . 
-												  "&WIDTH=300&HEIGHT=300&lw=3") .
-					"\" alt=\"A really-really zoomed-in image of your field on the sky.\" /></a>\n";
-			}
+			$url .= "&bb=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
+		} else {
+			$url .= "&bb=0,-85,360,85";
 		}
-
+		if (!$lastone) {
+			$url .= "&dashbox=" . $vals['dashbox'];
+		}
+		$alt = $vals['alt'];
+		echo "<a href=\"" . htmlentities($url . $largestyle) . "\">";
+		echo "<img src=\"" . htmlentities($url . $smallstyle) .
+			"\" alt=\"" . $alt . "\" /></a>\n";
 	}
-
 	echo "</div>\n";
 }
-
-//http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?&tag=test-tag&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=tycho,image,grid,rdls&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:4326&BBOX=-180,0,0,85.0511287798066&WIDTH=256&HEIGHT=256&reaspect=false
 
 if ($didsolve) {
 	$host  = $_SERVER['HTTP_HOST'];

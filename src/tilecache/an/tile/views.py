@@ -87,6 +87,13 @@ def query(request):
 			return HttpResponse('bad filename.')
 		cmdline += (" -i " + img + " -I " + wcs)
 
+	if ('boundary' in layers) and ('wcsfn' in request.GET):
+		wcs = request.GET['wcsfn']
+		if not (filenameRE.match(wcs)):
+			logging.debug("Bad WCS filename: \"" + wcs + "\".")
+			return HttpResponse('bad filename.')
+		cmdline += (" -I " + wcs)
+
 	if ('rdlsfn' in request.GET) and ('rdls' in layers):
 		rdlsfns = request.GET['rdlsfn'].split(',')
 		for rdls in rdlsfns:
@@ -96,7 +103,7 @@ def query(request):
 			cmdline += (' -r ' + rdls)
 
 	#logging.debug('1: cmdline ' + cmdline)
-	if ('images' in layers) or (('boundary' in layers) and not ('imagefn' in request.GET)):
+	if ('images' in layers) or (('boundary' in layers) and not ('wcsfn' in request.GET)):
 		# filelist: -S
 		# Compute list of files via DB query
 		# In the database, any image that spans the RA=0 line has its bounds

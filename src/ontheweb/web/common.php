@@ -7,8 +7,10 @@ require_once 'config.php';
 // Are we using a remote compute server?
 $remote = 1;
 
-$gmaps_url = "http://usno.astrometry.net/";
-$tiles_url = $gmaps_url . "tilecache/tilecache.php";
+//$gmaps_url = "http://usno.astrometry.net/";
+//$tiles_url = $gmaps_url . "tilecache/tilecache.php";
+$gmaps_url = "http://oven.cosmo.fas.nyu.edu/";
+$tiles_url = $gmaps_url . "tile/get/";
 $upload_progress = "/tmp/upt_%s.txt";
 
 // blind params
@@ -705,7 +707,7 @@ function download_url($url, $dest, $maxfilesize, &$errmsg, $id=FALSE) {
 
 // RA in degrees
 function ra2merc($ra) {
-	return $ra / 360.0;
+	return 1.0 - ($ra / 360.0);
 }
 // DEC in degrees
 function dec2merc($dec) {
@@ -713,7 +715,7 @@ function dec2merc($dec) {
 }
 // Returns RA in degrees.
 function merc2ra($mx) {
-	return $mx * 360.0;
+	return (1.0 - $mx) * 360.0;
 }
 // Returns DEC in degrees.
 function merc2dec($my) {
