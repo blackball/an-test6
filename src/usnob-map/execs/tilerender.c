@@ -34,7 +34,6 @@
 #include "cairoutils.h"
 #include "ioutils.h"
 
-#include "render_image.h"
 #include "render_tycho.h"
 #include "render_gridlines.h"
 #include "render_usnob.h"
@@ -59,7 +58,6 @@ const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:D:nS:J";
 
 /* All render layers must go in here */
 char* layernames[] = {
-	"image",
 	"tycho",
 	"grid",
 	"usnob",
@@ -76,7 +74,6 @@ char* layernames[] = {
 	"userimage"
 };
 render_func_t renderers[] = {
-	render_image,
 	render_tycho,
 	render_gridlines,
 	render_usnob,

@@ -71,13 +71,8 @@ load-db: load-db.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)
 image-pyramid: image-pyramid.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
 
-#.PHONY: remake-cairoutils
-#remake-cairoutils:
-#	$(MAKE) -C $(COMMON) cairoutils.o
-#tilerender: remake-cairoutils
-
-TILERENDER_OBJS := tilerender.o render_image.o \
-		render_tycho.o mercrender.o merctree.o \
+TILERENDER_OBJS := tilerender.o mercrender.o merctree.o merc.o \
+		render_tycho.o \
 		render_gridlines.o \
 		render_usnob.o \
 		render_rdls.o \
@@ -85,8 +80,7 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_constellation.o \
 		render_messier.o \
 		render_solid.o \
-		render_collection.o \
-		merc.o
+		render_collection.o
 
 MISC_OBJS := merctree.o pnmutils.o
 
