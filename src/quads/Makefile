@@ -195,6 +195,10 @@ test_simplexy: test_simplexy.o dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjec
 	$(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
 
+test_dsmooth: test_dsmooth.o dsmooth.o \
+	$(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
+
 ctmf.o: ctmf.c
 
 image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
