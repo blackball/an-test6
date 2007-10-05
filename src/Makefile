@@ -31,8 +31,7 @@ extra:
 
 # Targets that support the web service
 web:
-	$(MAKE) -C usnob-map/execs
-	$(MAKE) -C ontheweb/execs
+	$(MAKE) -C tilecache/render
 
 install:
 	mkdir -p $(INSTALL_DIR)/data
@@ -101,7 +100,7 @@ clean:
 	$(MAKE) -C gsl-an clean
 	$(MAKE) -C libkd clean
 	$(MAKE) -C quads clean
-	-$(MAKE) -C usnob-map/execs clean
+	-$(MAKE) -C tilecache/render clean
 
 TAGS:
 	etags -I `find . -name "*.c" -o -name "*.h"`
