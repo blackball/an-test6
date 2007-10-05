@@ -1,4 +1,7 @@
 # Django settings for an project.
+import an.gmaps_config as gmaps_config
+
+db
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -10,7 +13,7 @@ ADMINS = (
 MANAGERS = ADMINS
 
 DATABASE_ENGINE = 'sqlite3'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'ado_mssql'.
-DATABASE_NAME = '/data2/test-django/tile.db'             # Or path to database file if using sqlite3.
+DATABASE_NAME = gmaps_config.dbfile   # Or path to database file if using sqlite3.
 DATABASE_USER = ''             # Not used with sqlite3.
 DATABASE_PASSWORD = ''         # Not used with sqlite3.
 DATABASE_HOST = ''             # Set to empty string for localhost. Not used with sqlite3.
@@ -73,9 +76,5 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = (
-    #'django.contrib.auth',
-    #'django.contrib.contenttypes',
-    #'django.contrib.sessions',
-    #'django.contrib.sites',
 	'an.tile',
 )
