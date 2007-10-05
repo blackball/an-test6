@@ -48,10 +48,8 @@ LDFLAGS += $(CAIRO_LIB)
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
-USNOBMAP_EXECS := tilerender load-db image-pyramid usnobcount usnobtile \
-	sdssfieldtile \
-	indexquad sdssquad render-mercator make-merctree make-merctree2 rdlstile \
-	indextile indexquad2 tychotile
+USNOBMAP_EXECS := tilerender load-db image-pyramid render-mercator \
+	make-merctree 
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
 MISC_MAIN_OBJS := $(addsuffix .o,$(MISC_EXECS))
@@ -90,41 +88,11 @@ tilerender: $(TILERENDER_OBJS) \
 	$(MAKE) -C $(COMMON) cairoutils.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
 
-rdlstile: rdlstile.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
 render-mercator: render-mercator.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 make-merctree: make-merctree.o merctree.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
-
-make-merctree2: make-merctree2.o merctree.o merc.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
-	$(CC) -o $@ $^ $(LDFLAGS_DEF) -lm
-
-usnobcount: usnobcount.o 
-
-usnobtile: usnobtile.o merctree.o \
-		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-tychotile: tychotile.o merctree.o \
-		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-sdssfieldtile: sdssfieldtile.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-indextile: indextile.o \
-		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-indexquad: indexquad.o \
-		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-indexquad2: indexquad2.o \
-		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-sdssquad: sdssquad.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 zoomout: zoomout.o pnmutils.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_LIB)
@@ -139,13 +107,13 @@ whitebalance: whitebalance.o pnmutils.o
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS) $(MISC_MAIN_OBJS) \
+ALL_OBJS := $(USNOBMAP_MAIN_OBJS) $(MISC_MAIN_OBJS) \
 	$(TILERENDER_OBJS) $(MISC_OBJS)
 
 DEP_OBJ := $(ALL_OBJS)
 DEP_PREREQS := $(QFITS_LIB)
 
-CFLAGS += $(NETPBM_I)
+CFLAGS += $(NETPBM_INC)
 include $(COMMON)/makefile.deps
 
 allclean: clean
