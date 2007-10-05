@@ -42,7 +42,7 @@
 #include "render_constellation.h"
 #include "render_messier.h"
 #include "render_solid.h"
-#include "render_collection.h"
+#include "render_images.h"
 
 /**
   This program gets called by "tile.php" in response to a client requesting a map
@@ -86,8 +86,8 @@ render_func_t renderers[] = {
 	render_usnob,
 	render_solid,
 
-	render_collection,
-	render_collection,
+	render_images,
+	render_images,
 };
 
 static void

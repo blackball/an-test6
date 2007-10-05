@@ -58,7 +58,7 @@ struct render_args {
     // The current layer we're rendering.
     char* currentlayer;
 
-    // render_collection:
+    // render_images:
     char* filelist;
     bool density;
 

@@ -22,7 +22,7 @@
 
 #include "ioutils.h"
 #include "tilerender.h"
-#include "render_image.h"
+#include "render_images.h"
 #include "sip_qfits.h"
 #include "cairoutils.h"
 #include "keywords.h"
@@ -40,7 +40,7 @@ ATTRIB_FORMAT(printf,1,2)
 logmsg(char* format, ...) {
     va_list args;
     va_start(args, format);
-    fprintf(stderr, "render_collection: ");
+    fprintf(stderr, "render_images: ");
     vfprintf(stderr, format, args);
     va_end(args);
 }
@@ -123,7 +123,7 @@ static void add_ink(float* ink, float* counts, float* thisink, float* thiscounts
 
 const char* cachedomain = "apod";
 
-int render_collection(unsigned char* img, render_args_t* args) {
+int render_images(unsigned char* img, render_args_t* args) {
     int I;
     sl* imagefiles;
 	sl* wcsfiles = NULL;
