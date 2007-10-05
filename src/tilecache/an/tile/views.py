@@ -15,7 +15,13 @@ import sha
 import logging
 import commands
 
-logfile = "/home/gmaps/test/tilecache-django.log"
+import gmaps_config
+
+logfile        = gmaps_config.logfile
+tilerender     = gmaps_config.tilerender
+cachedir       = gmaps_config.cachedir
+rendercachedir = gmaps_config.rendercachedir
+tempdir        = gmaps_config.tempdir
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s',
@@ -24,10 +30,6 @@ logging.basicConfig(level=logging.DEBUG,
 
 def query(request):
 
-	tilerender = "/home/gmaps/test/usnob-map/execs/tilerender"
-	cachedir = "/data2/test-tilecache"
-	rendercachedir = "/data2/test-rendercache/"
-	tempdir = "/tmp"
 
 	logging.debug('starting')
 

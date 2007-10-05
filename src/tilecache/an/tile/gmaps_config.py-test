@@ -1,0 +1,5 @@
+logfile = "/home/gmaps/test/tilecache-django.log"
+tilerender = "/home/gmaps/test/usnob-map/execs/tilerender"
+cachedir = "/data2/test-tilecache"
+rendercachedir = "/data2/test-rendercache/"
+tempdir = "/tmp"
