@@ -70,7 +70,7 @@ char* layernames[] = {
 	"dirty",
 	"solid",
 
-	"apod",
+	"images",
 	"userimage"
 };
 render_func_t renderers[] = {

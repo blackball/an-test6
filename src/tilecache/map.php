@@ -76,14 +76,14 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onchang
 </form>
 
 <div id="toggles">
-	<a id="constellationToggleButton" href="#" onclick="toggleLineOverlay('constellation')"> Constellations</a> | 
-	<a id="gridToggleButton" href="#" onclick="toggleLineOverlay('grid')"> Grid</a> | 
-	<a id="messierToggleButton" href="#" onclick="toggleLineOverlay('messier')"> Messier objects</a> |
+<a id="constellationToggleButton" href="#" onclick="toggleLineOverlay('constellation')"> Constellations</a> | 
+<a id="gridToggleButton" href="#" onclick="toggleLineOverlay('grid')"> Grid</a> | 
+<a id="messierToggleButton" href="#" onclick="toggleLineOverlay('messier')"> Messier objects</a> |
 <span id="userImageToggleButtonHolder"></span>
-<a id="apodToggleButton" href="#" onclick="toggleApod()">Images </a> |
-    <a id="apodOutlineToggleButton" href="#" onclick="toggleApodOutline()"> Image outlines</a> |
-    <a id="tychoToggleButton" href="#" onclick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
-    <a id="usnobToggleButton" href="#" onclick="toggleOverlayRestack('usnob')"> USNO-B </a>
+<a id="imagesToggleButton" href="#" onclick="toggleImages()">Images </a> |
+<a id="imageOutlinesToggleButton" href="#" onclick="toggleImageOutlines()"> Image outlines</a> |
+<a id="tychoToggleButton" href="#" onclick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
+<a id="usnobToggleButton" href="#" onclick="toggleOverlayRestack('usnob')"> USNO-B </a>
 </div>
 
 <p />

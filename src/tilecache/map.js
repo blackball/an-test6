@@ -172,10 +172,10 @@ function linktohere() {
 		show.push("tycho");
 	if (usnobShowing)
 		show.push("usnob");
-	if (apodShowing)
-		show.push("apod");
-	if (apodOutlineShowing)
-		show.push("apodOutline");
+	if (imagesShowing)
+		show.push("images");
+	if (imageOutlinesShowing)
+		show.push("imageOutlines");
 	if (gridShowing)
 		show.push("grid");
 	if (messierShowing)
@@ -237,7 +237,7 @@ function buttonStyleCommon(button) {
 var lineOverlay;
 var tychoOverlay;
 var usnobOverlay;
-var apodOverlay;
+var imagesOverlay;
 var userImageOverlay;
 
 var gridShowing = 0;
@@ -245,8 +245,8 @@ var messierShowing = 0;
 var constellationShowing = 0;
 var tychoShowing = 0;
 var usnobShowing = 0;
-var apodShowing = 0;
-var apodOutlineShowing = 0;
+var imagesShowing = 0;
+var imageOutlinesShowing = 0;
 var userImageShowing = 0;
 var userOutlineShowing = 0;
 
@@ -259,17 +259,6 @@ function toggleButton(overlayName) {
 		eval(overlayName+"Showing = 1");
 		button.style.color = "white";
 	}
-}
-
-function toggleOverlayRestack(overlayName) {
-	toggleButton(overlayName);
-	restackOverlays();
-}
-
-function toggleLineOverlay(overlayName) {
-	toggleButton(overlayName);
-	updateLine();
-	restackOverlays();
 }
 
 function makeOverlay(layers, tag) {
@@ -294,7 +283,7 @@ var tychoArcsinh = 1; // must match HTML
 var usnobGain = 0; // must match HTML
 var usnobArcsinh = 1; // must match HTML
 
-var apodGain = 0; // must match HTML
+var imagesGain = 0; // must match HTML
 
 function restackOverlays() {
 	map.clearOverlays();
@@ -302,23 +291,34 @@ function restackOverlays() {
 		map.addOverlay(tychoOverlay);
 	if (usnobShowing)
 		map.addOverlay(usnobOverlay);
-	if (apodShowing || apodOutlineShowing)
-		map.addOverlay(apodOverlay);
+	if (imagesShowing || imageOutlinesShowing)
+		map.addOverlay(imagesOverlay);
 	if (userImageShowing || userOutlineShowing)
 		map.addOverlay(userImageOverlay);
 	if (gridShowing || messierShowing || constellationShowing)
 		map.addOverlay(lineOverlay);
 }
 
-function toggleApodOutline() {
-	toggleButton("apodOutline");
-	updateApod();
+function toggleOverlayRestack(overlayName) {
+	toggleButton(overlayName);
 	restackOverlays();
 }
 
-function toggleApod() {
-	toggleButton("apod");
-	updateApod();
+function toggleLineOverlay(overlayName) {
+	toggleButton(overlayName);
+	updateLine();
+	restackOverlays();
+}
+
+function toggleImageOutlines() {
+	toggleButton("imageOutlines");
+	updateImages();
+	restackOverlays();
+}
+
+function toggleImages() {
+	toggleButton("images");
+	updateImages();
 	restackOverlays();
 }
 
@@ -347,15 +347,15 @@ function updateLine() {
 	lineOverlay = makeOverlay(layerstr, tag);
 }
 
-function updateApod() {
-	var tag = "&tag=apod";
-	tag += "&gain=" + apodGain;
+function updateImages() {
+	var tag = "&tag=images";
+	tag += "&gain=" + imagesGain;
 	var lay = [];
-	if (apodShowing)
-		lay.push('apod');
-	if (apodOutlineShowing)
+	if (imagesShowing)
+		lay.push('images');
+	if (imageOutlinesShowing)
 		lay.push('boundary');
-	apodOverlay = makeOverlay(lay.join(","), tag);
+	imagesOverlay = makeOverlay(lay.join(","), tag);
 }
 
 function updateUserImage() {
@@ -402,8 +402,8 @@ function changeGain() {
 	updateTycho();
 	usnobGain = gain;
 	updateUsnob();
-	apodGain = gain;
-	updateApod();
+	imagesGain = gain;
+	updateImages();
 	restackOverlays();
 }
 
@@ -502,13 +502,13 @@ function startup() {
 		for (i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
 
-		var layers = [ 'tycho', 'usnob', 'apod', 'apodOutline', 'grid', 'constellation', 'messier', 'userImage', 'userOutline' ];
+		var layers = [ 'tycho', 'usnob', 'images', 'imageOutlines', 'grid', 'constellation', 'messier', 'userImage', 'userOutline' ];
 		for (i=0; i<layers.length; i++)
 			if (layers[i] in show)
 				toggleButton(layers[i]);
 	} else {
 		toggleButton('tycho');
-		toggleButton('apod');
+		toggleButton('images');
 		if ('userimage' in getdata) {
 			toggleButton('userImage');
 			toggleButton('userOutline');
@@ -516,7 +516,7 @@ function startup() {
 	}
 	updateLine();
 	updateUserImage();
-	updateApod();
+	updateImages();
 	restackOverlays();
 
 	// Connect up the event listeners...

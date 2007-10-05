@@ -87,7 +87,7 @@ def query(request):
 		cmdline += (" -i " + img + " -I " + wcs)
 
 	#logging.debug('1: cmdline ' + cmdline)
-	if ('apod' in layers) or (('boundary' in layers) and not ('imagefn' in request.GET)):
+	if ('images' in layers) or (('boundary' in layers) and not ('imagefn' in request.GET)):
 		# filelist: -S
 		# Compute list of files via DB query
 		# In the database, any image that spans the RA=0 line has its bounds
