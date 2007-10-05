@@ -1060,8 +1060,7 @@ function render_form($form, $headers) {
 	$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
 	$form->accept($renderer);
 
-	//if ($headers['simple']) {
-	if (!array_key_exists('advanced', $headers)) {
+	if ($webver && !array_key_exists('advanced', $headers)) {
 		$template = file_get_contents($index_template_simple);
 		$replace = array();
 		$flds = array('imgurl', 'submit', 'MAX_FILE_SIZE', 'skippreview');
