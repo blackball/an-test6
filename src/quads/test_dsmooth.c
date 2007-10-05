@@ -1,15 +1,5 @@
 /*
-   A test suite for simplexy.
-   Processes every jpeg or png in test_simplexy_images, and outputs
-   the verbose debugging data, as well as a list of the coordinates,
-   and annotated images into the same folder (each beginning with "out_").
-   Annotated images (those beginning with "out_") are not processed.
-
-   I recommend running this:
-   make test_simplexy ; test_simplexy > & test_simplexy_images/output.txt ; diff test_simplexy_images/ground.txt test_simplexy_images/output.txt
-
-   Diff returns the differences between the current run and the "ground truth"
-   stored in ground.txt.
+  A test suite for dsmooth, compares dsmooth with dsmooth2
 
    Jon Barron, 2007
    */
@@ -102,18 +92,21 @@ unsigned char* to_cairo_bw(float *image_bw, int imW, int imH) {
 
 int main(void) {
 	struct dirent **namelist;
-	int i, n, N, peak;
+	int i, n, N;
 	unsigned char *image = NULL;
 	float *image_bw_f;
 	unsigned char *image_bw_u8;
 	float *image_out_old;
 	float *image_out_new;
 	char fullpath[255];
-	char outpath[255];
+	char outpath_old[255];
+	char outpath_new[255];
 	int imW, imH;
 
 	float sigma;
-	int npeaks;
+	float err;
+
+	sigma = 1.0;
 
 	N = scandir("test_simplexy_images", &namelist, is_input_image, alphasort);
 	if (N < 0) {
@@ -126,12 +119,19 @@ int main(void) {
 		strcpy(fullpath, "test_simplexy_images/");
 		strcat(fullpath, namelist[n]->d_name);
 
-		strcpy(outpath, "test_simplexy_images/out_");
-		strcat(outpath, namelist[n]->d_name);
-		outpath[strlen(outpath)-4] = '\0';
-		strcat(outpath, ".png");
+		strcpy(outpath_old, "test_simplexy_images/out_");
+		strcat(outpath_old, namelist[n]->d_name);
+		outpath_old[strlen(outpath_old)-4] = '\0';
+		strcat(outpath_old, "_old");
+		strcat(outpath_old, ".png");
 
-		fprint("test_dsmooth: loading %s ", fullpath);
+		strcpy(outpath_new, "test_simplexy_images/out_");
+		strcat(outpath_new, namelist[n]->d_name);
+		outpath_new[strlen(outpath_new)-4] = '\0';
+		strcat(outpath_new, "_new");
+		strcat(outpath_new, ".png");
+
+		fprintf(stderr,"test_dsmooth: loading %s ", fullpath);
 
 		if (is_png(namelist[n])) {
 			fprintf(stderr, "as a PNG\n");
@@ -149,17 +149,27 @@ int main(void) {
 			image_bw_f[i] = (float)image_bw_u8[i];
 		}
 
-		fprint("test_simplexy: running %s through dsmooth\n", fullpath);
-		
 		image_out_old = malloc(sizeof(float)*imW*imH);
 		image_out_new = malloc(sizeof(float)*imW*imH);
-		
 
-		//dsmooth
+		fprintf(stderr,"test_dsmooth: running %s through dsmooth\n", fullpath);		
+		dsmooth(image_bw_f, imW, imH, sigma, image_out_old);
+
+		fprintf(stderr,"test_dsmooth: running %s through dsmooth2\n", fullpath);
+		dsmooth2(image_bw_f, imW, imH, sigma, image_out_new);
 		
+		err = 0.0;
+		for (i = 0; i < imW*imH; i++) {
+			err += fabs(image_out_old[i]-image_out_new[i]);
+		}
 		
-		
-//		cairoutils_write_png(outpath, image_out, imW, imH);
+		fprintf(stderr, "test_dsmooth: error between smooths = %f\n", err);
+
+		fprintf(stderr, "test_dsmooth: writing old dsmoothed image to %s\n", outpath_old);
+		cairoutils_write_png(outpath_old, to_cairo_bw(image_out_old, imW, imH), imW, imH);
+
+		fprintf(stderr, "test_dsmooth: writing new dsmoothed image to %s\n", outpath_new);
+		cairoutils_write_png(outpath_new, to_cairo_bw(image_out_new, imW, imH), imW, imH);
 
 		free(namelist[n]);
 		free(image);
