@@ -1,8 +1,6 @@
 # Django settings for an project.
 import an.gmaps_config as gmaps_config
 
-db
-
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
