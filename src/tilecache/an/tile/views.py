@@ -130,8 +130,7 @@ def query(request):
 
 	#logging.debug('2: cmdline ' + cmdline)
 
-	optflags = { 'outline': '-O',
-				 'jpeg'   : '-J',
+	optflags = { 'jpeg'   : '-J',
 				 'arcsinh': '-s',
 				 }
 	for opt,arg in optflags.iteritems():

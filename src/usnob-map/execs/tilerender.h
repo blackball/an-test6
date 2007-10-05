@@ -60,7 +60,6 @@ struct render_args {
 
     // render_collection:
     char* filelist;
-    bool outline;
     bool density;
 
 	// Args for render_image:

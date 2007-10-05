@@ -54,7 +54,7 @@
   The width and height in pixels are  -w <width> -h <height>
   */
 
-const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:OD:nS:J";
+const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:D:nS:J";
 
 
 /* All render layers must go in here */
@@ -154,9 +154,6 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'D':
 				args.cachedir = strdup(optarg);
-				break;
-			case 'O':
-				args.outline = TRUE;
 				break;
 			case 'V':
 				args.version = optarg;

@@ -29,7 +29,6 @@
 #include "md5.h"
 
 char* image_dir = "/home/gmaps/apod-solves";
-//char* image_dir = "/tmp/imgs";
 
 char* user_image_dirs[] = {
 	"/home/gmaps/ontheweb-data/",
@@ -132,7 +131,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
     float* ink;
     int i, j, w;
     double *ravals, *decvals;
-    bl* wcslist = NULL;
 	bool fullfilename = TRUE;
 
 	logmsg("starting.\n");
@@ -172,26 +170,12 @@ int render_collection(unsigned char* img, render_args_t* args) {
 			logmsg("Failed to find user image or WCS file.\n");
 			return -1;
 		}
-		/*
-		  } else {
-		  // Find images in the image directory.
-		  imagefiles = dir_get_contents(image_dir, NULL, TRUE, FALSE);
-		  if (!imagefiles) {
-		  logmsg("error getting image file list.\n");
-		  return -1;
-		  }
-		  logmsg("found %i files in image directory %s.\n", sl_size(imagefiles), image_dir);
-		*/
     }
 
     w = args->W;
 
     counts = calloc(args->W * args->H, sizeof(float));
     ink = calloc(3 * args->W * args->H, sizeof(float));
-
-    if (args->outline)
-        wcslist = bl_new(16, sizeof(sip_t));
-
     ravals  = malloc(args->W * sizeof(double));
     decvals = malloc(args->H * sizeof(double));
     for (i=0; i<w; i++)
@@ -497,12 +481,6 @@ int render_collection(unsigned char* img, render_args_t* args) {
             free(chunk);
         }
 
-        if (args->outline) {
-            wcs.wcstan.imagew = W;
-            wcs.wcstan.imageh = H;
-            bl_append(wcslist, &wcs);
-        }
-
 	nextimage:
 		free(wcsfn);
 		free(imgfn);
@@ -563,76 +541,5 @@ int render_collection(unsigned char* img, render_args_t* args) {
 
     free(counts);
     free(ink);
-
-    if (args->outline) {
-        cairo_t* cairo;
-        cairo_surface_t* target;
-        double lw = 2.0;
-        sip_t* wcs;
-        int j;
-
-        cairoutils_rgba_to_argb32(img, args->W, args->H);
-
-        target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, args->W, args->H, args->W*4);
-        cairo = cairo_create(target);
-        cairo_set_line_width(cairo, lw);
-        cairo_set_line_join(cairo, CAIRO_LINE_JOIN_ROUND);
-        cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
-        cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-
-        for (j=0; j<bl_size(wcslist); j++) {
-            int W, H;
-            wcs = bl_access(wcslist, j);
-            W = wcs->wcstan.imagew;
-            H = wcs->wcstan.imageh;
-            {
-                // bottom, right, top, left
-                int offsetx[] = { 0, W, W, 0 };
-                int offsety[] = { 0, 0, H, H };
-                int stepx[] = { 1, 0, -1, 0 };
-                int stepy[] = { 0, 1, 0, -1 };
-                int Nsteps[] = { W, H, W, H };
-                int side;
-                double lastx=0, lasty=0;
-                bool lastvalid = FALSE;
-
-                for (side=0; side<4; side++) {
-                    for (i=0; i<Nsteps[side]; i++) {
-                        int xin, yin;
-                        double xout, yout;
-                        double ra, dec;
-                        xin = offsetx[side] + i * stepx[side];
-                        yin = offsety[side] + i * stepy[side];
-                        sip_pixelxy2radec(wcs, xin, yin, &ra, &dec);
-                        xout = ra2pixelf(ra, args);
-                        if (xout < 0 || xout >= args->W) {
-                            lastvalid = FALSE;
-                            continue;
-                        }
-                        yout = dec2pixelf(dec, args);
-                        if (yout < 0 || yout >= args->H) {
-                            lastvalid = FALSE;
-                            continue;
-                        }
-                        if (lastvalid) {
-                            cairo_move_to(cairo, lastx, lasty);
-                            cairo_line_to(cairo, xout, yout);
-                            cairo_stroke(cairo);
-                        }
-                        lastx = xout;
-                        lasty = yout;
-                        lastvalid = TRUE;
-                    }
-                }
-            }
-        }
-
-        bl_free(wcslist);
-
-        cairoutils_argb32_to_rgba(img, args->W, args->H);
-        cairo_surface_destroy(target);
-        cairo_destroy(cairo);
-    }
-
 	return 0;
 }
