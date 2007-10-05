@@ -32,6 +32,7 @@ extra:
 # Targets that support the web service
 web:
 	$(MAKE) -C tilecache/render
+	$(MAKE) -C ontheweb/execs
 
 install:
 	mkdir -p $(INSTALL_DIR)/data
