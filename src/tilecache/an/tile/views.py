@@ -15,7 +15,7 @@ import sha
 import logging
 import commands
 
-import gmaps_config
+import an.gmaps_config as gmaps_config
 
 logfile        = gmaps_config.logfile
 tilerender     = gmaps_config.tilerender
