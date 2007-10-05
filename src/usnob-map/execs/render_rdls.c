@@ -12,7 +12,6 @@
 char* rdls_dirs[] = {
     "/home/gmaps/gmaps-rdls/",
     "/home/gmaps/ontheweb-data/",
-    "./"
 };
 
 static void logmsg(char* format, ...) {
@@ -32,6 +31,9 @@ int render_rdls(unsigned char* img, render_args_t* args)
 	cairo_t* cairo;
 	cairo_surface_t* target;
 
+	// draw black outline?
+	bool outline = TRUE;
+
 	target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 												 args->W, args->H, args->W*4);
 	cairo = cairo_create(target);
@@ -47,32 +49,39 @@ int render_rdls(unsigned char* img, render_args_t* args)
 		double lw = 2.0;
 		double rad = 3.0;
 		char style = 'o';
+		double r, g, b;
 
 		cairo_set_line_width(cairo, lw);
-		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+		r = g = b = 1.0;
 
 		for (j=0; color && j<strlen(color); j++) {
 			switch (color[j]) {
 			case 'r': // red
-				cairo_set_source_rgb(cairo, 1.0, 0.0, 0.0);
+				r = 1.0;
+				g = b = 0.0;
 				break;
 			case 'b': // blue
-				cairo_set_source_rgb(cairo, 0.0, 0.0, 1.0);
+				r = g = 0.0;
+				b = 1.0;
 				break;
 			case 'm': // magenta
-				cairo_set_source_rgb(cairo, 1.0, 0.0, 1.0);
+				r = b = 1.0;
+				g = 0.0;
 				break;
 			case 'y': // yellow
-				cairo_set_source_rgb(cairo, 1.0, 1.0, 0.0);
+				r = g = 1.0;
+				b = 0.0;
 				break;
 			case 'g': // green
-				cairo_set_source_rgb(cairo, 0.0, 1.0, 0.0);
+				r = b = 0.0;
+				g = 1.0;
 				break;
 			case 'c': // cyan
-				cairo_set_source_rgb(cairo, 0.0, 1.0, 1.0);
+				r = 0.0;
+				g = b = 1.0;
 				break;
 			case 'w': // white
-				cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+				r = g = b = 1.0;
 				break;
 
 			case 'p':
@@ -88,6 +97,8 @@ int render_rdls(unsigned char* img, render_args_t* args)
 				break;
 			}
 		}
+		cairo_set_source_rgb(cairo, r, g, b);
+
 		
 		/* Search in the rdls paths */
 		for (i=0; i<sizeof(rdls_dirs)/sizeof(char*); i++) {
@@ -103,6 +114,8 @@ int render_rdls(unsigned char* img, render_args_t* args)
 			return -1;
 		}
 
+		if (fieldnum < 1)
+			fieldnum = 1;
 		Nstars = rdlist_n_entries(rdls, fieldnum);
 		if (Nstars == -1) {
 			logmsg("Failed to read RDLS file. \"%s\"\n", rdlsfn);
@@ -136,7 +149,16 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 			switch (style) {
 			case 'o':
+				if (outline) {
+					cairo_set_line_width(cairo, lw + 2.0);
+					cairo_set_source_rgb(cairo, 0, 0, 0);
+					cairo_arc(cairo, px, py, rad, 0.0, 2.0*M_PI);
+					cairo_stroke(cairo);
+					cairo_set_line_width(cairo, lw);
+					cairo_set_source_rgb(cairo, r, g, b);
+				}
 				cairo_arc(cairo, px, py, rad, 0.0, 2.0*M_PI);
+
 				break;
 
 			case '+':

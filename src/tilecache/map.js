@@ -186,6 +186,8 @@ function linktohere() {
 		show.push('userImage');
 	if (userOutlineShowing)
 		show.push('userOutline');
+	if (userRdlsShowing)
+		show.push('userRdls');
 	url += "&show=" + show.join(",");
 
 	if ('userimage' in getdata) {
@@ -249,6 +251,7 @@ var imagesShowing = 0;
 var imageOutlinesShowing = 0;
 var userImageShowing = 0;
 var userOutlineShowing = 0;
+var userRdlsShowing = 0;
 
 function toggleButton(overlayName) {
 	button = document.getElementById(overlayName+"ToggleButton");
@@ -293,7 +296,7 @@ function restackOverlays() {
 		map.addOverlay(usnobOverlay);
 	if (imagesShowing || imageOutlinesShowing)
 		map.addOverlay(imagesOverlay);
-	if (userImageShowing || userOutlineShowing)
+	if (userImageShowing || userOutlineShowing || userRdlsShowing)
 		map.addOverlay(userImageOverlay);
 	if (gridShowing || messierShowing || constellationShowing)
 		map.addOverlay(lineOverlay);
@@ -324,6 +327,12 @@ function toggleImages() {
 
 function toggleUserOutline() {
 	toggleButton("userOutline");
+	updateUserImage();
+	restackOverlays();
+}
+
+function toggleUserRdls() {
+	toggleButton("userRdls");
 	updateUserImage();
 	restackOverlays();
 }
@@ -362,12 +371,15 @@ function updateUserImage() {
 	var jobid = getdata['userimage'];
 	var image = jobid + '/fullsize.png';
 	var wcs = jobid + '/wcs.fits';
-	var tag = "&imagefn=" + image + "&wcsfn=" + wcs;
+	var rdls = jobid + '/field.rd.fits';
+	var tag = "&imagefn=" + image + "&wcsfn=" + wcs + "&rdlsfn=" + rdls;
 	var lay = [];
 	if (userImageShowing)
 		lay.push('userimage');
 	if (userOutlineShowing)
 		lay.push('boundary');
+	if (userRdlsShowing)
+		lay.push('rdls');
 	userImageOverlay = makeOverlay(lay.join(","), tag);
 }
 
@@ -476,6 +488,16 @@ function startup() {
 		link2.appendChild(button2);
 		holder.appendChild(link2);
 		holder.appendChild(bar2);
+
+		var link3 = document.createElement("a");
+		link3.setAttribute('href', '#');
+		link3.setAttribute('onclick', 'toggleUserRdls()');
+		link3.setAttribute('id', 'userRdlsToggleButton');
+		var button3 = document.createTextNode("My Image Sources");
+		var bar3 = document.createTextNode(" | ");
+		link3.appendChild(button3);
+		holder.appendChild(link3);
+		holder.appendChild(bar3);
 	}
 
 	// Clear the set of map types.
@@ -502,7 +524,7 @@ function startup() {
 		for (i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
 
-		var layers = [ 'tycho', 'usnob', 'images', 'imageOutlines', 'grid', 'constellation', 'messier', 'userImage', 'userOutline' ];
+		var layers = [ 'tycho', 'usnob', 'images', 'imageOutlines', 'grid', 'constellation', 'messier', 'userImage', 'userOutline', 'userRdls' ];
 		for (i=0; i<layers.length; i++)
 			if (layers[i] in show)
 				toggleButton(layers[i]);

@@ -75,16 +75,25 @@ def query(request):
 		if layerexp.match(lay):
 			cmdline += (" -l " + lay)
 
+	# valid filenames regexp
+	filenameRE = re.compile(r'^[A-Za-z0-9\./_]+$')
+
 	#if ('userimage' in layers) and ('imagefn' in request.GET) and ('wcsfn' in request.GET):
 	if ('imagefn' in request.GET) and ('wcsfn' in request.GET):
-		filenameRE = re.compile(r'^[A-Za-z0-9\./_]+$')
 		img = request.GET['imagefn']
 		wcs = request.GET['wcsfn']
 		if not (filenameRE.match(img) and filenameRE.match(wcs)):
 			logging.debug("Bad image or WCS filename: \"" + img + "\", \"" + wcs + "\".")
 			return HttpResponse('bad filename.')
-		# HACK - shell-escape these filenames!!
 		cmdline += (" -i " + img + " -I " + wcs)
+
+	if ('rdlsfn' in request.GET) and ('rdls' in layers):
+		rdlsfns = request.GET['rdlsfn'].split(',')
+		for rdls in rdlsfns:
+			if not filenameRE.match(rdls):
+				logging.debug("Bad RDLS filename: \"" + rdls + "\".");
+				return HttpResponse('bad filename.')
+			cmdline += (' -r ' + rdls)
 
 	#logging.debug('1: cmdline ' + cmdline)
 	if ('images' in layers) or (('boundary' in layers) and not ('imagefn' in request.GET)):
@@ -130,6 +139,7 @@ def query(request):
 
 	#logging.debug('2: cmdline ' + cmdline)
 
+	# Options with no args:
 	optflags = { 'jpeg'   : '-J',
 				 'arcsinh': '-s',
 				 }
@@ -139,6 +149,7 @@ def query(request):
 
 	#logging.debug('2.5: cmdline ' + cmdline)
 
+	# Options with numeric args.
 	optnum = { 'dashbox' : '-B',
 			   'gain'    : '-g',
 			   }
@@ -149,6 +160,7 @@ def query(request):
 
 	#logging.debug('3: cmdline ' + cmdline)
 
+	# Options with choice args.
 	optchoice = { 'colormap' : {'arg':'-C', 'valid':['rb', 'i']},
 				  }
 
