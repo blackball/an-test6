@@ -450,6 +450,7 @@ td {border-width: 0;}
 #onsky > a:visited { color:white; }
 #onsky > a:hover { color:gray; }
 #onsky > a:active { color:yellow; }
+#gmapslink { margin-left:auto; margin-right:auto; text-align:center; }
 #sources { margin-left:auto; margin-right:auto; text-align:center; }
 #objs {margin-left:auto; margin-right:auto; width:100%; }
 #objs2 {width:40%; margin-left:auto; margin-right:auto; }
@@ -644,6 +645,17 @@ if ($didsolve) {
 			"\" alt=\"" . $alt . "\" /></a>\n";
 	}
 	echo "</div>\n";
+
+	echo "<div id=\"gmapslink\">\n";
+	echo "<a href=\"";
+	echo htmlentities($gmaps_url .
+					  "?zoom=" . $zoom . 
+					  "&ra=" . $rac_merc .
+					  "&dec=" . $decc_merc .
+					  "&userimage=" . $myreldir);
+	echo "\">View in Google Maps browser</a>\n";
+	echo "</div>\n";
+
 }
 
 if ($didsolve) {
@@ -653,8 +665,6 @@ if ($didsolve) {
 	echo "<p>Your field plus our index objects:\n";
 	echo "<br />Green circles: stars from the index, projected to image coordinates.\n";
 	echo "<br />Red circles: field objects.\n";
-	//echo "<br />Large red circles: field objects that were examined.\n";
-	//echo "<br />Small red circles: field objects that were not examined.\n";
 	$linktobig = ($jd['imageshrink'] > 1);
 	if ($linktobig) {
 		echo "<br />(click for full-size version)\n";
@@ -901,23 +911,12 @@ if ($job_done) {
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";
-		echo htmlentities($gmaps_url . 
+		echo htmlentities($gmaps_url .
 						  "?zoom=" . $zoom . 
 						  "&ra=" . $rac_merc .
 						  "&dec=" . $decc_merc .
-						  "&over=no" .
-						  "&rdls=" . $myreldir . "/field.rd.fits" .
-						  "&view=r+u&nr=200");
-		echo "\">USNOB</a>\n";
-		echo "<a href=\"";
-		echo htmlentities($gmaps_url .
-						  "?gain=" . (($zoom <= 6) ? "-2" : "0") .
-						  "&zoom=" . $zoom .
-						  "&ra=" . $rac_merc . "&dec=" . $decc_merc .
-						  "&over=no" .
-						  "&rdls=" . $myreldir . "/field.rd.fits" .
-						  "&view=r+t&nr=200&arcsinh");
-		echo "\">Tycho-2</a>\n";
+						  "&userimage=" . $myreldir);
+		echo "\">Google Maps</a>\n";
 		echo "</td></tr>\n";
 	}
 }
