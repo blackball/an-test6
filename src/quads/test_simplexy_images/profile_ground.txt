@@ -1,0 +1,50 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  Ts/call  Ts/call  name    
+ 33.82     38.98    38.98                             dfind2
+ 27.56     70.75    31.77                             dsmooth
+ 13.88     86.75    16.00                             dmedsmooth
+ 10.35     98.68    11.93                             RadixSort11
+  4.21    103.53     4.85                             dpeaks
+  1.74    105.54     2.01                             dobjects
+  1.45    107.21     1.67                             to_bw_u8
+  1.28    108.68     1.47                             cairoutils_read_jpeg_stream
+  1.14    110.00     1.31                             dallpeaks
+  0.85    110.97     0.97                             objects_compare
+  0.78    111.86     0.90                             IFloatFlip
+  0.76    112.74     0.88                             FloatFlipX
+  0.71    113.56     0.82                             FloatFlip
+  0.58    114.23     0.67                             main
+  0.56    114.87     0.64                             simplexy_u8
+  0.30    115.22     0.35                             qsort_r
+  0.03    115.26     0.04                             swapfunc
+  0.01    115.27     0.01                             dsigma
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this 
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
