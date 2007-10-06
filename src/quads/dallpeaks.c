@@ -146,7 +146,7 @@ int dallpeaks(float *image,
 			/* find peaks in cutout */
 			/* note that despite oimage and simage being sizeof(image), they
 			 * are only used as big buffers; only a portion of each are used */
-			dsmooth(oimage, onx, ony, dpsf, simage);
+			dsmooth2(oimage, onx, ony, dpsf, simage);
 			dpeaks(simage, onx, ony, &nc, xc, yc,
 			       sigma, dlim, saddle, maxper, 0, 1, minpeak);
 			imore = 0;

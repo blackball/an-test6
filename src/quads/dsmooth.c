@@ -25,13 +25,14 @@
 #include "simplexy-common.h"
 
 /*
- * dmsmooth.c
+ * dsmooth.c
  *
  * Smooth an image
  *
  * Mike Blanton
  * 1/2006 */
 
+// Optimize version of dsmooth, with a separated Gaussian convolution.
 int dsmooth2(float *image,
             int nx,
             int ny,
@@ -112,6 +113,7 @@ int dsmooth2(float *image,
 } /* end photfrac */
 
 
+// Original version of dsmooth, non-separated kernel.
 int dsmooth(float *image,
             int nx,
             int ny,

@@ -46,7 +46,7 @@ int dobjects(float *image,
 	int* mask;
 
 	/* smooth by the point spread function  */
-	dsmooth(image, nx, ny, dpsf, smooth);
+	dsmooth2(image, nx, ny, dpsf, smooth);
 
 	/* check how much noise is left after running a median filter and a point
 	 * spread smooth */

@@ -54,6 +54,7 @@ int dpeaks_compare(void* data_ptr, const void *first, const void *second)
 }
 
 int dsmooth(float *image, int nx, int ny, float sigma, float *smooth);
+int dsmooth2(float *image, int nx, int ny, float sigma, float *smooth);
 
 int dfind(int *image, int nx, int ny, int *object);
 
@@ -87,7 +88,7 @@ int dpeaks(float *image,
 	/* 1. smooth image */
 	smooth = (float *) malloc(sizeof(float) * nx * ny);
 	if (smoothimage) {
-		dsmooth(image, nx, ny, 1, smooth);
+		dsmooth2(image, nx, ny, 1, smooth);
 	} else {
 		for (j = 0;j < ny;j++)
 			for (i = 0;i < nx;i++)
