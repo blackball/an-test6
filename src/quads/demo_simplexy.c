@@ -6,7 +6,7 @@
    Annotated images (those beginning with "out_") are not processed.
 
    I recommend running this:
-   make test_simplexy ; test_simplexy > & test_simplexy_images/output.txt ; diff test_simplexy_images/ground.txt test_simplexy_images/output.txt
+   make demo_simplexy ; demo_simplexy > & demo_simplexy_images/output.txt ; diff demo_simplexy_images/ground.txt demo_simplexy_images/output.txt
 
    Diff returns the differences between the current run and the "ground truth"
    stored in ground.txt.
@@ -130,7 +130,7 @@ int main(void) {
 	halfbox = 100;
 	maxnpeaks = 10000;
 
-	N = scandir("test_simplexy_images", &namelist, is_input_image, alphasort);
+	N = scandir("demo_simplexy_images", &namelist, is_input_image, alphasort);
 	if (N < 0) {
 		perror("scandir");
 		return 1;
@@ -138,15 +138,15 @@ int main(void) {
 
 	for (n = 0; n < N; n++) {
 
-		strcpy(fullpath, "test_simplexy_images/");
+		strcpy(fullpath, "demo_simplexy_images/");
 		strcat(fullpath, namelist[n]->d_name);
 
-		strcpy(outpath, "test_simplexy_images/out_");
+		strcpy(outpath, "demo_simplexy_images/out_");
 		strcat(outpath, namelist[n]->d_name);
 		outpath[strlen(outpath)-4] = '\0';
 		strcat(outpath, ".png");
 
-		fprintf(stderr, "test_simplexy: loading %s ", fullpath);
+		fprintf(stderr, "demo_simplexy: loading %s ", fullpath);
 
 		if (is_png(namelist[n])) {
 			fprintf(stderr, "as a PNG\n");
@@ -169,7 +169,7 @@ int main(void) {
 		y = malloc(maxnpeaks * sizeof(float));
 		flux = malloc(maxnpeaks * sizeof(float));
 
-		fprintf(stderr, "test_simplexy: running %s\n", fullpath);
+		fprintf(stderr, "demo_simplexy: running %s\n", fullpath);
 
 		simplexy_u8(image_bw_u8, imW, imH, dpsf, plim, dlim, saddle, maxper,
 		            maxnpeaks, maxsize, halfbox, &sigma, x, y, flux, &npeaks, 1);

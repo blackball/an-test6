@@ -108,7 +108,7 @@ int main(void) {
 
 	sigma = 1.0;
 
-	N = scandir("test_simplexy_images", &namelist, is_input_image, alphasort);
+	N = scandir("demo_simplexy_images", &namelist, is_input_image, alphasort);
 	if (N < 0) {
 		perror("scandir");
 		return 1;
@@ -116,22 +116,22 @@ int main(void) {
 
 	for (n = 0; n < N; n++) {
 
-		strcpy(fullpath, "test_simplexy_images/");
+		strcpy(fullpath, "demo_simplexy_images/");
 		strcat(fullpath, namelist[n]->d_name);
 
-		strcpy(outpath_old, "test_simplexy_images/out_");
+		strcpy(outpath_old, "demo_simplexy_images/out_");
 		strcat(outpath_old, namelist[n]->d_name);
 		outpath_old[strlen(outpath_old)-4] = '\0';
 		strcat(outpath_old, "_old");
 		strcat(outpath_old, ".png");
 
-		strcpy(outpath_new, "test_simplexy_images/out_");
+		strcpy(outpath_new, "demo_simplexy_images/out_");
 		strcat(outpath_new, namelist[n]->d_name);
 		outpath_new[strlen(outpath_new)-4] = '\0';
 		strcat(outpath_new, "_new");
 		strcat(outpath_new, ".png");
 
-		fprintf(stderr,"test_dsmooth: loading %s ", fullpath);
+		fprintf(stderr,"demo_dsmooth: loading %s ", fullpath);
 
 		if (is_png(namelist[n])) {
 			fprintf(stderr, "as a PNG\n");
@@ -152,10 +152,10 @@ int main(void) {
 		image_out_old = malloc(sizeof(float)*imW*imH);
 		image_out_new = malloc(sizeof(float)*imW*imH);
 
-		fprintf(stderr,"test_dsmooth: running %s through dsmooth\n", fullpath);		
+		fprintf(stderr,"demo_dsmooth: running %s through dsmooth\n", fullpath);		
 		dsmooth(image_bw_f, imW, imH, sigma, image_out_old);
 
-		fprintf(stderr,"test_dsmooth: running %s through dsmooth2\n", fullpath);
+		fprintf(stderr,"demo_dsmooth: running %s through dsmooth2\n", fullpath);
 		dsmooth2(image_bw_f, imW, imH, sigma, image_out_new);
 		
 		err = 0.0;
@@ -164,12 +164,12 @@ int main(void) {
 		}
 		err = err / (imW*imH);
 		
-		fprintf(stderr, "test_dsmooth: error between smooths: %f per pixel\n", err);
+		fprintf(stderr, "demo_dsmooth: error between smooths: %f per pixel\n", err);
 
-		//		fprintf(stderr, "test_dsmooth: writing old dsmoothed image to %s\n", outpath_old);
+		//		fprintf(stderr, "demo_dsmooth: writing old dsmoothed image to %s\n", outpath_old);
 		//		cairoutils_write_png(outpath_old, to_cairo_bw(image_out_old, imW, imH), imW, imH);
 
-		//		fprintf(stderr, "test_dsmooth: writing new dsmoothed image to %s\n", outpath_new);
+		//		fprintf(stderr, "demo_dsmooth: writing new dsmoothed image to %s\n", outpath_new);
 		//		cairoutils_write_png(outpath_new, to_cairo_bw(image_out_new, imW, imH), imW, imH);
 
 		free(namelist[n]);
