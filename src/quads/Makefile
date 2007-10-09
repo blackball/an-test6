@@ -164,9 +164,11 @@ solver_test.o: solver.c
 # KEIR'S SUPER SIMPLE TESTING FRAMEWORK
 # 1. Add your file's test_blah.c and corresponding files needed to compile it
 #    to the all tests executable 'test' by editing the three variables below:
-ALL_TEST_FILES_C := test_dfind.c test_bl.c test_ctmf.c
-ALL_TEST_FILES_O := test_dfind.o test_bl.o test_ctmf.o
+ALL_TEST_FILES_C := test_dfind.c test_bl.c test_ctmf.c test_simplexy.c
+ALL_TEST_FILES_O := test_dfind.o test_bl.o test_ctmf.o test_simplexy.o
 TESTED_FILES := dfind.o ctmf.o
+TESTED_FILES += dallpeaks.o dcen3x3.o dmedsmooth.o dobjects.o dpeaks.o \
+	dselip.o dsigma.o dsmooth.o simplexy.o radix.o qsort_reentrant.o
 
 # 2. Add your individual test case like the ones below
 test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
@@ -180,6 +182,10 @@ test_bl-main.c: make-tests.sh test_bl.c
 test_ctmf: cutest.o ctmf.o test_ctmf-main.o test_ctmf.o
 test_ctmf-main.c: make-tests.sh test_dfind.c
 	bash make-tests.sh test_ctmf.c > test_ctmf-main.c
+
+test_simplexy: cutest.o test_simplexy-main.o test_simplexy.o simplexy.o
+test_simplexy-main.c: make-tests.sh test_simplexy.c
+	bash make-tests.sh test_simplexy.c > test_simplexy-main.c
 
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
