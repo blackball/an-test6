@@ -28,6 +28,7 @@
 #include "keywords.h"
 #include "md5.h"
 
+static void
 ATTRIB_FORMAT(printf,1,2)
 logmsg(char* format, ...) {
     va_list args;
