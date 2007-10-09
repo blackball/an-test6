@@ -290,14 +290,24 @@ function isodate_to_timestamp($datestr) {
 	if (!$d) {
 		return 0;
 	}
+	$dt = 0;
 	if ($d['unparsed'] == 'Z') {
 	} else if ($d['unparsed'] == '+0000') {
 	} else {
-		// FIXME
-		loggit("isodate_to_timestamp: unparsed part is " . $d['unparsed'] . "\n");
+		$tz = $d['unparsed'];
+		$n = sscanf($tz, "-%02d:%02d", &$hr, &$min);
+		if ($n == 2) {
+			loggit("Timezone offset \"" . $tz . "\" -> " + $hr + ":" + $min . "\n");
+			$dt = (($hr < 0) ? -1 : 1) * ((abs($hr) * 60.0 + $min) * 60);
+			loggit("dt = " . $dt . "\n");
+		} else {
+			// FIXME
+			loggit("isodate_to_timestamp: unparsed part is " . $d['unparsed'] . "\n");
+		}
 	}
 	$t = mktime($d['tm_hour'], $d['tm_min'], $d['tm_sec'], $d['tm_mon']+1,
 				$d['tm_mday'], $d['tm_year'] + 1900);
+	$t += $dt;
 	return $t;
 }
 
