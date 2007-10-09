@@ -25,6 +25,7 @@
 #include <sys/param.h>
 
 #include "sip.h"
+#include "sip-utils.h"
 #include "sip_qfits.h"
 #include "starutil.h"
 #include "mathutil.h"
@@ -56,6 +57,7 @@ int main(int argc, char** args) {
     char* units;
     double pixscale;
     double fldw, fldh;
+    double ramin, ramax, decmin, decmax;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -147,6 +149,12 @@ int main(int argc, char** args) {
     printf("fieldw %.4g\n", fldw);
     printf("fieldh %.4g\n", fldh);
     printf("fieldunits %s\n", units);
+
+    get_radec_bounds(&wcs, 10, &ramin, &ramax, &decmin, &decmax);
+    printf("decmin %g\n", decmin);
+    printf("decmax %g\n", decmax);
+    printf("ramin %g\n", ramin);
+    printf("ramax %g\n", ramax);
 
 	qfits_header_destroy(wcshead);
 

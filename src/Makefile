@@ -21,7 +21,6 @@ INSTALL_DIR ?= /usr/local/astrometry
 export INSTALL_DIR
 
 all:
-	$(MAKE) -C an-common
 	$(MAKE) -C quads
 
 # Targets that require extra libraries

@@ -21,13 +21,13 @@
 #include <sys/param.h>
 
 #include "ioutils.h"
+#include "sip-utils.h"
 #include "tilerender.h"
 #include "sip_qfits.h"
 #include "cairoutils.h"
 #include "keywords.h"
 #include "md5.h"
 
-static void
 ATTRIB_FORMAT(printf,1,2)
 logmsg(char* format, ...) {
     va_list args;
@@ -35,87 +35,6 @@ logmsg(char* format, ...) {
     fprintf(stderr, "load-db: ");
     vfprintf(stderr, format, args);
     va_end(args);
-}
-
-static double fmod_pos(double a, double b) {
-    double fm = fmod(a, b);
-    if (fm < 0.0)
-        fm += b;
-    return fm;
-}
-
-static double shift(double ra) {
-    return fmod_pos(ra + 180.0, 360.0);
-}
-
-static double unshift(double ra) {
-    return fmod_pos(ra - 180.0, 360.0);
-}
-
-static void get_radec_bounds(sip_t* wcs, int W, int H,
-                             double* pramin, double* pramax,
-                             double* pdecmin, double* pdecmax) {
-    double ramin, ramax, decmin, decmax;
-    int i, side;
-    int STEP = 10;
-    // Walk the perimeter of the image in steps of STEP pixels
-    // to find the RA,Dec min/max.
-    int offsetx[] = { STEP, W, W, 0 };
-    int offsety[] = { 0, 0, H, H };
-    int stepx[] = { +STEP, 0, -STEP, 0 };
-    int stepy[] = { 0, +STEP, 0, -STEP };
-    int Nsteps[] = { (W/STEP)-1, H/STEP, W/STEP, H/STEP };
-    double lastra, lastdec;
-    bool wrap = FALSE;
-
-    sip_pixelxy2radec(wcs, 0, 0, &lastra, &lastdec);
-    ramin = ramax = lastra;
-    decmin = decmax = lastdec;
-
-    /*
-     We handle RA wrap-around in a hackish way here: if we detect wrap-around,
-     we just shift the RA values by 180 degrees so that MIN() and MAX() still
-     work, then shift the resulting min and max values back by 180 at the end.
-     */
-
-    for (side=0; side<4; side++) {
-        for (i=0; i<Nsteps[side]; i++) {
-            double ra, dec;
-            int x, y;
-            x = offsetx[side] + i * stepx[side];
-            y = offsety[side] + i * stepy[side];
-            sip_pixelxy2radec(wcs, x, y, &ra, &dec);
-
-            decmin = MIN(decmin, dec);
-            decmax = MAX(decmax, dec);
-
-            // Did we just walk over the RA wrap-around line?
-            if (!wrap &&
-                (((lastra < 90) && (ra > 270)) ||
-                 ((lastra > 270) && (ra < 90)))) {
-                wrap = TRUE;
-                ramin = shift(ramin);
-                ramax = shift(ramax);
-            }
-            if (wrap)
-                ra = shift(ra);
-
-            ramin = MIN(ramin, ra);
-            ramax = MAX(ramax, ra);
-
-            lastra = ra;
-        }
-    }
-    if (wrap) {
-        ramin = unshift(ramin);
-        ramax = unshift(ramax);
-        if (ramin > ramax)
-            ramax += 360.0;
-    }
-    if (pramin) *pramin = ramin;
-    if (pramax) *pramax = ramax;
-    if (pdecmin) *pdecmin = decmin;
-    if (pdecmax) *pdecmax = decmax;
 }
 
 const char* OPTIONS = "";
@@ -201,7 +120,8 @@ int main(int argc, char** args) {
         H = (int)wcs.wcstan.imageh;
 
         // find the bounds in RA,Dec of this image.
-        get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
+        // magic 10 = step size in pixels for walking the image boundary.
+        get_radec_bounds(&wcs, 10, &ramin, &ramax, &decmin, &decmax);
 
         logmsg("Reading WCS file %s.\n", wcsfn);
         logmsg("Image file is    %s.\n", imgfn);

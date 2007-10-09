@@ -21,6 +21,7 @@
 #include <sys/param.h>
 
 #include "ioutils.h"
+#include "sip-utils.h"
 #include "tilerender.h"
 #include "render_images.h"
 #include "sip_qfits.h"
@@ -60,54 +61,6 @@ static void heatmap(float inpix, unsigned char* outpix) {
 		outpix[1] = 255;
 		outpix[2] = (inpix - 192.0) * 255.0 / 63.0;
 	}
-}
-
-static void get_radec_bounds(sip_t* wcs, int W, int H,
-                             double* pramin, double* pramax,
-                             double* pdecmin, double* pdecmax) {
-    double ramin, ramax, decmin, decmax;
-    int i, side;
-    int STEP = 10;
-    // Walk the perimeter of the image in steps of STEP pixels
-    // to find the RA,Dec min/max.
-    int offsetx[] = { STEP, W, W, 0 };
-    int offsety[] = { 0, 0, H, H };
-    int stepx[] = { +STEP, 0, -STEP, 0 };
-    int stepy[] = { 0, +STEP, 0, -STEP };
-    int Nsteps[] = { (W/STEP)-1, H/STEP, W/STEP, H/STEP };
-    double lastra;
-
-    sip_pixelxy2radec(wcs, 0, 0, &lastra, &decmin);
-    ramin = ramax = lastra;
-    decmax = decmin;
-
-    for (side=0; side<4; side++) {
-        for (i=0; i<Nsteps[side]; i++) {
-            double ra, dec;
-            int x, y;
-            x = offsetx[side] + i * stepx[side];
-            y = offsety[side] + i * stepy[side];
-            sip_pixelxy2radec(wcs, x, y, &ra, &dec);
-
-            decmin = MIN(decmin, dec);
-            decmax = MAX(decmax, dec);
-
-            // Did we just walk over the RA wrap-around line?
-            if ((lastra < 90 && ra > 270) ||
-                (lastra > 270 && ra < 90)) {
-                ramin = 0.0;
-                ramax = 360.0;
-            } else {
-                ramin = MIN(ramin, ra);
-                ramax = MAX(ramax, ra);
-            }
-            lastra = ra;
-        }
-    }
-    if (pramin) *pramin = ramin;
-    if (pramax) *pramax = ramax;
-    if (pdecmin) *pdecmin = decmin;
-    if (pdecmax) *pdecmax = decmax;
 }
 
 static void add_ink(float* ink, float* counts, float* thisink, float* thiscounts,
@@ -279,7 +232,8 @@ int render_images(unsigned char* img, render_args_t* args) {
 		// logmsg("WCS image W,H = (%i, %i)\n", W, H);
 
         // find the bounds in RA,Dec of this image.
-        get_radec_bounds(&wcs, W, H, &ramin, &ramax, &decmin, &decmax);
+        // magic 10 = step size in pixels for walking the image boundary.
+        get_radec_bounds(&wcs, 10, &ramin, &ramax, &decmin, &decmax);
 
 		logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
 			   ramin, ramax, decmin, decmax);
