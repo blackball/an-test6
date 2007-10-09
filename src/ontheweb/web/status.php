@@ -1158,7 +1158,11 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 			if (!$shrink)
 				$shrink = 1;
 			// Backwards compatibility:
-			die("Please email dstn@cs.toronto.edu if you see this message (1).");
+            if (!$W || !$H) {
+                //$W = $jd['xylsW'];
+                //$H = $jd['xylsH'];
+                die("Please email dstn@cs.toronto.edu if you see this message (1).");
+            }
 		}
 		break;
 	case 'img':
