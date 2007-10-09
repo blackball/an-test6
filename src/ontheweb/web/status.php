@@ -553,9 +553,14 @@ if ($didsolve) {
         $units = "arcminutes";
     }
 
-	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
-    echo "<h3 class=\"c\">Your field is " . ($exact ? "" : "about ");
+	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees"; //.\n";
+    //</h3>\n";
+    //echo "<h3 class=\"c\">
+    echo "<br />\n";
+    //echo "Your field 
+    echo "and spans " . ($exact ? "" : "about ");
     printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
+    echo ".</h3>\n";
 	echo "<hr />\n";
 
 	$listfile = $mydir . $const_list_fn;
