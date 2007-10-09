@@ -35,6 +35,20 @@
 
 #include "ioutils.h"
 
+#ifdef __APPLE__
+static void canonicalize_file_name(char* fn) {
+    char* path = malloc(1024);
+    char* canon;
+    canon = realpath(fn, path);
+    if (!canon) {
+        free(path);
+        return NULL;
+    }
+    path = realloc(path, strlen(path) + 1);
+    return path;
+}
+#endif
+
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
 void asprintf_safe(char** strp, const char* format, ...) {

@@ -19,7 +19,9 @@ We define _GNU_SOURCE in the Makefile, which yields some GNU-specific extensions
 
 -asprintf(), vasprintf() are GNU extensions.
 
--canonicalize_file_name() is a GNU extension.
+-canonicalize_file_name() is a GNU extension.  We have provided a stupid stub
+ implementation in an-common/ioutils.c; you may need to modify the preprocessor
+ code to enable it.
 
 -basename(): although _GNU_SOURCE defines some different behaviour, we do not depend
   on this.  (solve-field.c)
