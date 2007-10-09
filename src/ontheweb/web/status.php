@@ -95,13 +95,13 @@ if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 }
 
 // The size of the full-sized original image.
-$fullW = $jd["imageW"];
-$fullH = $jd["imageH"];
+$fullW = $jd['imageW'];
+$fullH = $jd['imageH'];
 $exact = TRUE;
 if (!($fullW && $fullH)) {
 	$exact = FALSE;
-	$fullW = $jd["xylsW"];
-	$fullH = $jd["xylsH"];
+	$fullW = $jd['xylsW'];
+	$fullH = $jd['xylsH'];
 	if (!($fullW && $fullH)) {
 		loggit("Couldn't get xylsW/H.\n");
 	}
@@ -270,35 +270,35 @@ if ($didsolve) {
 			//loggit("words: 0=" . $words[0] . ", 0=" . $words[1] . "\n");
 			$wcsvals[$words[0]] = $words[1];
 		}
-		$cd11 = (float)$wcsvals["cd11"];		
-		$cd12 = (float)$wcsvals["cd12"];		
-		$cd21 = (float)$wcsvals["cd21"];		
-		$cd22 = (float)$wcsvals["cd22"];		
-		$det =  (float)$wcsvals["det"];
-		$parity = (int)$wcsvals["parity"];
-		$orient = (float)$wcsvals["orientation"];
-		$pixscale = (float)$wcsvals["pixscale"];
+		$cd11 = (float)$wcsvals['cd11'];
+		$cd12 = (float)$wcsvals['cd12'];
+		$cd21 = (float)$wcsvals['cd21'];
+		$cd22 = (float)$wcsvals['cd22'];
+		$det =  (float)$wcsvals['det'];
+		$parity = (int)$wcsvals['parity'];
+		$orient = (float)$wcsvals['orientation'];
+		$pixscale = (float)$wcsvals['pixscale'];
 
-		$setjd = array("cd11" => $cd11,
-					   "cd12" => $cd12,
-					   "cd21" => $cd21,
-					   "cd22" => $cd22,
-					   "det" => $det,
-					   "trueparity" => $parity,
-					   "orientation" => $orient,
-					   "pixscale" => $pixscale);
+		$setjd = array('cd11' => $cd11,
+					   'cd12' => $cd12,
+					   'cd21' => $cd21,
+					   'cd22' => $cd22,
+					   'det' => $det,
+					   'trueparity' => $parity,
+					   'orientation' => $orient,
+					   'pixscale' => $pixscale);
 		if (!setjobdata($db, $setjd)) {
 			fail("Failed to set WCS-related jobdata entries.");
 		}
 	} else {
-		$cd11 = (float)$jd["cd11"];		
-		$cd12 = (float)$jd["cd12"];		
-		$cd21 = (float)$jd["cd21"];		
-		$cd22 = (float)$jd["cd22"];		
-		$det =  (float)$jd["det"];
-		$parity = (int)$jd["trueparity"];
-		$orient = (float)$jd["orientation"];
-		$pixscale = (float)$jd["pixscale"];
+		$cd11 = (float)$jd['cd11'];		
+		$cd12 = (float)$jd['cd12'];		
+		$cd21 = (float)$jd['cd21'];		
+		$cd22 = (float)$jd['cd22'];		
+		$det =  (float)$jd['det'];
+		$parity = (int)$jd['trueparity'];
+		$orient = (float)$jd['orientation'];
+		$pixscale = (float)$jd['pixscale'];
 	}
 }
 
@@ -538,13 +538,28 @@ Astrometry.net: Job Status
 
 <?php
 if ($didsolve) {
+
+	$fldsz = $pixscale * sqrt($fullW * $fullH);
+    $fldw = $pixscale * $fullW;
+    $fldh = $pixscale * $fullH;
+    $units = "arcseconds";
+    if (min($fldw, $fldh) > 3600.0) {
+        $fldw /= 3600.0;
+        $fldh /= 3600.0;
+        $units = "degrees";
+    } else if (min($fldw, $fldh) > 60.0) {
+        $fldw /= 60.0;
+        $fldh /= 60.0;
+        $units = "arcminutes";
+    }
+
 	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
+    echo "<h3 class=\"c\">Your field is " . ($exact ? "" : "about ");
+    printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
 	echo "<hr />\n";
 
 	$listfile = $mydir . $const_list_fn;
 	if (!file_exists($listfile)) {
-		// pixscale gets set above...
-		$fldsz = $pixscale * sqrt($fullW * $fullH);
 		render_const_overlay($mydir, FALSE, $jd, $fldsz);
 	}
 	// Read the list of objects that can be found in the field.
@@ -573,7 +588,6 @@ if ($didsolve) {
 		"&arcsinh" .
 		"&wcsfn=" . $myreldir . "/wcs.fits";
 
-	$fldsz = $pixscale * sqrt($fullW * $fullH);
 	$zoomin = ($fldsz < (3600*18));
 	$zoomin2 = ($fldsz < (3600*1.8));
 	//$zoomin3 = ($fldsz < (3600*0.36));
@@ -867,27 +881,13 @@ if ($job_done) {
 		}
 		echo "</td></tr>\n";
 
-		if ($fullW && $fullH) {
-			$fldw = $pixscale * $fullW;
-			$fldh = $pixscale * $fullH;
-			$units = "arcseconds";
-			if (min($fldw, $fldh) > 3600.0) {
-				$fldw /= 3600.0;
-				$fldh /= 3600.0;
-				$units = "degrees";
-			} else if (min($fldw, $fldh) > 60.0) {
-				$fldw /= 60.0;
-				$fldh /= 60.0;
-				$units = "arcminutes";
-			}
-			echo '<tr><td>Field size ';
-			if (!$exact) {
-				echo "(approximately)";
-			}
-			echo ':</td><td>';
-			printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
-			echo "</td></tr>\n";
-		}
+        echo '<tr><td>Field size ';
+        if (!$exact) {
+            echo "(approximately)";
+        }
+        echo ':</td><td>';
+        printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
+        echo "</td></tr>\n";
 
 		echo '<tr><td>WCS file:</td><td>';
 		print_link($wcsfile);
