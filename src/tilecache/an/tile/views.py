@@ -79,52 +79,40 @@ def getimage(request):
 	f.close()
 	return res
 
+def get_overlapping_images(ramin, ramax, decmin, decmax):
+	dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
+	Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
+	# In the database, any image that spans the RA=0 line has its bounds
+	# bumped up by 360; therefore every "ramin" value is > 0, but some
+	# "ramax" values are > 360.
+	raminwrap = ramin + 360
+	ramaxwrap = ramax + 360
+	Q_wrap   = Q(ramin__lte=ramaxwrap) & Q(ramax__gte=raminwrap)
+	inbounds = dec_ok.filter(Q_normal | Q_wrap)
+	return inbounds
+
 def imagelist(request):
 	logging.debug("imagelist() starting")
 	try:
 		(ramin, ramax, decmin, decmax) = getbb(request)
 	except KeyError, x:
 		return HttpResponse(x)
-
-	dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
-
-	Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
-	raminwrap = ramin + 360
-	ramaxwrap = ramax + 360
-	Q_wrap   = Q(ramin__lte=ramaxwrap) & Q(ramax__gte=raminwrap)
-	inbounds = dec_ok.filter(Q_normal | Q_wrap)
+	logging.debug("Bounds: RA [%g, %g], Dec [%g, %g]." % (ramin, ramax, decmin, decmax))
+	inbounds = get_overlapping_images(ramin, ramax, decmin, decmax)
 	# HACK
-	dra = (int)(ramax - ramin)
-	sortbysize = inbounds.order_by_expression('abs(%d - abs(ramax - ramin))' % dra)
+	dra = ramax - ramin
+	sortbysize = inbounds.order_by_expression('abs(%g - abs(ramax - ramin))' % dra)
 
 	top20 = sortbysize[:20]
 	query = top20
 
-	## DEBUG
-	if 0:
-		(select, sql, params) = query._get_sql_clause()
-		# umm... list to tuple...
-		strparams = ()
-		for x in params:
-			strparams = strparams + (str(x),)
-			logging.debug("SQL: SELECT " + ",".join(select) + (sql % strparams))
-	## /DEBUG
-
-	# Get list of filenames
-	#filenames = [img.filename for img in query]
-
 	res = HttpResponse()
 	res['Content-type'] = 'text/xml'
 	res.write('<imagelist>\n')
-	#res.write('<ul>\n')
 	for img in query:
 		res.write('<image name="%s" />\n' % (img.filename))
-		#res.write('<li>%s</li>\n' % (img.filename))
 	res.write('</imagelist>\n')
-	#res.write('</ul>')
-	#files = "\n".join(filenames) + "\n"
 	logging.debug("Returning %i files." % len(query))
-	#return HttpResponse(files)
 	return res
 
 def query(request):
@@ -184,39 +172,23 @@ def query(request):
 				return HttpResponse('bad filename.')
 			cmdline += (' -r ' + rdls)
 
-	#logging.debug('1: cmdline ' + cmdline)
 	if ('images' in layers) or (('boundary' in layers) and not ('wcsfn' in request.GET)):
 		# filelist: -S
 		# Compute list of files via DB query
-		# In the database, any image that spans the RA=0 line has its bounds
-		# bumped up by 360; therefore every "ramin" value is > 0, but some
-		# "ramax" values are > 360.
-		dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
-		Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
-		raminwrap = ramin + 360
-		ramaxwrap = ramax + 360
-		Q_wrap   = Q(ramin__lte=ramaxwrap) & Q(ramax__gte=raminwrap)
-		imgs = dec_ok.filter(Q_normal | Q_wrap)
+		imgs = get_overlapping_images(ramin, ramax, decmin, decmax)
 		# Get list of filenames
 		filenames = [img.filename for img in imgs]
 		files = "\n".join(filenames) + "\n"
 
-		logging.debug("For RA in [%f, %f] or [%f, %f] and Dec in [%f, %f], found %i files." %
-					  (ramin, ramax, raminwrap, ramaxwrap, decmin, decmax, len(filenames)))
+		logging.debug("For RA in [%f, %f] and Dec in [%f, %f], found %i files." %
+					  (ramin, ramax, decmin, decmax, len(filenames)))
 
-		#logging.debug('1.5: files ' + files)
 		# Compute filename
 		#m = hashlib.md5()
-		#logging.debug('1.51: new')
 		m = sha.new()
-		#logging.debug('1.52: update')
 		m.update(files)
-		#logging.debug('1.53: dig')
 		digest = m.hexdigest()
-		#logging.debug('digest: ' + digest)
-		#logging.debug('1.54: fn')
 		fn = tempdir + '/' + digest
-		#logging.debug('1.55: done')
 		# Write to that filename
 		try:
 			f = open(fn, 'wb')
@@ -226,8 +198,6 @@ def query(request):
 			return HttpResponse('Failed to write file list.')
 		cmdline += (" -S " + fn)
 
-	#logging.debug('2: cmdline ' + cmdline)
-
 	# Options with no args:
 	optflags = { 'jpeg'   : '-J',
 				 'arcsinh': '-s',
@@ -235,8 +205,6 @@ def query(request):
 	for opt,arg in optflags.iteritems():
 		if (opt in request.GET):
 			cmdline += (' ' + arg)
-
-	#logging.debug('2.5: cmdline ' + cmdline)
 
 	# Options with numeric args.
 	optnum = { 'dashbox' : '-B',
@@ -246,8 +214,6 @@ def query(request):
 		if (opt in request.GET):
 			num = float(request.GET[opt])
 			cmdline += (" %s %f" % (arg, num))
-
-	#logging.debug('3: cmdline ' + cmdline)
 
 	# Options with choice args.
 	optchoice = { 'colormap' : {'arg':'-C', 'valid':['rb', 'i']},
@@ -261,8 +227,6 @@ def query(request):
 				arg = choice['arg']
 				cmdline += (' ' + arg + ' ' + val)
 
-	#logging.debug('4: cmdline ' + cmdline)
-
 	jpeg = ('jpeg' in request.GET)
 
 	res = HttpResponse()
@@ -270,8 +234,6 @@ def query(request):
 		res['Content-Type'] = 'image/jpeg'
 	else:
 		res['Content-Type'] = 'image/png'
-	#res['Content-Type'] = (jpeg ? 'image/jpeg' : 'image/png')
-
 	#logging.debug('command-line is ' + cmdline)
 
 	if ('tag' in request.GET):
@@ -287,7 +249,6 @@ def query(request):
 		m = sha.new()
 		m.update(cmdline)
 		fn = tilecachedir + '/' + 'tile-' + m.hexdigest() + '.'
-		# + (jpeg ? 'jpg' : 'png')
 		if jpeg:
 			fn += 'jpg'
 		else:
@@ -329,8 +290,6 @@ def query(request):
 				logging.debug('command did not exit.')
 			return HttpResponse('tilerender command failed.')
 		res.write(out)
-		
-
 
 	logging.debug('finished.')
 	return res

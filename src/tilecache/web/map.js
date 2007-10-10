@@ -69,7 +69,9 @@ function getGetData(){
   Prints text to the debug form.
 */
 function debug(txt) {
-	document.debugform.debug.value += txt;
+	if (0) {
+		GLog.write(txt);
+	}
 }
 
 // The GMap2
@@ -411,48 +413,36 @@ function changeGain() {
 	restackOverlays();
 }
 
-function imageListLoaded(txt) {
+function emptyImageList() {
 	imglist = document.getElementById('imagelist');
 	while (imglist.childNodes.length) {
 		imglist.removeChild(imglist.childNodes[0]);
 	}
-	/*
-	  for (i=0; i<imglist.childNodes.length; i++) {
-	  imglist.removeChild(imglist[i]);
-	  }
-	*/
-	//imglist.appendChild(xml.documentElement);
-	//imglist.appendChild(document.createTextNode(txt));
-	//root = xml.documentElement;
-	//alert("Root type: " + 
-	//GLog.write("Root type: ");
+}
 
-	/*
-	  iltxt = document.getElementById('imagelisttxt');
-	  while (iltxt.childNodes.length) {
-	  iltxt.removeChild(iltxt.childNodes[0]);
-	  }
-	  iltxt.appendChild(document.createTextNode(txt));
-	*/
-
+function imageListLoaded(txt) {
+	emptyImageList();
+	debug("txt: " + txt);
 	xml = GXml.parse(txt);
-
-	GLog.write("txt: " + txt);
-	GLog.write("xml: " + xml);
-
+	debug("xml: " + xml);
 	imgs = xml.documentElement.getElementsByTagName("image");
-	GLog.write("Found " + imgs.length + " images.");
-
+	debug("Found " + imgs.length + " images.");
+	//imglist.appendChild(document.createTextNode("Images in this view:"));
+	//imglist.appendChild(document.createElement("br"));
 	for (i=0; i<imgs.length; i++) {
 		img = imgs[i];
 		name = img.getAttribute('name');
-		GLog.write("Image " + i + ": " + name);
+		debug("Image " + i + ": " + name);
 		link = document.createElement("a");
 		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + name);
 		link.appendChild(document.createTextNode(name));
 		imglist.appendChild(link);
 		imglist.appendChild(document.createElement("br"));
 	}
+}
+
+function movestarted() {
+	emptyImageList();
 }
 
 /*
@@ -468,7 +458,7 @@ function moveended() {
 		sw = bounds.getSouthWest();
 		ne = bounds.getNorthEast();
 		url += "bb=" + sw.lng() + "," + sw.lat() + "," + ne.lng() + "," + ne.lat();
-		//alert("Downloading: " + url);
+		//debug("Downloading: " + url);
 		GDownloadUrl(url, imageListLoaded);
 	}
 }
@@ -598,6 +588,7 @@ function startup() {
 	// Connect up the event listeners...
 	GEvent.addListener(map, "move", mapmoved);
 	GEvent.addListener(map, "moveend", moveended);
+	GEvent.addListener(map, "movestart", movestarted);
 	GEvent.addListener(map, "zoomend", mapzoomed);
 	GEvent.addListener(map, "mousemove", mousemoved);
 	GEvent.bindDom(window, "resize", map, map.onResize);

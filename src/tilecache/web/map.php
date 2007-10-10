@@ -41,19 +41,10 @@
 	#toggles a {
 		color: #666;
 	}
-	#imagelist {
+	#imagelistholder {
 		position: absolute;
 		right:10px;
-		bottom:10px;
-		color:white;
-		z-index:10000;
-		font-size: 12px;
-		font-weight: bold;
-	}
-	#imagelisttxt {
-		position: absolute;
-		right:10px;
-		bottom:400px;
+		bottom:50px;
 		color:white;
 		z-index:10000;
 		font-size: 12px;
@@ -107,24 +98,13 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onchang
 <a id="usnobToggleButton" href="#" onclick="toggleOverlayRestack('usnob')"> USNO-B </a>
 </div>
 
+<div id="imagelistholder">
+Images in this view:
 <div id="imagelist">
-Hello World!
 </div>
-<div id="imagelisttxt">
 </div>
-
 
 <p />
-
-<!--
-<center>
-Debug:
-  <form name="debugform" action="" method="get">
-  <textarea cols="100" rows="10" name="debug" readonly="readonly">
-  </textarea>
-  </FORM>
-</center>
--->
 
 <!-- Include the map itself. -->
 <script src="map.js" type="text/javascript"> </script>
