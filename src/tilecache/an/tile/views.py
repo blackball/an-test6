@@ -52,16 +52,13 @@ def getbb(request):
 	return (ramin, ramax, decmin, decmax)
 
 def imagelist(request):
-	logging.debug("Got imagelist() request.")
+	logging.debug("imagelist() starting")
 	try:
 		(ramin, ramax, decmin, decmax) = getbb(request)
 	except KeyError, x:
 		return HttpResponse(x)
 
 	dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
-
-	logging.debug(str(type(Image.objects)))
-	logging.debug(str(type(dec_ok)))
 
 	Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
 	raminwrap = ramin + 360
@@ -76,21 +73,23 @@ def imagelist(request):
 	query = top20
 
 	## DEBUG
-	(select, sql, params) = query._get_sql_clause()
-	# umm... list to tuple...
-	strparams = ()
-	for x in params:
-		strparams = strparams + (str(x),)
-	logging.debug("SQL: SELECT " + ",".join(select) + (sql % strparams))
+	if 0:
+		(select, sql, params) = query._get_sql_clause()
+		# umm... list to tuple...
+		strparams = ()
+		for x in params:
+			strparams = strparams + (str(x),)
+			logging.debug("SQL: SELECT " + ",".join(select) + (sql % strparams))
 	## /DEBUG
 
 	# Get list of filenames
 	filenames = [img.filename for img in query]
 	files = "\n".join(filenames) + "\n"
+	logging.debug("Returning %i files." % len(query))
 	return HttpResponse(files)
 
 def query(request):
-	logging.debug('starting')
+	logging.debug('query() starting')
 	try:
 		(ramin, ramax, decmin, decmax) = getbb(request)
 	except KeyError, x:
