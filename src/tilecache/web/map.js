@@ -124,14 +124,6 @@ function mapzoomed(oldzoom, newzoom) {
 }
 
 /*
-  This function gets called when the user stops moving the map (mouse drag),
-  and also after it's moved programmatically (via setCenter(), etc).
-*/
-function moveended() {
-	mapmoved();
-}
-
-/*
   This function gets called when the mouse is moved.
 */
 function mousemoved(latlong) {
@@ -417,6 +409,68 @@ function changeGain() {
 	imagesGain = gain;
 	updateImages();
 	restackOverlays();
+}
+
+function imageListLoaded(txt) {
+	imglist = document.getElementById('imagelist');
+	while (imglist.childNodes.length) {
+		imglist.removeChild(imglist.childNodes[0]);
+	}
+	/*
+	  for (i=0; i<imglist.childNodes.length; i++) {
+	  imglist.removeChild(imglist[i]);
+	  }
+	*/
+	//imglist.appendChild(xml.documentElement);
+	//imglist.appendChild(document.createTextNode(txt));
+	//root = xml.documentElement;
+	//alert("Root type: " + 
+	//GLog.write("Root type: ");
+
+	/*
+	  iltxt = document.getElementById('imagelisttxt');
+	  while (iltxt.childNodes.length) {
+	  iltxt.removeChild(iltxt.childNodes[0]);
+	  }
+	  iltxt.appendChild(document.createTextNode(txt));
+	*/
+
+	xml = GXml.parse(txt);
+
+	GLog.write("txt: " + txt);
+	GLog.write("xml: " + xml);
+
+	imgs = xml.documentElement.getElementsByTagName("image");
+	GLog.write("Found " + imgs.length + " images.");
+
+	for (i=0; i<imgs.length; i++) {
+		img = imgs[i];
+		name = img.getAttribute('name');
+		GLog.write("Image " + i + ": " + name);
+		link = document.createElement("a");
+		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + name);
+		link.appendChild(document.createTextNode(name));
+		imglist.appendChild(link);
+		imglist.appendChild(document.createElement("br"));
+	}
+}
+
+/*
+  This function gets called when the user stops moving the map (mouse drag),
+  and also after it's moved programmatically (via setCenter(), etc).
+*/
+function moveended() {
+	mapmoved();
+
+	if (imagesShowing || imageOutlinesShowing) {
+		url = BASE_URL + "tile/list/?";
+		bounds = map.getBounds();
+		sw = bounds.getSouthWest();
+		ne = bounds.getNorthEast();
+		url += "bb=" + sw.lng() + "," + sw.lat() + "," + ne.lng() + "," + ne.lat();
+		//alert("Downloading: " + url);
+		GDownloadUrl(url, imageListLoaded);
+	}
 }
 
 /*

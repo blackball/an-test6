@@ -41,6 +41,27 @@
 	#toggles a {
 		color: #666;
 	}
+	#imagelist {
+		position: absolute;
+		right:10px;
+		bottom:10px;
+		color:white;
+		z-index:10000;
+		font-size: 12px;
+		font-weight: bold;
+	}
+	#imagelisttxt {
+		position: absolute;
+		right:10px;
+		bottom:400px;
+		color:white;
+		z-index:10000;
+		font-size: 12px;
+		font-weight: bold;
+	}
+    #imagelist a {
+	color: #666;
+	}
 </style>
 </head>
 
@@ -85,6 +106,13 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onchang
 <a id="tychoToggleButton" href="#" onclick="toggleOverlayRestack('tycho')"> Tycho-2 </a> |
 <a id="usnobToggleButton" href="#" onclick="toggleOverlayRestack('usnob')"> USNO-B </a>
 </div>
+
+<div id="imagelist">
+Hello World!
+</div>
+<div id="imagelisttxt">
+</div>
+
 
 <p />
 

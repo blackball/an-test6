@@ -111,10 +111,21 @@ def imagelist(request):
 	## /DEBUG
 
 	# Get list of filenames
-	filenames = [img.filename for img in query]
-	files = "\n".join(filenames) + "\n"
+	#filenames = [img.filename for img in query]
+
+	res = HttpResponse()
+	res['Content-type'] = 'text/xml'
+	res.write('<imagelist>\n')
+	#res.write('<ul>\n')
+	for img in query:
+		res.write('<image name="%s" />\n' % (img.filename))
+		#res.write('<li>%s</li>\n' % (img.filename))
+	res.write('</imagelist>\n')
+	#res.write('</ul>')
+	#files = "\n".join(filenames) + "\n"
 	logging.debug("Returning %i files." % len(query))
-	return HttpResponse(files)
+	#return HttpResponse(files)
+	return res
 
 def query(request):
 	logging.debug('query() starting')
