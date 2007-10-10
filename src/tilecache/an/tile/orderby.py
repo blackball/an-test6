@@ -1,7 +1,7 @@
 from django.db import backend
 from django.utils.datastructures import SortedDict
 from django.db import models
-import logging
+#import logging
 
 # UGH, this is a major hack because the Django code is too rigid to be
 # subclassed easily.  Much cut-n-pasting from django/db/models/query.py .
@@ -112,9 +112,7 @@ class OrderByQuerySet(models.query.QuerySet):
 			sql.append("%s " % backend.get_limit_offset_sql(self._limit, self._offset))
 		else:
 			assert self._offset is None, "'offset' is not allowed without 'limit'"
-
-		logging.debug("Returning SQL: " + " ".join(sql))
-
+		#logging.debug("Returning SQL: " + " ".join(sql))
 		return select, " ".join(sql), params
 
 	def __str__(self):
