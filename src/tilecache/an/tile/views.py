@@ -28,41 +28,102 @@ logging.basicConfig(level=logging.DEBUG,
                     filename=logfile,
 					)
 
-def query(request):
-
-
-	logging.debug('starting')
-
+def getbb(request):
 	try:
 		bb = request.GET['bb']
-		imw = int(request.GET['w'])
-		imh = int(request.GET['h'])
-		layers = request.GET['layers'].split(',')
 	except (KeyError):
-		return HttpResponse('No bb/w/h/layers')
+		raise KeyError('No bb')
 	bbvals = bb.split(',')
 	if (len(bbvals) != 4):
-		return HttpResponse('Bad bb')
-	if (imw == 0 or imh == 0):
-		return HttpResponse('Bad w or h')
-	if (len(layers) == 0):
-		return HttpResponse('No layers')
-
+		raise KeyError('Bad bb')
 	longmin  = float(bbvals[0])
-	latmin = float(bbvals[1])
+	latmin   = float(bbvals[1])
 	longmax  = float(bbvals[2])
-	latmax = float(bbvals[3])
-
+	latmax   = float(bbvals[3])
 	# Flip RA!
 	(ramin,  ramax ) = (-longmax, -longmin)
 	(decmin, decmax) = ( latmin,   latmax )
-
 	# The Google Maps client treats RA as going from -180 to +180; we prefer
 	# to think of it as going from 0 to 360.  In the low value is negative,
 	# wrap it around...
 	if (ramin < 0.0):
 		ramin += 360
 		ramax += 360
+	return (ramin, ramax, decmin, decmax)
+
+def imagelist(request):
+	logging.debug("Got imagelist() request.")
+	try:
+		(ramin, ramax, decmin, decmax) = getbb(request)
+	except KeyError, x:
+		return HttpResponse(x)
+
+	dec_ok = Image.objects.filter(decmin__lte=decmax, decmax__gte=decmin)
+
+	logging.debug(str(type(Image.objects)))
+	logging.debug(str(type(dec_ok)))
+
+	Q_normal = Q(ramin__lte=ramax) & Q(ramax__gte=ramin)
+	raminwrap = ramin + 360
+	ramaxwrap = ramax + 360
+	Q_wrap   = Q(ramin__lte=ramaxwrap) & Q(ramax__gte=raminwrap)
+	inbounds = dec_ok.filter(Q_normal | Q_wrap)
+	# HACK
+	dra = (int)(ramax - ramin)
+	#sortbysize = inbounds.order_by('"abs(%f - abs(ramax - ramin))"' % dra)
+	#sortbysize = inbounds.order_by('abs(%d - abs(ramax - ramin))' % dra)
+	#sortbysize = inbounds.order_by('XXXorderbyXXX')
+	#sortbysize = inbounds
+
+	sortbysize = inbounds.order_by_expression('abs(%d - abs(ramax - ramin))' % dra)
+	logging.debug("sortbysize is a " + str(type(sortbysize)))
+	logging.debug("sortbysize is " + str(sortbysize))
+
+	(select, sql, params) = sortbysize._get_sql_clause()
+	#logging.debug(str(type(params)))
+	#logging.debug(",".join(select))
+	#logging.debug(sql)
+
+	# umm... list to tuple...
+	strparams = ()
+	for x in params:
+		strparams = strparams + (str(x),)
+	logging.debug("SQL: SELECT " + ",".join(select) + (sql % strparams))
+
+	#logging.debug("-- " + str(type(Image.objects)))
+	#logging.debug("  ".join(strparams))
+
+	top20 = sortbysize[:20]
+
+	logging.debug("top20 is a " + str(type(top20)))
+	logging.debug("top20 is " + str(top20))
+
+	query = top20
+
+	logging.debug("query is a " + str(type(query)))
+	logging.debug("query is " + str(query))
+
+	# Get list of filenames
+	filenames = [img.filename for img in query]
+	files = "\n".join(filenames) + "\n"
+	return HttpResponse(files)
+
+def query(request):
+	logging.debug('starting')
+	try:
+		(ramin, ramax, decmin, decmax) = getbb(request)
+	except KeyError, x:
+		return HttpResponse(x)
+	try:
+		imw = int(request.GET['w'])
+		imh = int(request.GET['h'])
+		layers = request.GET['layers'].split(',')
+	except (KeyError):
+		return HttpResponse('No w/h/layers')
+	if (imw == 0 or imh == 0):
+		return HttpResponse('Bad w or h')
+	if (len(layers) == 0):
+		return HttpResponse('No layers')
 
 	# Build tilerender command-line.
 	# RA,Dec range; image size.
