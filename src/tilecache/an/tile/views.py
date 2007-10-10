@@ -51,6 +51,34 @@ def getbb(request):
 		ramax += 360
 	return (ramin, ramax, decmin, decmax)
 
+def getimage(request):
+	logging.debug("getimage() starting")
+	try:
+		fn = request.GET['filename']
+	except KeyError:
+		return HttpResponse('No filename specified.')
+	#if (fn.find('..')):
+	#	return HttpResponse('".." not allowed in filename.')
+	q = list(Image.objects.filter(filename=fn))
+	if not len(q):
+		return HttpResponse('No such file.')
+	img = q[0]
+
+	ctmap = { 'jpeg':'image/jpeg' }
+	# Yuck!
+	suffixmap = { 'jpeg':'jpg' }
+	ct = ctmap[img.origformat]
+	suff = suffixmap[img.origformat]
+	res = HttpResponse()
+	res['Content-Type'] = ct
+
+	path = gmaps_config.imgdir + "/" + img.origfilename + "." + suff
+	logging.debug("Opening file " + path)
+	f = open(path, "rb")
+	res.write(f.read())
+	f.close()
+	return res
+
 def imagelist(request):
 	logging.debug("imagelist() starting")
 	try:
