@@ -70,38 +70,19 @@ def imagelist(request):
 	inbounds = dec_ok.filter(Q_normal | Q_wrap)
 	# HACK
 	dra = (int)(ramax - ramin)
-	#sortbysize = inbounds.order_by('"abs(%f - abs(ramax - ramin))"' % dra)
-	#sortbysize = inbounds.order_by('abs(%d - abs(ramax - ramin))' % dra)
-	#sortbysize = inbounds.order_by('XXXorderbyXXX')
-	#sortbysize = inbounds
-
 	sortbysize = inbounds.order_by_expression('abs(%d - abs(ramax - ramin))' % dra)
-	logging.debug("sortbysize is a " + str(type(sortbysize)))
-	logging.debug("sortbysize is " + str(sortbysize))
 
-	(select, sql, params) = sortbysize._get_sql_clause()
-	#logging.debug(str(type(params)))
-	#logging.debug(",".join(select))
-	#logging.debug(sql)
+	top20 = sortbysize[:20]
+	query = top20
 
+	## DEBUG
+	(select, sql, params) = query._get_sql_clause()
 	# umm... list to tuple...
 	strparams = ()
 	for x in params:
 		strparams = strparams + (str(x),)
 	logging.debug("SQL: SELECT " + ",".join(select) + (sql % strparams))
-
-	#logging.debug("-- " + str(type(Image.objects)))
-	#logging.debug("  ".join(strparams))
-
-	top20 = sortbysize[:20]
-
-	logging.debug("top20 is a " + str(type(top20)))
-	logging.debug("top20 is " + str(top20))
-
-	query = top20
-
-	logging.debug("query is a " + str(type(query)))
-	logging.debug("query is " + str(query))
+	## /DEBUG
 
 	# Get list of filenames
 	filenames = [img.filename for img in query]
