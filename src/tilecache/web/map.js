@@ -457,7 +457,16 @@ function moveended() {
 		bounds = map.getBounds();
 		sw = bounds.getSouthWest();
 		ne = bounds.getNorthEast();
-		url += "bb=" + sw.lng() + "," + sw.lat() + "," + ne.lng() + "," + ne.lat();
+		L = sw.lng();
+		R = ne.lng();
+		if (L > R) {
+			if (L > 180) {
+				L -= 360;
+			} else {
+				R += 360;
+			}
+		}
+		url += "bb=" + L + "," + sw.lat() + "," + R + "," + ne.lat();
 		//debug("Downloading: " + url);
 		GDownloadUrl(url, imageListLoaded);
 	}

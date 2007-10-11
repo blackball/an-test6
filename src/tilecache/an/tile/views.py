@@ -99,12 +99,42 @@ def imagelist(request):
 		return HttpResponse(x)
 	logging.debug("Bounds: RA [%g, %g], Dec [%g, %g]." % (ramin, ramax, decmin, decmax))
 	inbounds = get_overlapping_images(ramin, ramax, decmin, decmax)
-	# HACK
-	dra = ramax - ramin
-	sortbysize = inbounds.order_by_expression('abs(%g - abs(ramax - ramin))' % dra)
+
+	# We have a query that isolates images that overlap.  We now want to order them by
+	# the proportion of overlap:
+	#     (overlapping area)^2
+	#     --------------------
+	#        area_1 * area_2
+	# Note that the area of our query rectangle is constant, so we can omit it from
+	# the score function.
+	#
+	# We'll just treat the axis-aligned bounding box as the image, and we'll treat
+	# RA and Dec as rectangular units.  Obviously these are wrong, but this is SQL
+	# so we can't get too fancy...
+	#
+	# The overlapping area is just the min of the maxes minus the max of the mins,
+	# in RA and Dec.
+	# 
+	# What about wrap-around images?  Gah!  I guess the overlapping RA is the max of the
+	# overlapping normal RA and wrap-around RA (because wrongly wrapped-around RA range
+	# becomes negative)
+
+	overlap = ('(max(min(ramax, %g) - max(ramin, %g), min(ramax, %g) - max(ramin, %g)) * (min(decmax, %g) - max(decmin, %g)))' %
+			   (ramax, ramin, ramax+360, ramin+360, decmax, decmin))
+	a1 = '((ramax - ramin) * (decmax - decmin))'
+	#a2 = str((ramax - ramin) * (decmax - decmin))
+	sortbysize = inbounds.order_by_expression('-(' + overlap + '*' + overlap + ') / ' + a1)
 
 	top20 = sortbysize[:20]
 	query = top20
+
+	for img in query:
+		dra1 = min(ramax, img.ramax) - max(ramin, img.ramin)
+		dra2 = min(ramax+360, img.ramax) - max(ramin+360, img.ramin)
+		overlap = max(dra1, dra2) * (min(decmax, img.decmax) - min(decmin, img.decmin))
+		a1 = ((img.ramax - img.ramin) * (img.decmax - img.decmin))
+		logging.debug("Image " + img.filename + ": score %g (dra1=%g, dra2=%g))" %
+					  (overlap*overlap/a1, dra1, dra2))
 
 	res = HttpResponse()
 	res['Content-type'] = 'text/xml'
