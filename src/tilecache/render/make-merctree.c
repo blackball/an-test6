@@ -192,34 +192,37 @@ int main(int argc, char** args) {
 	hps = il_new(256);
 
 	for (i=0; i<HP; i++) {
-		double ra1, ra2;
-		double x1, x2;
-		double dec1, dec2;
-		double y1, y2;
+		double ramin, ramax;
+		double xmin, xmax;
+		double decmin, decmax;
+		double ymin, ymax;
 		double nil;
 
 		// leftmost point is (0,1); rightmost is (1,0).
 		// southmost is (0,0); northmost is (1,1).
-		healpix_to_radec(i, Nside, 0.0, 1.0, &ra1, &nil);
-		healpix_to_radec(i, Nside, 1.0, 0.0, &ra2, &nil);
-		x1 = ra2merc(ra1);
-		x2 = ra2merc(ra2);
+		healpix_to_radec(i, Nside, 0.0, 1.0, &ramin, &nil);
+		healpix_to_radec(i, Nside, 1.0, 0.0, &ramax, &nil);
+        // (swap these because min ra -> max merc)
+		xmin = ra2merc(ramax);
+		xmax = ra2merc(ramin);
 
-		if (x2 > x1) {
-			if ((x1 > xhi) || (x2 < xlo))
+        //printf("Healpix %i: x mercator range [%g, %g]\n", i, xmin, xmax);
+
+		if (xmax > xmin) {
+			if ((xmin > xhi) || (xmax < xlo))
 				continue;
 		} else {
 			// wrap-around
-			if ((x1 > xhi) && (x2 < xlo))
+			if ((xmin > xhi) && (xmax < xlo))
 				continue;
 		}
 
-		healpix_to_radec(i, Nside, 0.0, 0.0, &nil, &dec1);
-		healpix_to_radec(i, Nside, 1.0, 1.0, &nil, &dec2);
-		y1 = dec2merc(dec1);
-		y2 = dec2merc(dec2);
+		healpix_to_radec(i, Nside, 0.0, 0.0, &nil, &decmin);
+		healpix_to_radec(i, Nside, 1.0, 1.0, &nil, &decmax);
+		ymin = dec2merc(decmin);
+		ymax = dec2merc(decmax);
 
-		if ((y1 > yhi) || (y2 < ylo))
+		if ((ymin > yhi) || (ymax < ylo))
 			continue;
 
 		il_append(hps, i);
