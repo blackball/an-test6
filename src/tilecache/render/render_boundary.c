@@ -135,15 +135,24 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 					wrapped = ((lastra < 90 && ra > 270) || 
 							   (lastra > 270 && ra < 90));
 
+					if (wrapped) {
+						logmsg("Wrapped: lastra=%g, ra=%g, thisvalid=%i, lastvalid=%i, first=%i.\n",
+							   lastra, ra, thisvalid, lastvalid, first);
+					}
+
 					if (thisvalid && !lastvalid && !first && !wrapped)
 						cairo_move_to(cairo, lastx, lasty);
 					if (thisvalid)
-						cairo_line_to(cairo, xout, yout);
+						if (!wrapped)
+							cairo_line_to(cairo, xout, yout);
 					if (!thisvalid && lastvalid) {
 						if (!wrapped)
 							cairo_line_to(cairo, xout, yout);
 						cairo_stroke(cairo);
 					}
+
+					if (wrapped)
+						thisvalid = FALSE;
 					/*
 					  if (!side && !i) {
 					  cairo_move_to(cairo, xout, yout);
