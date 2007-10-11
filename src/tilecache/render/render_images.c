@@ -149,7 +149,8 @@ int render_images(unsigned char* img, render_args_t* args) {
         double ra, dec;
         double imagex, imagey;
         double ramin, ramax, decmin, decmax;
-        int xlo, xhi, ylo, yhi;
+		double xmerclo, xmerchi;
+        int xlo, xhi, xwraplo, xwraphi, ylo, yhi;
         float pixeldensity, weight;
         char cachekey[33];
         float* cached;
@@ -238,20 +239,41 @@ int render_images(unsigned char* img, render_args_t* args) {
 		logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
 			   ramin, ramax, decmin, decmax);
 
-		// min ra -> max pixel
-        xlo = floor(ra2pixelf(ramax, args));
-        xhi = ceil (ra2pixelf(ramin, args));
+		/*
+		  logmsg("x merc range: %g to %g\n", radeg2merc(ramin), radeg2merc(ramax));
+		  logmsg("x merc min: %g, pixelpermerc: %g\n", args->xmercmin, args->xpixelpermerc);
+		*/
+
         // increasing DEC -> decreasing Y pixel coord
         ylo = floor(dec2pixelf(decmax, args));
         yhi = ceil (dec2pixelf(decmin, args));
-
-		logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
-
-        if ((xhi < 0) || (yhi < 0) || (xlo >= args->W) || (ylo >= args->H)) {
+        if ((yhi < 0) || (ylo >= args->H)) {
             // No need to read the image!
-			logmsg("No overlap between this image and the requested RA,Dec region.\n");
+			logmsg("No overlap between this image and the requested RA,Dec region (Y pixel range %i to %i).\n", ylo, yhi);
 			goto nextimage;
 		}
+
+		// min ra -> max merc -> max pixel
+		xmerclo = radeg2merc(ramax);
+		xmerchi = radeg2merc(ramin);
+		xlo = floor(xmerc2pixelf(xmerclo, args));
+		xhi =  ceil(xmerc2pixelf(xmerchi, args));
+		if ((xhi < 0) || (xlo >= args->W)) {
+			if (xmerclo < 0.5) {
+				xwraplo = floor(xmerc2pixelf(xmerclo + 1.0, args));
+				xwraphi =  ceil(xmerc2pixelf(xmerchi + 1.0, args));
+			} else {
+				xwraplo = floor(xmerc2pixelf(xmerclo - 1.0, args));
+				xwraphi =  ceil(xmerc2pixelf(xmerchi - 1.0, args));
+			}
+			if ((xwraphi < 0) || (xwraplo >= args->W)) {
+				logmsg("No overlap between this image and the requested RA,Dec region (X pixel range %i to %i or %i to %i).\n", xlo, xhi, xwraplo, xwraphi);
+				goto nextimage;
+			}
+			xlo = xwraplo;
+			xhi = xwraphi;
+		}
+		logmsg("Pixel range: (%i to %i, %i to %i)\n", xlo, xhi, ylo, yhi);
 
         // Check the cache...
         {
