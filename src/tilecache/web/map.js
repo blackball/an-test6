@@ -69,7 +69,7 @@ function getGetData(){
   Prints text to the debug form.
 */
 function debug(txt) {
-	if (0) {
+	if (1) {
 		GLog.write(txt);
 	}
 }
@@ -286,20 +286,112 @@ var usnobArcsinh = 1; // must match HTML
 
 var imagesGain = 0; // must match HTML
 
+
+var oldOverlays = [];
+
+/*
+  function arrays_equal(arr1, arr2) {
+  if (arr1.length != arr2.length)
+  return false;
+  for (var i=0; i<arr1.length; i++) {
+  if (arr1[i] != arr2[i])
+  return false;
+  }
+  return true;
+  }
+*/
+function min(a, b) {
+	if (a < b) return a;
+	return b;
+}
+
 function restackOverlays() {
-	map.clearOverlays();
+	newOverlays = [];
 	if (tychoShowing)
-		map.addOverlay(tychoOverlay);
+		newOverlays.push(tychoOverlay);
 	if (usnobShowing)
-		map.addOverlay(usnobOverlay);
+		newOverlays.push(usnobOverlay);
 	if (imagesShowing || imageOutlinesShowing)
-		map.addOverlay(imagesOverlay);
+		newOverlays.push(imagesOverlay);
 	if (userImageShowing || userOutlineShowing || userRdlsShowing)
-		map.addOverlay(userImageOverlay);
-	if (selectedImageShowing)
-		map.addOverlay(selectedImageOverlay);
+		newOverlays.push(userImageOverlay);
 	if (gridShowing || messierShowing || constellationShowing)
-		map.addOverlay(lineOverlay);
+		newOverlays.push(lineOverlay);
+	if (selectedImageShowing)
+		newOverlays.push(selectedImageOverlay);
+
+	// How many layers stay the same?
+	var nsame;
+	for (nsame=0; nsame<min(newOverlays.length, oldOverlays.length); nsame++) {
+		if (newOverlays[nsame] != oldOverlays[nsame])
+			break;
+	}
+	debug('Old and new arrays are the same up to layer ' + nsame + ', old has ' + oldOverlays.length + ', new has ' + newOverlays.length);
+
+	// Remove old layers...
+	for (var i=nsame; i<oldOverlays.length; i++) {
+		map.removeOverlay(oldOverlays[i]);
+	}
+
+	// Add new layers...
+	for (var i=nsame; i<newOverlays.length; i++) {
+		map.addOverlay(newOverlays[i]);
+	}
+	oldOverlays = newOverlays;
+
+	/*
+	  if (arrays_equal(newOverlays, oldOverlays)) {
+	  debug('Not restacking overlays: new = old.');
+	  return;
+	  }
+	  // If we're just adding layers on top, we don't need to remove the lower
+	  // layers.
+	  if (newOverlays.length > oldOverlays.length) {
+	  justadding = arrays_equal(oldOverlays,
+	  newOverlays.slice(0, oldOverlays.length));
+	  if (justadding) {
+	  debug('Just adding layers.');
+	  for (i=oldOverlays.length; i<newOverlays.length; i++) {
+	  map.addOverlay(newOverlays[i]);
+	  }
+	  oldOverlays = newOverlays;
+	  return;
+	  }
+	  }
+	  // If we're just removing layers from the top, we don't need to restack.
+	  if (newOverlays.length < oldOverlays.length) {
+	  justremoving = arrays_equal(newOverlays, oldOverlays.slice(0, newOverlays.length));
+	  if (justremoving) {
+	  debug('Just removing layers.');
+	  for (i=newOverlays.length; i<oldOverlays.length; i++) {
+	  map.removeOverlay(oldOverlays[i]);
+	  }
+	  oldOverlays = newOverlays;
+	  return;
+	  }
+	  }
+	  debug('Restacking.');
+	  debug('Old overlays: [' + oldOverlays.join(', ') + ']');
+	  debug('New overlays: [' + newOverlays.join(', ') + ']');
+	  map.clearOverlays();
+	  for (i=0; i<newOverlays.length; i++) {
+	  map.addOverlay(newOverlays[i]);
+	  }
+	*/
+	/*
+	  if (tychoShowing)
+	  map.addOverlay(tychoOverlay);
+	  if (usnobShowing)
+	  map.addOverlay(usnobOverlay);
+	  if (imagesShowing || imageOutlinesShowing)
+	  map.addOverlay(imagesOverlay);
+	  if (userImageShowing || userOutlineShowing || userRdlsShowing)
+	  map.addOverlay(userImageOverlay);
+	  if (selectedImageShowing)
+	  map.addOverlay(selectedImageOverlay);
+	  if (gridShowing || messierShowing || constellationShowing)
+	  map.addOverlay(lineOverlay);
+	*/
 }
 
 function toggleOverlayRestack(overlayName) {
@@ -403,26 +495,19 @@ function updateUsnob() {
 }
 
 function updateSelectedImage() {
-	//var wcs = img + '.wcs';
-	//var tag = "&wcsfn=" + wcs + "&ubstyle=y";
 	var tag = "&ubstyle=y";
+	tag += "&wcsfn=" + selectedImages.join('.wcs,') + '.wcs';
 	/*
 	  for (i=0; i<selectedImages.length; i++) {
-	  tag += "&wcsfn=" + selectedImages[i] + '.wcs';
+	  tag += (i ? ',' : '') + selectedImages[i] + '.wcs';
 	  }
 	*/
-	//tag += "&wcsfn=" + selectedImages.join(',');
-	tag += "&wcsfn=";
-	for (i=0; i<selectedImages.length; i++) {
-		tag += (i ? ',' : '') + selectedImages[i] + '.wcs';
-	}
 	selectedImageOverlay = makeOverlay('userboundary', tag);
 }
 
 function indexOf(arr, element) {
 	ind = -1;
-	var i;
-	for (i=0; i<arr.length; i++) {
+	for (var i=0; i<arr.length; i++) {
 		if (arr[i] == element) {
 			ind = i;
 			break;
@@ -430,19 +515,19 @@ function indexOf(arr, element) {
 	}
 	return ind;
 }
-	
+
 function toggleSelectedImage(img) {
 	debug('Toggling ' + img);
 	debug('Selected images: [' + selectedImages.join(', ') + ']');
 	ind = indexOf(selectedImages, img);
-	debug('Ind ' + ind);
+	//debug('Ind ' + ind);
 	if (ind == -1) {
 		selectedImages.push(img);
 	} else {
 		selectedImages.splice(ind, 1);
 	}
 	debug('After: [' + selectedImages.join(', ') + ']');
-	debug('Len ' + selectedImages.length);
+	//debug('Len ' + selectedImages.length);
 	if (selectedImages.length > 0) {
 		selectedImageShowing = 1;
 		updateSelectedImage();
@@ -487,14 +572,6 @@ function removeAllChildren(node) {
 function emptyImageList() {
 	imglist = document.getElementById('imagelist');
 	removeAllChildren(imglist);
-	// ??
-	/*
-	  if (selectedImageShowing) {
-	  selectedImages = [];
-	  selectedImageShowing = 0;
-	  restackOverlays();
-	  }
-	*/
 }
 
 function imageListLoaded(txt) {
@@ -509,7 +586,7 @@ function imageListLoaded(txt) {
 	//imglist.appendChild(document.createElement("br"));
 
 	imgs = [];
-	for (i=0; i<imgtags.length; i++) {
+	for (var i=0; i<imgtags.length; i++) {
 		name = imgtags[i].getAttribute('name');
 		//debug("Image " + i + ": " + name);
 		imgs.push(name);
@@ -519,7 +596,7 @@ function imageListLoaded(txt) {
 	debug('Visible images: [' + imgs.join(', ') + ']');
 
 	// Remove selected images that are no longer visible.
-	for (i=0; i<selectedImages.length; i++) {
+	for (var i=0; i<selectedImages.length; i++) {
 		ind = indexOf(imgs, selectedImages[i]);
 		if (ind == -1) {
 			selectedImages.splice(ind, 1);
@@ -527,7 +604,7 @@ function imageListLoaded(txt) {
 		}
 	}
 
-	for (i=0; i<imgs.length; i++) {
+	for (var i=0; i<imgs.length; i++) {
 		img = imgs[i];
 		link = document.createElement("a");
 		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + img);
@@ -557,6 +634,8 @@ function movestarted() {
 	emptyImageList();
 }
 
+var lastListUrl = '';
+
 /*
   This function gets called when the user stops moving the map (mouse drag),
   and also after it's moved programmatically (via setCenter(), etc).
@@ -581,8 +660,13 @@ function moveended() {
 			}
 		}
 		url += "bb=" + L + "," + sw.lat() + "," + R + "," + ne.lat();
-		//debug("Downloading: " + url);
-		GDownloadUrl(url, imageListLoaded);
+		if (url == lastListUrl) {
+			debug('Not downloading identical image list (' + lastListUrl + ')');
+		} else {
+			//debug("Downloading: " + url);
+			lastListUrl = url;
+			GDownloadUrl(url, imageListLoaded);
+		}
 	}
 }
 
@@ -688,11 +772,11 @@ function startup() {
 		var showstr = getdata['show'];
 		var ss = showstr.split(',');
 		var show = [];
-		for (i=0; i<ss.length; i++)
+		for (var i=0; i<ss.length; i++)
 			show[ss[i]] = 1;
 
 		var layers = [ 'tycho', 'usnob', 'images', 'imageOutlines', 'grid', 'constellation', 'messier', 'userImage', 'userOutline', 'userRdls' ];
-		for (i=0; i<layers.length; i++)
+		for (var i=0; i<layers.length; i++)
 			if (layers[i] in show)
 				toggleButton(layers[i]);
 	} else {
