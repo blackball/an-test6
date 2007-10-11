@@ -586,7 +586,7 @@ if ($didsolve) {
 	echo "<p>Your field on the sky (click for larger image):</p>\n";
 
 	$tileurl = $tiles_url . "?" .
-		"layers=tycho,grid,boundary" .
+		"layers=tycho,grid,userboundary" .
 		"&arcsinh" .
 		"&wcsfn=" . $myreldir . "/wcs.fits";
 

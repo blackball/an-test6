@@ -88,7 +88,11 @@ int render_images(unsigned char* img, render_args_t* args) {
 
 	logmsg("starting.\n");
 
-    if (args->filelist) {
+	if (strcmp("images", args->currentlayer) == 0) {
+		if (!args->filelist) {
+			logmsg("Layer is \"images\" but no filelist was given.\n");
+			return -1;
+		}
 		fullfilename = FALSE;
         imagefiles = file_get_lines(args->filelist, FALSE);
         if (!imagefiles) {
@@ -96,7 +100,11 @@ int render_images(unsigned char* img, render_args_t* args) {
             return -1;
         }
         logmsg("read %i filenames from the file \"%s\".\n", sl_size(imagefiles), args->filelist);
-	} else if ((args->imagefn) && (args->imwcsfn)) {
+	} else if (strcmp("userimage", args->currentlayer) == 0) {
+		if (!(args->imagefn && args->imwcsfn)) {
+			logmsg("both imagefn and imwcsfn are required.\n");
+			return -1;
+		}
 		imagefiles = sl_new(4);
 		wcsfiles = sl_new(4);
 		for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
@@ -123,6 +131,10 @@ int render_images(unsigned char* img, render_args_t* args) {
 			logmsg("Failed to find user image or WCS file.\n");
 			return -1;
 		}
+	} else {
+		logmsg("Current layer is \"%s\", neither \"images\" nor \"userimage\".\n",
+			   args->currentlayer);
+		return -1;
     }
 
     w = args->W;

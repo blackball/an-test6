@@ -62,7 +62,6 @@ char* layernames[] = {
 	"grid",
 	"usnob",
 	"rdls",
-	"boundary",
 	"constellation",
 	"messier",
 
@@ -71,14 +70,17 @@ char* layernames[] = {
 	"solid",
 
 	"images",
-	"userimage"
+	"userimage",
+
+	"boundaries",
+	"userboundary",
 };
+
 render_func_t renderers[] = {
 	render_tycho,
 	render_gridlines,
 	render_usnob,
 	render_rdls,
-	render_boundary,
 	render_constellation,
 	render_messier,
 
@@ -88,6 +90,9 @@ render_func_t renderers[] = {
 
 	render_images,
 	render_images,
+
+	render_boundary,
+	render_boundary,
 };
 
 static void

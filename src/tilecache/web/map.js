@@ -357,7 +357,7 @@ function updateImages() {
 	if (imagesShowing)
 		lay.push('images');
 	if (imageOutlinesShowing)
-		lay.push('boundary');
+		lay.push('boundaries');
 	imagesOverlay = makeOverlay(lay.join(","), tag);
 }
 
@@ -371,7 +371,7 @@ function updateUserImage() {
 	if (userImageShowing)
 		lay.push('userimage');
 	if (userOutlineShowing)
-		lay.push('boundary');
+		lay.push('userboundary');
 	if (userRdlsShowing)
 		lay.push('rdls');
 	userImageOverlay = makeOverlay(lay.join(","), tag);

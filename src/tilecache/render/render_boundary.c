@@ -37,7 +37,11 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 
 	logmsg("Starting.\n");
 
-    if (args->filelist) {
+	if (strcmp("boundaries", args->currentlayer) == 0) {
+		if (!args->filelist) {
+			logmsg("Layer is \"boundaries\" but no filelist was given.\n");
+			return -1;
+		}
 		fullfilename = FALSE;
         wcsfiles = file_get_lines(args->filelist, FALSE);
         if (!wcsfiles) {
@@ -45,10 +49,17 @@ int render_boundary(unsigned char* img, render_args_t* args) {
             return -1;
         }
         logmsg("read %i filenames from the file \"%s\".\n", sl_size(wcsfiles), args->filelist);
-	} else if (args->imwcsfn) {
+	} else if (strcmp("userboundary", args->currentlayer) == 0) {
+		if (!args->imwcsfn) {
+			logmsg("Layer is \"userboundary\" but no imwcsfn was given.\n");
+			return -1;
+		}
 		wcsfiles = sl_new(4);
 		fullfilename = TRUE;
 		sl_appendf(wcsfiles, args->imwcsfn);
+	} else {
+		logmsg("Unknown layer \"%s\".\n", args->currentlayer);
+		return -1;
 	}
 	if (!sl_size(wcsfiles)) {
 		logmsg("No WCS files specified.\n");

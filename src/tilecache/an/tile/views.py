@@ -91,6 +91,15 @@ def get_overlapping_images(ramin, ramax, decmin, decmax):
 	inbounds = dec_ok.filter(Q_normal | Q_wrap)
 	return inbounds
 
+def filename_ok(fn):
+	if fn.find('..') != -1:
+		return False
+	# valid filenames regexp
+	filenameRE = re.compile(r'^[A-Za-z0-9\./_-]+$')
+	if filenameRE.match(fn) is None:
+		return False
+	return True
+
 def imagelist(request):
 	logging.debug("imagelist() starting")
 	try:
@@ -175,34 +184,29 @@ def query(request):
 		if layerexp.match(lay):
 			cmdline += (" -l " + lay)
 
-	# valid filenames regexp
-	filenameRE = re.compile(r'^[A-Za-z0-9\./_]+$')
-
-	#if ('userimage' in layers) and ('imagefn' in request.GET) and ('wcsfn' in request.GET):
-	if ('imagefn' in request.GET) and ('wcsfn' in request.GET):
+	if ('imagefn' in request.GET):
 		img = request.GET['imagefn']
-		wcs = request.GET['wcsfn']
-		if not (filenameRE.match(img) and filenameRE.match(wcs)):
-			logging.debug("Bad image or WCS filename: \"" + img + "\", \"" + wcs + "\".")
+		if not filename_ok(img):
+			logging.debug("Bad image filename: \"" + img + "\".")
 			return HttpResponse('bad filename.')
-		cmdline += (" -i " + img + " -I " + wcs)
+		cmdline += (" -i " + img)
 
-	if ('boundary' in layers) and ('wcsfn' in request.GET):
+	if ('wcsfn' in request.GET):
 		wcs = request.GET['wcsfn']
-		if not (filenameRE.match(wcs)):
+		if not filename_ok(wcs):
 			logging.debug("Bad WCS filename: \"" + wcs + "\".")
 			return HttpResponse('bad filename.')
 		cmdline += (" -I " + wcs)
 
-	if ('rdlsfn' in request.GET) and ('rdls' in layers):
+	if ('rdlsfn' in request.GET):
 		rdlsfns = request.GET['rdlsfn'].split(',')
 		for rdls in rdlsfns:
-			if not filenameRE.match(rdls):
+			if not filename_ok(rdls):
 				logging.debug("Bad RDLS filename: \"" + rdls + "\".");
 				return HttpResponse('bad filename.')
 			cmdline += (' -r ' + rdls)
 
-	if ('images' in layers) or (('boundary' in layers) and not ('wcsfn' in request.GET)):
+	if ('images' in layers) or ('boundaries' in layers):
 		# filelist: -S
 		# Compute list of files via DB query
 		imgs = get_overlapping_images(ramin, ramax, decmin, decmax)
