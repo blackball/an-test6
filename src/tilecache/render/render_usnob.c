@@ -12,7 +12,7 @@
 #include "mercrender.h"
 
 static char* prerendered_usnob = "/data1/usnob-gmaps/prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
-static char* merc_usnob = "/data1/usnob-gmaps/merc-orig/merc_%02i_%02i.mkdt.fits";
+static char* merc_usnob = "/data2/usnob-gmaps/merc-spikefree-09-11/merc_%02i_%02i.mkdt.fits";
 static char* merc_clean = "/data1/usnob-gmaps/merc-clean-%s/merc_%02i_%02i.mkdt.fits";
 static char* merc_dirty = "/data1/usnob-gmaps/merc-dirty-%s/merc_bad_%02i_%02i.mkdt.fits";
 
@@ -44,16 +44,16 @@ static void map_flux(unsigned char* img, render_args_t* args,
 
     if (type == USNOB) {
         double r, g, b, I, f, R, G, B, maxRGB;
-        if (args->cmap && !strcmp(args->cmap, "rb")) {
-            r = rflux;
-            b = bflux;
-            g = sqrt(r * b);
-        } else if (args->cmap && !strcmp(args->cmap, "i")) {
-            r = g = b = nflux;
-        } else {
+        if (args->cmap && !strcmp(args->cmap, "rbn")) {
             r = nflux;
             g = rflux;
             b = bflux;
+        } else if (args->cmap && !strcmp(args->cmap, "i")) {
+            r = g = b = nflux;
+        } else {
+            r = rflux;
+            b = bflux;
+            g = sqrt(r * b);
         }
         I = (r + g + b) / 3;
         if (I == 0.0) {
@@ -234,10 +234,11 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				mx = i / (double)n;
 				my = (j+1) / (double)n;
 				my += mystep;
-				logmsg("  (%i,%i): merc (%g,%g)\n", i, j, mx, my);
-				logmsg("  merc x step %g (%g for %i pixels)\n", mxstep, mxstep*WH, WH);
-				logmsg("  merc y step %g (%g for %i pixels)\n", mystep, mystep*WH, WH);
-
+				/*
+				  logmsg("  (%i,%i): merc (%g,%g)\n", i, j, mx, my);
+				  logmsg("  merc x step %g (%g for %i pixels)\n", mxstep, mxstep*WH, WH);
+				  logmsg("  merc y step %g (%g for %i pixels)\n", mystep, mystep*WH, WH);
+				*/
 				snprintf(fn, sizeof(fn), prerendered_usnob, args->zoomlevel, i, j);
 
 				logmsg("  reading file %s\n", fn);
@@ -254,14 +255,16 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				}
 				flux = map;
 
-				logmsg("  pixel (0,0) of this tile goes to (%i,%i) in the image.\n",
-					   xmerc2pixel(mx, args), ymerc2pixel(my, args));
-				logmsg("  pixel (0,0) of this tile goes to (%g,%g) in the image.\n",
-					   xmerc2pixelf(mx, args), ymerc2pixelf(my, args));
-				logmsg("  pixel (%i,%i) of this tile goes to (%i,%i) in the image.\n",
-					   WH-1, WH-1, xmerc2pixel(mx+mxstep*(WH-1), args), ymerc2pixel(my+mystep*(WH-1), args));
-				logmsg("  pixel (%i,%i) of this tile goes to (%g,%g) in the image.\n",
-					   WH-1, WH-1, xmerc2pixelf(mx+mxstep*(WH-1), args), ymerc2pixelf(my+mystep*(WH-1), args));
+				/*
+				  logmsg("  pixel (0,0) of this tile goes to (%i,%i) in the image.\n",
+				  xmerc2pixel(mx, args), ymerc2pixel(my, args));
+				  logmsg("  pixel (0,0) of this tile goes to (%g,%g) in the image.\n",
+				  xmerc2pixelf(mx, args), ymerc2pixelf(my, args));
+				  logmsg("  pixel (%i,%i) of this tile goes to (%i,%i) in the image.\n",
+				  WH-1, WH-1, xmerc2pixel(mx+mxstep*(WH-1), args), ymerc2pixel(my+mystep*(WH-1), args));
+				  logmsg("  pixel (%i,%i) of this tile goes to (%g,%g) in the image.\n",
+				  WH-1, WH-1, xmerc2pixelf(mx+mxstep*(WH-1), args), ymerc2pixelf(my+mystep*(WH-1), args));
+				*/
 
 				for (yp=0; yp<WH; yp++) {
 					int ix, iy;
