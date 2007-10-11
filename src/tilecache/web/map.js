@@ -235,6 +235,7 @@ var tychoOverlay;
 var usnobOverlay;
 var imagesOverlay;
 var userImageOverlay;
+var selectedImageOverlay;
 
 var gridShowing = 0;
 var messierShowing = 0;
@@ -246,6 +247,9 @@ var imageOutlinesShowing = 0;
 var userImageShowing = 0;
 var userOutlineShowing = 0;
 var userRdlsShowing = 0;
+var selectedImageShowing = 0;
+
+var selectedImages = [];
 
 function toggleButton(overlayName) {
 	button = document.getElementById(overlayName+"ToggleButton");
@@ -292,6 +296,8 @@ function restackOverlays() {
 		map.addOverlay(imagesOverlay);
 	if (userImageShowing || userOutlineShowing || userRdlsShowing)
 		map.addOverlay(userImageOverlay);
+	if (selectedImageShowing)
+		map.addOverlay(selectedImageOverlay);
 	if (gridShowing || messierShowing || constellationShowing)
 		map.addOverlay(lineOverlay);
 }
@@ -396,6 +402,65 @@ function updateUsnob() {
 	usnobOverlay = makeOverlay('usnob', tag);
 }
 
+function updateSelectedImage() {
+	//var wcs = img + '.wcs';
+	//var tag = "&wcsfn=" + wcs + "&ubstyle=y";
+	var tag = "&ubstyle=y";
+	/*
+	  for (i=0; i<selectedImages.length; i++) {
+	  tag += "&wcsfn=" + selectedImages[i] + '.wcs';
+	  }
+	*/
+	//tag += "&wcsfn=" + selectedImages.join(',');
+	tag += "&wcsfn=";
+	for (i=0; i<selectedImages.length; i++) {
+		tag += (i ? ',' : '') + selectedImages[i] + '.wcs';
+	}
+	selectedImageOverlay = makeOverlay('userboundary', tag);
+}
+
+function indexOf(arr, element) {
+	ind = -1;
+	var i;
+	for (i=0; i<arr.length; i++) {
+		if (arr[i] == element) {
+			ind = i;
+			break;
+		}
+	}
+	return ind;
+}
+	
+function toggleSelectedImage(img) {
+	debug('Toggling ' + img);
+	debug('Selected images: [' + selectedImages.join(', ') + ']');
+	ind = indexOf(selectedImages, img);
+	debug('Ind ' + ind);
+	if (ind == -1) {
+		selectedImages.push(img);
+	} else {
+		selectedImages.splice(ind, 1);
+	}
+	debug('After: [' + selectedImages.join(', ') + ']');
+	debug('Len ' + selectedImages.length);
+	if (selectedImages.length > 0) {
+		selectedImageShowing = 1;
+		updateSelectedImage();
+	} else {
+		selectedImageShowing = 0;
+	}
+	restackOverlays();
+	showhide = document.getElementById('showhide' + img);
+	removeAllChildren(showhide);
+	if (ind == -1) {
+		txt = '[hide]';
+	} else {
+		txt = '[show]';
+	}
+	debug('Txt ' + txt);
+	showhide.appendChild(document.createTextNode(txt));
+}
+
 function changeArcsinh() {
 	tychoArcsinh = gotoform.arcsinh.checked;
 	updateTycho();
@@ -413,30 +478,77 @@ function changeGain() {
 	restackOverlays();
 }
 
-function emptyImageList() {
-	imglist = document.getElementById('imagelist');
-	while (imglist.childNodes.length) {
-		imglist.removeChild(imglist.childNodes[0]);
+function removeAllChildren(node) {
+	while (node.childNodes.length) {
+		node.removeChild(node.childNodes[0]);
 	}
 }
 
+function emptyImageList() {
+	imglist = document.getElementById('imagelist');
+	removeAllChildren(imglist);
+	// ??
+	/*
+	  if (selectedImageShowing) {
+	  selectedImages = [];
+	  selectedImageShowing = 0;
+	  restackOverlays();
+	  }
+	*/
+}
+
 function imageListLoaded(txt) {
+	debug('image list loaded.');
 	emptyImageList();
-	debug("txt: " + txt);
+	//debug("txt: " + txt);
 	xml = GXml.parse(txt);
-	debug("xml: " + xml);
-	imgs = xml.documentElement.getElementsByTagName("image");
-	debug("Found " + imgs.length + " images.");
+	//debug("xml: " + xml);
+	imgtags = xml.documentElement.getElementsByTagName("image");
+	debug("Found " + imgtags.length + " images.");
 	//imglist.appendChild(document.createTextNode("Images in this view:"));
 	//imglist.appendChild(document.createElement("br"));
+
+	imgs = [];
+	for (i=0; i<imgtags.length; i++) {
+		name = imgtags[i].getAttribute('name');
+		//debug("Image " + i + ": " + name);
+		imgs.push(name);
+	}
+
+	debug('Selected images: [' + selectedImages.join(', ') + ']');
+	debug('Visible images: [' + imgs.join(', ') + ']');
+
+	// Remove selected images that are no longer visible.
+	for (i=0; i<selectedImages.length; i++) {
+		ind = indexOf(imgs, selectedImages[i]);
+		if (ind == -1) {
+			selectedImages.splice(ind, 1);
+			i--;
+		}
+	}
+
 	for (i=0; i<imgs.length; i++) {
 		img = imgs[i];
-		name = img.getAttribute('name');
-		debug("Image " + i + ": " + name);
 		link = document.createElement("a");
-		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + name);
-		link.appendChild(document.createTextNode(name));
+		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + img);
+		link.appendChild(document.createTextNode(img));
 		imglist.appendChild(link);
+
+		imglist.appendChild(document.createTextNode(" "));
+
+		link2 = document.createElement("a");
+		link2.setAttribute('href', '#');
+		link2.setAttribute('onclick', 'toggleSelectedImage("' + img + '")');
+		link2.setAttribute('id', 'showhide' + img);
+
+		if (indexOf(selectedImages, img) > -1) {
+			txt = '[hide]';
+		} else {
+			txt = '[show]';
+		}
+		link2.appendChild(document.createTextNode(txt));
+		imglist.appendChild(link2);
+
 		imglist.appendChild(document.createElement("br"));
 	}
 }
@@ -451,6 +563,8 @@ function movestarted() {
 */
 function moveended() {
 	mapmoved();
+
+	debug('moveended()');
 
 	if (imagesShowing || imageOutlinesShowing) {
 		url = BASE_URL + "tile/list/?";

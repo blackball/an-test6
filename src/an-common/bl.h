@@ -253,6 +253,8 @@ void   sl_init2(sl* list, int blocksize);
 // free this list and all the strings it contains.
 void   sl_free2(sl* list);
 
+void sl_append_contents(sl* dest, sl* src);
+
 // just free the list structure, not the strings in it.
 void   sl_free_nonrecursive(sl* list);
 int    sl_size(sl* list);

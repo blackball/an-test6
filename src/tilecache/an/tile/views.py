@@ -184,19 +184,25 @@ def query(request):
 		if layerexp.match(lay):
 			cmdline += (" -l " + lay)
 
+	if ('ubstyle' in request.GET):
+		style = request.GET['ubstyle']
+		cmdline += (' -b ' + style)
+
 	if ('imagefn' in request.GET):
-		img = request.GET['imagefn']
-		if not filename_ok(img):
-			logging.debug("Bad image filename: \"" + img + "\".")
-			return HttpResponse('bad filename.')
-		cmdline += (" -i " + img)
+		imgfns = request.GET['imagefn'].split(',')
+		for img in imgfns:
+			if not filename_ok(img):
+				logging.debug("Bad image filename: \"" + img + "\".")
+				return HttpResponse('bad filename.')
+			cmdline += (" -i " + img)
 
 	if ('wcsfn' in request.GET):
-		wcs = request.GET['wcsfn']
-		if not filename_ok(wcs):
-			logging.debug("Bad WCS filename: \"" + wcs + "\".")
-			return HttpResponse('bad filename.')
-		cmdline += (" -I " + wcs)
+		wcsfns = request.GET['wcsfn'].split(',')
+		for wcs in wcsfns:
+			if not filename_ok(wcs):
+				logging.debug("Bad WCS filename: \"" + wcs + "\".")
+				return HttpResponse('bad filename.')
+			cmdline += (" -I " + wcs)
 
 	if ('rdlsfn' in request.GET):
 		rdlsfns = request.GET['rdlsfn'].split(',')

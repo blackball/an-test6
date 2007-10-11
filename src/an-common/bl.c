@@ -1510,7 +1510,6 @@ void dl_print(dl* list) {
 
 
 
-
 sl* sl_new(int blocksize) {
 	pl* lst = pl_new(blocksize);
 	assert(lst);
@@ -1535,6 +1534,16 @@ void sl_free_nonrecursive(sl* list) {
 
 int   sl_size(sl* list) {
 	return bl_size(list);
+}
+
+void sl_append_contents(sl* dest, sl* src) {
+	int i;
+	if (!src)
+		return;
+	for (i=0; i<sl_size(src); i++) {
+		char* str = sl_get(src, i);
+		sl_append(dest, str);
+	}
 }
 
 void sl_reverse(sl* list) {

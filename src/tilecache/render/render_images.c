@@ -101,35 +101,40 @@ int render_images(unsigned char* img, render_args_t* args) {
         }
         logmsg("read %i filenames from the file \"%s\".\n", sl_size(imagefiles), args->filelist);
 	} else if (strcmp("userimage", args->currentlayer) == 0) {
-		if (!(args->imagefn && args->imwcsfn)) {
+		int j;
+		if (!(sl_size(args->imagefns) && sl_size(args->imwcsfns))) {
 			logmsg("both imagefn and imwcsfn are required.\n");
 			return -1;
 		}
 		imagefiles = sl_new(4);
 		wcsfiles = sl_new(4);
-		for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
-			char* fn = sl_appendf(imagefiles, "%s/%s", user_image_dirs[i], args->imagefn);
-			if (!file_readable(fn)) {
-				sl_pop(imagefiles);
-				free(fn);
-				continue;
+		for (j=0; j<MIN(sl_size(args->imagefns), sl_size(args->imwcsfns)); j++) {
+			char* imgfn = sl_get(args->imagefns, j);
+			char* wcsfn = sl_get(args->imwcsfns, j);
+			for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
+				char* fn = sl_appendf(imagefiles, "%s/%s", user_image_dirs[i], imgfn);
+				if (!file_readable(fn)) {
+					sl_pop(imagefiles);
+					free(fn);
+					continue;
+				}
+				logmsg("Found user image %s.\n", fn);
+				break;
 			}
-			logmsg("Found user image %s.\n", fn);
-			break;
-		}
-		for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
-			char* fn = sl_appendf(wcsfiles, "%s/%s", user_image_dirs[i], args->imwcsfn);
-			if (!file_readable(fn)) {
-				sl_pop(wcsfiles);
-				free(fn);
-				continue;
+			for (i=0; i<sizeof(user_image_dirs)/sizeof(char*); i++) {
+				char* fn = sl_appendf(wcsfiles, "%s/%s", user_image_dirs[i], wcsfn);
+				if (!file_readable(fn)) {
+					sl_pop(wcsfiles);
+					free(fn);
+					continue;
+				}
+				logmsg("Found user WCS %s.\n", fn);
+				break;
 			}
-			logmsg("Found user WCS %s.\n", fn);
-			break;
-		}
-		if (!sl_size(imagefiles) || !sl_size(wcsfiles)) {
-			logmsg("Failed to find user image or WCS file.\n");
-			return -1;
+			if (sl_size(imagefiles) != sl_size(wcsfiles)) {
+				logmsg("Failed to find user image or WCS file.\n");
+				return -1;
+			}
 		}
 	} else {
 		logmsg("Current layer is \"%s\", neither \"images\" nor \"userimage\".\n",

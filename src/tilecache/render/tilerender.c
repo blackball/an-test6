@@ -53,7 +53,7 @@
   The width and height in pixels are  -w <width> -h <height>
   */
 
-const char* OPTIONS = "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:pk:zdV:D:nS:J";
+const char* OPTIONS = "ab:c:dg:h:i:k:l:npr:sw:x:y:zB:C:D:F:I:JL:MN:RS:V:W:X:Y:";
 
 
 /* All render layers must go in here */
@@ -107,11 +107,11 @@ logmsg(char* format, ...) {
 
 static void default_rdls_args(render_args_t* args) {
 	// Set the other RDLS-related args if they haven't been set already.
-	if (pl_size(args->rdlscolors) < pl_size(args->rdlsfns))
-		pl_append(args->rdlscolors, NULL);
-	if (il_size(args->Nstars) < pl_size(args->rdlsfns))
+	if (sl_size(args->rdlscolors) < sl_size(args->rdlsfns))
+		sl_append(args->rdlscolors, NULL);
+	if (il_size(args->Nstars) < sl_size(args->rdlsfns))
 		il_append(args->Nstars, 0);
-	if (il_size(args->fieldnums) < pl_size(args->rdlsfns))
+	if (il_size(args->fieldnums) < sl_size(args->rdlsfns))
 		il_append(args->fieldnums, 0);
 }
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 	double xzoom;
 	unsigned char* img;
 	render_args_t args;
-	pl* layers;
+	sl* layers;
 	int i;
 	bool inmerc = 0;
     bool writejpeg = FALSE;
@@ -135,16 +135,21 @@ int main(int argc, char *argv[]) {
 	args.colorcor = 1.44;
 	args.linewidth = 2.0;
 
-	args.rdlsfns = pl_new(4);
-	args.rdlscolors = pl_new(4);
+	args.rdlsfns = sl_new(4);
+	args.rdlscolors = sl_new(4);
 	args.Nstars = il_new(4);
 	args.fieldnums = il_new(4);
+	args.imagefns = sl_new(4);
+	args.imwcsfns = sl_new(4);
 
-	layers = pl_new(16);
+	layers = sl_new(16);
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'b':
+			args.ubstyle = optarg;
+			break;
         case 'J':
             writejpeg = TRUE;
             break;
@@ -189,19 +194,19 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'r':
 				default_rdls_args(&args);
-				pl_append(args.rdlsfns, strdup(optarg));
+				sl_append(args.rdlsfns, optarg);
 				break;
 			case 'k':
-				pl_append(args.rdlscolors, strdup(optarg));
+				sl_append(args.rdlscolors, optarg);
 				break;
 			case 'i':
-				args.imagefn = strdup(optarg);
+				sl_append(args.imagefns, optarg);
 				break;
 			case 'W':
 				args.wcsfn = strdup(optarg);
 				break;
 			case 'I':
-				args.imwcsfn = strdup(optarg);
+				sl_append(args.imwcsfns, optarg);
 				break;
 			case 'c':
 				args.colorcor = atof(optarg);
@@ -216,7 +221,7 @@ int main(int argc, char *argv[]) {
 				args.gain = atof(optarg);
 				break;
 			case 'l':
-				pl_append(layers, strdup(optarg));
+				sl_append(layers, optarg);
 				break;
 			case 'L':
 				args.linewidth = atof(optarg);
@@ -351,14 +356,14 @@ int main(int argc, char *argv[]) {
 	img = calloc(4 * args.W * args.H, 1);
 
 	// Rescue boneheads.
-	if (!pl_size(layers)) {
+	if (!sl_size(layers)) {
 		logmsg("tilecache: Do you maybe want to try rendering some layers?\n");
 	}
 
-	for (i=0; i<pl_size(layers); i++) {
+	for (i=0; i<sl_size(layers); i++) {
 		int j, k;
 		int NR = sizeof(layernames) / sizeof(char*);
-		char* layer = pl_get(layers, i);
+		char* layer = sl_get(layers, i);
 		bool gotit = FALSE;
 		uchar* thisimg = calloc(4 * args.W * args.H, 1);
 
@@ -409,31 +414,59 @@ int main(int argc, char *argv[]) {
 
 	free(img);
 
-	for (i=0; i<pl_size(args.rdlsfns); i++) {
-		char* str = pl_get(args.rdlsfns, i);
-		free(str);
-	}
-	pl_free(args.rdlsfns);
-	for (i=0; i<pl_size(args.rdlscolors); i++) {
-		char* str = pl_get(args.rdlscolors, i);
-		free(str);
-	}
-	pl_free(args.rdlscolors);
+	sl_free2(args.rdlsfns);
+	sl_free2(args.rdlscolors);
+	sl_free2(args.imagefns);
+	sl_free2(args.imwcsfns);
+	sl_free2(layers);
+
 	il_free(args.Nstars);
 	il_free(args.fieldnums);
 
-	free(args.imagefn);
 	free(args.wcsfn);
-	free(args.imwcsfn);
 	free(args.cmap);
-	for (i=0; i<pl_size(layers); i++) {
-		char* str = pl_get(layers, i);
-		free(str);
-	}
-	pl_free(layers);
 
 	logmsg("tilecache: END TILECACHE\n");
 
+	return 0;
+}
+
+int parse_color(char c, double* p_r, double* p_g, double* p_b) {
+	double r, g, b;
+	switch (c) {
+	case 'r': // red
+		r = 1.0;
+		g = b = 0.0;
+		break;
+	case 'b': // blue
+		r = g = 0.0;
+		b = 1.0;
+		break;
+	case 'm': // magenta
+		r = b = 1.0;
+		g = 0.0;
+		break;
+	case 'y': // yellow
+		r = g = 1.0;
+		b = 0.0;
+		break;
+	case 'g': // green
+		r = b = 0.0;
+		g = 1.0;
+		break;
+	case 'c': // cyan
+		r = 0.0;
+		g = b = 1.0;
+		break;
+	case 'w': // white
+		r = g = b = 1.0;
+		break;
+	default:
+		return -1;
+	}
+	if (p_r) *p_r = r;
+	if (p_g) *p_g = g;
+	if (p_b) *p_b = b;
 	return 0;
 }
 

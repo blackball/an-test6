@@ -63,8 +63,12 @@ struct render_args {
     bool density;
 
 	// Args for render_image:
-	char* imagefn;
-    char* imwcsfn;
+	/*
+	  char* imagefn;
+	  char* imwcsfn;
+	*/
+	sl* imagefns;
+	sl* imwcsfns;
 
 	// Args for render_tycho:
 	double colorcor;
@@ -79,16 +83,10 @@ struct render_args {
     char* version;
 
 	// Args for render_rdls
-	/*
-	  char* rdlsfn;
-	  int Nstars;
-	  int fieldnum;
-	*/
-	pl* rdlsfns;
-	pl* rdlscolors;
+	sl* rdlsfns;
+	sl* rdlscolors;
 	il* Nstars;
 	il* fieldnums;
-	//dl* rdlslws;
 
 	// Args for render_boundary
 	char* wcsfn;
@@ -96,6 +94,7 @@ struct render_args {
 	double dashbox;
 	bool zoomright;
 	bool zoomdown;
+	char* ubstyle;
 
 	char* constfn;
 
@@ -105,6 +104,8 @@ struct render_args {
 typedef struct render_args render_args_t;
 
 typedef int (*render_func_t)(unsigned char* dest_img, render_args_t* args);
+
+int parse_color(char c, double* p_red, double* p_green, double* p_blue);
 
 // to RA in degrees
 double pixel2ra(double pix, render_args_t* args);

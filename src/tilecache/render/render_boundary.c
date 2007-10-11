@@ -34,6 +34,9 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	sl* wcsfiles = NULL;
 	qfits_header* hdr = NULL;
 	bool fullfilename = TRUE;
+	double r, g, b;
+
+	r = g = b = 1.0;
 
 	logmsg("Starting.\n");
 
@@ -50,13 +53,18 @@ int render_boundary(unsigned char* img, render_args_t* args) {
         }
         logmsg("read %i filenames from the file \"%s\".\n", sl_size(wcsfiles), args->filelist);
 	} else if (strcmp("userboundary", args->currentlayer) == 0) {
-		if (!args->imwcsfn) {
-			logmsg("Layer is \"userboundary\" but no imwcsfn was given.\n");
+		if (!sl_size(args->imwcsfns)) {
+			logmsg("Layer is \"userboundary\" but no imwcsfns were given.\n");
 			return -1;
 		}
 		wcsfiles = sl_new(4);
+		sl_append_contents(wcsfiles, args->imwcsfns);
 		fullfilename = TRUE;
-		sl_appendf(wcsfiles, args->imwcsfn);
+		if (args->ubstyle) {
+			//logmsg("Parsing userboundary style \"%s\".\n", args->ubstyle);
+			parse_color(args->ubstyle[0], &r, &g, &b);
+			//logmsg("Color %g, %g, %g\n", r, g, b);
+		}
 	} else {
 		logmsg("Unknown layer \"%s\".\n", args->currentlayer);
 		return -1;
@@ -72,7 +80,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	cairo_set_line_width(cairo, lw);
 	cairo_set_line_join(cairo, CAIRO_LINE_JOIN_ROUND);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
-	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+	cairo_set_source_rgb(cairo, r, g, b);
 
     for (I=0; I<sl_size(wcsfiles); I++) {
 		char* basefn;
