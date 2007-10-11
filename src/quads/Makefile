@@ -379,6 +379,9 @@ plotquad.o: plotquad.c
 $(COMMON)/cairoutils.o:
 	$(MAKE) -C $(COMMON) cairoutils.o
 
+onepixel: onepixel.o $(COMMON)/cairoutils.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
+
 plotquad: plotquad.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
 
