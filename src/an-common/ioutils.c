@@ -48,7 +48,6 @@ static void canonicalize_file_name(char* fn) {
     return path;
 }
 #endif
-
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
 void asprintf_safe(char** strp, const char* format, ...) {

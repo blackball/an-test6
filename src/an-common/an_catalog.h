@@ -49,13 +49,21 @@ typedef struct an_observation an_observation;
 
 struct an_entry {
 	uint64 id;
+    // In degrees
 	double ra;
+    // In degrees
 	double dec;
+    // In arcsec/yr.
 	float motion_ra;
+    // In arcsec/yr.
 	float motion_dec;
+    // In arcsec
 	float sigma_ra;
+    // In arcsec
 	float sigma_dec;
+    // In arcsec/yr
 	float sigma_motion_ra;
+    // In arcsec/yr
 	float sigma_motion_dec;
 	unsigned char nobs;
 	an_observation obs[AN_N_OBSERVATIONS];

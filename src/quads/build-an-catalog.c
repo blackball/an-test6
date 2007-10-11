@@ -326,12 +326,15 @@ int main(int argc, char** args) {
 
 				an.ra = entry->RA;
 				an.dec = entry->DEC;
-				an.sigma_ra = entry->sigma_RA;
-				an.sigma_dec = entry->sigma_DEC;
-				an.motion_ra = entry->pmRA;
-				an.motion_dec = entry->pmDEC;
-				an.sigma_motion_ra = entry->sigma_pmRA;
-				an.sigma_motion_dec = entry->sigma_pmDEC;
+                // Tycho-2 sigmas are in milli-arcsec/yr
+				an.sigma_ra = entry->sigma_RA / 1000.0;
+				an.sigma_dec = entry->sigma_DEC / 1000.0;
+                // Tycho-2 proper motions are in milli-arcsec/yr
+				an.motion_ra = entry->pmRA / 1000.0;
+				an.motion_dec = entry->pmDEC / 1000.0;
+                // Tycho-2 stores these in milli-arcsec/yr
+				an.sigma_motion_ra = entry->sigma_pmRA / 1000.0;
+				an.sigma_motion_dec = entry->sigma_pmDEC / 1000.0;
 
 				an.id = an_catalog_get_id(version, starid);
 				starid++;
