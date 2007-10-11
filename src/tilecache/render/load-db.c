@@ -60,7 +60,7 @@ int main(int argc, char** args) {
     }
 
     for (I=0; I<sl_size(wcsfiles); I++) {
-        char* imgfn;
+        char* imgfn = NULL;
         char* wcsfn;
         char* dot;
         bool jpeg, png;
@@ -93,7 +93,7 @@ int main(int argc, char** args) {
 					gotit = TRUE;
 					break;
 				}
-				free(imgfn);
+				free(fn);
 			}
 			if (!gotit) {
 				logmsg("Image file corresponding to WCS file \"%s\" not found.\n", wcsfn);
