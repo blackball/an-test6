@@ -91,7 +91,7 @@ tilerender: $(TILERENDER_OBJS) \
 render-mercator: render-mercator.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-make-merctree: make-merctree.o merctree.o \
+make-merctree: make-merctree.o merctree.o merc.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 zoomout: zoomout.o pnmutils.o

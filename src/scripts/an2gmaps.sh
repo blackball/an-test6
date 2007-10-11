@@ -15,7 +15,7 @@ LOG=log
 #LOG=log-bad
 
 # executable
-MERCTREE=/u/dstn/an/usnob-map/execs/make-merctree2
+MERCTREE=/u/dstn/an/tilecache/render/make-merctree
 
 # ignore input files that don't exist
 MTARGS=-I
