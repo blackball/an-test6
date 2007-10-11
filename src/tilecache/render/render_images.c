@@ -230,19 +230,12 @@ int render_images(unsigned char* img, render_args_t* args) {
         W = wcs.wcstan.imagew;
         H = wcs.wcstan.imageh;
 
-		// logmsg("WCS image W,H = (%i, %i)\n", W, H);
-
         // find the bounds in RA,Dec of this image.
         // magic 10 = step size in pixels for walking the image boundary.
         get_radec_bounds(&wcs, 10, &ramin, &ramax, &decmin, &decmax);
 
 		logmsg("RA,Dec range for this image: (%g to %g, %g to %g)\n",
 			   ramin, ramax, decmin, decmax);
-
-		/*
-		  logmsg("x merc range: %g to %g\n", radeg2merc(ramin), radeg2merc(ramax));
-		  logmsg("x merc min: %g, pixelpermerc: %g\n", args->xmercmin, args->xpixelpermerc);
-		*/
 
         // increasing DEC -> decreasing Y pixel coord
         ylo = floor(dec2pixelf(decmax, args));
