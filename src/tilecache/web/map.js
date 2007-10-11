@@ -69,7 +69,7 @@ function getGetData(){
   Prints text to the debug form.
 */
 function debug(txt) {
-	if (1) {
+	if (false) {
 		GLog.write(txt);
 	}
 }
@@ -286,24 +286,12 @@ var usnobArcsinh = 1; // must match HTML
 
 var imagesGain = 0; // must match HTML
 
-
-var oldOverlays = [];
-
-/*
-  function arrays_equal(arr1, arr2) {
-  if (arr1.length != arr2.length)
-  return false;
-  for (var i=0; i<arr1.length; i++) {
-  if (arr1[i] != arr2[i])
-  return false;
-  }
-  return true;
-  }
-*/
 function min(a, b) {
 	if (a < b) return a;
 	return b;
 }
+
+var oldOverlays = [];
 
 function restackOverlays() {
 	newOverlays = [];
@@ -338,60 +326,6 @@ function restackOverlays() {
 		map.addOverlay(newOverlays[i]);
 	}
 	oldOverlays = newOverlays;
-
-	/*
-	  if (arrays_equal(newOverlays, oldOverlays)) {
-	  debug('Not restacking overlays: new = old.');
-	  return;
-	  }
-	  // If we're just adding layers on top, we don't need to remove the lower
-	  // layers.
-	  if (newOverlays.length > oldOverlays.length) {
-	  justadding = arrays_equal(oldOverlays,
-	  newOverlays.slice(0, oldOverlays.length));
-	  if (justadding) {
-	  debug('Just adding layers.');
-	  for (i=oldOverlays.length; i<newOverlays.length; i++) {
-	  map.addOverlay(newOverlays[i]);
-	  }
-	  oldOverlays = newOverlays;
-	  return;
-	  }
-	  }
-	  // If we're just removing layers from the top, we don't need to restack.
-	  if (newOverlays.length < oldOverlays.length) {
-	  justremoving = arrays_equal(newOverlays, oldOverlays.slice(0, newOverlays.length));
-	  if (justremoving) {
-	  debug('Just removing layers.');
-	  for (i=newOverlays.length; i<oldOverlays.length; i++) {
-	  map.removeOverlay(oldOverlays[i]);
-	  }
-	  oldOverlays = newOverlays;
-	  return;
-	  }
-	  }
-	  debug('Restacking.');
-	  debug('Old overlays: [' + oldOverlays.join(', ') + ']');
-	  debug('New overlays: [' + newOverlays.join(', ') + ']');
-	  map.clearOverlays();
-	  for (i=0; i<newOverlays.length; i++) {
-	  map.addOverlay(newOverlays[i]);
-	  }
-	*/
-	/*
-	  if (tychoShowing)
-	  map.addOverlay(tychoOverlay);
-	  if (usnobShowing)
-	  map.addOverlay(usnobOverlay);
-	  if (imagesShowing || imageOutlinesShowing)
-	  map.addOverlay(imagesOverlay);
-	  if (userImageShowing || userOutlineShowing || userRdlsShowing)
-	  map.addOverlay(userImageOverlay);
-	  if (selectedImageShowing)
-	  map.addOverlay(selectedImageOverlay);
-	  if (gridShowing || messierShowing || constellationShowing)
-	  map.addOverlay(lineOverlay);
-	*/
 }
 
 function toggleOverlayRestack(overlayName) {
@@ -497,11 +431,6 @@ function updateUsnob() {
 function updateSelectedImage() {
 	var tag = "&ubstyle=y";
 	tag += "&wcsfn=" + selectedImages.join('.wcs,') + '.wcs';
-	/*
-	  for (i=0; i<selectedImages.length; i++) {
-	  tag += (i ? ',' : '') + selectedImages[i] + '.wcs';
-	  }
-	*/
 	selectedImageOverlay = makeOverlay('userboundary', tag);
 }
 
@@ -582,16 +511,12 @@ function imageListLoaded(txt) {
 	//debug("xml: " + xml);
 	imgtags = xml.documentElement.getElementsByTagName("image");
 	debug("Found " + imgtags.length + " images.");
-	//imglist.appendChild(document.createTextNode("Images in this view:"));
-	//imglist.appendChild(document.createElement("br"));
 
 	imgs = [];
 	for (var i=0; i<imgtags.length; i++) {
 		name = imgtags[i].getAttribute('name');
-		//debug("Image " + i + ": " + name);
 		imgs.push(name);
 	}
-
 	debug('Selected images: [' + selectedImages.join(', ') + ']');
 	debug('Visible images: [' + imgs.join(', ') + ']');
 
