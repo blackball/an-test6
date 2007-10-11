@@ -188,6 +188,10 @@ function linktohere() {
 		url += "&userimage=" + getdata['userimage'];
 	}
 
+	if (selectedImages.length) {
+		url += "&selectedImages=" + selectedImages.join(',');
+	}
+
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
 			url += "&" + passargs[i];
@@ -674,6 +678,14 @@ function startup() {
 		link3.appendChild(button3);
 		holder.appendChild(link3);
 		holder.appendChild(bar3);
+	}
+
+	if ('selectedImages' in getdata) {
+		selectedImages = getdata['selectedImages'].split(',');
+		if (selectedImages.length > 0) {
+			selectedImageShowing = 1;
+			updateSelectedImage();
+		}
 	}
 
 	// Clear the set of map types.

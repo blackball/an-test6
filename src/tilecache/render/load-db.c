@@ -80,32 +80,28 @@ int main(int argc, char** args) {
             continue;
         }
 
-        jpeg = png = FALSE;
-        asprintf(&fn, "%.*s.%s", dot-wcsfn, wcsfn, "jpg");
-        if (file_exists(fn)) {
-            jpeg = TRUE;
-        } else {
-            free(fn);
-            asprintf(&fn, "%.*s.%s", dot-wcsfn, wcsfn, "jpeg");
-            if (file_exists(fn)) {
-                jpeg = TRUE;
-            } else {
-                free(fn);
-                asprintf(&fn, "%.*s.%s", dot-wcsfn, wcsfn, "png");
-                if (file_exists(fn)) {
-                    png = TRUE;
-                } else {
-                    free(fn);
-                }
-            }
-        }
+		{
+			char* suffixes[] = { "jpeg", "jpg", "png" };
+			bool isjpegs[] = { TRUE,  TRUE,  FALSE };
+			bool ispngs[]  = { FALSE, FALSE, TRUE  };
+			bool gotit = FALSE;
+			for (i=0; i<sizeof(suffixes)/sizeof(char*); i++) {
+				asprintf_safe(&fn, "%.*s.%s", dot-wcsfn, wcsfn, suffixes[i]);
+				if (file_readable(fn)) {
+					jpeg = isjpegs[i];
+					png = ispngs[i];
+					gotit = TRUE;
+					break;
+				}
+				free(imgfn);
+			}
+			if (!gotit) {
+				logmsg("Image file corresponding to WCS file \"%s\" not found.\n", wcsfn);
+				continue;
+			}
+		}
         imgfn = fn;
         
-        if (!(jpeg || png)) {
-            logmsg("Image file corresponding to WCS file \"%s\" not found.\n", wcsfn);
-            continue;
-        }
-
         hdr = qfits_header_read(wcsfn);
         if (!hdr) {
             logmsg("failed to read WCS header from %s\n", wcsfn);
@@ -134,18 +130,11 @@ int main(int argc, char** args) {
 
         asprintf(&basefn, "%.*s", dot-wcsfn, wcsfn);
 
-		/*
-		  char* cpy;
-		  char* base;
-		  cpy = strdup(basefn);
-		  base = strdup(basename(cpy));
-		  free(cpy);
-		*/
-        // insert into readimgdb_image(basefilename,imageformat,ramin,ramax,decmin,decmax,imagew,imageh) values ("img1", "jpeg", 90, 120, -10, 10, 800, 600);
         printf("INSERT INTO tile_image(origfilename, origformat, filename, ramin, ramax, decmin, decmax, imagew, imageh) VALUES ("
-               "\"%s\", \"%s\", \"%s\", %g, %g, %g, %g, %i, %i);\n", basefn, (jpeg ? "jpeg" : "png"), basefn, ramin, ramax, decmin, decmax, W, H);
+               "\"%s\", \"%s\", \"%s\", %g, %g, %g, %g, %i, %i);\n", imgfn, (jpeg ? "jpeg" : "png"), basefn, ramin, ramax, decmin, decmax, W, H);
 
         free(basefn);
+		free(imgfn);
     }
 
     sl_free2(wcsfiles);
