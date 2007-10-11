@@ -534,6 +534,10 @@ function imageListLoaded(txt) {
 	}
 
 	for (var i=0; i<imgs.length; i++) {
+		if (i) {
+			imglist.appendChild(document.createElement("br"));
+		}
+
 		img = imgs[i];
 		link = document.createElement("a");
 		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + img);
@@ -554,8 +558,6 @@ function imageListLoaded(txt) {
 		}
 		link2.appendChild(document.createTextNode(txt));
 		imglist.appendChild(link2);
-
-		imglist.appendChild(document.createElement("br"));
 	}
 }
 

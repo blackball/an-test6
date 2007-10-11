@@ -24,31 +24,46 @@
 		left: 90px;
 		font-family: monospace;
 		color: white;
+	background-image: url(darken.png);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
 	}
 	#map {
 		position: absolute; top:0; left:0; width: 100%; height: 100%;
 		background-color: black;
 	}
 	#toggles {
-		position: absolute;
-		right:10px;
-		top:10px;
-		color:white;
-		z-index:10000;
-		font-size: 12px;
-		font-weight: bold;
+	position: absolute;
+	right:10px;
+	top:10px;
+	color:white;
+	z-index:10000;
+	font-size: 12px;
+	font-weight: bold;
+	background-image: url(darken.png);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
 	}
 	#toggles a {
 		color: #666;
 	}
 	#imagelistholder {
-		position: absolute;
-		right:10px;
-		bottom:50px;
-		color:white;
-		z-index:10000;
-		font-size: 12px;
-		font-weight: bold;
+	position: absolute;
+	right:10px;
+	bottom:50px;
+	color:white;
+	z-index:10000;
+	font-size: 12px;
+	font-weight: bold;
+	background-image: url(darken.png);
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
 	}
     #imagelist a {
 	color: #666;
@@ -100,14 +115,9 @@ Arcsinh mapping: <input type="checkbox" name="arcsinh" checked="checked" onchang
 
 <div id="imagelistholder">
 Images in this view:
-<div id="imagelist">
-</div>
-</div>
+<div id="imagelist"></div></div>
 
-<p />
-
-<!-- Include the map itself. -->
-<script src="map.js" type="text/javascript"> </script>
+<p><script src="map.js" type="text/javascript"> </script></p>
 
 </body>
 </html>
