@@ -22,14 +22,15 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/param.h>
 #include <errno.h>
 #include <unistd.h>
 
 #include "an-bool.h"
 #include "fitsio.h"
-#include "dimage.h"
+#include "ioutils.h"
+#include "simplexy.h"
+#include "svn.h"
 
 #define MAXNPEAKS 10000
 
@@ -37,7 +38,7 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
-static const char* OPTIONS = "hpOo:q";
+static const char* OPTIONS = "hpOo:q8";
 
 void printHelp() {
 	fprintf(stderr,
@@ -48,6 +49,7 @@ void printHelp() {
 			"\n"
 			"   [-O]  overwrite existing output file.\n"
 			"   [-p]  compute image percentiles.\n"
+            "   [-8]  don't use optimization for byte (u8) images.\n"
 			"   [-o <output-filename>]  write XYlist to given filename.\n"
 			"\n"
 			"   image2xy 'file.fits[1]'   - process first extension.\n"
@@ -69,8 +71,7 @@ static int compare_floats(const void* v1, const void* v2) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int argchar;
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
 	fitsfile *ofptr;        /* FITS file pointer to output file */
@@ -82,6 +83,7 @@ int main(int argc, char *argv[])
 	long naxisn[2];
 	int kk, jj;
 	float *thedata = NULL;
+    unsigned char* theu8data = NULL;
 	float sigma;
 	int percentiles = 0;
 	char* infn;
@@ -89,9 +91,14 @@ int main(int argc, char *argv[])
 	float dpsf,plim,dlim,saddle;
 	int overwrite = 0;
     bool verbose = TRUE;
+    char* str;
+    bool do_u8 = TRUE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case '8':
+            do_u8 = FALSE;
+            break;
         case 'q':
             verbose = FALSE;
             break;
@@ -138,8 +145,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (overwrite) {
-		struct stat st;		
-		if (stat(outfn, &st) == 0) {
+        if (file_exists(outfn)) {
             if (verbose)
                 fprintf(stderr, "Deleting existing output file \"%s\"...\n", outfn);
 			if (unlink(outfn)) {
@@ -178,12 +184,24 @@ int main(int argc, char *argv[])
 	fits_write_key(ofptr, TINT, "HALFBOX", &halfbox, "image2xy Half-size for sliding sky window", &status);
 
 	fits_write_history(ofptr, 
-		"Created by astrometry.net's simplexy v1.0.4rc2 alpha-3+4",
-		&status);
+                       "Created by Astrometry.net's simplexy.",
+                       &status);
 	assert(!status);
+    asprintf_safe(&str, "SVN URL: %s", svn_url());
+	fits_write_history(ofptr, str, &status);
+	assert(!status);
+    free(str);
+    asprintf_safe(&str, "SVN Rev: %i", svn_revision());
+	fits_write_history(ofptr, str, &status);
+	assert(!status);
+    free(str);
+    asprintf_safe(&str, "SVN Date: %s", svn_date());
+	fits_write_history(ofptr, str, &status);
+	assert(!status);
+    free(str);
 	fits_write_history(ofptr, 
-		"Visit us on the web at http://astrometry.net/",
-		&status);
+                       "Visit us on the web at http://astrometry.net/",
+                       &status);
 	assert(!status);
 
 	nimgs = 0;
@@ -196,6 +214,7 @@ int main(int argc, char *argv[])
 		long* fpixel;
 		int a;
 		int w, h;
+        int bitpix;
 
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
@@ -227,17 +246,36 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "NAXIS > 2: processing the first image plane only.\n");
 		}
 
-		thedata = malloc(naxisn[0] * naxisn[1] * sizeof(float));
-		if (thedata == NULL) {
-			fprintf(stderr, "Failed allocating data array.\n");
+        fits_get_img_type(fptr, &bitpix, &status);
+		if (status) {
+			fits_report_error(stderr, status);
 			exit( -1);
 		}
+        fprintf(stderr, "BITPIX: %i\n", bitpix);
 
 		fpixel = malloc(naxis * sizeof(long));
 		for (a=0; a<naxis; a++)
 			fpixel[a] = 1;
-		fits_read_pix(fptr, TFLOAT, fpixel, naxisn[0]*naxisn[1], NULL, thedata,
-					  NULL, &status);
+
+        if (bitpix == 8 && do_u8) {
+            // u8 image.
+            theu8data = malloc(naxisn[0] * naxisn[1]);
+            if (!theu8data) {
+                fprintf(stderr, "Failed allocating data array.\n");
+                exit( -1);
+            }
+            fits_read_pix(fptr, TBYTE, fpixel, naxisn[0]*naxisn[1], NULL,
+                          theu8data, NULL, &status);
+        } else {
+            thedata = malloc(naxisn[0] * naxisn[1] * sizeof(float));
+            if (!thedata) {
+                fprintf(stderr, "Failed allocating data array.\n");
+                exit( -1);
+            }
+            fits_read_pix(fptr, TFLOAT, fpixel, naxisn[0]*naxisn[1], NULL,
+                          thedata, NULL, &status);
+        }
+
 		free(fpixel);
 		if (status) {
 			fits_report_error(stderr, status);
@@ -252,9 +290,18 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 		flux = malloc(maxnpeaks * sizeof(float));
-		simplexy(thedata, naxisn[0], naxisn[1],
-				 dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-				 maxsize, halfbox, &sigma, x, y, flux, &npeaks, (verbose?1:0));
+
+        if (bitpix == 8 && do_u8) {
+            simplexy_u8(theu8data, naxisn[0], naxisn[1],
+                        dpsf, plim, dlim, saddle, maxper, maxnpeaks,
+                        maxsize, halfbox, &sigma, x, y, flux, &npeaks,
+                        (verbose?1:0));
+        } else {
+            simplexy(thedata, naxisn[0], naxisn[1],
+                     dpsf, plim, dlim, saddle, maxper, maxnpeaks,
+                     maxsize, halfbox, &sigma, x, y, flux, &npeaks,
+                     (verbose?1:0));
+        }
 
 		// The FITS standard specifies that the center of the lower
 		// left pixel is 1,1. Store our xylist according to FITS
@@ -395,6 +442,7 @@ int main(int argc, char *argv[])
 		}
 
 		free(thedata);
+		free(theu8data);
 		free(x);
 		free(y);
 	}

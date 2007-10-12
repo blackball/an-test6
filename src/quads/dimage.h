@@ -21,6 +21,8 @@
 #ifndef DIMAGE_H
 #define DIMAGE_H
 
+#include "simplexy.h"
+
 int dfluxes(float *image, float *templates, float *weights, int nx, int ny,
             float *xcen, float *ycen, int nchild, float *children,
             float sigma);
@@ -74,16 +76,6 @@ int dallpeaks(float *image, int nx, int ny, int *objects, float *xcen,
               float *ycen, int *npeaks, float dpsf, float sigma,
 	      float dlim, float saddle,
               int maxper, int maxnpeaks, float minpeak, int maxsize);
-
-int simplexy(float *image, int nx, int ny, float dpsf, float plim,
-             float dlim, float saddle, int maxper, int maxnpeaks,
-	     int maxsize, int halfbox,
-             float *sigma, float *x, float *y, float *flux, int *npeaks, int verbose);
-
-int simplexy_u8(unsigned char *image, int nx, int ny, float dpsf, float plim,
-             float dlim, float saddle, int maxper, int maxnpeaks,
-	     int maxsize, int halfbox,
-             float *sigma, float *x, float *y, float *flux, int *npeaks, int verbose);
 
 int dtemplates(float *image, int nx, int ny, int *ntemplates, int *xcen,
                int *ycen, float *templates, float sigma, float parallel);

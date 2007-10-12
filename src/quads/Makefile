@@ -207,7 +207,7 @@ demo_dsmooth: demo_dsmooth.o dsmooth.o \
 
 ctmf.o: ctmf.c
 
-image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
+image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
 
 fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
 
