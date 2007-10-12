@@ -65,11 +65,13 @@ function getGetData(){
 	return GET_DATA;
 }
 
+var dodebug = false;
+
 /*
   Prints text to the debug form.
 */
 function debug(txt) {
-	if (false) {
+	if (dodebug) {
 		GLog.write(txt);
 	}
 }
@@ -94,6 +96,15 @@ var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', //'gain',
     ];
 
 var gotoform = document.getElementById("gotoform");
+
+// List of "images in this view" names.
+var visImages = [];
+// List of "images in this view" bounding boxes.
+var visBoxes  = [];
+
+var selectedIndex = -1;
+var selectedImage = "";
+var selectedPoly;
 
 function ra2long(ra) {
 	return 360 - ra;
@@ -126,13 +137,90 @@ function mapzoomed(oldzoom, newzoom) {
 	mapmoved();
 }
 
+function colorimagelinks(latlng) {
+	inset = [];
+
+	var lat = latlng.lat();
+	var lng = latlng.lng();
+	if (lng < 0)
+		lng += 360;
+
+	debug("lat,lng " + lat + ", " + lng);
+
+	for (var i=0; i<visBoxes.length; i++) {
+		var link = document.getElementById('imagename-' + visImages[i]);
+		if (visImages[i] == selectedImage) {
+			link.style.color = '#00FF88';
+		} else if (inPoly(visBoxes[i], lng, lat)) {
+			inset.push(visImages[i]);
+			link.style.color = '#FF0000';
+		} else {
+			link.style.color = '#666';
+		}
+	}
+	debug("In polies: [ " + inset.join(", ") + " ]");
+}
+
+function mouseclicked(overlay, latlng) {
+	if (selectedPoly)
+		map.removeOverlay(selectedPoly);
+	selectedIndex++;
+
+	var lat = latlng.lat();
+	var lng = latlng.lng();
+	if (lng < 0)
+		lng += 360;
+
+	debug("lat,lng " + lat + ", " + lng);
+
+	var incount = 0;
+	for (var i=0; i<visBoxes.length; i++) {
+		if (inPoly(visBoxes[i], lng, lat)) {
+			if (incount == selectedIndex) {
+				/*
+				  if (selectedImage == visImages[i]) {
+				  selectedIndex++;
+				  continue;
+				  }
+				*/
+
+				selectedImage = visImages[i];
+
+				poly = visBoxes[i];
+				gpoly = [];
+				for (var j=0; j<poly.length/2; j++) {
+					gpoly.push(new GLatLng(poly[j*2+1], poly[j*2]));
+				}
+				selectedPoly = new GPolyline(gpoly, "#00FF88", 2, 0.8);
+			}
+			incount++;
+		}
+	}
+	if (selectedIndex == incount) {
+		selectedIndex = -1;
+		mouseclicked(overlay, latlng);
+		return;
+	}
+
+	if (selectedPoly)
+		map.addOverlay(selectedPoly);
+	colorimagelinks(latlng);
+}
+
+var mouseLatLng;
+
 /*
   This function gets called when the mouse is moved.
 */
-function mousemoved(latlong) {
-	var ra = long2ra(latlong.lng());
+function mousemoved(latlng) {
+	mouseLatLng = latlng;
+
+	var ra = long2ra(latlng.lng());
 	gotoform.ra_mouse.value  = "" + ra;
-	gotoform.dec_mouse.value = "" + latlong.lat();
+	gotoform.dec_mouse.value = "" + latlng.lat();
+
+	selectedIndex = -1;
+	colorimagelinks(latlng);
 }
 
 /*
@@ -450,6 +538,16 @@ function indexOf(arr, element) {
 	return ind;
 }
 
+function mymap(f, arr) {
+	var res = [];
+	for (var i=0; i<arr.length; i++) {
+		res.push(f(arr[i]));
+		//for (var x in arr) {
+		//res.push(f(x));
+	}
+	return res;
+}
+
 function toggleSelectedImage(img) {
 	debug('Toggling ' + img);
 	debug('Selected images: [' + selectedImages.join(', ') + ']');
@@ -473,11 +571,15 @@ function toggleSelectedImage(img) {
 	removeAllChildren(showhide);
 	if (ind == -1) {
 		txt = '[hide]';
+		color = "white";
 	} else {
 		txt = '[show]';
+		color = "#666";
 	}
 	debug('Txt ' + txt);
-	showhide.appendChild(document.createTextNode(txt));
+	txtnode = document.createTextNode(txt);
+	showhide.style.color = color;
+	showhide.appendChild(txtnode);
 }
 
 function changeArcsinh() {
@@ -513,53 +615,67 @@ function imageListLoaded(txt) {
 	emptyImageList();
 	//debug("txt: " + txt);
 	xml = GXml.parse(txt);
-	//debug("xml: " + xml);
+	debug("xml: " + xml);
 	imgtags = xml.documentElement.getElementsByTagName("image");
 	debug("Found " + imgtags.length + " images.");
 
-	imgs = [];
+	visImages = [];
+	visBoxes = [];
 	for (var i=0; i<imgtags.length; i++) {
 		name = imgtags[i].getAttribute('name');
-		imgs.push(name);
+		visImages.push(name);
+		poly = mymap(parseFloat, imgtags[i].getAttribute('poly').split(','));
+		visBoxes.push(poly);
+		debug("Found " + poly.length + " polygon points.");
+		debug("  " + poly.join(","));
+
 	}
 	debug('Selected images: [' + selectedImages.join(', ') + ']');
-	debug('Visible images: [' + imgs.join(', ') + ']');
+	debug('Visible images: [' + visImages.join(', ') + ']');
 
 	// Remove selected images that are no longer visible.
 	for (var i=0; i<selectedImages.length; i++) {
-		ind = indexOf(imgs, selectedImages[i]);
+		ind = indexOf(visImages, selectedImages[i]);
 		if (ind == -1) {
 			selectedImages.splice(ind, 1);
 			i--;
 		}
 	}
 
-	for (var i=0; i<imgs.length; i++) {
+	for (var i=0; i<visImages.length; i++) {
 		if (i) {
 			imglist.appendChild(document.createElement("br"));
 		}
 
-		img = imgs[i];
-		link = document.createElement("a");
-		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + img);
-		link.appendChild(document.createTextNode(img));
-		imglist.appendChild(link);
-
-		imglist.appendChild(document.createTextNode(" "));
+		img = visImages[i];
 
 		link2 = document.createElement("a");
 		link2.setAttribute('href', '#');
 		link2.setAttribute('onclick', 'toggleSelectedImage("' + img + '")');
 		link2.setAttribute('id', 'showhide' + img);
-
 		if (indexOf(selectedImages, img) > -1) {
 			txt = '[hide]';
+			color = "white";
 		} else {
 			txt = '[show]';
+			color = "#666";
 		}
-		link2.appendChild(document.createTextNode(txt));
+		txtnode = document.createTextNode(txt);
+		link2.style.color = color;
+		link2.appendChild(txtnode);
 		imglist.appendChild(link2);
+
+		imglist.appendChild(document.createTextNode(" "));
+
+		link = document.createElement("a");
+		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + img);
+		link.setAttribute('id', 'imagename-' + img);
+		link.appendChild(document.createTextNode(img));
+		imglist.appendChild(link);
 	}
+
+	if (mouseLatLng)
+		colorimagelinks(mouseLatLng);
 }
 
 function movestarted() {
@@ -576,6 +692,9 @@ function moveended() {
 	mapmoved();
 
 	debug('moveended()');
+
+	visBoxes = [];
+	visImages = [];
 
 	if (imagesShowing || imageOutlinesShowing) {
 		url = BASE_URL + "tile/list/?";
@@ -595,7 +714,7 @@ function moveended() {
 		if (url == lastListUrl) {
 			debug('Not downloading identical image list (' + lastListUrl + ')');
 		} else {
-			//debug("Downloading: " + url);
+			debug("Downloading: " + url);
 			lastListUrl = url;
 			GDownloadUrl(url, imageListLoaded);
 		}
@@ -625,6 +744,10 @@ function startup() {
 		zoom = Number(getdata["zoom"]);
 	}
 	map.setCenter(new GLatLng(dec, ra2long(ra)), zoom);
+
+	if ('debug' in getdata) {
+		dodebug = true;
+	}
 
 	// Add pass-thru args
 	firstone = true;
@@ -726,6 +849,7 @@ function startup() {
 	GEvent.addListener(map, "movestart", movestarted);
 	GEvent.addListener(map, "zoomend", mapzoomed);
 	GEvent.addListener(map, "mousemove", mousemoved);
+	GEvent.addListener(map, "click", mouseclicked);
 	GEvent.bindDom(window, "resize", map, map.onResize);
 
 	map.addControl(new GLargeMapControl());
@@ -733,3 +857,61 @@ function startup() {
 	moveended();
 	mapzoomed(map.getZoom(), map.getZoom());
 }
+
+/* inPoly: borrowed from http://www.scottandrew.com/weblog/jsjunk#inpoly
+   copyright 2001 scott andrew lepera, damn you!
+*/
+/* inPoly()
+Finds if a given point is within a polygon.
+
+Based on Bob Stein's inpoly() function for C.
+http://home.earthlink.net/~bobstein/inpoly/
+
+Modified for JavaScript by Scott Andrew LePera.
+
+Parameters:
+poly: array containing x/y coordinate pairs that
+  describe the vertices of the polygon. Format is
+  indentical to that of HTML image maps, i.e. [x1,y1,x2,y2,...]
+  
+px: the x-coordinate of the target point.
+
+py: the y-coordinate of the target point.
+
+Return value:
+true if the point is within the polygon, false if not.
+*/
+function inPoly(poly, px, py) {
+	var npoints = poly.length; // number of points in polygon
+	var xnew,ynew,xold,yold,x1,y1,x2,y2,i;
+	var inside=false;
+
+	if (npoints/2 < 3) { // points don't describe a polygon
+		return false;
+	}
+	xold=poly[npoints-2];
+	yold=poly[npoints-1];
+     
+	for (i=0 ; i < npoints ; i=i+2) {
+		xnew=poly[i];
+		ynew=poly[i+1];
+		if (xnew > xold) {
+			x1=xold;
+			x2=xnew;
+			y1=yold;
+			y2=ynew;
+		} else {
+			x1=xnew;
+			x2=xold;
+			y1=ynew;
+			y2=yold;
+		}
+		if ((xnew < px) == (px <= xold) && ((py-y1)*(x2-x1) < (y2-y1)*(px-x1))) {
+			inside=!inside;
+		}
+		xold=xnew;
+		yold=ynew;
+	}
+	return inside;
+}
+

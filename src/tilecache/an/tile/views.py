@@ -134,19 +134,29 @@ def imagelist(request):
 	top20 = sortbysize[:20]
 	query = top20
 
+	res = HttpResponse()
+	res['Content-Type'] = 'text/xml'
+	res.write('<imagelist>\n')
+
+	a2 = (ramax - ramin) * (decmax - decmin)
 	for img in query:
 		dra1 = min(ramax, img.ramax) - max(ramin, img.ramin)
 		dra2 = min(ramax+360, img.ramax) - max(ramin+360, img.ramin)
 		overlap = max(dra1, dra2) * (min(decmax, img.decmax) - min(decmin, img.decmin))
 		a1 = ((img.ramax - img.ramin) * (img.decmax - img.decmin))
+		score = (overlap**2) / (a1 * a2)
 		logging.debug("Image " + img.filename + ": score %g (dra1=%g, dra2=%g))" %
-					  (overlap*overlap/a1, dra1, dra2))
+					  (score, dra1, dra2))
+		latmin = img.decmin
+		latmax = img.decmax
+		longmin = 360-img.ramax
+		longmax = 360-img.ramin
+		poly = map(str, (longmin, latmin, longmin, latmax, longmax, latmax, longmax, latmin, longmin, latmin))
+		#poly = (ramin, decmin, ramin, decmax, ramax, decmax, ramax, decmin, ramin, decmin)
+		#if (score < 0.01**2):
+		#	continue
+		res.write('<image name="%s" poly="%s" />\n' % (img.filename, ','.join(poly)))
 
-	res = HttpResponse()
-	res['Content-type'] = 'text/xml'
-	res.write('<imagelist>\n')
-	for img in query:
-		res.write('<image name="%s" />\n' % (img.filename))
 	res.write('</imagelist>\n')
 	logging.debug("Returning %i files." % len(query))
 	return res

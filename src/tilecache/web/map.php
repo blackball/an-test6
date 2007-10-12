@@ -64,6 +64,7 @@
 	padding-right: 10px;
 	padding-top: 5px;
 	padding-bottom: 5px;
+	font-family: monospace;
 	}
     #imagelist a {
 	color: #666;
