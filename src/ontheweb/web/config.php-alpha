@@ -10,6 +10,11 @@ $siteid = "alpha";
 // Path to executables.
 $base = "/home/gmaps/alpha/";
 
+// Google Maps URL to use.
+$gmaps_base = "http://explore.astrometry.net/";
+$gmaps_url = $gmaps_base;
+$tiles_url = $gmaps_base . "tile/get/";
+
 // Log file name.
 $logfile = "alpha.log";
 

@@ -7,11 +7,6 @@ require_once 'config.php';
 // Are we using a remote compute server?
 $remote = 1;
 
-//$gmaps_url = "http://usno.astrometry.net/";
-//$tiles_url = $gmaps_url . "tilecache/tilecache.php";
-$gmaps_base = "http://oven.cosmo.fas.nyu.edu/";
-$gmaps_url = $gmaps_base . "tilecache2/";
-$tiles_url = $gmaps_base . "tile/get/";
 $upload_progress = "/tmp/upt_%s.txt";
 
 // blind params
