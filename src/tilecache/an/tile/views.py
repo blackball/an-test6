@@ -57,22 +57,19 @@ def getimage(request):
 		fn = request.GET['filename']
 	except KeyError:
 		return HttpResponse('No filename specified.')
-	#if (fn.find('..')):
-	#	return HttpResponse('".." not allowed in filename.')
+	if not filename_ok(fn):
+		return HttpResponse('Bad filename')
 	q = list(Image.objects.filter(filename=fn))
 	if not len(q):
 		return HttpResponse('No such file.')
 	img = q[0]
 
+	# Content-type
 	ctmap = { 'jpeg':'image/jpeg' }
-	# Yuck!
-	suffixmap = { 'jpeg':'jpg' }
-	ct = ctmap[img.origformat]
-	suff = suffixmap[img.origformat]
-	res = HttpResponse()
-	res['Content-Type'] = ct
 
-	path = gmaps_config.imgdir + "/" + img.origfilename + "." + suff
+	res = HttpResponse()
+	res['Content-Type'] = ctmap[img.origformat]
+	path = gmaps_config.imgdir + "/" + img.origfilename
 	logging.debug("Opening file " + path)
 	f = open(path, "rb")
 	res.write(f.read())

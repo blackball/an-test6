@@ -1551,8 +1551,12 @@ void sl_reverse(sl* list) {
 }
 
 char* sl_append(sl* list, const char* data) {
-	char* copy = strdup(data);
-	assert(copy);
+	char* copy;
+	if (data) {
+		copy = strdup(data);
+		assert(copy);
+	} else
+		copy = NULL;
 	pl_append(list, copy);
 	return copy;
 }
