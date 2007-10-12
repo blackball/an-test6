@@ -135,6 +135,7 @@ function mapzoomed(oldzoom, newzoom) {
 	// update the "zoom" textbox.
 	gotoform.zoomlevel.value = "" + newzoom;
 	mapmoved();
+	selectedIndex = -1;
 }
 
 function colorimagelinks(latlng) {
@@ -164,7 +165,6 @@ function colorimagelinks(latlng) {
 function mouseclicked(overlay, latlng) {
 	if (selectedPoly)
 		map.removeOverlay(selectedPoly);
-	selectedIndex++;
 
 	var lat = latlng.lat();
 	var lng = latlng.lng();
@@ -173,35 +173,23 @@ function mouseclicked(overlay, latlng) {
 
 	debug("lat,lng " + lat + ", " + lng);
 
-	var incount = 0;
-	for (var i=0; i<visBoxes.length; i++) {
+	for (var off=0; off<visBoxes.length; off++) {
+		var i = (selectedIndex - (1 + off) + visBoxes.length) % visBoxes.length;
+
 		if (inPoly(visBoxes[i], lng, lat)) {
-			if (incount == selectedIndex) {
-				/*
-				  if (selectedImage == visImages[i]) {
-				  selectedIndex++;
-				  continue;
-				  }
-				*/
+			selectedImage = visImages[i];
+			selectedIndex = i;
 
-				selectedImage = visImages[i];
-
-				poly = visBoxes[i];
-				gpoly = [];
-				for (var j=0; j<poly.length/2; j++) {
-					gpoly.push(new GLatLng(poly[j*2+1], poly[j*2]));
-				}
-				selectedPoly = new GPolyline(gpoly, "#00FF88", 2, 0.8);
+			poly = visBoxes[i];
+			gpoly = [];
+			for (var j=0; j<poly.length/2; j++) {
+				gpoly.push(new GLatLng(poly[j*2+1], poly[j*2]));
 			}
-			incount++;
+			selectedPoly = new GPolyline(gpoly, "#00FF88", 2, 0.8);
+
+			break;
 		}
 	}
-	if (selectedIndex == incount) {
-		selectedIndex = -1;
-		mouseclicked(overlay, latlng);
-		return;
-	}
-
 	if (selectedPoly)
 		map.addOverlay(selectedPoly);
 	colorimagelinks(latlng);
@@ -219,7 +207,6 @@ function mousemoved(latlng) {
 	gotoform.ra_mouse.value  = "" + ra;
 	gotoform.dec_mouse.value = "" + latlng.lat();
 
-	selectedIndex = -1;
 	colorimagelinks(latlng);
 }
 
