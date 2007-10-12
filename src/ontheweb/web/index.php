@@ -43,6 +43,7 @@ function allow_email($email) {
 		       'fitz@tucana.tuc.noao.edu',
 		       'fstoehr@eso.org',
 		       'fvkastro@xs4all.nl',
+		       'gbb@ipac.caltech.edu',
 		       'gizis@udel.edu',
 		       'hlorch@eso.org',
 		       'hurt@ipac.caltech.edu',
