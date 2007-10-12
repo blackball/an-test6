@@ -77,9 +77,10 @@ function debug(txt) {
 // The GMap2
 var map;
 
-// URL of tileserver
-var TILE_URL;
-var BLACK_URL;
+// URLs of tileserver.  These are defined in the HTML (map.php)
+var BASE_URL  = CONFIG_BASE_URL;
+var TILE_URL  = CONFIG_TILE_URL;
+var BLACK_URL = CONFIG_BLACK_URL;
 
 // The arguments in the HTTP request
 var getdata;
@@ -624,18 +625,6 @@ function startup() {
 		zoom = Number(getdata["zoom"]);
 	}
 	map.setCenter(new GLatLng(dec, ra2long(ra)), zoom);
-
-	// Base URL of the tile and quad servers.
-	var myurl = new String(window.location);
-	if (myurl.toLowerCase().indexOf("explore.astrometry.net") > -1) {
-		BASE_URL = "http://explore.astrometry.net/";
-		TILE_URL = BASE_URL + "tilecache.php?";
-		BLACK_URL = BASE_URL + "black.png";
-	} else {
-		BASE_URL = "http://oven.cosmo.fas.nyu.edu/";
-		TILE_URL = BASE_URL + "tile/get/?";
-		BLACK_URL = BASE_URL + "tilecache2/black.png";
-	}
 
 	// Add pass-thru args
 	firstone = true;

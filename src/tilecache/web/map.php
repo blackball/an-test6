@@ -74,13 +74,13 @@
 <body onload="startup()" onunload="GUnload()">
 
 <?php
-if (strcasecmp($_SERVER['HTTP_HOST'], "oven.cosmo.fas.nyu.edu") == 0) {
-	echo '<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA" type="text/javascript"> </script>';
-} else if (strcasecmp($_SERVER['HTTP_HOST'], "explore.astrometry.net") == 0) {
-	echo '<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w" type="text/javascript"> </script>';
-} else {
-	echo "No Google Maps key for you!";
-}
+include 'config.php';
+echo '<script src="' . $GMAPS_KEY . '" type="text/javascript"> </script>' . "\n";
+echo '<script type="text/javascript">' . "\n" .
+'var CONFIG_BASE_URL = "'  . $BASE_URL  . '"' . "\n" .
+'var CONFIG_TILE_URL = "'  . $TILE_URL  . '"' . "\n" .
+'var CONFIG_BLACK_URL = "' . $BLACK_URL . '"' . "\n" .
+'</script>' . "\n";
 ?>
 
 <!-- The map will go here:-->

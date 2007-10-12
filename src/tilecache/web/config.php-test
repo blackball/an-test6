@@ -1,0 +1,6 @@
+<?php
+$GMAPS_KEY = 'http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRRWPaQfegoYWoxyhnGKpr3zYcSQBxSyAqZ1tFdI4Vptc_OSe3RdgwHPIA';
+$BASE_URL  = "http://oven.cosmo.fas.nyu.edu/";
+$TILE_URL  = $BASE_URL . "tile/get/?";
+$BLACK_URL = $BASE_URL . "tilecache2/black.png";
+?>

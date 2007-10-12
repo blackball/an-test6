@@ -1,0 +1,6 @@
+<?php
+$GMAPS_KEY = 'http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAlvYHC2LeZmCsJFCFk03fhhRnW50g22O78mhXjuWvuhZDh1wNNBQKWzt3ADML7agkUNb_99esy9S_8w';
+$BASE_URL  = "http://explore.astrometry.net/";
+$TILE_URL  = $BASE_URL . "tile/get/?";
+$BLACK_URL = $BASE_URL . "black.png";
+?>
