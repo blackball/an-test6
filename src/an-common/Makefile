@@ -92,7 +92,10 @@ DEP_PREREQS := $(QFITS_LIB)
 endif
 include $(COMMON)/makefile.deps
 
-stellarium-constellations.c: grab-stellarium-constellations
+# This is annoying for people who don't want to install the stellarium 
+# data files...
+#stellarium-constellations.c: grab-stellarium-constellations
+stellarium-constellations.c:
 	-./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@
 
 grab-stellarium-constellations: grab-stellarium-constellations.o \
