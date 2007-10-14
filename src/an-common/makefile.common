@@ -25,6 +25,10 @@ whichcc:
 	@echo $(CC)
 	@echo $(origin CC)
 
+# Reset CFLAGS, unless the user set a value in the environment.
+CFLAGS ?=
+CFLAGS := $(CFLAGS)
+
 RANLIB := ranlib
 
 AWK := LC_ALL=C awk
@@ -104,4 +108,5 @@ LDFLAGS_DEF := $(FLAGS_DEF)
 TEST_OPTION := -shared
 TEST_FAIL_OPTION := -dynamic
 SHAREDLIBFLAGS_DEF += $(shell ($(CC) $(TEST_OPTION) -x c -o /dev/null - < /dev/null > /dev/null 2>&1 && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
+
 

@@ -44,6 +44,19 @@
 #include "render_solid.h"
 #include "render_images.h"
 
+// Ugh, zlib before 1.2.0 didn't include compressBound()...
+// And ZLIB_VERNUM wasn't defined until 1.2.0.2
+#if !defined(ZLIB_VERNUM) || (ZLIB_VERNUM < 0x1200)
+// This was copy-n-pasted directly from the zlib source code version 1.2.3:
+/* compress.c -- compress a memory buffer
+ * Copyright (C) 1995-2003 Jean-loup Gailly.
+ * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+uLong compressBound (uLong sourceLen) {
+  return sourceLen + (sourceLen >> 12) + (sourceLen >> 14) + 11;
+}
+#endif
+
 /**
   This program gets called by "tile.php" in response to a client requesting a map
   tile.  The coordinates of the tile are specified as a range of RA and DEC values.

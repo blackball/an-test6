@@ -208,7 +208,9 @@ int main(int argc, char** args) {
 	rtn = 0;
 	while (1) {
 		int option_index = 0;
-		c = getopt_long_only(argc, args, OPTIONS, long_options, &option_index);
+		// getopt_long_only doesn't exist on my MacOS setup...
+		//c = getopt_long_only(argc, args, OPTIONS, long_options, &option_index);
+		c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {

@@ -24,13 +24,15 @@
  */
 
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/param.h>
+#include <libgen.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#include <sys/param.h>
 
 #include "tweak.h"
 #include "sip_qfits.h"

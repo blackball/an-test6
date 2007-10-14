@@ -20,6 +20,10 @@ COMMON := $(BASEDIR)/an-common
 .PHONY: all
 all:
 
+# Reset CFLAGS, unless the user set a value in the environment.
+CFLAGS ?= 
+CFLAGS := $(CFLAGS)
+
 include $(COMMON)/makefile.common
 include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.anfiles
@@ -33,8 +37,7 @@ include $(COMMON)/makefile.jpeg
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
 
-CFLAGS := $(CFLAGS_DEF)
-
+CFLAGS += $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
@@ -64,10 +67,10 @@ $(COMMON)/cairoutils.o:
 	$(MAKE) -C $(COMMON) cairoutils.o
 
 load-db: load-db.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB) $(PNG_LIB)
 
 image-pyramid: image-pyramid.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB) $(PNG_LIB)
 
 TILERENDER_OBJS := tilerender.o mercrender.o merctree.o merc.o \
 		render_tycho.o \
@@ -86,7 +89,7 @@ tilerender: $(TILERENDER_OBJS) \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
 		$(COMMON)/cairoutils.o
 	$(MAKE) -C $(COMMON) cairoutils.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(NETPBM_LIB) $(JPEG_LIB) $(PNG_LIB)
 
 render-mercator: render-mercator.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -98,10 +101,10 @@ zoomout: zoomout.o pnmutils.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_LIB)
 
 ppmnormrgb: ppmnormrgb.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_LIB) -lm
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(NETPBM_LIB)
 
 whitebalance: whitebalance.o pnmutils.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_LIB) -lm
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(NETPBM_LIB) -lm
 
 .PHONY: tags
 tags:

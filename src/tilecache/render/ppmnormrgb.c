@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "pm.h"
 #include "ppm.h"
@@ -127,17 +128,17 @@ main(int argc, char** args) {
 		if (redgain == 0.0)
 			rmap[i] = (pixval)rint((double)i * maxval / (double)rmax);
 		else
-			rmap[i] = (pixval)min(maxval, rint((double)i * redgain));
+			rmap[i] = (pixval)MIN(maxval, rint((double)i * redgain));
 
 		if (greengain == 0.0)
 			gmap[i] = (pixval)rint((double)i * maxval / (double)gmax);
 		else
-			gmap[i] = (pixval)min(maxval, rint((double)i * greengain));
+			gmap[i] = (pixval)MIN(maxval, rint((double)i * greengain));
 			
 		if (bluegain == 0.0)
 			bmap[i] = (pixval)rint((double)i * maxval / (double)bmax);
 		else
-			bmap[i] = (pixval)min(maxval, rint((double)i * bluegain));
+			bmap[i] = (pixval)MIN(maxval, rint((double)i * bluegain));
 	}
 
     for (row = 0; row < rows; ++row) {

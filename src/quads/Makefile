@@ -35,8 +35,7 @@ include $(COMMON)/makefile.jpeg
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
 
-CFLAGS := $(CFLAGS_DEF)
-
+CFLAGS += $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(LIBKD_INC)
@@ -374,7 +373,7 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
 		$(QFITS_LIB)
 
 plotquad.o: plotquad.c
-	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_INC) -c -o $@ $<
 
 $(COMMON)/cairoutils.o:
 	$(MAKE) -C $(COMMON) cairoutils.o

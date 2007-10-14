@@ -34,10 +34,16 @@ endif
 ifndef NO_KDTREE
 include $(COMMON)/makefile.libkd
 endif
+
 include $(COMMON)/makefile.cairo
+include $(COMMON)/makefile.jpeg
 include $(COMMON)/makefile.netpbm
 
-CFLAGS := $(CFLAGS_DEF)
+CFLAGS += $(CFLAGS_DEF)
+CFLAGS += $(CAIRO_INC)
+CFLAGS += $(NETPBM_INC)
+CFLAGS += $(JPEG_INC)
+
 ifndef NO_QFITS
 CFLAGS += $(QFITS_INC)
 endif
@@ -107,8 +113,8 @@ grab-stellarium-constellations: grab-stellarium-constellations.o \
 ifeq ($(MAKECMDGOALS),cairoutils.o)
   include cairoutils.dep
 endif
-cairoutils.o: cairoutils.c
-	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) $(JPEG_INC) $(PNG_INC) -c $< -o $@
+#cairoutils.o: cairoutils.c
+#	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) $(JPEG_INC) $(PNG_INC) -c $< -o $@
 
 clean:
 	rm -f $(ANUTILS_LIB) $(ANFILES_LIB) $(ALL_OBJ) \

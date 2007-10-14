@@ -36,7 +36,7 @@
 #include "ioutils.h"
 
 #ifdef __APPLE__
-static void canonicalize_file_name(char* fn) {
+static char* canonicalize_file_name(const char* fn) {
     char* path = malloc(1024);
     char* canon;
     canon = realpath(fn, path);
