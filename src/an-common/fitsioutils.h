@@ -22,6 +22,21 @@
 #include "qfits.h"
 #include "keywords.h"
 
+double fits_get_double_val(const qfits_table* table, int column,
+                           const void* rowdata);
+
+/*
+ Returns 1 if the given keyword is one of the required keywords in a BINTABLE
+ specification.
+ */
+int fits_is_table_header(const char* keyword);
+
+/*
+ Copies headers that aren't part of the BINTABLE specification from "src"
+ to "dest".
+ */
+void fits_copy_non_table_headers(qfits_header* dest, const qfits_header* src);
+
 char* fits_get_dupstring(qfits_header* hdr, const char* key);
 
 void

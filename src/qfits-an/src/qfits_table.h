@@ -164,7 +164,8 @@ typedef struct qfits_col
     int            scale_present ;
     float        scale ;   
 
-    /** Offset between the beg. of the table and the beg. of the column.  */
+    /** Offset between the beg. of the table and the beg. of the column.
+     NOTE, THIS IS NOT THE OFFSET FROM THE BEGINNING OF THE *ROW*! */
     int            off_beg ;
     
     /** Flag to know if the column is readable. An empty col is not readable */

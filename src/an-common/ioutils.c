@@ -48,7 +48,32 @@ static char* canonicalize_file_name(const char* fn) {
     return path;
 }
 #endif
+
 uint32_t ENDIAN_DETECTOR = 0x01020304;
+
+int pipe_file_offset(FILE* fin, int offset, int length, FILE* fout) {
+    char buf[1024];
+    int i;
+    if (fseeko(fin, offset, SEEK_SET)) {
+        fprintf(stderr, "Failed to seek to offset %i: %s\n", offset, strerror(errno));
+        return -1;
+    }
+    for (i=0; i<length; i+=sizeof(buf)) {
+        int n = sizeof(buf);
+        if (i + n > length) {
+            n = length - i;
+        }
+        if (fread(buf, 1, n, fin) != n) {
+            fprintf(stderr, "Failed to read %i bytes: %s\n", n, strerror(errno));
+            return -1;
+        }
+        if (fwrite(buf, 1, n, fout) != n) {
+            fprintf(stderr, "Failed to write %i bytes: %s\n", n, strerror(errno));
+            return -1;
+        }
+    }
+    return 0;
+}
 
 void asprintf_safe(char** strp, const char* format, ...) {
 	va_list lst;

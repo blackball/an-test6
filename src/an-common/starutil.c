@@ -54,8 +54,8 @@ inline void radecdegarr2xyzarr(double* radec, double* xyz) {
 
 inline void xyzarr2radecdeg(const double* xyz, double *ra, double *dec) {
 	xyzarr2radec(xyz, ra, dec);
-	*ra  = rad2deg(*ra);
-	*dec = rad2deg(*dec);
+    *ra  = rad2deg(*ra);
+    *dec = rad2deg(*dec);
 }
 
 inline void xyzarr2radecdegarr(double* xyz, double *radec) {

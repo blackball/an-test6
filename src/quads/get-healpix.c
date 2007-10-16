@@ -29,10 +29,10 @@
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  [-H <healpix>]: take healpix number as input and print center as output.\n"
 		   "  %s [-d] ra dec\n"
 		   "     (-d means values are in degree; by default they're in radians)\n"
 		   "  %s x y z\n\n"
+		   "  [-H <healpix>]: take healpix number as input and print center as output.\n"
 		   "  [-N nside]  (default 1)\n"
 		   "  [-n]: print neighbours\n"
 		   "  [-p]: project position within healpix\n"
@@ -124,7 +124,9 @@ int main(int argc, char** args) {
 		uint ri;
 		uint ringnum, longind;
 		uint bighp, x, y;
-		double center[2];
+        double ra, dec;
+        double ramin, ramax;
+        double decmin, decmax;
 		healpix_decompose_xy(healpix, &bighp, &x, &y, Nside);
 		printf("Healpix=%i in the XY scheme (bighp=%i, x=%i, y=%i)\n",
 			   healpix, bighp, x, y);
@@ -136,9 +138,16 @@ int main(int argc, char** args) {
 			int ni = healpix_xy_to_nested(healpix, Nside);
 			printf("  healpix=%i in the NESTED scheme.\n", ni);
 		}
-		healpix_to_radecarr(healpix, Nside, 0.5, 0.5, center);
-		printf("Healpix center is (%.8g, %.8g) degrees\n",
-			   rad2deg(center[0]), rad2deg(center[1]));
+		healpix_to_radecdeg(healpix, Nside, 0.5, 0.5, &ra, &dec);
+		printf("Healpix center is (%.8g, %.8g) degrees\n", ra, dec);
+		// the point with smallest RA is (0,1); largest is (1,0).
+		// southmost (min Dec) is (0,0); northmost is (1,1).
+        healpix_to_radecdeg(healpix, Nside, 0.0, 1.0, &ramin, &dec);
+        healpix_to_radecdeg(healpix, Nside, 1.0, 0.0, &ramax, &dec);
+        healpix_to_radecdeg(healpix, Nside, 0.0, 0.0, &ra, &decmin);
+        healpix_to_radecdeg(healpix, Nside, 1.0, 1.0, &ra, &decmax);
+        printf("Healpix is bounded by RA=[%g, %g], Dec=[%g, %g] degrees.\n",
+               ramin, ramax, decmin, decmax);
 	}
 
 	if (neighbours) {

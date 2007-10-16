@@ -27,6 +27,8 @@
 
 extern uint32_t ENDIAN_DETECTOR;
 
+int pipe_file_offset(FILE* fin, int offset, int length, FILE* fout);
+
 /*
  It's not really _safe_ as such, it just prints an error message if it fails...
  */

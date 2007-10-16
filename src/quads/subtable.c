@@ -26,6 +26,7 @@
 #include "qfits.h"
 #include "bl.h"
 #include "fitsioutils.h"
+#include "ioutils.h"
 
 char* OPTIONS = "hc:i:o:";
 
@@ -82,37 +83,27 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	if (infn) {
-		fin = fopen(infn, "rb");
-		if (!fin) {
-			fprintf(stderr, "Failed to open input file %s: %s\n", infn, strerror(errno));
-			exit(-1);
-		}
-	}
+    fin = fopen(infn, "rb");
+    if (!fin) {
+        fprintf(stderr, "Failed to open input file %s: %s\n", infn, strerror(errno));
+        exit(-1);
+    }
 
-	if (outfn) {
-		fout = fopen(outfn, "wb");
-		if (!fout) {
-			fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
-			exit(-1);
-		}
-	}
+    fout = fopen(outfn, "wb");
+    if (!fout) {
+        fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
+        exit(-1);
+    }
 
 	// copy the main header exactly.
 	if (qfits_get_hdrinfo(infn, 0, &start, &size)) {
 		fprintf(stderr, "Couldn't get main header.\n");
 		exit(-1);
 	}
-	buffer = malloc(size);
-	if (fread(buffer, 1, size, fin) != size) {
-		fprintf(stderr, "Error reading main header: %s\n", strerror(errno));
-		exit(-1);
-	}
-	if (fwrite(buffer, 1, size, fout) != size) {
-		fprintf(stderr, "Error writing main header: %s\n", strerror(errno));
-		exit(-1);
-	}
-	free(buffer);
+    if (pipe_file_offset(fin, start, size, fout)) {
+        fprintf(stderr, "Failed to copy primary header.\n");
+        exit(-1);
+    }
 
 	NC = pl_size(cols);
 	nextens = qfits_query_n_ext(infn);
@@ -189,35 +180,7 @@ int main(int argc, char *argv[]) {
 
 		tablehdr = qfits_table_ext_header_default(outtable);
 		// add any headers from the original table that aren't part of the BINTABLE extension.
-		{
-			char key[FITS_LINESZ+1];
-			char val[FITS_LINESZ+1];
-			char com[FITS_LINESZ+1];
-			char lin[FITS_LINESZ+1];
-			int i;
-			for (i=0; i<header->n; i++) {
-				qfits_header_getitem(header, i, key, val, com, lin);
-				if (!strcasecmp(key, "XTENSION") ||
-					!strcasecmp(key, "BITPIX") ||
-					!strncasecmp(key, "NAXIS...", 5) ||
-					!strcasecmp(key, "PCOUNT") ||
-					!strcasecmp(key, "GCOUNT") ||
-					!strcasecmp(key, "TFIELDS") ||
-					!strncasecmp(key, "TFORM...", 5) ||
-					!strncasecmp(key, "TTYPE...", 5) ||
-					!strncasecmp(key, "TUNIT...", 5) ||
-					!strncasecmp(key, "TNULL...", 5) ||
-					!strncasecmp(key, "TSCAL...", 5) ||
-					!strncasecmp(key, "TZERO...", 5) ||
-					!strncasecmp(key, "TDISP...", 5) ||
-					!strncasecmp(key, "THEAP...", 5) ||
-					!strncasecmp(key, "TDIM...", 4) ||
-					!strcasecmp(key, "END"))
-					continue;
-				qfits_header_add(tablehdr, key, val, com, lin);
-			}
-		}
-
+        fits_copy_non_table_headers(tablehdr, header);
 		qfits_header_dump(tablehdr, fout);
 		qfits_header_destroy(tablehdr);
 		

@@ -15,14 +15,13 @@
   along with the Astrometry.net suite ; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
-
 #include <stdio.h>
-
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <math.h>
 
 #include "qfits.h"
 #include "fitsioutils.h"
@@ -34,6 +33,67 @@
 #else
 #define IS_LITTLE_ENDIAN 0
 #endif
+
+static Inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2);
+static Inline void ntoh64(void* ptr);
+static Inline void ntoh32(void* ptr);
+static Inline void ntoh16(void* ptr);
+
+double fits_get_double_val(const qfits_table* table, int column,
+                           const void* rowdata) {
+    const unsigned char* cdata = rowdata;
+    double dval;
+    float fval;
+
+    // oh, the insanity of qfits...
+    cdata += (table->col[column].off_beg - table->col[0].off_beg);
+    if (table->col[column].atom_type == TFITS_BIN_TYPE_E) {
+        memcpy(&fval, cdata, sizeof(fval));
+        ntoh32(&fval);
+        dval = fval;
+        return fval;
+    } else if (table->col[column].atom_type == TFITS_BIN_TYPE_D) {
+        memcpy(&dval, cdata, sizeof(dval));
+        ntoh64(&dval);
+        return dval;
+    } else {
+        fprintf(stderr, "Invalid column type %i.\n", table->col[column].atom_type);
+    }
+    return HUGE_VAL;
+}
+
+int fits_is_table_header(const char* key) {
+    return (!strcasecmp(key, "XTENSION") ||
+            !strcasecmp(key, "BITPIX") ||
+            !strncasecmp(key, "NAXIS...", 5) ||
+            !strcasecmp(key, "PCOUNT") ||
+            !strcasecmp(key, "GCOUNT") ||
+            !strcasecmp(key, "TFIELDS") ||
+            !strncasecmp(key, "TFORM...", 5) ||
+            !strncasecmp(key, "TTYPE...", 5) ||
+            !strncasecmp(key, "TUNIT...", 5) ||
+            !strncasecmp(key, "TNULL...", 5) ||
+            !strncasecmp(key, "TSCAL...", 5) ||
+            !strncasecmp(key, "TZERO...", 5) ||
+            !strncasecmp(key, "TDISP...", 5) ||
+            !strncasecmp(key, "THEAP...", 5) ||
+            !strncasecmp(key, "TDIM...", 4) ||
+            !strcasecmp(key, "END")) ? 1 : 0;
+}
+
+void fits_copy_non_table_headers(qfits_header* dest, const qfits_header* src) {
+    char key[FITS_LINESZ+1];
+    char val[FITS_LINESZ+1];
+    char com[FITS_LINESZ+1];
+    char lin[FITS_LINESZ+1];
+    int i;
+    for (i=0; i<src->n; i++) {
+        qfits_header_getitem(src, i, key, val, com, lin);
+        if (fits_is_table_header(key))
+            continue;
+        qfits_header_add(dest, key, val, com, lin);
+    }
+}
 
 char* fits_get_dupstring(qfits_header* hdr, const char* key) {
 	return strdup_safe(qfits_pretty_string(qfits_header_getstr(hdr, key)));
@@ -278,6 +338,9 @@ static Inline void hton64(void* ptr) {
 	dstn_swap_bytes(c+3, c+4);
 #endif
 }
+static Inline void ntoh64(void* ptr) {
+    hton64(ptr);
+}
 
 static Inline void hton32(void* ptr) {
 #if IS_LITTLE_ENDIAN
@@ -286,12 +349,18 @@ static Inline void hton32(void* ptr) {
 	dstn_swap_bytes(c+1, c+2);
 #endif
 }
+static Inline void ntoh32(void* ptr) {
+    hton32(ptr);
+}
 
 static Inline void hton16(void* ptr) {
 #if IS_LITTLE_ENDIAN
 	unsigned char* c = (unsigned char*)ptr;
 	dstn_swap_bytes(c+0, c+1);
 #endif
+}
+static Inline void ntoh16(void* ptr) {
+    hton16(ptr);
 }
 
 int fits_write_data_D(FILE* fid, double value) {

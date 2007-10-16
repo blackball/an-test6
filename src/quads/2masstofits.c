@@ -37,6 +37,8 @@ void print_help(char* progname) {
 		   "  %s -o <output-filename-template>\n"
 		   "  [-N <healpix-nside>]  (default = 8.)\n"
 		   "  <input-file> [<input-file> ...]\n"
+           "\n"
+           "Input files are gzipped 2MASS PSC catalog files, named like psc_aaa.gz."
 		   "\n", progname);
 }
 

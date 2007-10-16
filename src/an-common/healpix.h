@@ -246,11 +246,17 @@ void healpix_to_xyzarr(unsigned int hp, unsigned int Nside, double dx, double dy
 void healpix_to_radec(unsigned int hp, unsigned int Nside, double dx, double dy,
 					  double* ra, double* dec);
 
+void healpix_to_radecdeg(unsigned int hp, unsigned int Nside, double dx, double dy,
+                         double* ra, double* dec);
+
 /**
    Same as healpix_to_radec, but (RA,DEC) are stored in an array.
  */
 void healpix_to_radecarr(unsigned int hp, unsigned int Nside, double dx, double dy,
 						 double* radec);
+
+void healpix_to_radecdegarr(unsigned int hp, unsigned int Nside, double dx, double dy,
+                            double* radec);
 
 /**
    Computes the approximate side length of a healpix, in arcminutes.
