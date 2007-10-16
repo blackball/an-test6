@@ -28,22 +28,51 @@ from ctypes import *
 class Tan(ctypes.Structure):
     _fields_ = [("crval", c_double*2),
                 ("crpix", c_double*2),
-                ("cd",    c_double*4)]
+                ("cd",    c_double*4),
+                ("imagew", c_double),
+                ("imageh", c_double)]
 
     def pixelxy2radec(self, px,py):
         'Return ra,dec of px,py'
         ra = ctypes.c_double(3.14159)
         dec = ctypes.c_double(2.71828)
-        print ra, dec
+        fpx = ctypes.c_double(px)
+        fpy = ctypes.c_double(py)
         _sip.tan_pixelxy2radec(
                 ctypes.pointer(self),
-                px, py,
+                fpx, fpy,
                 ctypes.pointer(ra),
                 ctypes.pointer(dec))
+        return ra.value, dec.value
 
-#        return ra.value, dec.value
+SIP_MAXORDER = 10
+
+class Sip(ctypes.Structure):
+    _fields_ = [('wcstan', Tan),
+                ('a_order', c_int),
+                ('b_order', c_int),
+                ('a', c_double*(SIP_MAXORDER**2)),
+                ('b', c_double*(SIP_MAXORDER**2)),
+                ('ap_order', c_int),
+                ('bp_order', c_int),
+                ('ap', c_double*(SIP_MAXORDER**2)),
+                ('bp', c_double*(SIP_MAXORDER**2)),]
+
+    def pixelxy2radec(self, px,py):
+        'Return ra,dec of px,py'
+        ra = ctypes.c_double(0)
+        dec = ctypes.c_double(0)
+        fpx = ctypes.c_double(px)
+        fpy = ctypes.c_double(py)
+        _sip.sip_pixelxy2radec(
+                ctypes.pointer(self),
+                fpx, fpy,
+                ctypes.pointer(ra),
+                ctypes.pointer(dec))
+        return ra.value, dec.value
 
 _sip.tan_pixelxy2radec
+_sip.sip_pixelxy2radec
 
 #tan_t* tan, double px, double py, double *xyz);
 #tan_pixelxy2radec(tan_t* wcs_tan, double px, double py, double *ra, double *dec);
@@ -60,4 +89,15 @@ if __name__ == '__main__':
     t.cd[2] = 0.0
     t.cd[3] = 1.0
 
-    ra,dec = t.pixelxy2radec(2,3)
+    ra,dec = t.pixelxy2radec(2.0,3.0)
+    print ra,dec
+
+    s = Sip()
+    s.wcstan = t
+    s.a_order = 1
+    s.b_order = 1
+    s.ap_order = 1
+    s.bp_order = 1
+
+    ra,dec = s.pixelxy2radec(2.0,3.0)
+    print ra,dec

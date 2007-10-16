@@ -504,22 +504,13 @@ static void load_and_parse_wcsfiles(blind_t* bp) {
 	int i;
 	for (i = 0; i < sl_size(bp->verify_wcsfiles); i++) {
 		sip_t wcs;
-		qfits_header* hdr;
 		char* fn = sl_get(bp->verify_wcsfiles, i);
 		logmsg("Reading WCS header to verify from file %s\n", fn);
-		hdr = qfits_header_read(fn);
-		if (!hdr) {
-			logerr("Failed to read FITS header from file %s\n", fn);
-			continue;
-		}
-		memset(&wcs, 0, sizeof(wcs));
-		if (!sip_read_header(hdr, &wcs)) {
+		if (!sip_read_header_file(fn, &wcs)) {
 			logerr("Failed to parse WCS header from file %s\n", fn);
-			qfits_header_destroy(hdr);
 			continue;
 		}
 		pl_append(bp->verify_wcs_list, &wcs);
-		qfits_header_destroy(hdr);
 	}
 }
 

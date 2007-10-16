@@ -75,7 +75,6 @@ int main(int argc, char** args) {
 	//rdlist* rdls = NULL;
 	xylist* xyls = NULL;
 	sip_t sip;
-	qfits_header* hdr;
 	int i;
 	int W, H;
 	double xyzcenter[3];
@@ -116,13 +115,8 @@ int main(int argc, char** args) {
 	}
 
 	// read WCS.
-	hdr = qfits_header_read(wcsfn);
-	if (!hdr) {
-		fprintf(stderr, "Failed to read FITS header from file %s.\n", wcsfn);
-		exit(-1);
-	}
 	fprintf(stderr, "Trying to parse SIP header from %s...\n", wcsfn);
-	if (!sip_read_header(hdr, &sip)) {
+	if (!sip_read_header_file(wcsfn, &sip)) {
 		fprintf(stderr, "Failed to parse SIP header from %s.\n", wcsfn);
 	}
 	// image W, H

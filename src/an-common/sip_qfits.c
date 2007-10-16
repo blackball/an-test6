@@ -22,7 +22,7 @@
 #include "an-bool.h"
 #include "fitsioutils.h"
 
-static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
+static void wcs_hdr_common(qfits_header* hdr, const tan_t* tan) {
 	qfits_header_add(hdr, "WCSAXES", "2", NULL, NULL);
 	qfits_header_add(hdr, "EQUINOX", "2000.0", "Epoch (yr) of celestial coordinates", NULL);
 	qfits_header_add(hdr, "LONPOLE", "180.0", NULL, NULL);
@@ -47,7 +47,7 @@ static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 }
 
 static void add_polynomial(qfits_header* hdr, const char* format,
-						   int order, double* data, int datastride,
+						   int order, const double* data, int datastride,
 						   bool drop_linear) {
 	int i, j;
 	char key[64];
@@ -62,7 +62,7 @@ static void add_polynomial(qfits_header* hdr, const char* format,
 		}
 }
 
-void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
+void sip_add_to_header(qfits_header* hdr, const sip_t* sip) {
 	qfits_header_add(hdr, "CTYPE1", "RA---TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
 	qfits_header_add(hdr, "CTYPE2", "DEC--TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
 
@@ -81,25 +81,57 @@ void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
 	add_polynomial(hdr, "BP_%i_%i", sip->bp_order, (double*)sip->bp, SIP_MAXORDER, FALSE);
 }
 
-qfits_header* sip_create_header(sip_t* sip) {
+qfits_header* sip_create_header(const sip_t* sip) {
 	qfits_header* hdr = qfits_table_prim_header_default();
 	sip_add_to_header(hdr, sip);
 	return hdr;
 }
 
-void tan_add_to_header(qfits_header* hdr, tan_t* tan) {
+void tan_add_to_header(qfits_header* hdr, const tan_t* tan) {
 	qfits_header_add(hdr, "CTYPE1", "RA---TAN", "TAN (gnomic) projection", NULL);
 	qfits_header_add(hdr, "CTYPE2", "DEC--TAN", "TAN (gnomic) projection", NULL);
 	wcs_hdr_common(hdr, tan);
 }
 
-qfits_header* tan_create_header(tan_t* tan) {
+qfits_header* tan_create_header(const tan_t* tan) {
 	qfits_header* hdr = qfits_table_prim_header_default();
 	tan_add_to_header(hdr, tan);
 	return hdr;
 }
 
-static bool read_polynomial(qfits_header* hdr, const char* format,
+static void* read_header_file(const char* fn, void* dest,
+							  void* (*readfunc)(const qfits_header*, void*)) {
+	qfits_header* hdr;
+	void* result;
+	hdr = qfits_header_read(fn);
+	if (!hdr) {
+		fprintf(stderr, "Failed to read FITS header from file \"%s\".\n", fn);
+		return NULL;
+	}
+	result = readfunc(hdr, dest);
+	if (!result) {
+		fprintf(stderr, "Failed to parse WCS header from file \"%s\".\n", fn);
+	}
+	qfits_header_destroy(hdr);
+	return result;
+}
+
+// silly little dispatch function to avoid casting - I like a modicum of type safety
+static void* call_sip_read_header(const qfits_header* hdr, void* dest) {
+	return sip_read_header(hdr, dest);
+}
+sip_t* sip_read_header_file(const char* fn, sip_t* dest) {
+	return read_header_file(fn, dest, call_sip_read_header);
+}
+
+static void* call_tan_read_header(const qfits_header* hdr, void* dest) {
+	return tan_read_header(hdr, dest);
+}
+tan_t* tan_read_header_file(const char* fn, tan_t* dest) {
+	return read_header_file(fn, dest, call_tan_read_header);
+}
+
+static bool read_polynomial(const qfits_header* hdr, const char* format,
 							int order, double* data, int datastride,
 							bool skip_linear) {
 	int i, j;
@@ -128,7 +160,7 @@ static bool read_polynomial(qfits_header* hdr, const char* format,
 	return TRUE;
 }
 
-sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
+sip_t* sip_read_header(const qfits_header* hdr, sip_t* dest) {
 	sip_t sip;
 	char* str;
 	const char* key;
@@ -204,7 +236,7 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 	return dest;
 }
 
-tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
+tan_t* tan_read_header(const qfits_header* hdr, tan_t* dest) {
 	char* str;
 	const char* key;
 	const char* expect;

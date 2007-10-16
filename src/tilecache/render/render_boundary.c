@@ -32,7 +32,6 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	cairo_surface_t* target;
 	double lw = args->linewidth;
 	sl* wcsfiles = NULL;
-	qfits_header* hdr = NULL;
 	bool fullfilename = TRUE;
 	double r, g, b;
 
@@ -108,15 +107,9 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 			goto nextfile;
 		}
 
-        hdr = qfits_header_read(wcsfn);
-        if (!hdr) {
-            logmsg("failed to read WCS header from %s\n", wcsfn);
-			goto nextfile;
-        }
+        res = sip_read_header_file(wcsfn, &wcs);
         free(wcsfn);
 		wcsfn = NULL;
-        res = sip_read_header(hdr, &wcs);
-        qfits_header_destroy(hdr);
         if (!res) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
 			goto nextfile;

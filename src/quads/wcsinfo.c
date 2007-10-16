@@ -49,7 +49,6 @@ int main(int argc, char** args) {
 	int ninputfiles = 0;
 	sip_t wcs;
 	double imw, imh;
-	qfits_header* wcshead = NULL;
 	double rac, decc;
 	double det, T, A, parity, orient;
     int rah, ram, decd, decm;
@@ -76,13 +75,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	wcshead = qfits_header_read(inputfiles[0]);
-	if (!wcshead) {
-		fprintf(stderr, "failed to read wcs file %s\n", inputfiles[0]);
-		return -1;
-	}
-
-	if (!sip_read_header(wcshead, &wcs)) {
+	if (!sip_read_header_file(inputfiles[0], &wcs)) {
 		fprintf(stderr, "failed to read WCS header from file %s.\n", inputfiles[0]);
 		return -1;
 	}
@@ -155,8 +148,6 @@ int main(int argc, char** args) {
     printf("decmax %g\n", decmax);
     printf("ramin %g\n", ramin);
     printf("ramax %g\n", ramax);
-
-	qfits_header_destroy(wcshead);
 
 	return 0;
 }

@@ -50,7 +50,6 @@ int main(int argc, char** args) {
 	int c;
 	char* wcsfn = NULL;
 	sip_t sip;
-	qfits_header* hdr;
 	bool hassip = FALSE;
 	int i;
 	int N;
@@ -84,28 +83,13 @@ int main(int argc, char** args) {
 	}
 
 	// read WCS.
-	hdr = qfits_header_read(wcsfn);
-	if (!hdr) {
-		fprintf(stderr, "Failed to read FITS header from file %s.\n", wcsfn);
-		exit(-1);
-	}
-
 	fprintf(stderr, "Trying to parse SIP header from %s...\n", wcsfn);
-	memset(&sip, 0, sizeof(sip_t));
-	if (sip_read_header(hdr, &sip)) {
+	if (sip_read_header_file(wcsfn, &sip)) {
 		fprintf(stderr, "Got SIP header.\n");
-		hassip = TRUE;
+		hassip = (sip.a_order > 0);
 	} else {
-		fprintf(stderr, "Failed to parse SIP header from %s.\n", wcsfn);
-	}
-	if (!hassip) {
-		fprintf(stderr, "Trying to parse TAN header from %s...\n", wcsfn);
-		if (tan_read_header(hdr, &(sip.wcstan))) {
-			fprintf(stderr, "Got TAN header.\n");
-		} else {
-			fprintf(stderr, "Failed to parse TAN header from %s.\n", wcsfn);
-			exit(-1);
-		}
+		fprintf(stderr, "Failed to parse SIP or TAN header from %s.\n", wcsfn);
+		exit(-1);
 	}
 
     if ((sip.wcstan.imagew == 0.0) || (sip.wcstan.imageh == 0.0)) {

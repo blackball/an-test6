@@ -55,7 +55,7 @@ CFLAGS += -I.
 ANFILES_LIB := libanfiles.a
 ANUTILS_LIB := libanutils.a
 
-all: $(ANUTILS_LIB) $(ANFILES_LIB)
+all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so
 
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
@@ -91,6 +91,10 @@ $(ANUTILS_LIB): $(ANUTILS_OBJ) $(ANUTILS_DEPS)
 $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
 	$(AR) rc $@ $(ANFILES_OBJ)
 	$(RANLIB) $@
+
+_sip.so: sip.o starutil.o mathutil.o sip_qfits.o fitsioutils.o ioutils.o bl.o \
+		$(QFITS_LIB)
+	$(CC) -shared -o $@ $^
 
 DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)
 ifndef NO_QFITS

@@ -64,7 +64,6 @@ int main(int argc, char** args) {
         char* wcsfn;
         char* dot;
         bool jpeg, png;
-        qfits_header* hdr;
         sip_t wcs;
         sip_t* res;
         double ramin, ramax, decmin, decmax;
@@ -102,13 +101,7 @@ int main(int argc, char** args) {
 		}
         imgfn = fn;
         
-        hdr = qfits_header_read(wcsfn);
-        if (!hdr) {
-            logmsg("failed to read WCS header from %s\n", wcsfn);
-            continue;
-        }
-        res = sip_read_header(hdr, &wcs);
-        qfits_header_destroy(hdr);
+        res = sip_read_header_file(wcsfn, &wcs);
         if (!res) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
             continue;

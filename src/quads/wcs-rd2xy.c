@@ -63,7 +63,6 @@ int main(int argc, char** args) {
 	rdlist* rdls = NULL;
 	il* fields;
 	sip_t sip;
-	qfits_header* hdr;
 	int i;
 
 	fields = il_new(16);
@@ -111,32 +110,15 @@ int main(int argc, char** args) {
 	}
 
 	// read WCS.
-	hdr = qfits_header_read(wcsfn);
-	if (!hdr) {
-		fprintf(stderr, "Failed to read FITS header from file %s.\n", wcsfn);
-		exit(-1);
-	}
-
-	if (!forcetan) {
-		if (verbose)
-            printf("Trying to parse SIP header from %s...\n", wcsfn);
-		if (sip_read_header(hdr, &sip)) {
-			if (verbose)
-                printf("Got SIP header.\n");
-			hassip = TRUE;
-		} else {
-			if (verbose) 
-                printf("Failed to parse SIP header from %s.\n", wcsfn);
-		}
-	}
-	if (!hassip) {
-		if (verbose)
-            printf("Trying to parse TAN header from %s...\n", wcsfn);
-		if (tan_read_header(hdr, &(sip.wcstan))) {
-			if (verbose)
-                printf("Got TAN header.\n");
-		} else {
+	if (forcetan) {
+		memset(&sip, 0, sizeof(sip_t));
+		if (!tan_read_header_file(wcsfn, &(sip.wcstan))) {
 			fprintf(stderr, "Failed to parse TAN header from %s.\n", wcsfn);
+			exit(-1);
+		}
+	} else {
+		if (!sip_read_header_file(wcsfn, &sip)) {
+			printf("Failed to parse SIP header from %s.\n", wcsfn);
 			exit(-1);
 		}
 	}

@@ -778,22 +778,14 @@ int main(int argc, char** args) {
     I = 0;
     for (i=0; i<sl_size(verifywcs); i++) {
         char* fn;
-        qfits_header* wcshdr;
         sip_t sip;
 		int j;
 
         fn = sl_get(verifywcs, i);
-        wcshdr = qfits_header_read(fn);
-        if (!wcshdr) {
-            fprintf(stderr, "Failed to read FITS header from file \"%s\".\n", fn);
-            continue;
-        }
-        if (!sip_read_header(wcshdr, &sip)) {
+        if (!sip_read_header_file(fn, &sip)) {
             fprintf(stderr, "Failed to parse WCS header from file \"%s\".\n", fn);
-            qfits_header_destroy(wcshdr);
             continue;
         }
-        qfits_header_destroy(wcshdr);
         I++;
         {
             tan_t* wcs = &(sip.wcstan);

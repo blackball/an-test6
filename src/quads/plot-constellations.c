@@ -108,8 +108,6 @@ int main(int argc, char** args) {
     int W, H;
     unsigned char* img;
 
-    qfits_header* hdr;
-
     bool NGC = FALSE, constell = FALSE;
 	bool bright = FALSE;
 	bool common_only = FALSE;
@@ -213,15 +211,9 @@ int main(int argc, char** args) {
     }
 
     // read WCS.
-    hdr = qfits_header_read(wcsfn);
-    if (!hdr) {
-        fprintf(stderr, "Failed to read FITS header from file %s.\n", wcsfn);
-        exit(-1);
-    }
-
     if (verbose)
         fprintf(stderr, "Trying to parse SIP/TAN header from %s...\n", wcsfn);
-    if (sip_read_header(hdr, &sip)) {
+    if (sip_read_header_file(wcsfn, &sip)) {
         if (verbose)
             fprintf(stderr, "Got SIP header.\n");
     } else {

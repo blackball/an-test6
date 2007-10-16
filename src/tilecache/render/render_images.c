@@ -158,7 +158,6 @@ int render_images(unsigned char* img, render_args_t* args) {
         char* imgfn;
         char* wcsfn;
         bool jpeg, png;
-        qfits_header* hdr;
         sip_t wcs;
         unsigned char* userimg = NULL;
         int W, H;
@@ -231,15 +230,9 @@ int render_images(unsigned char* img, render_args_t* args) {
 			}
 		}
 
-        hdr = qfits_header_read(wcsfn);
-        if (!hdr) {
-            logmsg("failed to read WCS header from %s\n", wcsfn);
-			goto nextimage;
-        }
+        res = sip_read_header_file(wcsfn, &wcs);
         free(wcsfn);
 		wcsfn = NULL;
-        res = sip_read_header(hdr, &wcs);
-        qfits_header_destroy(hdr);
         if (!res) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
 			goto nextimage;
