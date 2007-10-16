@@ -17,6 +17,8 @@ import commands
 
 import sip
 
+import ctypes
+
 import an.gmaps_config as gmaps_config
 
 logfile        = gmaps_config.logfile
@@ -152,7 +154,15 @@ def imagelist(request):
 
 		wcsfn = gmaps_config.imgdir + '/' + img.filename + '.wcs'
 		try:
-			wcs = Sip(filename=wcsfn)
+			if not sip.libraryloaded():
+				fn = gmaps_config.sipso
+				logging.debug('Trying to load library %s' % fn)
+				#sip.loadlibrary(fn)
+				lib = ctypes.CDLL(fn)
+				logging.debug('Lib is ' + str(lib))
+				sip._sip = lib
+
+			wcs = sip.Sip(filename=wcsfn)
 			poly = []
 			steps = 4
 			# bottom
@@ -160,33 +170,33 @@ def imagelist(request):
 			for i in xrange(steps):
 				x = 1 + float(i) / (steps-1) * (wcs.wcstan.imagew-1)
 				ra,dec = wcs.pixelxy2radec(x, y)
-				poly.push(ra)
-				poly.push(dec)
+				poly.append(360-ra)
+				poly.append(dec)
 			# right
 			x = wcs.wcstan.imagew
 			for i in xrange(steps):
 				y = 1 + float(i) / (steps-1) * (wcs.wcstan.imageh-1)
 				ra,dec = wcs.pixelxy2radec(x, y)
-				poly.push(ra)
-				poly.push(dec)
+				poly.append(360-ra)
+				poly.append(dec)
 			# top
 			y = wcs.wcstan.imageh
-			for i in xrange(steps-1, 0, -1):
+			for i in xrange(steps-1, -1, -1):
 				x = 1 + float(i) / (steps-1) * (wcs.wcstan.imagew-1)
 				ra,dec = wcs.pixelxy2radec(x, y)
-				poly.push(ra)
-				poly.push(dec)
+				poly.append(360-ra)
+				poly.append(dec)
 			# left
 			x = 0
-			for i in xrange(steps-1, 0, -1):
+			for i in xrange(steps-1, -1, -1):
 				y = 1 + float(i) / (steps-1) * (wcs.wcstan.imageh-1)
 				ra,dec = wcs.pixelxy2radec(x, y)
-				poly.push(ra)
-				poly.push(dec)
+				poly.append(360-ra)
+				poly.append(dec)
 
 			poly = ','.join(map(str, poly))
 		except Exception, e:
-			logging.debug('Reading SIP header from %s: %s' % wcsfn, e)
+			logging.debug('Failed to read SIP header from %s: %s' % (wcsfn, e))
 			poly=''
 
 		#latmin = img.decmin
@@ -200,7 +210,7 @@ def imagelist(request):
 		res.write('<image name="%s"' % img.filename)
 		if len(poly):
 			res.write(' poly="%s"' % poly)
-		res.write('>')
+		res.write(' />')
 
 	res.write('</imagelist>\n')
 	logging.debug("Returning %i files." % len(query))

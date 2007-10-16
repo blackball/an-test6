@@ -166,6 +166,9 @@ function mouseclicked(overlay, latlng) {
 	if (selectedPoly)
 		map.removeOverlay(selectedPoly);
 
+	if (!latlng) {
+		return;
+	}
 	var lat = latlng.lat();
 	var lng = latlng.lng();
 	if (lng < 0)
@@ -557,10 +560,10 @@ function toggleSelectedImage(img) {
 	showhide = document.getElementById('showhide' + img);
 	removeAllChildren(showhide);
 	if (ind == -1) {
-		txt = '[hide]';
+		txt = '[outline]';
 		color = "white";
 	} else {
-		txt = '[show]';
+		txt = '[outline]';
 		color = "#666";
 	}
 	debug('Txt ' + txt);
@@ -641,10 +644,10 @@ function imageListLoaded(txt) {
 		link2.setAttribute('onclick', 'toggleSelectedImage("' + img + '")');
 		link2.setAttribute('id', 'showhide' + img);
 		if (indexOf(selectedImages, img) > -1) {
-			txt = '[hide]';
+			txt = '[outline]';
 			color = "white";
 		} else {
-			txt = '[show]';
+			txt = '[outline]';
 			color = "#666";
 		}
 		txtnode = document.createTextNode(txt);

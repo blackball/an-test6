@@ -15,16 +15,36 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 import ctypes
-from ctypes import c_int, c_double
+#from ctypes import c_int, c_double
+from ctypes import *
+import ctypes.util
 import sys
 
 # pwd
 # /data/wrk/astrometry/src/tweak/libtweak
 # gcc -shared -o _sip.so sip.o ../an-common/starutil.o ../an-common/mathutil.o
 # gdb --args `which python` ./sip.py
-_sip = ctypes.CDLL('./_sip.so')
+#_sip = ctypes.CDLL('./_sip.so')
 
-from ctypes import *
+_sip = None
+
+def libraryloaded():
+	return not _sip is None
+
+def loadlibrary(fn):
+	print 'loading library ', fn
+	_sip = ctypes.CDLL(fn)
+	#path = ctypes.util.find_library(fn)
+	#print 'library path is ', path
+	#if path:
+	#	_sip = ctypes.CDLL(path)
+	print 'sip is ', _sip
+
+_libname = ctypes.util.find_library('_sip.so')
+if _libname:
+	loadlibrary(_libname)
+#	#_sip = ctypes.CDLL(_libname)
+#loadlibrary('_sip.so')
 
 class Tan(ctypes.Structure):
     _fields_ = [("crval", c_double*2),
@@ -69,7 +89,7 @@ class Sip(ctypes.Structure):
             cfn = c_char_p(filename)
             rtn = _sip.sip_read_header_file(cfn, ctypes.pointer(self))
             if not rtn:
-                raise Exception, ('Failed to parse SIP header from file "%s"' % filename)
+                raise Exception, 'Failed to parse SIP header from file "%s"' % filename
 
     def __str__(self):
         return '<Sip: ' + str(self.wcstan) + \
@@ -89,10 +109,10 @@ class Sip(ctypes.Structure):
         return ra.value, dec.value
 
 
-_sip.tan_pixelxy2radec
-_sip.sip_pixelxy2radec
-_sip.tan_read_header_file
-_sip.sip_read_header_file
+#_sip.tan_pixelxy2radec
+#_sip.sip_pixelxy2radec
+#_sip.tan_read_header_file
+#_sip.sip_read_header_file
 
 #tan_t* tan, double px, double py, double *xyz);
 #tan_pixelxy2radec(tan_t* wcs_tan, double px, double py, double *ra, double *dec);
