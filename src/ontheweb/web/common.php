@@ -79,7 +79,6 @@ $formDefaults = array('x_col' => 'X',
 					  'tweak_order' => 2,
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
-					  //'autoscale' => 1,
 					  'skippreview' => '',
 					  'justjobid' => '',
 					  );

@@ -33,12 +33,6 @@ foreach ($_GET as $key=>$val) {
 // eg "index.php"
 $scriptname = basename($_SERVER['PHP_SELF']);
 
-// debug - print out the values submitted by the client.
-loggit($scriptname . " submitted values:\n");
-foreach ($_POST as $key => $val) {
-	loggit("  \"" . $key . "\" = \"" . $val . "\"\n");
-}
-
 // If the "submit" button was pushed, fold in the default values.  This allows
 // "wget" users to specify only the fields they want to change from the defaults.
 if (array_key_exists('submit', $_POST)) {
@@ -48,10 +42,11 @@ if (array_key_exists('submit', $_POST)) {
             $_POST[$k] = $v;
         }
     }
-    loggit($scriptname . " all values:\n");
-    foreach ($_POST as $key => $val) {
-	loggit("  \"" . $key . "\" = \"" . $val . "\"\n");
-    }
+
+	if (array_key_exists('imgurl', $_POST) &&
+		!array_key_exists('xysrc', $_POST)) {
+		$_POST['xysrc'] = 'url';
+	}
 }
 
 // Handle "preset="... by looking up the preset and redirecting
@@ -67,8 +62,15 @@ if ($preset) {
 // a la the suggestion at http://ca.php.net/manual/en/function.uniqid.php:
 $upload_id = md5(uniqid(rand(), TRUE));
 
+$usepassword = array_key_exists('password', $_POST);
+
+$target = '';
+if ($usepassword) {
+	$target = $myuridir . '/submit.php';
+}
+
 // Create the HTML form object...
-$form =& new HTML_QuickForm('blindform','post', '', '');
+$form =& new HTML_QuickForm('blindform','post', $target);
 
 // XHTML compliance:
 $form->removeAttribute('name');
@@ -150,16 +152,12 @@ $indexes['auto'] = 'Automatic (based on image scale)';
 foreach ($indexdata as $k => $v) {
 	$indexes[$k] = $v['desc'];
 }
-
 $form->addElement('select', 'index', 'index', $indexes, null);
 
 $form->addElement('submit', 'submit', 'Submit');
-
 $form->addElement('submit', 'linkhere', 'Link to these parameter settings');
-
-//$form->addElement('submit', 'imagescale', 'Try to guess scale from image headers');
-
 $form->addElement('submit', 'reset', "Reset Form");
+$form->addElement('submit', 'logout', 'Logout');
 
 $form->setMaxFileSize($maxfilesize);
 
@@ -177,7 +175,7 @@ $form->addFormRule('check_fieldscale');
 $form->addFormRule('check_poserr');
 $form->addFormRule('check_tweak');
 
-if ($emailver) {
+if ($emailver && !$usepassword) {
 	$form->addFormRule('check_email');
 }
 
@@ -199,17 +197,62 @@ if ($form->exportValue("reset")) {
 	exit;
 }
 
-// Handle "guess image scale" requests.
-/*
-if ($form->exportValue("imagescale")) {
-	loggit("Guessing image scale.\n");
-	guess_image_scale($form->exportValues());
+if ($form->exportValue('logout')) {
+	loggit("Logout.\n");
+	loggit("Form values:\n");
+	foreach ($form->exportValues() as $k => $v) {
+		loggit("  " . $k . " = " . $v . "\n");
+	}
+	header('HTTP/1.0 401 Logging you out.');
+	// HACK - this must match Apache config...
+	header('WWW-Authenticate: Basic realm="Astrometry.net Alpha Test"');
+	echo("Logged out.\n");
 	exit;
 }
-*/
+
+loggit("Form values:\n");
+foreach ($form->exportValues() as $k => $v) {
+	loggit("  " . $k . " = " . $v . "\n");
+}
+
+loggit("Using password: " . ($usepassword ? "yes" : "no") . "\n");
+
+$vals = $form->exportValues();
 
 // If the form has been filled out correctly (and the Submit button pressed), process it.
-if ($form->exportValue("submit") && $form->validate()) {
+if (array_key_exists('submit', $vals) && $form->validate()) {
+
+	if ($usepassword) {
+		$submitscript = 'submit.php';
+		if ($scriptname != $submitscript) {
+			$loc = "http://" . $host . $myuridir . '/' . $submitscript . '?' . $_SERVER["QUERY_STRING"];
+			loggit('Redirecting to ' . $loc . "\n");
+			header("Location: " . $loc);
+			exit;
+		} else {
+			loggit("Form was submitted to the password-secured page; processing it.\n");
+			loggit("Request headers:\n");
+			$hdrs = apache_request_headers();
+			foreach ($hdrs as $k=>$v) {
+				loggit("  " . $k . " = " . $v . "\n");
+			}
+			if (!array_key_exists('Authorization', $hdrs)) {
+				loggit("No Authorization.\n");
+				exit;
+			} else {
+				$auth = explode(' ', $hdrs['Authorization']);
+				if ($auth[0] != 'Basic') {
+					loggit("Not Basic\n");
+					exit;
+				}
+				$userpass = base64_decode($auth[1]);
+				loggit("Username/password: " . $userpass . "\n");
+				$up = explode(':', $userpass);
+				loggit("Username " . $up[0] . ", password " . $up[1] . "\n");
+			}
+		}
+	}
+
     $form->freeze();
     $form->process('process_data', false);
     exit;
@@ -1129,7 +1172,6 @@ function render_form($form, $headers) {
 				  'tweak', 'tweak_order', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
                       'poserr', 'index', 'uname', 'email', 'remember',
 				  'submit', 'linkhere',
-				  #'imagescale',
 				  'reset', 'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER',
 				  'justjobid', 'skippreview');
 	
