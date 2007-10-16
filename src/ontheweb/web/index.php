@@ -9,9 +9,6 @@ if ($emailver) {
 require_once 'form.php';
 
 function allow_email($email) {
-	// $mode = 'deny';
-	$mode = 'allow';
-
     // Note, these email address MUST be entered in lower-case.
 	$allow = array(
 		       'aa@astro.ex.ac.uk',
@@ -75,22 +72,9 @@ function allow_email($email) {
 		       'stubbs@physics.harvard.edu',
 		       'tim@chaos.org.uk');
 
-	$deny = array('badguy@somewhere.com');
-
-	if ($mode == 'deny') {
-		if (in_array(strtolower($email), $deny)) {
-			loggit("denying email " . $email . "\n");
-			return FALSE;
-		}
+	if (in_array(strtolower($email), $allow))
 		return TRUE;
-	} else if ($mode == 'allow') {
-		if (in_array(strtolower($email), $allow))
-			return TRUE;
-		loggit("disallowing email " . $email . "\n");
-		return FALSE;
-	} else {
-		loggit("allow_email: invalid mode " . $mode . "\n");
-	}
+	loggit("disallowing email " . $email . "\n");
 	return FALSE;
 }
 
