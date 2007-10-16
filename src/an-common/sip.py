@@ -16,6 +16,7 @@
 
 import ctypes
 from ctypes import c_int, c_double
+import sys
 
 # pwd
 # /data/wrk/astrometry/src/tweak/libtweak
@@ -45,6 +46,11 @@ class Tan(ctypes.Structure):
                 ctypes.pointer(dec))
         return ra.value, dec.value
 
+    def __str__(self):
+        return '<Tan: crval=(%g, %g), crpix=(%g, %g), cd=(%g, %g; %g, %g), imagew=%d, imageh=%d>' % \
+               (self.crval[0], self.crval[1], self.crpix[0], self.crpix[1], self.cd[0], self.cd[1],
+                self.cd[2], self.cd[3], self.imagew, self.imageh)
+
 SIP_MAXORDER = 10
 
 class Sip(ctypes.Structure):
@@ -57,6 +63,15 @@ class Sip(ctypes.Structure):
                 ('bp_order', c_int),
                 ('ap', c_double*(SIP_MAXORDER**2)),
                 ('bp', c_double*(SIP_MAXORDER**2)),]
+
+    def __init__(self, filename=None):
+        if not filename is None:
+            cfn = c_char_p(filename)
+            _sip.sip_read_header_file(cfn, ctypes.pointer(self))
+
+    def __str__(self):
+        return '<Sip: ' + str(self.wcstan) + \
+               ', a_order=%d, b_order=%d, ap_order=%d>' % (self.a_order, self.b_order, self.ap_order)
 
     def pixelxy2radec(self, px,py):
         'Return ra,dec of px,py'
@@ -71,8 +86,11 @@ class Sip(ctypes.Structure):
                 ctypes.pointer(dec))
         return ra.value, dec.value
 
+
 _sip.tan_pixelxy2radec
 _sip.sip_pixelxy2radec
+_sip.tan_read_header_file
+_sip.sip_read_header_file
 
 #tan_t* tan, double px, double py, double *xyz);
 #tan_pixelxy2radec(tan_t* wcs_tan, double px, double py, double *ra, double *dec);
@@ -101,3 +119,10 @@ if __name__ == '__main__':
 
     ra,dec = s.pixelxy2radec(2.0,3.0)
     print ra,dec
+
+    if len(sys.argv) > 1:
+        s = Sip(sys.argv[1])
+        print s
+        ra,dec = s.pixelxy2radec(2.0,3.0)
+        print ra,dec
+
