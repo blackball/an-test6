@@ -15,6 +15,8 @@ import sha
 import logging
 import commands
 
+import sip
+
 import an.gmaps_config as gmaps_config
 
 logfile        = gmaps_config.logfile
@@ -147,15 +149,58 @@ def imagelist(request):
 		score = (overlap**2) / (a1 * a2)
 		logging.debug("Image " + img.filename + ": score %g (dra1=%g, dra2=%g))" %
 					  (score, dra1, dra2))
-		latmin = img.decmin
-		latmax = img.decmax
-		longmin = 360-img.ramax
-		longmax = 360-img.ramin
-		poly = map(str, (longmin, latmin, longmin, latmax, longmax, latmax, longmax, latmin, longmin, latmin))
-		#poly = (ramin, decmin, ramin, decmax, ramax, decmax, ramax, decmin, ramin, decmin)
+
+		wcsfn = gmaps_config.imgdir + '/' + img.filename + '.wcs'
+		try:
+			wcs = Sip(filename=wcsfn)
+			poly = []
+			steps = 4
+			# bottom
+			y = 1
+			for i in xrange(steps):
+				x = 1 + float(i) / (steps-1) * (wcs.wcstan.imagew-1)
+				ra,dec = wcs.pixelxy2radec(x, y)
+				poly.push(ra)
+				poly.push(dec)
+			# right
+			x = wcs.wcstan.imagew
+			for i in xrange(steps):
+				y = 1 + float(i) / (steps-1) * (wcs.wcstan.imageh-1)
+				ra,dec = wcs.pixelxy2radec(x, y)
+				poly.push(ra)
+				poly.push(dec)
+			# top
+			y = wcs.wcstan.imageh
+			for i in xrange(steps-1, 0, -1):
+				x = 1 + float(i) / (steps-1) * (wcs.wcstan.imagew-1)
+				ra,dec = wcs.pixelxy2radec(x, y)
+				poly.push(ra)
+				poly.push(dec)
+			# left
+			x = 0
+			for i in xrange(steps-1, 0, -1):
+				y = 1 + float(i) / (steps-1) * (wcs.wcstan.imageh-1)
+				ra,dec = wcs.pixelxy2radec(x, y)
+				poly.push(ra)
+				poly.push(dec)
+
+			poly = ','.join(map(str, poly))
+		except Exception, e:
+			logging.debug('Reading SIP header from %s: %s' % wcsfn, e)
+			poly=''
+
+		#latmin = img.decmin
+		#latmax = img.decmax
+		#longmin = 360-img.ramax
+		#longmax = 360-img.ramin
+		#poly = map(str, (longmin, latmin, longmin, latmax, longmax, latmax, longmax, latmin, longmin, latmin))
 		#if (score < 0.01**2):
 		#	continue
-		res.write('<image name="%s" poly="%s" />\n' % (img.filename, ','.join(poly)))
+		#res.write('<image name="%s" poly="%s" />\n' % (img.filename, ','.join(poly)))
+		res.write('<image name="%s"' % img.filename)
+		if len(poly):
+			res.write(' poly="%s"' % poly)
+		res.write('>')
 
 	res.write('</imagelist>\n')
 	logging.debug("Returning %i files." % len(query))

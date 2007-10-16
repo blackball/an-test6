@@ -67,7 +67,9 @@ class Sip(ctypes.Structure):
     def __init__(self, filename=None):
         if not filename is None:
             cfn = c_char_p(filename)
-            _sip.sip_read_header_file(cfn, ctypes.pointer(self))
+            rtn = _sip.sip_read_header_file(cfn, ctypes.pointer(self))
+            if not rtn:
+                raise Exception, ('Failed to parse SIP header from file "%s"' % filename)
 
     def __str__(self):
         return '<Sip: ' + str(self.wcstan) + \
