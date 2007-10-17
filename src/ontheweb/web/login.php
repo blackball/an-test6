@@ -12,7 +12,7 @@ exit;
 function show_login_form() {
 	global $login_form;
 
-	$template = file_get_contents('login-template.html');
+	$template = file_get_contents('template-login.html');
 	$replace = array();
 	$flds = array('user', 'pass', 'login');
 	$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
