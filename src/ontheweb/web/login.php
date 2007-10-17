@@ -12,7 +12,7 @@ exit;
 function show_login_form() {
 	global $login_form;
 
-	$template = file_get_contents('template-login.html');
+	$template = file_get_contents('template-login-form.html');
 	$replace = array();
 	$flds = array('user', 'pass', 'login');
 	$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
@@ -21,8 +21,13 @@ function show_login_form() {
 		$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
 	}
 	$template = str_replace(array_keys($replace), array_values($replace), $template);
+	$form_html = $renderer->toHtml($template);
+
+	$template = file_get_contents('template-login.html');
+	$template = str_replace('##form##', $form_html, $template);
+
 	echo '<' . '?xml version="1.0" encoding="UTF-8"?' . '>';
-	echo $renderer->toHtml($template);
+	echo $template;
 }
 
 function try_login_user($user, $pass) {

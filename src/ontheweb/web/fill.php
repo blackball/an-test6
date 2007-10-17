@@ -25,15 +25,6 @@ function main() {
 		exit;
 	}
 
-	echo "<p> Logged in as <b>" . $_SESSION['yourname'] . "</b> ";
-	$logout = get_logout_form();
-	$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
-	$logout->accept($renderer);
-	echo $renderer->toHtml();
-	echo "</p>";
-
-	echo "<p>Hello there.</p>";
-
 	if (isset($_SESSION['src'])) {
 		$src = $_SESSION['src'];
 	} else {
@@ -68,13 +59,8 @@ function main() {
 		$shortform->process('process_shortform', false);
 	} else {
 
-		if ($src == 'imgurl') {
-			echo '<p>Go to the <a href="?src=imgfile">file upload version</a> of this form</p>';
-		} else if ($src == 'imgfile') {
-			echo '<p>Go to the <a href="?src=imgurl">URL version</a> of this form</p>';
-		}
-
 		// DEBUG
+		/*
 		echo "<pre>";
 		print_r($vals);
 		echo "</pre>";
@@ -91,6 +77,18 @@ function main() {
 			print_r($imgfile->getValue());
 			echo "</pre>";
 		}
+		*/
+
+		$logout = get_logout_form();
+		$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
+		$logout->accept($renderer);
+		$replace = array();
+		$replace['##user##'] = $_SESSION['yourname'];
+		$replace['##logout##'] = $renderer->elementToHtml('logout');
+		$template = file_get_contents('template-logout.html');
+		$template = str_replace(array_keys($replace), array_values($replace), $template);
+		$logout_html = $renderer->toHtml($template);
+
 
 		$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
 		//$renderer =& new HTML_QuickForm_Renderer_Default();
@@ -116,6 +114,7 @@ function main() {
 		$body = $renderer->toHtml($template);
 		$html = file_get_contents('template-simple.html');
 		$html = str_replace('##body##', $body, $html);
+		$html = str_replace('##logout##', $logout_html, $html);
 		echo $html;
 	}
 	exit;
