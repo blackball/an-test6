@@ -1,0 +1,61 @@
+<!DOCTYPE html 
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>
+Astrometry.net: Web Edition
+</title>
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<style type="text/css">
+</style>
+<meta http-equiv="Content-Script-Type" content="text/javascript" />
+<script type="text/javascript">
+var imgurl;
+var imgfile;
+var fitsfile;
+var textfile;
+
+function sourceChanged() {
+  activesource = document.getElementById('activesource');
+  removeAllChildren(activesource);
+  selectsource = document.getElementById('selectsource');
+  switch (selectsource.value) {
+  case 'imgurl':
+    activesource.appendChild(imgurl);
+	break;
+  case 'imgfile':
+    activesource.appendChild(imgfile);
+	break;
+  case 'fitsfile':
+    activesource.appendChild(fitsfile);
+	break;
+  case 'textfile':
+    activesource.appendChild(textfile);
+	break;
+  }
+}
+function removeAllChildren(node) {
+	while (node.childNodes.length) {
+		node.removeChild(node.childNodes[0]);
+	}
+}
+function onLoad() {
+  imgurl   = document.getElementById('imgurldiv');
+  imgfile  = document.getElementById('imgfilediv');
+  fitsfile = document.getElementById('fitsfilediv');
+  textfile = document.getElementById('textfilediv');
+  sources  = document.getElementById('sources');
+  removeAllChildren(sources);
+  sourceChanged();
+}
+</script>
+</head>
+<body onload="onLoad()">
+
+##body##
+
+</body>
+</html>
+

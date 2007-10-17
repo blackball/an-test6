@@ -39,6 +39,49 @@ function main() {
 	}
 	$_SESSION['src'] = $src;
 
+	if ($_REQUEST['long']) {
+		global $unitmap;
+
+		$longform = new HTML_QuickForm('longform', 'post');
+		$longform->removeAttribute('name');
+		$longform->addElement('text', 'imgurl', '', array('size' => 40));
+		$longform->addElement('file', 'imgfile', '', array('size' => 40));
+		$longform->addElement('file', 'fitsfile', '', array('size' => 40));
+		$longform->addElement('file', 'textfile', '', array('size' => 40));
+
+		$srcmap = array('imgurl' => 'URL of an image file',
+						'imgfile' => 'Image file',
+						'fitsfile' => 'FITS table of sources',
+						'textfile' => 'Text list of sources');
+		$longform->addElement('select', 'src', '', $srcmap,
+							  array('onchange' =>'sourceChanged()',
+									'onkeyup' =>'sourceChanged()',
+									'id' => 'selectsource'));
+
+		$longform->addElement('submit', 'submit', 'Submit');
+
+		//$longform->addElement('select', 'fsunit', 'units', $unitmap, array('onchange=);
+		$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
+		$longform->accept($renderer);
+
+		$replace = array();
+		$flds = array('imgurl', 'imgfile', 'fitsfile', 'textfile', 'src', 'submit');
+		foreach ($flds as $fld) {
+			$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
+		}
+		$template = file_get_contents('template-long-body.html');
+		$template = str_replace(array_keys($replace), array_values($replace), $template);
+		echo '<' . '?xml version="1.0" encoding="UTF-8"?' . '>';
+		$body = $renderer->toHtml($template);
+
+		$html = file_get_contents('template-long.html');
+		$html = str_replace('##body##', $body, $html);
+		echo $html;
+
+		//echo $renderer->toHtml();
+		exit;
+	}
+
 	$shortformDefaults = array('imgurl' => 'http://');
 
 	$shortform = new HTML_QuickForm('shortform', 'post');
