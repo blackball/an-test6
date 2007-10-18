@@ -1019,8 +1019,8 @@ void invert_sip_polynomial(tweak_t* t)
 		for (gv = 0; gv < ngrid; gv++) {
 			double fuv, guv;
 			// Calculate grid position in original image pixels
-			u = (gu * (maxu - minu) / ngrid) + minu; // now in pixels
-			v = (gv * (maxv - minv) / ngrid) + minv;  // now in pixels
+			u = (gu * (maxu - minu) / (ngrid-1)) + minu; // now in pixels
+			v = (gv * (maxv - minv) / (ngrid-1)) + minv;  // now in pixels
 			// compute U=u+f(u,v) and V=v+g(u,v)
 			sip_calc_distortion(t->sip, u, v, &U, &V);
 			fuv = U - u;
@@ -1105,8 +1105,8 @@ void invert_sip_polynomial(tweak_t* t)
 			for (gv = 0; gv < ngrid; gv++) {
 				double newu, newv;
 				// Calculate grid position in original image pixels
-				u = (gu * (maxu - minu) / ngrid) + minu;
-				v = (gv * (maxv - minv) / ngrid) + minv;
+				u = (gu * (maxu - minu) / (ngrid-1)) + minu;
+				v = (gv * (maxv - minv) / (ngrid-1)) + minv;
 				sip_calc_distortion(t->sip, u, v, &U, &V);
 				sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
 				sumdu += square(u - newu);
