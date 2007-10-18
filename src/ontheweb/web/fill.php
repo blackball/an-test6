@@ -54,7 +54,8 @@ function main() {
 								  'scaleunits' => 'degreewidth',
 								  );
 
-		$longform = new HTML_QuickForm('longform', 'post');
+		$longform = new HTML_QuickForm('longform', 'post', '', '',
+									   array('onsubmit'=>'return submitForm();'));
 		$longform->removeAttribute('name');
 		$longform->setDefaults($longformDefaults);
 		$longform->addElement('text', 'imgurl', '', array('size' => 40));
