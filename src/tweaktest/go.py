@@ -1,5 +1,8 @@
 from pylab import *
+#from scipy.linalg import *
+import scipy.linalg as linalg
 import pyfits
+from numpy import *
 
 def indexsort(lst):
     def mycmp(i1, i2):
@@ -73,6 +76,50 @@ S = indexsort(corrdc)
 
 figure(1)
 plot(cfx, cfy, 'r+', cix, ciy, 'gx', array([cx]), array([cy]), 'bs')
+title('Correspondences within %.1f pixels' % cutoff)
+
 figure(2)
 plot([corrdc[i] for i in S], [corrd[i] for i in S], 'r.')
+xlabel('Distance from quad center (pixels)')
+ylabel('Distance between corresponding stars')
+
+
+corrw = [exp(-(d**2) / (2 * (sigma**2))) for d in corrd]
+
+# Here's what the current C code does: sets up a weighted linear system.
+order = 2
+uorder = []
+vorder = []
+for o in range(order+1):
+    for j in range(o+1):
+        for i in range(o+1):
+            if (i + j) == o:
+                uorder.append(i)
+                vorder.append(j)
+
+M = len(corri)
+N = len(uorder)
+#A = mat(zeros([M, N]))
+#b1 = mat(zeros([M]))
+#b2 = mat(zeros([M]))
+
+A = zeros([M, N])
+b1 = zeros([M])
+b2 = zeros([M])
+
+for m in range(M):
+    weight = corrw[m]
+    #weight = 1
+    u = cfx[m] - cx
+    v = cfy[m] - cy
+    b1[m] = weight * cix[m]
+    b2[m] = weight * ciy[m]
+    for n in range(N):
+        A[m,n] = weight * (u**uorder[n]) * (v**vorder[n])
+
+x1,res1,rank1,s1 = linalg.lstsq(A, b1)
+x2,res2,rank2,s2 = linalg.lstsq(A, b2)
+
+x1
+x2
 
