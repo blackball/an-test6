@@ -3,6 +3,7 @@ from pylab import *
 import scipy.linalg as linalg
 import pyfits
 from numpy import *
+import sip
 
 def indexsort(lst):
     def mycmp(i1, i2):
@@ -25,10 +26,14 @@ table = hdus[1].data
 ix = table.field(0)
 iy = table.field(1)
 
-hdus=pyfits.open('wcs1.fits')
-hdr = hdus[0].header
-cx = hdr['CRPIX1']
-cy = hdr['CRPIX2']
+Tan origwcs('wcs1.fits')
+cx = origwcs.crpix[0]
+cy = origwcs.crpix[1]
+
+#hdus=pyfits.open('wcs1.fits')
+#hdr = hdus[0].header
+#cx = hdr['CRPIX1']
+#cy = hdr['CRPIX2']
 
 hdus=pyfits.open('match1.fits')
 table = hdus[1].data
@@ -131,4 +136,24 @@ for m in range(M):
 
 x1
 x2
+
+CD = zeros([2,2])
+CD[0,0] = x1[1]
+CD[0,1] = x1[2]
+CD[1,0] = x2[1]
+CD[1,1] = x2[2]
+shiftxy = zeros([2,1])
+shiftxy[0] = x1[0]
+shiftxy[1] = x2[0]
+siptermsxy = zeros([2, len(siptermsx)])
+siptermsxy[0, :] = x1[3:]
+siptermsxy[1, :] = x2[3:]
+
+invCD = linalg.inv(CD)
+shiftUV = mat(invCD) * mat(shiftxy)
+sipterms = mat(invCD) * mat(siptermsxy)
+
+#tx,ty = sip_distort(uorder, vorder, xcoeffs, ycoeffs, cx, cy, cix, ciy)
+
+
 
