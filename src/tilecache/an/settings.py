@@ -83,8 +83,4 @@ INSTALLED_APPS = (
 
 #LOGIN_REDIRECT_URL='/job/new'
 
-#AUTHENTICATION_BACKENDS = (
-#    "an.portal.email-auth.EmailBackend",
-#    "django.contrib.auth.backends.ModelBackend",
-#)
 
