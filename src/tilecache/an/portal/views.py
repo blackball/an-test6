@@ -2,13 +2,13 @@ from an.portal.models import Job
 from django import newforms as forms
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
-from django.template import Context, loader
+from django.template import Context, RequestContext, loader
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as authlogin
 
 class LoginForm(forms.Form):
     username = forms.EmailField()
-    password = forms.CharField(max_length=100)
+    password = forms.CharField(max_length=100, widget=forms.PasswordInput)
 
 def login(request, redirect_to=None):
 	form = LoginForm(request.POST)
@@ -35,4 +35,10 @@ def login(request, redirect_to=None):
 
 
 def new(request):
-	return HttpResponse("no code here")
+	form = LoginForm(request.POST)
+	t = loader.get_template('portal/newjob.html')
+	c = RequestContext(request, {
+		'form' : form,
+		})
+	return HttpResponse(t.render(c))
+
