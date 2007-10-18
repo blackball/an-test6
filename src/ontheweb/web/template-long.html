@@ -9,6 +9,10 @@ Astrometry.net: Web Edition
 <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
 <link rel="icon" type="image/png" href="favicon.png" />
 <style type="text/css">
+.explain { color:blue; font-size:80%; }
+table.c { margin-left:auto; margin-right:auto; }
+#scalelist { list-style:none; }
+#scalelist > li { margin-top:1em; }
 </style>
 <meta http-equiv="Content-Script-Type" content="text/javascript" />
 <script type="text/javascript">
@@ -16,11 +20,26 @@ var imgurl;
 var imgfile;
 var fitsfile;
 var textfile;
+var oldsource = '';
+var scaleplus;
+var scaleminus;
+var scalepanel;
+var selectunits;
+var ulradio;
+var evradio;
+var scalelo;
+var scalehi;
+var scaleest;
+var scaleerr;
 
 function sourceChanged() {
   activesource = document.getElementById('activesource');
-  removeAllChildren(activesource);
   selectsource = document.getElementById('selectsource');
+  if (selectsource.value == oldsource) {
+    return;
+  }
+  removeAllChildren(activesource);
+  oldsource = selectsource.value;
   switch (selectsource.value) {
   case 'imgurl':
     activesource.appendChild(imgurl);
@@ -49,6 +68,97 @@ function onLoad() {
   sources  = document.getElementById('sources');
   removeAllChildren(sources);
   sourceChanged();
+
+  scaleplus  = document.getElementById('scaleplus');
+  scaleminus = document.getElementById('scaleminus');
+  scalepm = document.getElementById('scalepm');
+  removeAllChildren(scalepm);
+
+  scalepanel = document.getElementById('scalepanel');
+  selectunits = document.getElementById('selectunits');
+  ulradio = document.getElementById('fstype-ul');
+  evradio = document.getElementById('fstype-ev');
+  scalelo = document.getElementById('fsl');
+  scalehi = document.getElementById('fsu');
+  scaleest = document.getElementById('fse');
+  scaleerr = document.getElementById('fsv');
+
+  holder = document.getElementById('scalepanelholder');
+  removeAllChildren(holder);
+  scaleshowhide(false);
+  scalechanged();
+}
+function setFsUl() {
+  var u = document.getElementById("fstype-ul");
+  u.checked = 1;
+  scalechanged();
+}
+function setFsEv() {
+  var u = document.getElementById("fstype-ev");
+  u.checked = 1;
+  scalechanged();
+}
+function scaleshowhide(show) {
+  scalepm = document.getElementById('scalepm');
+  removeAllChildren(scalepm);
+  holder = document.getElementById('scalepanelholder');
+  if (show) {
+    child = scaleminus;
+	holder.appendChild(scalepanel);
+  } else {
+    child = scaleplus;
+	removeAllChildren(holder);
+  }
+  scalepm.appendChild(child);
+}
+function unitsChanged() {
+  scalechanged();
+}
+function scalechanged() {
+  scaletxt = document.getElementById('scaletext');
+  val = '';
+  if (ulradio.checked) {
+	lower = scalelo.value;
+    upper = scalehi.value;
+    if (lower == '') {
+      lower = '(none)';
+    }
+    if (upper == '') {
+      upper = '(none)';
+    }
+    val = 'between ' + lower + ' and ' + upper;
+  } else if (evradio.checked) {
+  	est = scaleest.value;
+    err = scaleerr.value;
+    if (est == '') {
+      est = '(none)';
+    }
+    if (err == '') {
+      err = '(none)';
+    }
+    val = est + ' plus or minus ' + err + ' %';
+  } else {
+    val = '(none)';
+  }
+  switch (selectunits.value) {
+  case 'arcsecperpix':
+    txt = val + " arcseconds per pixel";
+    break;
+  case 'arcminperpix':
+    txt = val + " arcminutes per pixel";
+    break;
+  case 'arcminwidth':
+    txt = val + " arcminutes wide";
+    break;
+  case 'degreewidth':
+    txt = val + " degrees wide";
+    break;
+  case 'focalmm':
+    txt = "focal length of " + val + " mm";
+	break;
+  }
+  removeAllChildren(scaletxt);
+  scaletxt.appendChild(document.createTextNode("Image scale: " + txt));
 }
 </script>
 </head>

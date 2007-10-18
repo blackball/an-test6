@@ -1,39 +1,122 @@
 <div style="text-align:center;">
 
-<div id="activesource">
+<div>
+<table border="0" class="c">
+<tr><td valign="top">
+<span>
+Data source: ##src##
+</span>
+</td>
+<td>
+<span id="activesource">
 active source
+</span>
+</td>
+</tr>
+</table>
 </div>
+
+<div>
+<span id="scalepm">
+<img src="plus.png" alt="+" id="scaleplus" onclick="scaleshowhide(true)" />
+<img src="minus.png" alt="-" id="scaleminus" onclick="scaleshowhide(false)" />
+</span>
+<span id="scaletext">
+scaletext
+</span>
+</div>
+
 
 <div id="sources">
-<div id="imgurldiv">
+<span id="imgurldiv">
 Image URL: ##imgurl##
-<div style="color:blue; font-size:small;">
+<br /><span class="explain">
 Explanatory text about image URL
-</div>
-</div>
-<div id="imgfilediv">
+</span>
+</span>
+<span id="imgfilediv">
 Image file: ##imgfile##
-<div style="color:blue; font-size:small;">
+<br /><span class="explain">
 Explanatory text about image file
-</div>
-</div>
-<div id="fitsfilediv">
+</span>
+</span>
+<span id="fitsfilediv">
 FITS file: ##fitsfile##
-<div style="color:blue; font-size:small;">
+<br /><span class="explain">
 Explanatory text about FITS file
-</div>
-</div>
-<div id="textfilediv">
+</span>
+</span>
+<span id="textfilediv">
 Text file: ##textfile##
-<div style="color:blue; font-size:small;">
+<br /><span class="explain">
 Explanatory text about text file
-</div>
-</div>
+</span>
+</span>
 </div>
 
-<p>
-Data source: ##src##
-</p>
+<div id="scalepanelholder">
+<div id="scalepanel" style="border-style:groove; border-color:black; border-width:thin; margin-right:auto; margin-left:auto;">
+<ul id="scalelist">
+<li>
+Units: ##scaleunits##
+<div class="cap">
+Choose how you want to describe the scale of your field.
+</div>
+</li>
+<li>
+<div class="err" id="fstype-err">
+##fstype-err##
+</div>
+<div class="cap">
+Fill in ONE of the following pairs of values:
+</div>
+
+<table border="0" class="c">
+<tr><td>
+
+<div class="fuset" id="lu">
+<div class="err" id="fsl-err">##fsl-err##</div>
+<div class="err" id="fsu-err">##fsu-err##</div>
+<table>
+<tr>
+<td colspan="2">##fstype-ul## Bounds</td>
+</tr>
+<tr>
+<td>Lower bound:</td>
+<td>##fsl##</td>
+</tr>
+<tr>
+<td>Upper bound:</td>
+<td>##fsu##</td>
+</tr>
+</table>
+</div>
+
+</td><td>
+
+<div class="fuset" id="ev">
+<div class="err" id="fse-err">##fse-err##</div>
+<div class="err" id="fsv-err">##fsv-err##</div>
+<table>
+<tr>
+<td colspan="2">##fstype-ev## Estimate+/-Error</td>
+</tr>
+<tr>
+<td>Estimate:</td>
+<td>##fse##</td>
+</tr>
+<tr>
+<td>% Error:</td>
+<td>##fsv##</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+</table>
+</li>
+</div>
+</div>
 
 <p>
 ##submit##
