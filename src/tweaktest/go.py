@@ -30,7 +30,14 @@ hdr = hdus[0].header
 cx = hdr['CRPIX1']
 cy = hdr['CRPIX2']
 
-# arcsec per pix
+hdus=pyfits.open('match1.fits')
+table = hdus[1].data
+quadpix = table.field('quadpix')[0]
+
+# radius of the quad: half the distance between stars A and B.
+quadrad = sqrt((quadpix[0] - quadpix[2])**2 + (quadpix[1] - quadpix[3])**2) / 2
+
+# arcsec per pix = sqrt(abs(det(CD)))
 pixscale = 97.7
 
 #plot(ix, iy, 'g.', fx, fy, 'ro')
@@ -84,9 +91,8 @@ xlabel('Distance from quad center (pixels)')
 ylabel('Distance between corresponding stars')
 
 
-corrw = [exp(-(d**2) / (2 * (sigma**2))) for d in corrd]
-
-# Here's what the current C code does: sets up a weighted linear system.
+# Here's (approximately) what the current C code does:
+# sets up a weighted linear system.
 order = 2
 uorder = []
 vorder = []
@@ -97,13 +103,16 @@ for o in range(order+1):
                 uorder.append(i)
                 vorder.append(j)
 
+# Weights:
+#corrw = [exp(-(d**2) / (2 * (sigma**2))) for d in corrd]
+
+corrw = [exp(-(d**2) / (2 * (sigma**2))) for d,r in zip(corrd, corrdc)]
+
 M = len(corri)
 N = len(uorder)
-#A = mat(zeros([M, N]))
-#b1 = mat(zeros([M]))
-#b2 = mat(zeros([M]))
-
+# these are the SIP terms evaluated at the field data points
 A = zeros([M, N])
+# these are the corresponding index points
 b1 = zeros([M])
 b2 = zeros([M])
 
@@ -117,8 +126,8 @@ for m in range(M):
     for n in range(N):
         A[m,n] = weight * (u**uorder[n]) * (v**vorder[n])
 
-x1,res1,rank1,s1 = linalg.lstsq(A, b1)
-x2,res2,rank2,s2 = linalg.lstsq(A, b2)
+(x1,res1,rank1,s1) = linalg.lstsq(A, b1)
+(x2,res2,rank2,s2) = linalg.lstsq(A, b2)
 
 x1
 x2
