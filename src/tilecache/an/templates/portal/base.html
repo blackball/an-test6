@@ -9,6 +9,14 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 </head>
 
 <body>
+
+{% block logo %}
+<div id="logo">
+{% include "logo.html" %}
+</div>
+{% endblock logo %}
+
+{% block usernameblock %}
 <div id="username">
 {% if user.is_authenticated %}
 {% block loggedin %}
@@ -18,9 +26,13 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 {% block notloggedin %}{% endblock %}
 {% endif %}
 </div>
+{% endblock usernameblock %}
 
-    <div id="content">
-        {% block content %}base content{% endblock %}
-    </div>
+<div id="content">
+{% block content %}
+base content
+{% endblock %}
+</div>
+
 </body>
 </html>
