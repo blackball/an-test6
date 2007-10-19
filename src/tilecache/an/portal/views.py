@@ -5,6 +5,13 @@ from django.http import HttpResponseRedirect
 from django.template import Context, RequestContext, loader
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as authlogin
+from django.contrib.auth import logout as authlogout
+
+# Adding a user:
+# > python manage.py shell
+# >>> from django.contrib.auth.models import User
+# >>> user = User.objects.create_user('john', 'lennon@thebeatles.com', 'johnpassword')
+# >>> user.save()
 
 class LoginForm(forms.Form):
     username = forms.EmailField()
@@ -33,6 +40,11 @@ def login(request, redirect_to=None):
 		})
 	return HttpResponse(t.render(c))
 
+def logout(request):
+    if not request.user.is_authenticated():
+        return HttpResponse("piss off.")
+    authlogout(request)
+    return HttpResponseRedirect('/login')
 
 def new(request):
 	form = LoginForm(request.POST)

@@ -4,8 +4,23 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-    <link rel="stylesheet" href="style.css" />
-    <title>{% block title %}Astrometry.net{% endblock %}</title>
+
+{% block favicon %}
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+<link rel="icon" type="image/png" href="favicon.png" />
+{% endblock favicon %}
+
+{% block linkcss %}
+<link rel="stylesheet" href="style.css" />
+{% endblock linkcss %}
+{% block inlinecssblock %}
+<style type="text/css">
+{% block inlinecss %}
+{% endblock inlinecss %}
+</style>
+{% endblock inlinecssblock %}
+
+<title>{% block title %}Astrometry.net{% endblock %}</title>
 </head>
 
 <body>

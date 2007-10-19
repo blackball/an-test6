@@ -68,7 +68,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'an.urls'
 
 TEMPLATE_DIRS = (
-	'/home/gmaps/test/tilecache/an/templates',
+    gmaps_config.templatedir,
 )
 
 INSTALLED_APPS = (
