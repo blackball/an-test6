@@ -20,29 +20,46 @@ from ctypes import *
 import ctypes.util
 import sys
 
+#from sys import OSError
+
 # pwd
 # /data/wrk/astrometry/src/tweak/libtweak
 # gcc -shared -o _sip.so sip.o ../an-common/starutil.o ../an-common/mathutil.o
 # gdb --args `which python` ./sip.py
 #_sip = ctypes.CDLL('./_sip.so')
 
-_sip = None
+_libname = ctypes.util.find_library('_sip.so')
+if _libname:
+    print 'libname is ', _libname
+    _sip = ctypes.CDLL(_libname)
+else:
+    print 'no libname.'
+    _sip = ctypes.CDLL('/u/dstn/an/an-common/_sip.so')
+#try:
+    #_sip = ctypes.CDLL('_sip.so')
+    #except OSError:
+    #pass
+    #if _sip is None:
+    #    raise Exception('No _sip.so')
+#_sip = None
 
-def libraryloaded():
-	return not _sip is None
 
-def loadlibrary(fn):
-	print 'loading library ', fn
-	_sip = ctypes.CDLL(fn)
+#def libraryloaded():
+#	return not _sip is None
+#
+#def loadlibrary(fn):
+#    global _sip
+#	print 'loading library ', fn
+#	_sip = ctypes.CDLL(fn)
 	#path = ctypes.util.find_library(fn)
 	#print 'library path is ', path
 	#if path:
 	#	_sip = ctypes.CDLL(path)
-	print 'sip is ', _sip
+#	print 'sip is ', _sip
 
-_libname = ctypes.util.find_library('_sip.so')
-if _libname:
-	loadlibrary(_libname)
+#_libname = ctypes.util.find_library('_sip.so')
+#if _libname:
+#	loadlibrary(_libname)
 #	#_sip = ctypes.CDLL(_libname)
 #loadlibrary('_sip.so')
 
@@ -52,6 +69,13 @@ class Tan(ctypes.Structure):
                 ("cd",    c_double*4),
                 ("imagew", c_double),
                 ("imageh", c_double)]
+
+    def __init__(self, filename=None):
+        if not filename is None:
+            cfn = c_char_p(filename)
+            rtn = _sip.tan_read_header_file(cfn, ctypes.pointer(self))
+            if not rtn:
+                raise Exception, 'Failed to parse TAN header from file "%s"' % filename
 
     def pixelxy2radec(self, px,py):
         'Return ra,dec of px,py'

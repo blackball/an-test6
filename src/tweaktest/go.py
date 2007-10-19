@@ -26,7 +26,7 @@ table = hdus[1].data
 ix = table.field(0)
 iy = table.field(1)
 
-Tan origwcs('wcs1.fits')
+origwcs = sip.Tan('wcs1.fits')
 cx = origwcs.crpix[0]
 cy = origwcs.crpix[1]
 
@@ -60,10 +60,8 @@ iy2 = array(list(iy[i] for i in find(ok)))
 ix = ix2
 iy = iy2
 
-#plot(fx, fy, 'r+', ix, iy, 'gx', array([cx]), array([cy]), 'bs')
-
 sigma = hypot(1 / pixscale, 1)
-cutoff = sigma * 6
+cutoff = sigma * 20
 
 corri = []
 corrf = []
@@ -95,6 +93,8 @@ plot([corrdc[i] for i in S], [corrd[i] for i in S], 'r.')
 xlabel('Distance from quad center (pixels)')
 ylabel('Distance between corresponding stars')
 
+figure(3)
+plot(fx, fy, 'r+', ix, iy, 'gx', array([cx]), array([cy]), 'bs')
 
 # Here's (approximately) what the current C code does:
 # sets up a weighted linear system.
@@ -145,7 +145,7 @@ CD[1,1] = x2[2]
 shiftxy = zeros([2,1])
 shiftxy[0] = x1[0]
 shiftxy[1] = x2[0]
-siptermsxy = zeros([2, len(siptermsx)])
+siptermsxy = zeros([2, N-3])
 siptermsxy[0, :] = x1[3:]
 siptermsxy[1, :] = x2[3:]
 
