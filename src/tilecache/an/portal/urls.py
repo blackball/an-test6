@@ -1,6 +1,8 @@
 from django.conf.urls.defaults import *
 
 urlpatterns = patterns('an.portal.views',
-					   (r'^new/$', 'new'),
+					   (r'^newurl/$', 'newurl'),
+					   (r'^newfile/$', 'newfile'),
+					   (r'^newlong/$', 'newlong'),
 					   (r'^submit/$', 'submit'),
 					   )

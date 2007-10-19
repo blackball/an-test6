@@ -28,6 +28,9 @@ class SimpleURLForm(forms.Form):
 	url = ForgivingURLField(initial='http://',
 							widget=forms.TextInput(attrs={'size':'50'}))
 
+class SimpleFileForm(forms.Form):
+	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
+
 def login(request, redirect_to=None):
 	form = LoginForm(request.POST)
 	authfailed = False
@@ -42,7 +45,7 @@ def login(request, redirect_to=None):
 			if user.is_active:
 				authlogin(request, user)
 				# Success
-				return HttpResponseRedirect('/job/new')
+				return HttpResponseRedirect('/job/newurl')
 			else:
 				authfailed = True
 				passerr = 'Your account is not active.'
@@ -72,7 +75,7 @@ def logout(request):
 	authlogout(request)
 	return HttpResponseRedirect('/login')
 
-def new(request):
+def newurl(request):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/login')
 	urlerr = None
@@ -80,20 +83,57 @@ def new(request):
 		form = SimpleURLForm(request.POST)
 		if form.is_valid():
 			url = form.cleaned_data['url']
-			request.session['url'] = url
+			job = Job()
+			job.user = user
+			job.xysrc = 'url'
+			request.session['job'] = job
 			return HttpResponseRedirect('/job/submit')
 		else:
 			urlerr = form['url'].errors[0]
 	else:
-		request.session['url'] = None
+		request.session['job'] = None
 		form = SimpleURLForm()
 		
 	t = loader.get_template('portal/newjob.html')
 	c = RequestContext(request, {
 		'form' : form,
+		'isurl' : True,
 		'urlerr' : urlerr,
+		'fileerr' : None,
 		})
 	return HttpResponse(t.render(c))
+
+def newfile(request):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/login')
+	fileerr = None
+	if len(request.POST):
+		form = SimpleFileForm(request.POST, request.FILES)
+		if form.is_valid():
+			job = Job()
+			job.user = user
+			job.xysrc = 'file'
+			request.session['job'] = job
+			return HttpResponseRedirect('/job/submit')
+		else:
+			fileerr = form['file'].errors[0]
+	else:
+		request.session['job'] = None
+		form = SimpleFileForm()
+		
+	t = loader.get_template('portal/newjob.html')
+	c = RequestContext(request, {
+		'form' : form,
+		'isurl' : False,
+		'urlerr' : None,
+		'fileerr' : fileerr,
+		})
+	return HttpResponse(t.render(c))
+
+def newlong(request):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/login')
+	return HttpResponse("hello")
 
 def submit(request):
 	if not request.user.is_authenticated():
