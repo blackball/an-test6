@@ -26,10 +26,16 @@ class Job(models.Model):
 		('ev', 'estimate and error bound'),
 		)
 
+	#parity_CHOICES = (
+	#	('pos', 'Positive'),
+	#	('neg', 'Negative'),
+	#	('both', 'Try both'),
+	#	)
+
 	parity_CHOICES = (
-		('pos', 'Positive'),
-		('neg', 'Negative'),
-		('both', 'Try both'),
+		(0, 'Positive'),
+		(1, 'Negative'),
+		(2, 'Try both'),
 		)
 
 	status_CHOICES = (
@@ -40,58 +46,67 @@ class Job(models.Model):
 		('failed', 'Failed')
 		)
 
-	user = models.ForeignKey(User)
-	xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
-	url = models.URLField()
+	jobid = models.CharField(max_length=32, unique=True, editable=False,
+							 primary_key=True)
 
-	jobid = models.CharField(max_length=32)
+	user = models.ForeignKey(User, editable=False)
+	xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
+	url = models.URLField(blank=True)
 
 	# filename of the uploaded file on the user's machine.
-	userfilename = models.CharField(max_length=256)
+	userfilename = models.CharField(max_length=256, editable=False, blank=True)
 	# content-type of the uploaded file, if it was compressed
-	compressedtype = models.CharField(max_length=64)
+	compressedtype = models.CharField(max_length=64, editable=False, blank=True)
 	# content-type of the uploaded file, after compression
-	filetype = models.CharField(max_length=64)
+	filetype = models.CharField(max_length=64, editable=False)
 
 	# sha-1 hash of the uncompressed file.
-	filehash = models.CharField(max_length=40)
+	filehash = models.CharField(max_length=40, editable=False)
 
 	# for FITS tables, the names of the X and Y columns.
-	xcol = models.CharField(max_length=16)
-	ycol = models.CharField(max_length=16)
+	xcol = models.CharField(max_length=16, blank=True)
+	ycol = models.CharField(max_length=16, blank=True)
 
 	# size of the field
-	imagew = models.PositiveIntegerField()
-	imageh = models.PositiveIntegerField()
+	imagew = models.PositiveIntegerField(editable=False)
+	imageh = models.PositiveIntegerField(editable=False)
 
 	# scale factor for rendering images; <=1.
-	displayscale = models.DecimalField(max_digits=10, decimal_places=10)
+	displayscale = models.DecimalField(max_digits=10, decimal_places=10, editable=False)
 	# size to render images.
-	displayw = models.PositiveIntegerField()
-	displayh = models.PositiveIntegerField()
+	displayw = models.PositiveIntegerField(editable=False)
+	displayh = models.PositiveIntegerField(editable=False)
 
-	parity = models.CharField(max_length=5, choices=parity_CHOICES)
+	#parity = models.CharField(max_length=5, choices=parity_CHOICES,
+	#						  default='both')
+	parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
+											  default=2, radio_admin=True,
+											  core=True)
 
 	# image scale.
-	scaleunits = models.CharField(max_length=5, choices=scaleunit_CHOICES)
-	scaletype  = models.CharField(max_length=3, choices=scaletype_CHOICES)
-	scalelower = models.DecimalField(max_digits=20, decimal_places=10)
-	scaleupper = models.DecimalField(max_digits=20, decimal_places=10)
-	scaleest   = models.DecimalField(max_digits=20, decimal_places=10)
-	scaleerr   = models.DecimalField(max_digits=20, decimal_places=10)
+	scaleunits = models.CharField(max_length=16, choices=scaleunit_CHOICES,
+								  default='degreewidth')
+	scaletype  = models.CharField(max_length=3, choices=scaletype_CHOICES,
+								  default='ul')
+	scalelower = models.DecimalField(max_digits=20, decimal_places=10,
+									 default=0.1, blank=True)
+	scaleupper = models.DecimalField(max_digits=20, decimal_places=10,
+									 default=180, blank=True)
+	scaleest   = models.DecimalField(max_digits=20, decimal_places=10, blank=True)
+	scaleerr   = models.DecimalField(max_digits=20, decimal_places=10, blank=True)
 
 	# tweak.
-	tweak = models.BooleanField()
-	tweakorder = models.PositiveSmallIntegerField()
+	tweak = models.BooleanField(default=True)
+	tweakorder = models.PositiveSmallIntegerField(default=2)
 
 	#
-	status = models.CharField(max_length=16, choices=status_CHOICES)
-	failurereason = models.CharField(max_length=256)
+	status = models.CharField(max_length=16, choices=status_CHOICES, editable=False)
+	failurereason = models.CharField(max_length=256, editable=False)
 
 	# times
-	submittime = models.DateTimeField()
-	starttime  = models.DateTimeField()
-	finishtime = models.DateTimeField()
+	submittime = models.DateTimeField(editable=False)
+	starttime  = models.DateTimeField(editable=False)
+	finishtime = models.DateTimeField(editable=False)
 
 	## These fields don't go in the database.
 

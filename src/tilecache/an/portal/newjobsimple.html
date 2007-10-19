@@ -1,0 +1,38 @@
+{% extends "portal/newjob.html" %}
+
+{% block newjobcontent %}
+<form enctype="multipart/form-data" method="post">
+
+{% if urlerr or fileerr %}
+<div class="err">
+{% if urlerr %}
+{{ urlerr }}
+{% endif %}
+{% if fileerr %}
+{{ fileerr }}
+{% endif %}
+</div>
+{% endif %}
+
+<p style="text-align:center">
+{% if isurl %}
+{{ form.url }}
+{% else %}
+{{ form.file }}
+{% endif %}
+<input name="submit" value="Submit" type="submit" />
+</p>
+
+<div id="switch_views" style="font-size:10px; text-align:center; color:#999;">
+{% if isurl %}
+<a style="color:#bbb;" href="/job/newfile">switch to file upload version</a>
+{% else %}
+<a style="color:#bbb;" href="/job/newurl">switch to image URL version</a>
+{% endif %}
+&nbsp;&nbsp;
+<a style="color:#bbb;" href="/job/newlong">switch to full version</a>
+</div>
+
+</form>
+{% endblock newjobcontent %}
+

@@ -6,6 +6,7 @@ from django.template import Context, RequestContext, loader
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as authlogin
 from django.contrib.auth import logout as authlogout
+from django.newforms import widgets
 import settings
 
 # Adding a user:
@@ -30,6 +31,9 @@ class SimpleURLForm(forms.Form):
 
 class SimpleFileForm(forms.Form):
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
+
+#class FullForm(forms.Form):
+
 
 def login(request, redirect_to=None):
 	form = LoginForm(request.POST)
@@ -94,7 +98,7 @@ def newurl(request):
 		request.session['job'] = None
 		form = SimpleURLForm()
 		
-	t = loader.get_template('portal/newjob.html')
+	t = loader.get_template('portal/newjobsimple.html')
 	c = RequestContext(request, {
 		'form' : form,
 		'isurl' : True,
@@ -121,7 +125,7 @@ def newfile(request):
 		request.session['job'] = None
 		form = SimpleFileForm()
 		
-	t = loader.get_template('portal/newjob.html')
+	t = loader.get_template('portal/newjobsimple.html')
 	c = RequestContext(request, {
 		'form' : form,
 		'isurl' : False,
@@ -130,10 +134,41 @@ def newfile(request):
 		})
 	return HttpResponse(t.render(c))
 
+def longform_formfield(field, **kwargs):
+	print field.verbose_name
+	print 'field is: ', field
+	default = field.formfield(**kwargs)
+	print 'form  is: ', default
+	print 'core? ', field.core
+	print
+	if (field.verbose_name == 'parity'):
+		default.widget = widgets.RadioSelect(choices = field.choices)
+	if (field.verbose_name == 'scaleunits' or
+		field.verbose_name == 'scaletype' or
+		field.verbose_name == 'xysrc'):
+		default.widget = widgets.Select(choices = field.choices)
+	return default
+
 def newlong(request):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/login')
-	return HttpResponse("hello")
+
+	#JobForm = forms.form_for_model(Job)
+	newjob = Job()
+	JobForm = forms.form_for_instance(newjob, formfield_callback=longform_formfield)
+
+	print 'default parity ', newjob.parity
+
+	if request.POST:
+		form = JobForm(request.POST)
+	else:
+		form = JobForm()
+
+	t = loader.get_template('portal/newjoblong.html')
+	c = RequestContext(request, {
+		'form' : form,
+		})
+	return HttpResponse(t.render(c))
 
 def submit(request):
 	if not request.user.is_authenticated():
