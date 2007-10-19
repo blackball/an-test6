@@ -8,6 +8,10 @@ ADMINS = (
     # ('Your Name', 'your_email@domain.com'),
 )
 
+ACCOUNT_ADMIN = 'dstn@cs.toronto.edu'
+
+SESSION_COOKIE_NAME = 'AstrometrySession'
+
 MANAGERS = ADMINS
 
 DATABASE_ENGINE = 'sqlite3'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'ado_mssql'.
@@ -36,8 +40,7 @@ SITE_ID = 1
 USE_I18N = True
 
 # Absolute path to the directory that holds media.
-# Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = ''
+MEDIA_ROOT = '/home/gmaps/test/tilecache/an/media/';
 
 # URL that handles the media served from MEDIA_ROOT.
 # Example: "http://media.lawrence.com"
@@ -81,6 +84,5 @@ INSTALLED_APPS = (
 	'an.portal',
 )
 
-#LOGIN_REDIRECT_URL='/job/new'
 
 

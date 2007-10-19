@@ -1,0 +1,54 @@
+{% extends "portal/base.html" %}
+
+{% block title %}
+Astrometry.net Job
+{% endblock title %}
+
+{% block inlinecss %}
+#logout { float:right; padding:5px; margin-top:0; margin-bottom:auto;}
+#logo { width:300px; margin-left:auto; margin-right:auto; text-align:center; padding:5px;}
+#banner { text-align:center; padding:5px;}
+div.err { font-size:110%; color:red; text-align:center;}
+{% endblock inlinecss %}
+
+{% block logo %}
+{% endblock logo %}
+
+{% block loggedin %}
+<div id="logout">
+<form name="logoutform" method="post" action="/logout/">
+Logged in as <b>{{ user.username }}</b>. &nbsp;
+{#<input type="submit" name="logout" value="Logout" />#}
+<a href="javascript:document.logoutform.submit()">Logout</a>
+</form>
+</div>
+{% endblock loggedin %}
+
+{% block content %}
+<div style="clear:both;">
+</div>
+
+<div id="banner">
+<img src="http://oven.cosmo.fas.nyu.edu/test/you_are_here1.png" alt="Paste Url. Wait. You are Here." />
+</div>
+
+<form method="post">
+
+{% if urlerr %}
+<div class="err">
+{{ urlerr }}
+</div>
+{% endif %}
+
+<p style="text-align:center">
+{{ form.url }}
+<input name="submit" value="Submit" type="submit" />
+</p>
+
+<div id="switch_views" style="font-size:10px; text-align:center; color:#999;">
+<a style="color:#bbb;" href="?src=imgfile">switch to file upload version</a>
+</div>
+
+</form>
+{% endblock content %}
+

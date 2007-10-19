@@ -6,12 +6,12 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 <head>
 
 {% block favicon %}
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
-<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="shortcut icon" type="image/x-icon" href="/anmedia/favicon.ico" />
+<link rel="icon" type="image/png" href="/anmedia/favicon.png" />
 {% endblock favicon %}
 
 {% block linkcss %}
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="/anmedia/style.css" />
 {% endblock linkcss %}
 {% block inlinecssblock %}
 <style type="text/css">
@@ -25,12 +25,6 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 
 <body>
 
-{% block logo %}
-<div id="logo">
-{% include "logo.html" %}
-</div>
-{% endblock logo %}
-
 {% block usernameblock %}
 <div id="username">
 {% if user.is_authenticated %}
@@ -42,6 +36,12 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 {% endif %}
 </div>
 {% endblock usernameblock %}
+
+{% block logo %}
+<div id="logo">
+{% include "logo.html" %}
+</div>
+{% endblock logo %}
 
 <div id="content">
 {% block content %}
