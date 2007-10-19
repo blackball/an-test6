@@ -18,9 +18,16 @@ class LoginForm(forms.Form):
 	username = forms.EmailField()
 	password = forms.CharField(max_length=100, widget=forms.PasswordInput)
 
+class ForgivingURLField(forms.URLField):
+	def clean(self, value):
+		if value.startswith('http://http://') or value.startswith('http://ftp://'):
+			value = value[7:]
+		return super(ForgivingURLField, self).clean(value)
+
 class SimpleURLForm(forms.Form):
-	url = forms.URLField(initial='http://',
-						 widget=forms.TextInput(attrs={'size':'50'}))
+	url = ForgivingURLField(initial='http://',
+							widget=forms.TextInput(attrs={'size':'50'}))
+
 def login(request, redirect_to=None):
 	form = LoginForm(request.POST)
 	authfailed = False
@@ -73,10 +80,12 @@ def new(request):
 		form = SimpleURLForm(request.POST)
 		if form.is_valid():
 			url = form.cleaned_data['url']
+			request.session['url'] = url
 			return HttpResponseRedirect('/job/submit')
 		else:
 			urlerr = form['url'].errors[0]
 	else:
+		request.session['url'] = None
 		form = SimpleURLForm()
 		
 	t = loader.get_template('portal/newjob.html')
@@ -85,4 +94,10 @@ def new(request):
 		'urlerr' : urlerr,
 		})
 	return HttpResponse(t.render(c))
+
+def submit(request):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/login')
+	return HttpResponse(request.session['url'] or 'none')
+	#return HttpResponse(request.POST['url'])
 
