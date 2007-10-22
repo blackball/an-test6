@@ -79,6 +79,49 @@ class FullForm(forms.Form):
 	ycol = forms.CharField(initial='Y',
 						   required=False,
 						   widget=forms.TextInput(attrs={'size':'10'}))
+	def getclean(self, name):
+		if name in self.cleaned_data:
+			return self.cleaned_data[name]
+		return None
+	def geterror(self, name):
+		if name in self._errors:
+			return self._errors[name]
+		return None
+
+	def clean(self):
+		"""Take a shower"""
+		xysrc = self.getclean('xysrc')
+		if (xysrc == 'url') or (xysrc == 'fitsurl'):
+			#if 'url' in self._errors:
+			#	print self._errors['url']
+			#if 'url' in self.cleaned_data:
+			#	print self.cleaned_data['url']
+			print 'xysrc is url'
+			print 'url errors: ', self.geterror('url')
+			print 'url value: ', self.getclean('url')
+			if (not 'url' in self._errors):
+				url = self.getclean('url')
+				if url is None or (len(url) == 0):
+					self._errors['url'] = ['URL is required']
+		elif (xysrc == 'file') or (xysrc == 'fitsfile'):
+			if (not 'file' in self._errors):
+				file = self.getclean('file')
+				print 'file is',repr(file)
+				print 'file in self.files is',repr('file' in self.files and self.files['file'] or None)
+				if not file:
+					self._errors['file'] = ['You must upload a file']
+				else:
+					print 'extraneous check?'
+					try:
+						file.field.clean(file)
+					except forms.ValidationError, v:
+						self._errors['file'] = v.messages
+						del self.cleaned_data['file']
+			else:
+				print 'file error is already', self._errors['file']
+		return self.cleaned_data
+		
+
 
 
 def login(request, redirect_to=None):
@@ -209,7 +252,7 @@ def newlong(request):
 	#	form = JobForm()
 
 	if request.POST:
-		form = FullForm(request.POST)
+		form = FullForm(request.POST, request.FILES)
 	else:
 		form = FullForm()
 
@@ -250,18 +293,28 @@ def newlong(request):
 	for f in errfields:
 		ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
 
-	urlerr  = len(form['url'].errors)  and form['url'].errors [0] or None
-	fileerr = len(form['file'].errors) and form['file'].errors[0] or None
-	val = form['xysrc'].field.clean(request.POST['xysrc'])
-	#val = form.cleaned_data['xysrc']
-   	if val == 'url':
-		ctxt['imgurl_err'] = urlerr
-	elif val == 'file':
-		ctxt['imgfile_err'] = fileerr
-	elif val == 'fitsurl':
-		ctxt['fitsurl_err'] = urlerr
-	elif val == 'fitsfile':
-		ctxt['fitsfile_err'] = fileerr
+	if request.POST:
+		form.is_valid()
+
+		if request.FILES:
+			f1 = request.FILES['file']
+			print 'file is', repr(f1)
+		else:
+			print 'no file uploaded'
+
+		urlerr  = len(form['url'].errors)  and form['url'].errors [0] or None
+		fileerr = len(form['file'].errors) and form['file'].errors[0] or None
+		print 'url error is', urlerr
+		print 'file error is', fileerr
+		val = form['xysrc'].field.clean(request.POST['xysrc'])
+		if val == 'url':
+			ctxt['imgurl_err'] = urlerr
+		elif val == 'file':
+			ctxt['imgfile_err'] = fileerr
+		elif val == 'fitsurl':
+			ctxt['fitsurl_err'] = urlerr
+		elif val == 'fitsfile':
+			ctxt['fitsfile_err'] = fileerr
 
 	t = loader.get_template('portal/newjoblong.html')
 	c = RequestContext(request, ctxt)
