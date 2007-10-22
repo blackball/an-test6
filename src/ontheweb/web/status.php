@@ -992,6 +992,7 @@ foreach ($job as $k => $v) {
 	echo '</td></tr>' . "\n";
 }
 echo '</table>' . "\n";
+
 ?>
 
 <hr />

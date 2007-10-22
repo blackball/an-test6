@@ -291,7 +291,7 @@ function isodate_to_timestamp($datestr) {
 		$tz = $d['unparsed'];
 		$n = sscanf($tz, "-%02d:%02d", &$hr, &$min);
 		if ($n == 2) {
-			loggit("Timezone offset \"" . $tz . "\" -> " + $hr + ":" + $min . "\n");
+			loggit("Timezone offset \"" . $tz . "\" -> " . $hr . ":" . $min . "\n");
 			$dt = (($hr < 0) ? -1 : 1) * ((abs($hr) * 60.0 + $min) * 60);
 			loggit("dt = " . $dt . "\n");
 		} else {
