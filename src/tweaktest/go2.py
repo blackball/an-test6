@@ -50,9 +50,20 @@ for nf in range(len(fxy)):
             keepers.append((nf,ni))
 
 keepers = array(keepers)
+fxykeep = fxy[keepers[:,0]]
+ixykeep = ixy[keepers[:,1]]
+figure()
+plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field')
+plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index')
+legend()
+title('stars which were found in correspondence using prior on covariance')
+
 rads = sum((fxy[keepers[:,0]] - A)**2,1)**.5
 dists = sum((fxy[keepers[:,0]] - ixy[keepers[:,1]])**2,1)**.5
+figure()
 plot(rads, dists, 'r.')
+ylabel('r_field - r_ind where r is distance from quad center')
+xlabel('distance from field object to quad center')
 show()
 
 def fitpoly1d(x, y, order):
@@ -77,6 +88,7 @@ for iteration in range(1000):
     trydists = genpoly1d(rads, lll)
     tryerrors = (trydists - dists)**2
     num_inliers = sum(tryerrors < thresh) # FIXME Make this some smart EM type thing
+    # hybrid inlier / sqd err 'score' makes this the MSAC variant of RANSAC
     score = sum(tryerrors[tryerrors < thresh])+sum(tryerrors>=thresh)*thresh # FIXME Make this some smart EM type thing
     #if num_inliers > num_inliers_best:
     if score < best_score:
@@ -89,10 +101,11 @@ for iteration in range(1000):
 # refit
 lll_best,resids,rank,s = fitpoly1d(rads[inlier_pts_best], dists[inlier_pts_best], order)
 
-plot(rads,dists,'r.')
+plot(rads,dists,'r.', label='distances')
 a = axis()
 t=arange(1.,700.,20)
-plot(t,genpoly1d(t, lll_best),'g--',linewidth=0.3)
+plot(t,genpoly1d(t, lll_best),'g--',linewidth=0.3, label='fitted radial distortion')
+legend()
 axis(a)
 
 """
