@@ -12,22 +12,27 @@ td.l { text-align:right; }
 #tdsubmit { text-align:center; }
 ul.xycol { list-style:none; margin-bottom:0px; }
 ul.xycol > li { margin:5px; }
+.scalelabel { text-align:right; padding-left:2em; }
 {% endblock moreinlinecss %}
 
 {% block javascript %}
 <script type="text/javascript">
 var srcurl;
 var srcurl_label;
+var srcurl_error;
 var srcurl_explain;
 var srcfile;
 var srcfile_label;
+var srcfile_error;
 var srcfile_explain;
 var srcfitsfile;
 var srcfitsfile_label;
+var srcfitsfile_error;
 var srcfitsfile_explain;
 var srcfitsurl;
 var srcfitsurl_label;
-var srcfitsurl_eplain;
+var srcfitsurl_error;
+var srcfitsurl_explain;
 var oldsource = '';
 var scaleplus;
 var scaleminus;
@@ -71,21 +76,25 @@ function sourceChanged() {
   case 'url':
     src = srcurl;
 	label = srcurl_label;
+	error = srcurl_error;
 	explain = srcurl_explain;
 	break;
   case 'file':
     src = srcfile;
 	label = srcfile_label;
+	error = srcfile_error;
 	explain = srcfile_explain;
 	break;
   case 'fitsfile':
     src = srcfitsfile;
 	label = srcfitsfile_label;
+	error = srcfitsfile_error;
 	explain = srcfitsfile_explain;
 	break;
   case 'fitsurl':
     src = srcfitsurl;
 	label = srcfitsurl_label;
+	error = srcfitsurl_error;
 	explain = srcfitsurl_explain;
 	break;
   }
@@ -95,6 +104,9 @@ function sourceChanged() {
   activesource_label = document.getElementById('activesource-label');
   removeAllChildren(activesource_label);
   activesource_label.appendChild(label);
+  activesource_error = document.getElementById('activesource-error');
+  removeAllChildren(activesource_error);
+  activesource_error.appendChild(error);
   activesource_explain = document.getElementById('activesource-explain');
   removeAllChildren(activesource_explain);
   activesource_explain.appendChild(explain);
@@ -116,6 +128,11 @@ function onLoad() {
   srcfile_label     = document.getElementById('imgfile-label');
   srcfitsurl_label  = document.getElementById('fitsurl-label');
   srcfitsfile_label = document.getElementById('fitsfile-label');
+
+  srcurl_error      = document.getElementById('imgurl-error');
+  srcfile_error     = document.getElementById('imgfile-error');
+  srcfitsurl_error  = document.getElementById('fitsurl-error');
+  srcfitsfile_error = document.getElementById('fitsfile-error');
 
   srcurl_explain      = document.getElementById('imgurl-explain');
   srcfile_explain     = document.getElementById('imgfile-explain');
@@ -249,17 +266,12 @@ function scalechanged() {
 
 <tr>
 <td class="l">
-<span id="activesource-label">
-active-source-label
-</span>
+<span id="activesource-label"> active-source-label </span>
 </td>
 <td>
-<span id="activesource">
-active source
-</span>
-<span id="activesource-explain" class="explain">
-active-source-explain
-</span>
+<span id="activesource-error" class="err"> active-source-error </span>
+<span id="activesource"> active source </span>
+<span id="activesource-explain" class="explain"> active-source-explain </span>
 </td>
 </tr>
 
@@ -299,6 +311,13 @@ scaletext
 Image URL:
 </span>
 
+<span id="imgurl-error">
+{% if imgurl_err %}
+{{ imgurl_err }}
+<br />
+{% endif %}
+</span>
+
 <span id="imgurl-explain">
 <br />
 Explanatory text about image URL
@@ -310,6 +329,13 @@ Explanatory text about image URL
 
 <span id="imgfile-label">
 Image file: 
+</span>
+
+<span id="imgfile-error">
+{% if imgfile_err %}
+{{ imgfile_err }}
+<br />
+{% endif %}
 </span>
 
 <span id="imgfile-explain">
@@ -329,6 +355,13 @@ File: {{ form.file }}
 FITS table: 
 </span>
 
+<span id="fitsfile-error">
+{% if fitsfile_err %}
+{{ fitsfile_err }}
+<br />
+{% endif %}
+</span>
+
 <span id="fitsfile-explain">
 Explanatory text about FITS file
 </span>
@@ -345,6 +378,13 @@ URL: {{ form.url }}
 FITS URL:
 </span>
 
+<span id="fitsurl-error">
+{% if fitsurl_err %}
+{{ fitsurl_err }}
+<br />
+{% endif %}
+</span>
+
 <span id="fitsurl-explain">
 Explanatory text about FITS URL
 </span>
@@ -354,7 +394,7 @@ Explanatory text about FITS URL
 <ul id="scalelist">
 <li>
 Units: {{ form.scaleunits }}
-<div class="cap">
+<div class="explain">
 Choose how you want to describe the scale of your field.
 </div>
 </li>
@@ -368,83 +408,66 @@ Choose how you want to describe the scale of your field.
 Fill in ONE of the following pairs of values:
 </div>
 
-<table border="1" class="c">
-<tr><td>
+<table border="0" class="c">
 
-<div class="fuset" id="lu">
-<table>
 <tr>
 <td colspan="2"> {{ scale_ul }} Bounds</td>
-</tr>
-
-{% if scalelower_err %}
-<tr>
-<td></td>
-<td class="err" id="fsl-err">
-{{ scalelower_err }}
-</td>
-</tr>
-{% endif %}
-
-<tr>
-<td>
-Lower bound:</td>
-<td> {{ form.scalelower }} </td>
-</tr>
-
-{% if scaleupper_err %}
-<tr>
-<td></td>
-<td class="err" id="fsl-err">
-{{ scaleupper_err }}
-</td>
-</tr>
-{% endif %}
-
-<tr>
-<td>Upper bound:</td>
-<td> {{ form.scaleupper }} </td>
-</tr>
-</table>
-</div>
-
-</td><td>
-
-<div class="fuset" id="ev">
-<table>
-<tr>
 <td colspan="2"> {{ scale_ee }} Estimate+/-Error</td>
 </tr>
 
-{% if scaleest_err %}
+{% if scalelower_err or scaleest_err %}
 <tr>
 <td></td>
-<td class="err" id="fsl-err">
-{{ scaleest_err }}
-</td>
+{% if scalelower_err %}
+<td class="err" id="fsl-err"> {{ scalelower_err }} </td>
+{% else %}
+<td></td>
+{% endif %}
+<td></td>
+{% if scaleest_err %}
+<td class="err" id="fsl-err"> {{ scaleest_err }} </td>
+{% else %}
+<td></td>
+{% endif %}
 </tr>
 {% endif %}
 
+
 <tr>
-<td>Estimate:</td>
+<td class="scalelabel"> Lower bound:</td>
+<td> {{ form.scalelower }} </td>
+
+<td class="scalelabel">Estimate:</td>
 <td> {{ form.scaleest }} </td>
 </tr>
 
-{% if scaleerr_err %}
+
+{% if scaleupper_err or scaleerr_err %}
 <tr>
 <td></td>
-<td class="err" id="fsl-err">
-{{ scaleerr_err }}
-</td>
+{% if scaleupper_err %}
+<td class="err" id="fsl-err"> {{ scaleupper_err }} </td>
+{% else %}
+<td></td>
+{% endif %}
+<td></td>
+{% if scaleerr_err %}
+<td class="err" id="fsl-err"> {{ scaleerr_err }} </td>
+{% else %}
+<td></td>
+{% endif %}
 </tr>
 {% endif %}
 
 <tr>
-<td>% Error:</td>
+<td class="scalelabel">Upper bound:</td>
+<td> {{ form.scaleupper }} </td>
+
+<td class="scalelabel">% Error:</td>
 <td> {{ form.scaleerr }} </td>
 </tr>
-</table>
-</div>
+</table> <!-- end upper/lower estimate/error table -->
+
 
 </td></tr>
 </table>

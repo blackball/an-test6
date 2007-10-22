@@ -21,7 +21,8 @@ class LoginForm(forms.Form):
 
 class ForgivingURLField(forms.URLField):
 	def clean(self, value):
-		if value.startswith('http://http://') or value.startswith('http://ftp://'):
+		if value is not None and \
+			   (value.startswith('http://http://') or value.startswith('http://ftp://')):
 			value = value[7:]
 		return super(ForgivingURLField, self).clean(value)
 
@@ -50,18 +51,22 @@ class FullForm(forms.Form):
 	scalelower = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsUl()',
 			   'onkeyup':'scalechanged()',
+			   'size':'5',
 			   }), initial=0.1, required=False)
 	scaleupper = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsUl()',
 			   'onkeyup':'scalechanged()',
+			   'size':'5',
 			   }), initial=180, required=False)
 	scaleest = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsEv()',
 			   'onkeyup':'scalechanged()',
+			   'size':'5',
 			   }), required=False)
 	scaleerr = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsEv()',
 			   'onkeyup':'scalechanged()',
+			   'size':'5',
 			   }), required=False)
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}),
 						   required=False)
@@ -241,12 +246,22 @@ def newlong(request):
 		'scale_ul' : r0txt,
 		'scale_ee' : r1txt,
 		}
-	errfields = [ 'url', 'file', 'scalelower', 'scaleupper', 'scaleest',
-				  'scaleerr' ]
+	errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr' ]
 	for f in errfields:
 		ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
-		#'urlerr' : len(form.url.errors) and form.url.errors[0] or None,
-		#'fileerr' : len(form.file.errors) and form.url.errors[0] or None,
+
+	urlerr  = len(form['url'].errors)  and form['url'].errors [0] or None
+	fileerr = len(form['file'].errors) and form['file'].errors[0] or None
+	val = form['xysrc'].field.clean(request.POST['xysrc'])
+	#val = form.cleaned_data['xysrc']
+   	if val == 'url':
+		ctxt['imgurl_err'] = urlerr
+	elif val == 'file':
+		ctxt['imgfile_err'] = fileerr
+	elif val == 'fitsurl':
+		ctxt['fitsurl_err'] = urlerr
+	elif val == 'fitsfile':
+		ctxt['fitsfile_err'] = fileerr
 
 	t = loader.get_template('portal/newjoblong.html')
 	c = RequestContext(request, ctxt)
