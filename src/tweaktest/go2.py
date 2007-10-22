@@ -36,21 +36,6 @@ pixscale = 97.7
 sigma = hypot(1 / pixscale, 1)
 cutoff = sigma * 30
 
-def all_deltas(a,b):
-    "return a 3d matrix where entry [i,j] is a[i]-b[j] (but is a vector!)"
-    n1,m1 = a.shape
-    n2,m2 = b.shape
-    assert m1 == m2
-    m = m1
-    delta = zeros((n1,n2,m),'d')
-    for d in xrange(m):
-        data1 = a[:,d]
-        data2 = b[:,d]
-        delta[:,:,d] = c_[data1] - data2
-    return delta
-
-deltas = all_deltas(fxy, ixy)
-
 keepers = []
 for nf in range(len(fxy)):
     rad = fxy[nf] - quadcenter
@@ -59,7 +44,6 @@ for nf in range(len(fxy)):
     covmat = array([[r1,r2],
                     [-factor*r2,factor*r1]])
     for ni in range(len(ixy)):
-#        dist = norm(dot(covmat, deltas[nf,ni]))
         dist = norm(dot(covmat, fxy[nf]-ixy[ni]))
         if dist < cutoff:
             print dist
