@@ -32,7 +32,48 @@ class SimpleURLForm(forms.Form):
 class SimpleFileForm(forms.Form):
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
 
-#class FullForm(forms.Form):
+class FullForm(forms.Form):
+	xysrc = forms.ChoiceField(choices=Job.xysrc_CHOICES,
+							  initial='url',
+							  widget=forms.Select(
+		attrs={'onchange':'sourceChanged()',
+			   'onkeyup':'sourceChanged()'}))
+	scaleunits = forms.ChoiceField(choices=Job.scaleunit_CHOICES,
+								   widget=forms.Select(
+		attrs={'onchange':'unitsChanged()',
+			   'onkeyup':'unitsChanged()'}))
+	scaletype = forms.ChoiceField(choices=Job.scaletype_CHOICES,
+								  widget=forms.RadioSelect(),
+								  initial='ul')
+	parity = forms.ChoiceField(choices=Job.parity_CHOICES,
+							   widget=forms.RadioSelect())
+	scalelower = forms.DecimalField(widget=forms.TextInput(
+		attrs={'onfocus':'setFsUl()',
+			   'onkeyup':'scalechanged()',
+			   }), initial=0.1, required=False)
+	scaleupper = forms.DecimalField(widget=forms.TextInput(
+		attrs={'onfocus':'setFsUl()',
+			   'onkeyup':'scalechanged()',
+			   }), initial=180, required=False)
+	scaleest = forms.DecimalField(widget=forms.TextInput(
+		attrs={'onfocus':'setFsEv()',
+			   'onkeyup':'scalechanged()',
+			   }), required=False)
+	scaleerr = forms.DecimalField(widget=forms.TextInput(
+		attrs={'onfocus':'setFsEv()',
+			   'onkeyup':'scalechanged()',
+			   }), required=False)
+	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}),
+						   required=False)
+	url = ForgivingURLField(initial='http://',
+							widget=forms.TextInput(attrs={'size':'50'}),
+							required=False)
+	xcol = forms.CharField(initial='X',
+						   required=False,
+						   widget=forms.TextInput(attrs={'size':'10'}))
+	ycol = forms.CharField(initial='Y',
+						   required=False,
+						   widget=forms.TextInput(attrs={'size':'10'}))
 
 
 def login(request, redirect_to=None):
@@ -141,10 +182,11 @@ def longform_formfield(field, **kwargs):
 	print 'form  is: ', default
 	print 'core? ', field.core
 	print
-	if (field.verbose_name == 'parity'):
+	if (field.verbose_name == 'parity' or
+		field.verbose_name == 'scaletype'):
 		default.widget = widgets.RadioSelect(choices = field.choices)
 	if (field.verbose_name == 'scaleunits' or
-		field.verbose_name == 'scaletype' or
+		#field.verbose_name == 'scaletype' or
 		field.verbose_name == 'xysrc'):
 		default.widget = widgets.Select(choices = field.choices)
 	return default
@@ -154,20 +196,60 @@ def newlong(request):
 		return HttpResponseRedirect('/login')
 
 	#JobForm = forms.form_for_model(Job)
-	newjob = Job()
-	JobForm = forms.form_for_instance(newjob, formfield_callback=longform_formfield)
-
-	print 'default parity ', newjob.parity
+	#newjob = Job()
+	#JobForm = forms.form_for_instance(newjob, formfield_callback=longform_formfield)
+	#if request.POST:
+	#	form = JobForm(request.POST)
+	#else:
+	#	form = JobForm()
 
 	if request.POST:
-		form = JobForm(request.POST)
+		form = FullForm(request.POST)
 	else:
-		form = JobForm()
+		form = FullForm()
+
+	#print form.scaletype_0
+	#print form
+	#print form['scaletype']
+	#print form['scaletype'].field
+	#print form['scaletype'].field.widget
+	scaletype = form['scaletype'].field
+	#print
+	attrs = scaletype.widget.attrs
+	#attrs['id'] = 'scaletype'
+	render = form['scaletype'].field.widget.get_renderer('scaletype',
+														 scaletype.initial,
+														 attrs)
+	r0 = render[0]
+	r0.attrs['id'] = 'scaletype'
+	r0.attrs['onclick'] = 'scalechanged()'
+	r1 = render[1]
+	r1.attrs['id'] = 'scaletype'
+	r1.attrs['onclick'] = 'scalechanged()'
+	#print 'choice value:', r1.choice_value
+	#print 'value:', r1.value
+	#r0txt = str(r0)
+	#r1txt = str(r1)
+	r0txt = r0.tag()
+	r1txt = r1.tag()
+	#print str(type(r0))
+	#print r0txt
+	#print r1txt
+
+	ctxt = {
+		'form' : form,
+		'scale_ul' : r0txt,
+		'scale_ee' : r1txt,
+		}
+	errfields = [ 'url', 'file', 'scalelower', 'scaleupper', 'scaleest',
+				  'scaleerr' ]
+	for f in errfields:
+		ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
+		#'urlerr' : len(form.url.errors) and form.url.errors[0] or None,
+		#'fileerr' : len(form.file.errors) and form.url.errors[0] or None,
 
 	t = loader.get_template('portal/newjoblong.html')
-	c = RequestContext(request, {
-		'form' : form,
-		})
+	c = RequestContext(request, ctxt)
 	return HttpResponse(t.render(c))
 
 def submit(request):

@@ -11,7 +11,8 @@ class Job(models.Model):
 	xysrc_CHOICES = (
 		('url', 'URL'),
 		('file', 'File'),
-		('fitsfile', 'FITS file'),
+		('fitsfile', 'FITS table'),
+		('fitsurl', 'FITS table URL'),
 		)
 
 	scaleunit_CHOICES = (
