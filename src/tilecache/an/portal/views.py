@@ -92,11 +92,6 @@ class FullForm(forms.Form):
 		"""Take a shower"""
 		xysrc = self.getclean('xysrc')
 		if (xysrc == 'url') or (xysrc == 'fitsurl'):
-			#if 'url' in self._errors:
-			#	print self._errors['url']
-			#if 'url' in self.cleaned_data:
-			#	print self.cleaned_data['url']
-			print 'xysrc is url'
 			print 'url errors: ', self.geterror('url')
 			print 'url value: ', self.getclean('url')
 			if (not 'url' in self._errors):
@@ -110,15 +105,6 @@ class FullForm(forms.Form):
 				print 'file in self.files is',repr('file' in self.files and self.files['file'] or None)
 				if not file:
 					self._errors['file'] = ['You must upload a file']
-				else:
-					print 'extraneous check?'
-					try:
-						file.field.clean(file)
-					except forms.ValidationError, v:
-						self._errors['file'] = v.messages
-						del self.cleaned_data['file']
-			else:
-				print 'file error is already', self._errors['file']
 		return self.cleaned_data
 		
 
