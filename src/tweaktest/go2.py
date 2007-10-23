@@ -21,7 +21,10 @@ cy = origwcs.crpix[1]
 crpix = array((cx,cy), Float64)
 
 # filter index stars to be in the image
-ixy[all(ixy < fxy.max(0), 1)]
+saftey = 1.05
+fxymax = fxy.max(0)
+ixy = ixy[all(ixy <  1.05*fxymax, 1)]
+ixy = ixy[all(ixy > -0.05*fxymax, 1)]
 
 # grab matched quad 
 hdus = pyfits.open('match1.fits')
@@ -71,11 +74,13 @@ figure()
 t=arange(1.,700.,20)
 t **= 2
 plot(t, ones(len(t)), 'b--',linewidth=0.3, label='r^2=r^2 line')
+
+# find radial distortion
 ratio = radsi/radsf
 ratio[~isfinite(ratio)] = 1.0
 radsf2 = radsf**2
 coeffs,inliers,resids = ransac.robust_poly_fit(
-    radsf2, ratio, order=3, thresh=0.0001, iterations=500, verbose=True)
+    radsf2, ratio, order=2, thresh=0.00002, iterations=500, verbose=True)
 
 plot(radsf2, ratio, 'r.')
 xlabel('r_field^2')
@@ -93,19 +98,36 @@ def correct(xy, center, coeffs):
 
 ################################################################################
 figure()
-scatter(ixy[:,0], ixy[:,1], 50, label='index', facecolor='#ffffff')
-#plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field')
+#scatter(ixy[:,0], ixy[:,1], 130, marker='s', label='index', facecolor='#ffffff')
+#scatter(ixykeep[:,0], ixykeep[:,1], 130, marker='s', label='index', facecolor='#ffffff')
+plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index',markersize=8)
+plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field',markersize=8)
+#scatter(fxykeep[:,0], fxykeep[:,1], 130, marker='+',facecolor='green', label='field')
+axis([0,fxymax[0],0,fxymax[1]])
+
+figure()
+#scatter(ixy[:,0], ixy[:,1], 130, marker='s', label='index', facecolor='#ffffff')
+#scatter(ixykeep[:,0], ixykeep[:,1], 130, marker='s', label='index', facecolor='#ffffff')
+plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index',markersize=8)
 fxycorr = correct(fxykeep, quadcenter, coeffs)
-plot(fxycorr[:,0],fxycorr[:,1], 'bx', label='field corrected')
+plot(fxycorr[:,0],fxycorr[:,1], 'gx', label='field corrected', markersize=8,
+     aa=False)
+axis([0,fxymax[0],0,fxymax[1]])
+
 fxycorr_inliers = correct(fxykeep[inliers], quadcenter, coeffs)
-scatter(fxycorr_inliers[:,0],fxycorr_inliers[:,1], 50,
-        label='inliers corrected',alpha=0.2,faceted=False)
+#scatter(fxycorr_inliers[:,0],fxycorr_inliers[:,1], 50, marker='s',
+#        label='inliers corrected',alpha=0.2,faceted=False)
 #plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index')
 #plot(ixy[:,0], ixy[:,1], 'r+', label='index')
 plot([quadcenter[0]], [quadcenter[1]], 'ys', label='quad center')
 legend()
 title('stars which were found in correspondence using prior on covariance CORRECTED')
 show()
+
+
+
+
+
 
 """
 MAXIMA CODE:
