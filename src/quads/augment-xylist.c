@@ -177,7 +177,7 @@ int main(int argc, char** args) {
     char* ycol = NULL;
     char* me;
     char* tempdir = "/tmp";
-    // this is just to avoid leaking temp filenames...
+	// tempfiles to delete when we finish
     sl* tempfiles;
     char* sortcol = NULL;
     bool descending = TRUE;
@@ -882,6 +882,13 @@ int main(int argc, char** args) {
 			}
 		}
 		fclose(fin);
+	}
+
+	for (i=0; i<sl_size(tempfiles); i++) {
+		char* fn = sl_get(tempfiles, i);
+		if (unlink(fn)) {
+			fprintf(stderr, "Failed to delete temp file \"%s\": %s.\n", fn, strerror(errno));
+		}
 	}
 
     dl_free(scales);

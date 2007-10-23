@@ -367,6 +367,7 @@ int main(int argc, char** args) {
         char* downloadfn;
         char* suffix = NULL;
 		sl* outfiles;
+		sl* tempfiles;
 		sl* cmdline;
         bool ctrlc = FALSE;
 
@@ -419,6 +420,7 @@ int main(int argc, char** args) {
 
 		// the output filenames.
 		outfiles = sl_new(16);
+		tempfiles = sl_new(4);
 
 		axyfn      = sl_appendf(outfiles, "%s.axy",       base);
 		matchfn    = sl_appendf(outfiles, "%s.match",     base);
@@ -437,7 +439,7 @@ int main(int argc, char** args) {
         if (solvedin && !strcmp(solvedfn, solvedin)) {
             // solved input and output files are the same: don't delete the input!
             sl_pop(outfiles);
-            // MEMLEAK (small memleak here)
+            // MEMLEAK
         }
 
 		free(base);
@@ -544,7 +546,7 @@ int main(int argc, char** args) {
 
 		if (image) {
             ppmfn = create_temp_file("ppm", tempdir);
-            sl_append_nocopy(outfiles, ppmfn);
+            sl_append_nocopy(tempfiles, ppmfn);
 
 			sl_append(augmentxyargs, "--pnm");
 			append_escape(augmentxyargs, ppmfn);
@@ -855,8 +857,14 @@ int main(int argc, char** args) {
         fflush(NULL);
 
     nextfile:        // clean up and move on to the next file.
+		for (i=0; i<sl_size(tempfiles); i++) {
+			char* fn = sl_get(tempfiles, i);
+			if (unlink(fn))
+				fprintf(stderr, "Failed to delete temp file \"%s\": %s.\n", fn, strerror(errno));
+		}
         sl_free2(cmdline);
 		sl_free2(outfiles);
+		sl_free2(tempfiles);
 	}
 
 	sl_free2(augmentxyargs);
