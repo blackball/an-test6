@@ -3,12 +3,13 @@ from django import newforms as forms
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.template import Context, RequestContext, loader
-from django.contrib.auth import authenticate
-from django.contrib.auth import login as authlogin
-from django.contrib.auth import logout as authlogout
+import django.contrib.auth as auth
 from django.newforms import widgets
 import re
 from an import settings
+#import sys
+import logging
+from an import gmaps_config
 
 # Adding a user:
 # > python manage.py shell
@@ -17,6 +18,13 @@ from an import settings
 # >>> passwd = 'password'
 # >>> user = User.objects.create_user(email, email, passwd)
 # >>> user.save()
+
+#logfile        = gmaps_config.logfile
+logfile = '/home/gmaps/test/tilecache/portal.log'
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s %(message)s',
+                    filename=logfile,
+					)
 
 class LoginForm(forms.Form):
 	username = forms.EmailField()
@@ -199,14 +207,19 @@ def login(request, redirect_to=None):
 	authfailed = False
 	usererr = None
 	passerr = None
+	logging.debug('login()')
 	if form.is_valid():
 		username = form.cleaned_data['username']
 		password = form.cleaned_data['password']
 
-		user = authenticate(username=username, password=password)
+		logging.debug('calling auth.authenticate()...')
+		user = auth.authenticate(username=username, password=password)
+		logging.debug('auth.authenticate() returned.')
 		if user is not None:
 			if user.is_active:
-				authlogin(request, user)
+				logging.debug('calling auth.login().')
+				auth.login(request, user)
+				logging.debug('auth.login() returned.')
 				# Success
 				return HttpResponseRedirect('/job/newurl')
 			else:
@@ -235,11 +248,15 @@ def login(request, redirect_to=None):
 def logout(request):
 	if not request.user.is_authenticated():
 		return HttpResponse("piss off.")
-	authlogout(request)
+	auth.logout(request)
 	return HttpResponseRedirect('/login')
 
 def newurl(request):
-	if not request.user.is_authenticated():
+	logging.debug('calling user.is_authenticated()...')
+	ok = request.user.is_authenticated()
+	logging.debug('user.is_authenticated() returned', ok)
+	#if not request.user.is_authenticated():
+	if not ok:
 		return HttpResponseRedirect('/login')
 	urlerr = None
 	if len(request.POST):
