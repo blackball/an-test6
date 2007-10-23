@@ -2,6 +2,7 @@ import sip
 import pyfits
 from pylab import *
 from numpy import *
+import ransac
 
 def readxylist(fn):
     hdus = pyfits.open(fn)
@@ -34,13 +35,13 @@ quadcenter = 0.5*(A+B)
 pixscale = 97.7
 
 sigma = hypot(1 / pixscale, 1)
-cutoff = sigma * 30
+cutoff = sigma * 50
 
 keepers = []
 for nf in range(len(fxy)):
     rad = fxy[nf] - quadcenter
     r1, r2 = rad/norm(rad)
-    factor = 6.0
+    factor = 5.0
     covmat = array([[r1,r2],
                     [-factor*r2,factor*r1]])
     for ni in range(len(ixy)):
@@ -52,118 +53,59 @@ for nf in range(len(fxy)):
 keepers = array(keepers)
 fxykeep = fxy[keepers[:,0]]
 ixykeep = ixy[keepers[:,1]]
+
+radsf = sum((fxykeep - quadcenter)**2,1)**.5
+radsi = sum((ixykeep - quadcenter)**2,1)**.5
+
+################################################################################
 figure()
 plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field')
 plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index')
 legend()
 title('stars which were found in correspondence using prior on covariance')
 
-radsf = sum((fxy[keepers[:,0]] - A)**2,1)**.5
-dists = sum((fxy[keepers[:,0]] - ixy[keepers[:,1]])**2,1)**.5
+################################################################################
+# DIRECT RATIO ESTIMATE
+# fit ri/rf; need a multiplicitave update
 figure()
-plot(radsf, dists, 'r.')
-ylabel('r_field - r_ind where r is distance from quad center')
-xlabel('distance from field object to quad center')
-show()
-
-def fitpoly1d(x, y, order):
-    AA = vstack(x**(2*i) for i in range(order)).T
-    return linalg.lstsq(AA, y)
-
-def genpoly1d(x,ll):
-    AA = vstack(x**(2*i) for i in range(len(ll))).T
-    return dot(AA, ll)
-
-order = 3
-npts = order
-thresh = 3
-thresh = 4
-n = len(keepers)
-# dumbass ransac without ANY EM; pure threshold
-num_inliers_best = 0
-best_score = 10000000000000000
-for iteration in range(1000):
-    minfitpts = [random.randint(0,n-1) for i in range(npts)]
-    lll,resids,rank,s = fitpoly1d(radsf[minfitpts], dists[minfitpts], order)
-    trydists = genpoly1d(radsf, lll)
-    tryerrors = (trydists - dists)**2
-    num_inliers = sum(tryerrors < thresh) # FIXME Make this some smart EM type thing
-    # hybrid inlier / sqd err 'score' makes this the MSAC variant of RANSAC
-    score = sum(tryerrors[tryerrors < thresh])+sum(tryerrors>=thresh)*thresh # FIXME Make this some smart EM type thing
-    #if num_inliers > num_inliers_best:
-    if score < best_score:
-        lll_best = lll
-        num_inliers_best = num_inliers
-        best_score = score
-        inlier_pts_best = find(tryerrors < thresh)
-        print iteration, num_inliers_best, best_score, lll
-
-# refit
-lll_best,resids,rank,s = fitpoly1d(radsf[inlier_pts_best], dists[inlier_pts_best], order)
-
-plot(radsf,dists,'r.', label='distances')
-a = axis()
 t=arange(1.,700.,20)
-plot(t,genpoly1d(t, lll_best),'g--',linewidth=0.3, label='fitted radial distortion')
-legend()
-axis(a)
-
-# alternate fit method: fit r directly rather than rf-ri
-radsi = sum((ixy[keepers[:,1]] - A)**2,1)**.5
-figure()
-plot(radsf, radsi, 'r.')
-plot(t, t, 'b--',linewidth=0.3, label='r=r line')
-xlabel('distance from quad for field object')
-ylabel('distance from quad for index object')
-
-# alternate fit method: fit ri/rf instead; just need a multiplicitave update
-figure()
-plot(t, ones(len(t)), 'b--',linewidth=0.3, label='r=r line')
+t **= 2
+plot(t, ones(len(t)), 'b--',linewidth=0.3, label='r^2=r^2 line')
 ratio = radsi/radsf
-radsf_finite = radsf[isfinite(ratio)]
-ratio_finite = ratio[isfinite(ratio)]
-plot(radsf_finite, ratio_finite, 'r.')
-xlabel('distance from quad for field object')
-ylabel('ratio r_index / r_field')
+ratio[~isfinite(ratio)] = 1.0
+radsf2 = radsf**2
+coeffs,inliers,resids = ransac.robust_poly_fit(
+    radsf2, ratio, order=3, thresh=0.0001, iterations=500, verbose=True)
 
-# Copy N PASTE ORAMA!
-order = 2
-npts = order
-thresh = 3
-thresh = 0.0001 # in sqd error
-n = len(ratio_finite)
-# dumbass ransac without ANY EM; pure threshold
-num_inliers_best = 0
-best_score = 10000000000000000
-for iteration in range(5000):
-    minfitpts = [random.randint(0,n-1) for i in range(npts)]
-    lll,resids,rank,s = fitpoly1d(radsf_finite[minfitpts], ratio_finite[minfitpts], order)
-    tryratio_finite = genpoly1d(radsf_finite, lll)
-    tryerrors = (tryratio_finite - ratio_finite)**2
-    num_inliers = sum(tryerrors < thresh) # FIXME Make this some smart EM type thing
-    # hybrid inlier / sqd err 'score' makes this the MSAC variant of RANSAC
-    score = sum(tryerrors[tryerrors < thresh])+sum(tryerrors>=thresh)*thresh # FIXME Make this some smart EM type thing
-    #if num_inliers > num_inliers_best:
-    if score < best_score:
-        lll_best = lll
-        num_inliers_best = num_inliers
-        best_score = score
-        inlier_pts_best = find(tryerrors < thresh)
-        print iteration, num_inliers_best, best_score, lll
-
-# refit
-lll_best,resids,rank,s = fitpoly1d(radsf_finite[inlier_pts_best], ratio_finite[inlier_pts_best], order)
+plot(radsf2, ratio, 'r.')
+xlabel('r_field^2')
+ylabel('r_index / r_field')
 
 a = axis()
-t=arange(1.,700.,20)
-plot(t,genpoly1d(t, lll_best),'g--',linewidth=0.3, label='fitted radial distortion ratio')
-plot(radsf_finite[inlier_pts_best], ratio_finite[inlier_pts_best], 'b.',
-     label='points used in fit')
+plot(t,ransac.genpoly1d(t, coeffs),'g--',linewidth=0.3, label='fitted radial distortion ratio')
+plot(radsf2[inliers], ratio[inliers], 'b.', label='points used in fit')
 legend()
 axis(a)
 title('ratio model')
 
+def correct(xy, center, coeffs):
+    return (xy-center)*c_[ransac.genpoly1d(sum((xy-center)**2,1), coeffs)] + center
 
+################################################################################
+figure()
+scatter(ixy[:,0], ixy[:,1], 50, label='index', facecolor='#ffffff')
+#plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field')
+fxycorr = correct(fxykeep, quadcenter, coeffs)
+plot(fxycorr[:,0],fxycorr[:,1], 'bx', label='field corrected')
+fxycorr_inliers = correct(fxykeep[inliers], quadcenter, coeffs)
+scatter(fxycorr_inliers[:,0],fxycorr_inliers[:,1], 50,
+        label='inliers corrected',alpha=0.2,faceted=False)
+#plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index')
+#plot(ixy[:,0], ixy[:,1], 'r+', label='index')
+plot([quadcenter[0]], [quadcenter[1]], 'ys', label='quad center')
+legend()
+title('stars which were found in correspondence using prior on covariance CORRECTED')
+show()
 
 """
 MAXIMA CODE:

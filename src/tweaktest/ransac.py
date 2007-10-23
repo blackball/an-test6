@@ -1,7 +1,8 @@
+import sys
 from numpy import where, linalg, arange, vstack, hstack, dot
 from numpy.random import rand, randint
 
-def robust_poly_fit(x,y, order=2, thresh=10, iterations=10):
+def robust_poly_fit(x,y, order=2, thresh=10, iterations=10, verbose=False):
     npts = order
     n = len(x)
     assert len(x) == len(y)
@@ -17,7 +18,10 @@ def robust_poly_fit(x,y, order=2, thresh=10, iterations=10):
             coeffs_best = coeffs
             best_score = score
             inlier_pts_best = where(err < thresh)[0]
-            print iteration, num_inliers, best_score, coeffs
+            if verbose:
+                print '%04d %04d %10f' % (iteration, num_inliers, best_score), coeffs
+                sys.stdout.flush()
+
     coeffs_best,resids,rank,s = fitpoly1d(x[inlier_pts_best],
                                           y[inlier_pts_best], order)
     return coeffs_best, inlier_pts_best, resids
