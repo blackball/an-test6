@@ -12,21 +12,36 @@ td.l { text-align:right; }
 #tdsubmit { text-align:center; }
 ul.xycol { list-style:none; margin-bottom:0px; }
 ul.xycol > li { margin:5px; }
-.scalelabel { text-align:right; padding-left:2em; }
 
-#scalevalues { background:yellow; border-collapse:collapse; padding:20px; }
-.boxcol { border-style:solid; border-width:1px; border-color:blue; }
-#spacercol { border-style:none; width:20px; }
+#scalevalues { border-collapse:collapse; margin:10px;}
 
+.scalelabel { text-align:right; padding-left:15px; }
+
+td[col=ll] { padding-left:15px; }
+td[col=lr] { padding-right:10px; }
+td[col=rr] { padding-right:10px; }
+td[col=rl] { padding-left:15px; }
+
+#boundscell { padding:10px; padding-bottom:3px; }
+#errestcell { padding:10px; padding-bottom:3px; }
+
+.boxcol { border-style:solid; border-width:1px; border-color:black; }
+#spacercol { border-style:none; width:10px; }
+
+#toprow td { padding-top:10px; }
+#bottomrow td { padding-bottom:10px; }
 
 {% endblock moreinlinecss %}
 
 {#
 
+#scalevalues td { padding:2px; }
+
+#scalevalues > tbody > tr > td { vertical-align:middle; }
+
 #leftleft > tbody > tr > td { background:red; padding-left:20px; margin-left:20px; }
 
 #scalevalues > tbody > tr > td { padding:10px; }
-#boundscell { padding:10px; padding-bottom:5px; }
 
 #scalevalues { border-collapse:collapse; padding:10px; }
 #scalevalues > colgroup { border-style:solid; border-width:1px; border-color:blue; }
@@ -450,34 +465,29 @@ Fill in ONE of the following pairs of values:
 </div>
 
 <table border="0" class="c" id="scalevalues">
-<colgroup span="2" class="boxcol">
-<col id="leftleft" />
-<col id="leftright" />
-</colgroup>
-<colgroup span="1" id="spacercol" />
-<colgroup span="2" class="boxcol">
-<col id="rightleft" />
-<col id="rightright" />
-</colgroup>
 
-<tr>
+<colgroup span="2" class="boxcol" />
+<colgroup span="1" id="spacercol" />
+<colgroup span="2" class="boxcol" />
+
+<tr id="toprow">
 <td colspan="2" id="boundscell"> {{ scale_ul }} Bounds</td>
 <td />
-<td colspan="2"> {{ scale_ee }} Estimate &plusmn; Error</td>
+<td colspan="2" id="errestcell"> {{ scale_ee }} Estimate &plusmn; Error</td>
 </tr>
 
 {% if scalelower_err or scaleest_err %}
 <tr>
 <td></td>
 {% if scalelower_err %}
-<td class="err" id="fsl-err"> {{ scalelower_err }} </td>
+<td class="err" id="fsl-err" col="lr"> {{ scalelower_err }} </td>
 {% else %}
 <td></td>
 {% endif %}
 <td />
 <td></td>
 {% if scaleest_err %}
-<td class="err" id="fsl-err"> {{ scaleest_err }} </td>
+<td class="err" id="fsl-err" col="rr"> {{ scaleest_err }} </td>
 {% else %}
 <td></td>
 {% endif %}
@@ -486,13 +496,13 @@ Fill in ONE of the following pairs of values:
 
 
 <tr>
-<td class="scalelabel"> Lower bound:</td>
-<td> {{ form.scalelower }} </td>
+<td class="scalelabel" col="ll"> Lower bound:</td>
+<td col="lr"> {{ form.scalelower }} </td>
 
 <td />
 
-<td class="scalelabel">Estimate:</td>
-<td> {{ form.scaleest }} </td>
+<td class="scalelabel" col="rl">Estimate:</td>
+<td col="rr"> {{ form.scaleest }} </td>
 </tr>
 
 
@@ -500,7 +510,7 @@ Fill in ONE of the following pairs of values:
 <tr>
 <td></td>
 {% if scaleupper_err %}
-<td class="err" id="fsl-err"> {{ scaleupper_err }} </td>
+<td class="err" id="fsl-err" col="lr"> {{ scaleupper_err }} </td>
 {% else %}
 <td></td>
 {% endif %}
@@ -509,21 +519,21 @@ Fill in ONE of the following pairs of values:
 
 <td></td>
 {% if scaleerr_err %}
-<td class="err" id="fsl-err"> {{ scaleerr_err }} </td>
+<td class="err" id="fsl-err" col="rr"> {{ scaleerr_err }} </td>
 {% else %}
 <td></td>
 {% endif %}
 </tr>
 {% endif %}
 
-<tr>
-<td class="scalelabel">Upper bound:</td>
-<td> {{ form.scaleupper }} </td>
+<tr id="bottomrow">
+<td class="scalelabel" col="ll">Upper bound:</td>
+<td col="lr"> {{ form.scaleupper }} </td>
 
 <td />
 
-<td class="scalelabel">% Error:</td>
-<td> {{ form.scaleerr }} </td>
+<td class="scalelabel" col="rl">% Error:</td>
+<td col="rr"> {{ form.scaleerr }} </td>
 </tr>
 </table> <!-- end upper/lower estimate/error table -->
 
