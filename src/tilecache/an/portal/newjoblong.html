@@ -9,8 +9,6 @@ td.l { text-align:right; }
 #scalelist { list-style:none; }
 #scalelist > li { margin-top:1em; }
 #tdsubmit { text-align:center; }
-ul.xycol { list-style:none; margin-bottom:0px; }
-ul.xycol > li { margin:5px; }
 
 #scalevalues { border-collapse:collapse; margin:10px;}
 
@@ -32,10 +30,12 @@ td[col=rl] { padding-left:15px; }
 #toprow td { padding-top:10px; }
 #bottomrow td { padding-bottom:10px; }
 
+#xycol { margin-left:20px; }
+
 {% endblock moreinlinecss %}
 
-{#
-#}
+{% comment %}
+{% endcomment %}
 
 {% block javascript %}
 <script type="text/javascript">
@@ -55,6 +55,7 @@ var srcfitsurl;
 var srcfitsurl_label;
 var srcfitsurl_error;
 var srcfitsurl_explain;
+var fitscols;
 var oldsource = '';
 var scaleplus;
 var scaleminus;
@@ -73,7 +74,8 @@ function submitForm() {
   // document tree so their values get submitted with the form.
   elements = [ selectunits, ulradio, evradio, scalelo, scalehi,
     scaleest, scaleerr ];
-  formelements = document.form.longform.elements;
+  longform = document.getElementById('longform');
+  formelements = longform.elements;
   for (var i=0; i<elements.length; i++) {
     var gotit = false;
     for (var j=0; j<formelements.length; j++) {
@@ -96,25 +98,25 @@ function sourceChanged() {
   oldsource = selectsource.value;
   switch (selectsource.value) {
   case 'url':
-    src = srcurl;
+    srcs = [srcurl];
 	label = srcurl_label;
 	error = srcurl_error;
 	explain = srcurl_explain;
 	break;
   case 'file':
-    src = srcfile;
+    srcs = [srcfile];
 	label = srcfile_label;
 	error = srcfile_error;
 	explain = srcfile_explain;
 	break;
   case 'fitsfile':
-    src = srcfitsfile;
+    srcs = [srcfitsfile, fitscols];
 	label = srcfitsfile_label;
 	error = srcfitsfile_error;
 	explain = srcfitsfile_explain;
 	break;
   case 'fitsurl':
-    src = srcfitsurl;
+    srcs = [srcfitsurl, fitscols];
 	label = srcfitsurl_label;
 	error = srcfitsurl_error;
 	explain = srcfitsurl_explain;
@@ -122,7 +124,9 @@ function sourceChanged() {
   }
   activesource = document.getElementById('activesource');
   removeAllChildren(activesource);
-  activesource.appendChild(src);
+  for (var i=0; i<srcs.length; i++) {
+    activesource.appendChild(srcs[i]);
+  }
   activesource_label = document.getElementById('activesource-label');
   removeAllChildren(activesource_label);
   activesource_label.appendChild(label);
@@ -141,6 +145,8 @@ function removeAllChildren(node) {
 }
 
 function onLoad() {
+  fitscols = document.getElementById('fitscols');
+
   srcurl      = document.getElementById('imgurl-input');
   srcfile     = document.getElementById('imgfile-input');
   srcfitsurl  = document.getElementById('fitsurl-input');
@@ -236,7 +242,7 @@ function scalechanged() {
     if (err == '') {
       err = '(none)';
     }
-    val = est + ' plus or minus ' + err + ' %';
+    val = est + ' plus or minus ' + err + '%';
   } else {
     val = '(none)';
   }
@@ -286,7 +292,7 @@ function scalechanged() {
 
 <br />
 
-<form enctype="multipart/form-data" method="post">
+<form enctype="multipart/form-data" method="post" id="longform" onsubmit="return submitForm();">
 
 <table id="formtable">
 
@@ -397,12 +403,23 @@ Image file:
 Explanatory text about image file
 </span>
 
+<span id="fitscols">
+
+<table id="xycol">
+{% if xcol_err %}
+<tr><td /><td class="err"> {{ xcol_err }} </td></tr>
+{% endif %}
+<tr><td>X column:</td><td> {{ form.xcol }} </td></tr>
+{% if ycol_err %}
+<tr><td /><td class="err"> {{ ycol_err }} </td></tr>
+{% endif %}
+<tr><td>Y column:</td><td> {{ form.ycol }} </td></tr>
+</table>
+
+</span>
+
 <span id="fitsfile-input">
 File: {{ form.file }}
-<ul class="xycol">
-<li>X column: {{ form.xcol }} </li>
-<li>Y column: {{ form.ycol }} </li>
-</ul>
 </span>
 
 <span id="fitsfile-label">
@@ -422,10 +439,6 @@ Explanatory text about FITS file
 
 <span id="fitsurl-input">
 URL: {{ form.url }}
-<ul class="xycol">
-<li>X column: {{ form.xcol }} </li>
-<li>Y column: {{ form.ycol }} </li>
-</ul>
 </span>
 
 <span id="fitsurl-label">
