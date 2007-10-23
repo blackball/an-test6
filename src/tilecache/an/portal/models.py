@@ -34,9 +34,9 @@ class Job(models.Model):
 	#	)
 
 	parity_CHOICES = (
+		(2, 'Try both simultaneously'),
 		(0, 'Positive'),
 		(1, 'Negative'),
-		(2, 'Try both simultaneously'),
 		)
 
 	status_CHOICES = (

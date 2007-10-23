@@ -21,6 +21,7 @@ class LoginForm(forms.Form):
 
 class ForgivingURLField(forms.URLField):
 	def clean(self, value):
+		print 'cleaning value', value
 		if value is not None and \
 			   (value.startswith('http://http://') or value.startswith('http://ftp://')):
 			value = value[7:]
@@ -100,11 +101,12 @@ class FullForm(forms.Form):
 		"""Take a shower"""
 		xysrc = self.getclean('xysrc')
 		if (xysrc == 'url') or (xysrc == 'fitsurl'):
-			print 'url errors: ', self.geterror('url')
-			print 'url value: ', self.getclean('url')
-			if (not 'url' in self._errors):
-				url = self.getclean('url')
-				if url is None or (len(url) == 0):
+			urlerr = self.geterror('url')
+			urlval = self.getclean('url')
+			print 'url error:', urlerr
+			print 'url value:', urlval
+			if urlerr is None:
+				if urlval is None or (len(urlval) == 0):
 					self._errors['url'] = ['URL is required']
 		elif (xysrc == 'file') or (xysrc == 'fitsfile'):
 			if (not 'file' in self._errors):
