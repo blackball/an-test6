@@ -34,6 +34,24 @@ class SimpleURLForm(forms.Form):
 class SimpleFileForm(forms.Form):
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
 
+class ANRadioSelect(forms.RadioSelect):
+	def value_from_datadict(self, data, files, name):
+		print 'ANRadioSelect:value_from_datadict:'
+		print '	data is'
+		for k,v in data.items():
+			print '	',k,'=',v
+		print 'name is', name
+		val = super(ANRadioSelect,self).value_from_datadict(data, files, name)
+		print 'super val is', val
+		return val
+
+class ANChoiceField(forms.ChoiceField):
+	def clean(self, value):
+		print 'ANChoiceField:clean', self.label
+		val = super(ANChoiceField,self).clean(value)
+		print 'super val is', val
+		return val
+
 class FullForm(forms.Form):
 	xysrc = forms.ChoiceField(choices=Job.xysrc_CHOICES,
 							  initial='url',
@@ -44,11 +62,13 @@ class FullForm(forms.Form):
 								   widget=forms.Select(
 		attrs={'onchange':'unitsChanged()',
 			   'onkeyup':'unitsChanged()'}))
-	scaletype = forms.ChoiceField(choices=Job.scaletype_CHOICES,
-								  widget=forms.RadioSelect(),
-								  initial='ul')
+	scaletype = ANChoiceField(choices=Job.scaletype_CHOICES,
+							  widget=ANRadioSelect(
+		attrs={'id':'scaletype',
+			   'onclick':'scalechanged()'}),
+							  initial='ul')
 	parity = forms.ChoiceField(choices=Job.parity_CHOICES,
-                               initial=2)
+							   initial=2)
 	scalelower = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsUl()',
 			   'onkeyup':'scalechanged()',
@@ -84,17 +104,40 @@ class FullForm(forms.Form):
 	tweak = forms.BooleanField(initial=True)
 
 	tweakorder = forms.IntegerField(initial=2, min_value=2,
-                                    max_value=10,
-                                    widget=forms.TextInput(attrs={'size':'5'}))
+									max_value=10,
+									widget=forms.TextInput(attrs={'size':'5'}))
+
+	def clean_scaletype(self):
+		print 'clean_scaletype:'
+		val = self.getclean('scaletype')
+		print 'val is', val
+		return val
 
 	def getclean(self, name):
+		if not hasattr(self, 'cleaned_data'):
+			return None
 		if name in self.cleaned_data:
 			return self.cleaned_data[name]
 		return None
+
 	def geterror(self, name):
 		if name in self._errors:
 			return self._errors[name]
 		return None
+
+	def reclean(self, name):
+		field = self.fields[name].field
+		value = field.widget.value_from_datadict(self.data, self.files, self.add_prefix(name))
+		try:
+			value = field.clean(value)
+			self.cleaned_data[name] = value
+			if hasattr(self, 'clean_%s' % name):
+				value = getattr(self, 'clean_%s' % name)()
+				self.cleaned_data[name] = value
+		except ValidationError, e:
+			self._errors[name] = e.messages
+			if name in self.cleaned_data:
+				del self.cleaned_data[name]			
 
 	def clean(self):
 		"""Take a shower"""
@@ -113,10 +156,15 @@ class FullForm(forms.Form):
 				print 'file is',repr(file)
 				print 'file in self.files is',repr('file' in self.files and self.files['file'] or None)
 				if not file:
-					self._errors['file'] = ['You must upload a file']
-		return self.cleaned_data
-		
+					self._errors['file'] = ['You must upload a file.']
+		if self.getclean('tweak'):
+			order = self.getclean('tweakorder')
+			print 'tweak order', order
+			if not order:
+				self._errors['tweakorder'] = ['Tweak order is required if tweak is enabled.']
 
+		print 'form clean(): scaletype is', self.getclean('scaletype')
+		return self.cleaned_data
 
 
 def login(request, redirect_to=None):
@@ -223,22 +271,34 @@ def newlong(request):
 		return HttpResponseRedirect('/login')
 
 	if request.POST:
+		#print 'request.POST is', request.POST
+		print 'POST values:'
+		for k,v in request.POST.items():
+			print '		 ', k, '=', v
 		form = FullForm(request.POST, request.FILES)
 	else:
 		form = FullForm()
 
+	#form.full_clean()
+	form.is_valid()
+
+	# Note, if there are *ANY* errors, the form will have no 'cleaned_data'
+	# array.
+
+
+	#print 'scaletype is', form.getclean('scaletype')
+	#scaletype = form['scaletype'].field
+	#widg = scaletype.widget
+	#val = widg.value_from_datadict(request.POST, request.FILES, 'scaletype')
+	#print 'scaletype val is', val
+
 	# Ugh, special rendering for radio checkboxes....
 	scaletype = form['scaletype'].field
-	attrs = scaletype.widget.attrs
-	render = form['scaletype'].field.widget.get_renderer('scaletype',
-														 scaletype.initial,
-														 attrs)
+	widg = scaletype.widget
+	attrs = widg.attrs
+	render = widg.get_renderer('scaletype', form.getclean('scaletype'), attrs)
 	r0 = render[0]
-	r0.attrs['id'] = 'scaletype'
-	r0.attrs['onclick'] = 'scalechanged()'
 	r1 = render[1]
-	r1.attrs['id'] = 'scaletype'
-	r1.attrs['onclick'] = 'scalechanged()'
 	r0txt = r0.tag()
 	r1txt = r1.tag()
 
@@ -247,12 +307,13 @@ def newlong(request):
 		'scale_ul' : r0txt,
 		'scale_ee' : r1txt,
 		}
-	errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr' ]
+	errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr',
+				  'tweakorder', ]
 	for f in errfields:
 		ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
 
 	if request.POST:
-		form.is_valid()
+		#form.is_valid()
 
 		if request.FILES:
 			f1 = request.FILES['file']

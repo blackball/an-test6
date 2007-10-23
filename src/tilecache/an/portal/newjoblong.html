@@ -327,6 +327,10 @@ scaletext
 {{ form.tweak }} Tweak:
 </td>
 <td>
+{% if tweakorder_err %}
+<span class="err">{{ tweakorder_err }}</span>
+<br />
+{% endif %}
 Tweak order: {{ form.tweakorder }}
 </td>
 </tr>
