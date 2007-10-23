@@ -391,5 +391,10 @@ def submit(request):
 	for k,v in request.session['jobvals'].items():
 		txt += '  ' + str(k) + ' = ' + str(v) + '\n'
 	txt += "</pre>"
+
+	print 'Job values:'
+	for k,v in request.session['jobvals'].items():
+		print '  ',k,'=',v
+
 	return HttpResponse(txt)
 

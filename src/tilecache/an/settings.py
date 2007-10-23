@@ -1,6 +1,10 @@
 # Django settings for an project.
 import an.gmaps_config as gmaps_config
 
+#import sip
+#if not sip.libraryloaded():
+#	sip.loadlibrary(gmaps_config.sipso)
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 

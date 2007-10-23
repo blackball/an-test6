@@ -114,3 +114,21 @@ class Job(models.Model):
 	# filename of the uploaded file on the local machine.
 	localfilename = None
 
+
+#	def __init__(self, vals):
+#		super(Job,self).__init__()
+#		xysrc = vals['xysrc']
+#		self.xysrc = xysrc
+#	if xysrc == 'file':
+#		## FIXME
+#		pass
+#	elif xysrc == 'url':
+#		job.url = vals['url']
+#	elif xysrc == 'fitsfile':
+#	elif xysrc == 'fitsurl':
+#		job.url = vals['url']
+#	else:
+#		raise ValueError, 'unknown xysrc'
+
+
+
