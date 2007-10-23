@@ -67,6 +67,7 @@ var scalelo;
 var scalehi;
 var scaleest;
 var scaleerr;
+var scalepanelshowing;
 
 function submitForm() {
   hidden = document.getElementById('hiddenitems');
@@ -167,6 +168,11 @@ function onLoad() {
   srcfitsurl_explain  = document.getElementById('fitsurl-explain');
   srcfitsfile_explain = document.getElementById('fitsfile-explain');
 
+  // we have to remove this div because otherwise we have multiple copies of
+  // the "url" and "file" form fields.
+  sources = document.getElementById('sources');
+  removeAllChildren(sources);
+
   sourceChanged();
 
   scaleplus  = document.getElementById('scaleplus');
@@ -204,7 +210,11 @@ function setFsEv() {
   u.checked = 1;
   scalechanged();
 }
+function scaleshowhidetoggle() {
+  scaleshowhide(!scalepanelshowing);
+}
 function scaleshowhide(show) {
+  scalepanelshowing = show;
   scalepm = document.getElementById('scalepmimg');
   removeAllChildren(scalepm);
   holder = document.getElementById('scalepanelholder');
@@ -314,10 +324,12 @@ function scalechanged() {
 
 <tr>
 <td class="l">
+<a href="javascript:scaleshowhidetoggle()" style="text-decoration:none; color:inherit;">
 <span id="scalepmimg">
 +-
 </span>
 Image scale:
+</a>
 </td>
 <td>
 <span id="scaletext">
@@ -360,8 +372,10 @@ Parity:
 
 <div id="hiddenitems" style="visibility:hidden;">
 
-<img src="/anmedia/plus.png" alt="+" id="scaleplus" onclick="scaleshowhide(true)" />
-<img src="/anmedia/minus.png" alt="-" id="scaleminus" onclick="scaleshowhide(false)" />
+<img src="/anmedia/plus.png" border="0" alt="+" id="scaleplus" />
+<img src="/anmedia/minus.png" border="0" alt="-" id="scaleminus" />
+
+<div id="sources">
 
 <span id="imgurl-input">
 {{ form.url }}
@@ -455,6 +469,8 @@ FITS URL:
 <span id="fitsurl-explain">
 Explanatory text about FITS URL
 </span>
+
+</div> <!-- end sources -->
 
 <div id="scalepanel">
 

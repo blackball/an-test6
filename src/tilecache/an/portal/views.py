@@ -13,7 +13,9 @@ import settings
 # Adding a user:
 # > python manage.py shell
 # >>> from django.contrib.auth.models import User
-# >>> user = User.objects.create_user('john', 'lennon@thebeatles.com', 'johnpassword')
+# >>> email = 'user@domain.com'
+# >>> passwd = 'password'
+# >>> user = User.objects.create_user(email, email, passwd)
 # >>> user.save()
 
 class LoginForm(forms.Form):
@@ -84,7 +86,7 @@ class FullForm(forms.Form):
 						   required=False,
 						   widget=forms.TextInput(attrs={'size':'10'}))
 
-	tweak = forms.BooleanField(initial=True)
+	tweak = forms.BooleanField(initial=True, required=False)
 
 	tweakorder = forms.IntegerField(initial=2, min_value=2,
 									max_value=10,
@@ -182,6 +184,12 @@ class FullForm(forms.Form):
 					self._errors['scaleest'] = ['You must enter a scale estimate.']
 				if err is None:
 					self._errors['scaleerr'] = ['You must enter a scale error bound.']
+
+		# If tweak is off, ignore errors in tweakorder.
+		if self.getclean('tweak') == False:
+			if self.geterror('tweakorder'):
+				del self._errors['tweakorder']
+				self.cleaned_data['tweakorder'] = 0
 
 		return self.cleaned_data
 
@@ -299,7 +307,13 @@ def newlong(request):
 		form = FullForm()
 
 	#form.full_clean()
-	form.is_valid()
+	if form.is_valid():
+		print 'Yay'
+		request.session['jobvals'] = form.cleaned_data
+		return HttpResponseRedirect('/job/submit')
+
+	if 'jobvals' in request.session:
+		del request.session['jobvals']
 
 	# Note, if there are *ANY* errors, the form will have no 'cleaned_data'
 	# array.
@@ -372,6 +386,10 @@ def newlong(request):
 def submit(request):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/login')
-	return HttpResponse(request.session['url'] or 'none')
-	#return HttpResponse(request.POST['url'])
+
+	txt = "<pre>Job values:\n"
+	for k,v in request.session['jobvals'].items():
+		txt += '  ' + str(k) + ' = ' + str(v) + '\n'
+	txt += "</pre>"
+	return HttpResponse(txt)
 
