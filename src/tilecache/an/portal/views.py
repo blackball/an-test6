@@ -8,7 +8,7 @@ from django.contrib.auth import login as authlogin
 from django.contrib.auth import logout as authlogout
 from django.newforms import widgets
 import re
-import settings
+from an import settings
 
 # Adding a user:
 # > python manage.py shell

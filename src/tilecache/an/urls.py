@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import *
-import settings
+from an import settings
 
 urlpatterns = patterns('',
 					   (r'^tile/', include('an.tile.urls')),
