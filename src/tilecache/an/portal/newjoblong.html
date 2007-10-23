@@ -8,7 +8,7 @@ td.l { text-align:right; }
 .explain { color:blue; font-size:80%; }
 #scalelist { list-style:none; }
 #scalelist > li { margin-top:1em; }
-#scalepanelholder { padding:0px; }
+#scalepanelholder { padding:0px; margin:0px; }
 #tdsubmit { text-align:center; }
 ul.xycol { list-style:none; margin-bottom:0px; }
 ul.xycol > li { margin:5px; }
@@ -236,7 +236,7 @@ function scalechanged() {
 	break;
   }
   removeAllChildren(scaletxt);
-  scaletxt.appendChild(document.createTextNode("Image scale: " + txt));
+  scaletxt.appendChild(document.createTextNode(txt));
 }
 </script>
 {% endblock javascript %}
@@ -276,17 +276,36 @@ function scalechanged() {
 </tr>
 
 <tr>
-<td colspan="2">
+<td class="l">
 <span id="scalepmimg">
 +-
 </span>
+Image scale:
+</td>
+<td>
 <span id="scaletext">
 scaletext
 </span>
+</td>
+</tr>
+
+<tr><td colspan="2" id="scalepanelholder"></td></tr>
+
+<tr>
+<td class="l">
+{{ form.tweak }} Tweak:
+</td>
+<td>
+Tweak order: {{ form.tweakorder }}
+</td>
 </tr>
 
 <tr>
-<td colspan="2" id="scalepanelholder">
+<td class="l">
+Parity:
+</td>
+<td>
+{{ form.parity }}
 </td>
 </tr>
 
@@ -468,8 +487,8 @@ Fill in ONE of the following pairs of values:
 </tr>
 </table> <!-- end upper/lower estimate/error table -->
 
-
 </td></tr>
+
 </table>
 </li>
 

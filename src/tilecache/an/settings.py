@@ -40,7 +40,7 @@ SITE_ID = 1
 USE_I18N = True
 
 # Absolute path to the directory that holds media.
-MEDIA_ROOT = '/home/gmaps/test/tilecache/an/media/';
+MEDIA_ROOT = gmaps_config.mediadir
 
 # URL that handles the media served from MEDIA_ROOT.
 # Example: "http://media.lawrence.com"

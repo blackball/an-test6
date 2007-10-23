@@ -47,17 +47,18 @@ class FullForm(forms.Form):
 								  widget=forms.RadioSelect(),
 								  initial='ul')
 	parity = forms.ChoiceField(choices=Job.parity_CHOICES,
-							   widget=forms.RadioSelect())
+                               initial=2)
+							   #widget=forms.RadioSelect())
 	scalelower = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsUl()',
 			   'onkeyup':'scalechanged()',
 			   'size':'5',
-			   }), initial=0.1, required=False)
+			   }), initial=0.1, required=False, min_value=0)
 	scaleupper = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsUl()',
 			   'onkeyup':'scalechanged()',
 			   'size':'5',
-			   }), initial=180, required=False)
+			   }), initial=180, required=False, min_value=0)
 	scaleest = forms.DecimalField(widget=forms.TextInput(
 		attrs={'onfocus':'setFsEv()',
 			   'onkeyup':'scalechanged()',
@@ -67,7 +68,7 @@ class FullForm(forms.Form):
 		attrs={'onfocus':'setFsEv()',
 			   'onkeyup':'scalechanged()',
 			   'size':'5',
-			   }), required=False)
+			   }), required=False, min_value=0, max_value=100)
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}),
 						   required=False)
 	url = ForgivingURLField(initial='http://',
@@ -79,6 +80,13 @@ class FullForm(forms.Form):
 	ycol = forms.CharField(initial='Y',
 						   required=False,
 						   widget=forms.TextInput(attrs={'size':'10'}))
+
+	tweak = forms.BooleanField(initial=True)
+
+	tweakorder = forms.IntegerField(initial=2, min_value=2,
+                                    max_value=10,
+                                    widget=forms.TextInput(attrs={'size':'5'}))
+
 	def getclean(self, name):
 		if name in self.cleaned_data:
 			return self.cleaned_data[name]
@@ -213,7 +221,7 @@ def longform_formfield(field, **kwargs):
 	print field.verbose_name
 	print 'field is: ', field
 	default = field.formfield(**kwargs)
-	print 'form  is: ', default
+	print 'form	 is: ', default
 	print 'core? ', field.core
 	print
 	if (field.verbose_name == 'parity' or
@@ -288,7 +296,7 @@ def newlong(request):
 		else:
 			print 'no file uploaded'
 
-		urlerr  = len(form['url'].errors)  and form['url'].errors [0] or None
+		urlerr	= len(form['url'].errors)  and form['url'].errors [0] or None
 		fileerr = len(form['file'].errors) and form['file'].errors[0] or None
 		print 'url error is', urlerr
 		print 'file error is', fileerr

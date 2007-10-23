@@ -1,9 +1,16 @@
-logfile = "/home/gmaps/test/tilecache-django.log"
-tilerender = "/home/gmaps/test/tilecache/render/tilerender"
+basedir = "/home/gmaps/test/"
+tcdir = basedir + "tilecache/"
+
+logfile = basedir + "tilecache-django.log"
+tilerender = tcdir + "render/tilerender"
+sipso = basedir + "an-common/_sip.so"
+templatedir = tcdir + "an/"
+mediadir = tcdir + "an/media/"
+
 cachedir = "/data2/test-tilecache"
 rendercachedir = "/data2/test-rendercache/"
 dbfile = "/data2/test-django/tile.db"
 imgdir = "/data2/apod-solves"
+
 tempdir = "/tmp"
-sipso = "/home/gmaps/test/an-common/_sip.so"
-templatedir = "/home/gmaps/test/tilecache/an/"
+

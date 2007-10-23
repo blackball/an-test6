@@ -11,7 +11,7 @@ class Job(models.Model):
 	xysrc_CHOICES = (
 		('url', 'URL'),
 		('file', 'File'),
-		('fitsfile', 'FITS table'),
+		('fitsfile', 'FITS table file'),
 		('fitsurl', 'FITS table URL'),
 		)
 
@@ -36,7 +36,7 @@ class Job(models.Model):
 	parity_CHOICES = (
 		(0, 'Positive'),
 		(1, 'Negative'),
-		(2, 'Try both'),
+		(2, 'Try both simultaneously'),
 		)
 
 	status_CHOICES = (
