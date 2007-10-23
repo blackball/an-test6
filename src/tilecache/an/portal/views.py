@@ -34,24 +34,6 @@ class SimpleURLForm(forms.Form):
 class SimpleFileForm(forms.Form):
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
 
-class ANRadioSelect(forms.RadioSelect):
-	def value_from_datadict(self, data, files, name):
-		print 'ANRadioSelect:value_from_datadict:'
-		print '	data is'
-		for k,v in data.items():
-			print '	',k,'=',v
-		print 'name is', name
-		val = super(ANRadioSelect,self).value_from_datadict(data, files, name)
-		print 'super val is', val
-		return val
-
-class ANChoiceField(forms.ChoiceField):
-	def clean(self, value):
-		print 'ANChoiceField:clean', self.label
-		val = super(ANChoiceField,self).clean(value)
-		print 'super val is', val
-		return val
-
 class FullForm(forms.Form):
 	xysrc = forms.ChoiceField(choices=Job.xysrc_CHOICES,
 							  initial='url',
@@ -62,11 +44,11 @@ class FullForm(forms.Form):
 								   widget=forms.Select(
 		attrs={'onchange':'unitsChanged()',
 			   'onkeyup':'unitsChanged()'}))
-	scaletype = ANChoiceField(choices=Job.scaletype_CHOICES,
-							  widget=ANRadioSelect(
+	scaletype = forms.ChoiceField(choices=Job.scaletype_CHOICES,
+								  widget=forms.RadioSelect(
 		attrs={'id':'scaletype',
 			   'onclick':'scalechanged()'}),
-							  initial='ul')
+								  initial='ul')
 	parity = forms.ChoiceField(choices=Job.parity_CHOICES,
 							   initial=2)
 	scalelower = forms.DecimalField(widget=forms.TextInput(
@@ -107,11 +89,10 @@ class FullForm(forms.Form):
 									max_value=10,
 									widget=forms.TextInput(attrs={'size':'5'}))
 
-	def clean_scaletype(self):
-		print 'clean_scaletype:'
-		val = self.getclean('scaletype')
-		print 'val is', val
-		return val
+	# How to clean an individual field:
+	#def clean_scaletype(self):
+	#	val = self.getclean('scaletype')
+	#	return val
 
 	def getclean(self, name):
 		if not hasattr(self, 'cleaned_data'):
