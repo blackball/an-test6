@@ -3,17 +3,18 @@
 {% block moreinlinecss %}
 table.c { margin-left:auto; margin-right:auto; }
 td.l { text-align:right; }
-#formtable { margin-left:auto; margin-right:auto; }
+#formtable { margin-left:auto; margin-right:auto; border-style:solid; border-color:gray; border-width:thin; }
 #formtable > tbody > tr > td { padding:10px; }
 .explain { color:blue; font-size:80%; }
 #scalelist { list-style:none; }
 #scalelist > li { margin-top:1em; }
-#scalepanelholder { padding:0px; margin:0px; }
 #tdsubmit { text-align:center; }
 ul.xycol { list-style:none; margin-bottom:0px; }
 ul.xycol > li { margin:5px; }
 
 #scalevalues { border-collapse:collapse; margin:10px;}
+
+#scalepanel { border-style:solid; border-color:gray; border-width:thin; margin-right:auto; margin-left:auto; }
 
 .scalelabel { text-align:right; padding-left:15px; }
 
@@ -25,7 +26,7 @@ td[col=rl] { padding-left:15px; }
 #boundscell { padding:10px; padding-bottom:3px; }
 #errestcell { padding:10px; padding-bottom:3px; }
 
-.boxcol { border-style:solid; border-width:1px; border-color:black; }
+.boxcol { border-style:solid; border-width:thin; border-color:gray; }
 #spacercol { border-style:none; width:10px; }
 
 #toprow td { padding-top:10px; }
@@ -276,9 +277,18 @@ function scalechanged() {
 {% endblock banner %}
 
 {% block newjobcontent %}
+
+<div id="switch_views">
+<a href="/job/newfile">switch to file upload version</a>
+&nbsp;&nbsp;
+<a href="/job/newurl">switch to image URL version</a>
+</div>
+
+<br />
+
 <form enctype="multipart/form-data" method="post">
 
-<table border="1" id="formtable">
+<table id="formtable">
 
 <tr>
 <td class="l">Data source:</td>
@@ -310,7 +320,7 @@ scaletext
 </td>
 </tr>
 
-<tr><td colspan="2" id="scalepanelholder"></td></tr>
+<tr><td colspan="2" id="scalepanelholder" style="padding-top:0px; padding-bottom:0px;"></td></tr>
 
 <tr>
 <td class="l">
@@ -429,7 +439,7 @@ FITS URL:
 Explanatory text about FITS URL
 </span>
 
-<div id="scalepanel" style="border-style:groove; border-color:black; border-width:thin; margin-right:auto; margin-left:auto;">
+<div id="scalepanel">
 
 <ul id="scalelist">
 <li>
