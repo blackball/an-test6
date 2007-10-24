@@ -524,6 +524,7 @@ def uploadprogress(request):
 		'time_remaining' : '0:30',
 		'bytes_sofar' : '100 k',
 		'bytes_total' : '500 k',
+		'showstats' : False,
 		}
 	t = loader.get_template('portal/uploadprogress.html')
 	c = RequestContext(request, ctxt)
