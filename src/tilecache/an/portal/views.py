@@ -463,6 +463,22 @@ class UploadForm(forms.Form):
 		attrs={'size':'40',}
 		))
 
+
+def printvals(request):
+	if request.POST:
+		logging.debug('POST values:')
+		for k,v in request.POST.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+	if request.GET:
+		logging.debug('GET values:')
+		for k,v in request.GET.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+	if request.FILES:
+		logging.debug('FILES values:')
+		for k,v in request.FILES.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+
+
 def upload(request):
 	if not request.user.is_authenticated():
 		return HttpResponse('not authenticated')
@@ -515,8 +531,15 @@ def uploadprogress(request):
 	if not 'upload_id' in request.GET:
 		return HttpResponse('no upload_id')
 	id = request.GET['upload_id']
-	logging.debug("Upload progress request for id %s" % id);
+	logging.debug("Upload progress request for id %s" % id)
+	printvals(request)
 
+	if 'xml' in request.GET:
+		res = HttpResponse()
+		res['Content-type'] = 'text/xml'
+		res.write('<progress pct="60" />\n\n')
+		return res
+	
 	ctxt = {
 		'refresh' : ('5; URL=/job/uploadprogress?upload_id=%s' % id),
 		'pct' : 50,
@@ -525,8 +548,10 @@ def uploadprogress(request):
 		'bytes_sofar' : '100 k',
 		'bytes_total' : '500 k',
 		'showstats' : False,
+
+		'xmlurl' : ('/job/uploadprogress?xml&upload_id=%s' % id),
 		}
-	t = loader.get_template('portal/uploadprogress.html')
+	t = loader.get_template('portal/uploadprogress2.html')
 	c = RequestContext(request, ctxt)
 	return HttpResponse(t.render(c))
 
