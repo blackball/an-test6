@@ -5,5 +5,6 @@ urlpatterns = patterns('an.portal.views',
 					   (r'^newfile/$', 'newfile'),
 					   (r'^newlong/$', 'newlong'),
 					   (r'^newlong2/$', 'newlong2'),
+					   (r'^upload/$', 'upload'),
 					   (r'^submit/$', 'submit'),
 					   )

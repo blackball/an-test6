@@ -453,12 +453,58 @@ def submit(request):
 	for k,v in request.session['jobvals'].items():
 		logging.debug('  %s = %s' % (str(k), str(v)))
 
-
 	return HttpResponse(txt)
 
 
 
+class UploadForm(forms.Form):
+	upload_id = forms.CharField(max_length=32, widget=forms.HiddenInput)
+	file = forms.FileField(widget=forms.FileInput(
+		attrs={'size':'40',}
+		))
 
+def upload(request):
+	if not request.user.is_authenticated():
+		return HttpResponse('not authenticated')
+
+	logging.debug("Upload request.");
+
+	if request.GET:
+		form = UploadForm(request.GET)
+	elif request.POST:
+		form = UploadForm(request.POST, request.FILES)
+	else:
+		form = UploadForm()
+
+	if request.POST:
+		logging.debug('POST values:')
+		for k,v in request.POST.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+	if request.GET:
+		logging.debug('GET values:')
+		for k,v in request.GET.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+	if request.FILES:
+		logging.debug('FILES values:')
+		for k,v in request.FILES.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+
+
+	if form.is_valid():
+		sz = len(form.cleaned_data['file'].content)
+		return HttpResponse("file uploaded: size %d" % sz)
+	else:
+		logging.debug('Invalid form: errors:')
+		for k,v in form.errors.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+
+	ctxt = {
+		'form' : form,
+		}
+
+	t = loader.get_template('portal/upload.html')
+	c = RequestContext(request, ctxt)
+	return HttpResponse(t.render(c))
 
 
 
