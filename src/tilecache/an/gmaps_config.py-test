@@ -6,6 +6,7 @@ tilerender = tcdir + "render/tilerender"
 sipso = basedir + "an-common/_sip.so"
 templatedir = tcdir + "an/"
 mediadir = tcdir + "an/media/"
+portal_logfile = tcdir + "portal.log"
 
 cachedir = "/data2/test-tilecache"
 rendercachedir = "/data2/test-rendercache/"

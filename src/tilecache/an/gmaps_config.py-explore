@@ -5,6 +5,8 @@ logfile = basedir + "tilecache-django.log"
 tilerender = tcdir + "render/tilerender"
 templatedir = tcdir + "an/"
 mediadir = tcdir + "an/media/"
+portal_logfile = tcdir + "portal.log"
+
 sipso = basedir + "an-common/_sip.so"
 
 cachedir = "/data2/explore-tilecache"
