@@ -123,6 +123,11 @@ function removeAllChildren(node) {
 }
 
 function onLoad() {
+
+  fileinput = document.getElementById('fileinput');
+  holder = document.getElementById('fileholder');
+  holder.appendChild(fileinput);
+
   fitscols = document.getElementById('fitscols');
 
   //fitsOptions = document.getElementById('fits-options');
@@ -275,7 +280,7 @@ function scalechanged() {
 
 <tr>
 <!-- first td filled in by rowspan=2 above -->
-<td style="padding-top:2px;"> {{ datasrc_file }} File {{ form.file }} </td>
+<td style="padding-top:2px;"> {{ datasrc_file }} File <span id="fileholder"></span></td>
 </tr>
 
 <tr>
@@ -337,7 +342,16 @@ Parity:
 
 </table>
 
+<a href="javascript:document.uploadform.submit()">upload</a>
+
 <div id="hiddenitems" style="visibility:hidden;">
+
+<span id="fileinput">
+<form name="uploadform" id="uploadform" method="post" action="/job/upload/" enctype="multipart/form-data">
+<input type="hidden" name="upload-id" value="123456789101112" />
+{{ form.file }} 
+</form>
+</span>
 
 <img src="/anmedia/plus.png" border="0" alt="+" id="scaleplus" />
 <img src="/anmedia/minus.png" border="0" alt="-" id="scaleminus" />
