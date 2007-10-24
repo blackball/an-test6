@@ -492,6 +492,7 @@ def upload(request):
 
 	if form.is_valid():
 		sz = len(form.cleaned_data['file'].content)
+		logging.debug("Successful upload: file size %d" % sz)
 		return HttpResponse("file uploaded: size %d" % sz)
 	else:
 		logging.debug('Invalid form: errors:')
@@ -506,7 +507,27 @@ def upload(request):
 	c = RequestContext(request, ctxt)
 	return HttpResponse(t.render(c))
 
+def uploadprogress(request):
+	if not request.user.is_authenticated():
+		return HttpResponse('not authenticated')
+	if not request.GET:
+		return HttpResponse('no GET')
+	if not 'upload_id' in request.GET:
+		return HttpResponse('no upload_id')
+	id = request.GET['upload_id']
+	logging.debug("Upload progress request for id %s" % id);
 
+	ctxt = {
+		'refresh' : ('5; URL=/job/uploadprogress?upload_id=%s' % id),
+		'pct' : 50,
+		'time_sofar' : '0:10',
+		'time_remaining' : '0:30',
+		'bytes_sofar' : '100 k',
+		'bytes_total' : '500 k',
+		}
+	t = loader.get_template('portal/uploadprogress.html')
+	c = RequestContext(request, ctxt)
+	return HttpResponse(t.render(c))
 
 def newlong2(request):
 	if not request.user.is_authenticated():

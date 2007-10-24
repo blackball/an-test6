@@ -65,22 +65,16 @@ function submitUploadForm() {
 
 function submitForm() {
 
-  //alert('N frames: ' + window.length);
+  holder = document.getElementById('progressholder');
+  holder.style.visibility = 'visible';
+  progress = document.getElementById('progressframe');
+  id = document.getElementById('uploadframe').contentDocument.forms.uploadform.upload_id.value;
+  progress.src = "/job/uploadprogress?upload_id=" + id;
 
-  //uploadframe = document.all.uploadframe;
-  //uploadframe = document.getElementById('uploadframe');
-  //uploadframe = document.frames.uploadframe;
-  //alert('N frames: ' + window.frames.length); //-> 1
-  //uploadframe = window.frames['uploadframe']
-  uploadframe = document.getElementById('uploadframe');
-  //alert('' + uploadframe);
-  //alert('N forms: ' + document.forms.length);
-  //alert('N forms: ' + uploadframe.contentDocument.forms.length);
-  uploadform = uploadframe.contentDocument.getElementById('uploadform');
-  //uploadform = uploadframe.document.getElementById('uploadform');
-  //uploadform = document.getElementById('uploadform');
-  //alert('' + uploadform);
-  uploadform.submit();
+  submitUploadForm();
+
+  // DEBUG
+  return false;
 
   hidden = document.getElementById('hiddenitems');
   // add form elements to the "hidden" div so that they are part of the
@@ -302,12 +296,12 @@ function scalechanged() {
 <!-- first td filled in by rowspan=2 above -->
 <td style="padding-top:2px;"> {{ datasrc_file }} File
 <iframe src="/job/upload?upload_id=1234567890" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
- width="50em" height="2em"
-width="400" height="500"
-  [Your user agent does not support frames or is currently configured
-    not to display frames. However, you may visit
-	<A href="foo.html">the related document.</A>]
+  [Your user agent does not support iframes]
 </iframe>
+<div id="progressholder" style="visibility:hidden;">
+<iframe src="" scrolling="no" frameborder="1" id="progressframe" style="width:25em; height:2em;">
+</iframe>
+</div>
 </td>
 </tr>
 
