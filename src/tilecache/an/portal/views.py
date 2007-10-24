@@ -19,8 +19,7 @@ from an import gmaps_config
 # >>> user = User.objects.create_user(email, email, passwd)
 # >>> user.save()
 
-#logfile        = gmaps_config.logfile
-logfile = '/home/gmaps/test/tilecache/portal.log'
+logfile = gmaps_config.portal_logfile
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s',
                     filename=logfile,
@@ -46,11 +45,45 @@ class SimpleFileForm(forms.Form):
 	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
 
 class FullForm(forms.Form):
+
+	datasrc_CHOICES = (
+		('url', 'URL'),
+		('file', 'File'),
+		)
+
+	filetype_CHOICES = (
+		('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
+		('fits', 'FITS table of source locations'),
+		('text', 'Text list of source locations'),
+		)
+
+	datasrc = forms.ChoiceField(choices=datasrc_CHOICES,
+								initial='url',
+								widget=forms.RadioSelect(
+		attrs={'id':'datasrc',
+			   'onclick':'datasourceChanged()'}),
+								# HACK
+								required=False
+								)
+
+	filetype = forms.ChoiceField(choices=filetype_CHOICES,
+								 initial='image',
+								 widget=forms.Select(
+		attrs={'onchange':'filetypeChanged()',
+			   'onkeyup':'filetypeChanged()'}),
+								 # HACK
+								 required=False
+								 )
+
+
 	xysrc = forms.ChoiceField(choices=Job.xysrc_CHOICES,
 							  initial='url',
 							  widget=forms.Select(
 		attrs={'onchange':'sourceChanged()',
-			   'onkeyup':'sourceChanged()'}))
+			   'onkeyup':'sourceChanged()'}),
+							  # HACK
+							  required=False
+							  )
 	scaleunits = forms.ChoiceField(choices=Job.scaleunit_CHOICES,
 								   widget=forms.Select(
 		attrs={'onchange':'unitsChanged()',
@@ -82,10 +115,18 @@ class FullForm(forms.Form):
 			   'onkeyup':'scalechanged()',
 			   'size':'5',
 			   }), required=False, min_value=0, max_value=100)
-	file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}),
+	file = forms.FileField(widget=forms.FileInput(
+		attrs={'size':'40',
+			   'onfocus':'setDatasourceFile()',
+			   'onclick':'setDatasourceFile()',
+			   }),
 						   required=False)
 	url = ForgivingURLField(initial='http://',
-							widget=forms.TextInput(attrs={'size':'50'}),
+							widget=forms.TextInput(
+		attrs={'size':'50',
+			   'onfocus':'setDatasourceUrl()',
+			   'onclick':'setDatasourceUrl()',
+			   }),
 							required=False)
 	xcol = forms.CharField(initial='X',
 						   required=False,
@@ -315,10 +356,9 @@ def newlong(request):
 		return HttpResponseRedirect('/login')
 
 	if request.POST:
-		#print 'request.POST is', request.POST
-		print 'POST values:'
+		logging.debug('POST values:')
 		for k,v in request.POST.items():
-			print '		 ', k, '=', v
+			logging.debug('  %s = %s' % (str(k), str(v)))
 		form = FullForm(request.POST, request.FILES)
 	else:
 		form = FullForm()
@@ -335,10 +375,10 @@ def newlong(request):
 	# Note, if there are *ANY* errors, the form will have no 'cleaned_data'
 	# array.
 
-	print 'Errors:'
+	logging.debug('Errors:')
 	if form._errors:
 		for k,v in form._errors.items():
-			print '  ',k,'=',v
+			logging.debug('  %s = %s' % (str(k), str(v)))
 
 	#print 'scaletype is', form.getclean('scaletype')
 	#scaletype = form['scaletype'].field
@@ -415,3 +455,88 @@ def submit(request):
 
 	return HttpResponse(txt)
 
+
+
+
+
+
+
+def newlong2(request):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/login')
+
+	if request.POST:
+		logging.debug('POST values:')
+		for k,v in request.POST.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+		form = FullForm(request.POST, request.FILES)
+	else:
+		form = FullForm()
+
+	if form.is_valid():
+		print 'Yay'
+		request.session['jobvals'] = form.cleaned_data
+		return HttpResponseRedirect('/job/submit')
+
+	if 'jobvals' in request.session:
+		del request.session['jobvals']
+
+	# Note, if there are *ANY* errors, the form will have no 'cleaned_data'
+	# array.
+
+	logging.debug('Errors:')
+	if form._errors:
+		for k,v in form._errors.items():
+			logging.debug('  %s = %s' % (str(k), str(v)))
+
+	# Ugh, special rendering for radio checkboxes....
+	scaletype = form['scaletype'].field
+	widg = scaletype.widget
+	attrs = widg.attrs
+	if request.POST:
+		val = widg.value_from_datadict(request.POST, None, 'scaletype')
+	else:
+		val = form.getclean('scaletype') or scaletype.initial
+	render = widg.get_renderer('scaletype', val, attrs)
+	r0 = render[0]
+	r1 = render[1]
+	r0txt = r0.tag()
+	r1txt = r1.tag()
+
+
+	datasrc = form['datasrc'].field
+	widg = datasrc.widget
+	attrs = widg.attrs
+	if request.POST:
+		val = widg.value_from_datadict(request.POST, None, 'datasrc')
+	else:
+		val = form.getclean('datasrc') or datasrc.initial
+	render = widg.get_renderer('datasrc', val, attrs)
+	ds0 = render[0].tag()
+	ds1 = render[1].tag()
+
+
+
+
+	ctxt = {
+		'form' : form,
+		'scale_ul' : r0txt,
+		'scale_ee' : r1txt,
+		'datasrc_url' : ds0,
+		'datasrc_file' : ds1,
+		}
+	errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr',
+				  'tweakorder', 'xcol', 'ycol', 'scaletype', 'datasrc' ]
+	for f in errfields:
+		ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
+
+	if request.POST:
+		if request.FILES:
+			f1 = request.FILES['file']
+			print 'file is', repr(f1)
+		else:
+			print 'no file uploaded'
+
+	t = loader.get_template('portal/newjoblong2.html')
+	c = RequestContext(request, ctxt)
+	return HttpResponse(t.render(c))

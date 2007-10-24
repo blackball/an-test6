@@ -39,24 +39,7 @@ td[col=rl] { padding-left:15px; }
 
 {% block javascript %}
 <script type="text/javascript">
-var srcurl;
-var srcurl_label;
-var srcurl_error;
-var srcurl_explain;
-var srcfile;
-var srcfile_label;
-var srcfile_error;
-var srcfile_explain;
-var srcfitsfile;
-var srcfitsfile_label;
-var srcfitsfile_error;
-var srcfitsfile_explain;
-var srcfitsurl;
-var srcfitsurl_label;
-var srcfitsurl_error;
-var srcfitsurl_explain;
 var fitscols;
-var oldsource = '';
 var scaleplus;
 var scaleminus;
 var scalepanel;
@@ -68,6 +51,10 @@ var scalehi;
 var scaleest;
 var scaleerr;
 var scalepanelshowing;
+
+//var imageOptions;
+//var textOptions;
+var fitsOptions;
 
 function submitForm() {
   hidden = document.getElementById('hiddenitems');
@@ -91,57 +78,42 @@ function submitForm() {
   return true;
 }  
 
-function setDatasourceFile() {
-}
-function setDatasourceUrl() {
+function datasourceChanged() {
 }
 
-function sourceChanged() {
-  selectsource = document.getElementById('id_xysrc');
-  if (selectsource.value == oldsource) {
-    return;
+function setDatasourceFile() {
+  setDatasource(false);
+}
+function setDatasourceUrl() {
+  setDatasource(true);
+}
+function setDatasource(set) {
+  datasrc = document.getElementById('datasrc_0');
+  datasrc.checked = set;
+  datasrc = document.getElementById('datasrc_1');
+  datasrc.checked = !set;
+}
+
+function filetypeChanged() {
+  filetype = document.getElementById('id_filetype').value;
+  switch (filetype) {
+    case 'image':
+	  options = false;
+	  //options = imageOptions;
+	  break;
+	case 'fits':
+	  options = fitsOptions;
+	  break;
+	case 'text':
+	  options = false;
+	  //options = textOptions;
+	  break;
   }
-  oldsource = selectsource.value;
-  switch (selectsource.value) {
-  case 'url':
-    srcs = [srcurl];
-	label = srcurl_label;
-	error = srcurl_error;
-	explain = srcurl_explain;
-	break;
-  case 'file':
-    srcs = [srcfile];
-	label = srcfile_label;
-	error = srcfile_error;
-	explain = srcfile_explain;
-	break;
-  case 'fitsfile':
-    srcs = [srcfitsfile, fitscols];
-	label = srcfitsfile_label;
-	error = srcfitsfile_error;
-	explain = srcfitsfile_explain;
-	break;
-  case 'fitsurl':
-    srcs = [srcfitsurl, fitscols];
-	label = srcfitsurl_label;
-	error = srcfitsurl_error;
-	explain = srcfitsurl_explain;
-	break;
+  optionsPanel = document.getElementById('options-holder');
+  removeAllChildren(optionsPanel);
+  if (options) {
+    optionsPanel.appendChild(options);
   }
-  activesource = document.getElementById('activesource');
-  removeAllChildren(activesource);
-  for (var i=0; i<srcs.length; i++) {
-    activesource.appendChild(srcs[i]);
-  }
-  activesource_label = document.getElementById('activesource-label');
-  removeAllChildren(activesource_label);
-  activesource_label.appendChild(label);
-  activesource_error = document.getElementById('activesource-error');
-  removeAllChildren(activesource_error);
-  activesource_error.appendChild(error);
-  activesource_explain = document.getElementById('activesource-explain');
-  removeAllChildren(activesource_explain);
-  activesource_explain.appendChild(explain);
 }
 
 function removeAllChildren(node) {
@@ -153,32 +125,15 @@ function removeAllChildren(node) {
 function onLoad() {
   fitscols = document.getElementById('fitscols');
 
-  srcurl      = document.getElementById('imgurl-input');
-  srcfile     = document.getElementById('imgfile-input');
-  srcfitsurl  = document.getElementById('fitsurl-input');
-  srcfitsfile = document.getElementById('fitsfile-input');
-
-  srcurl_label      = document.getElementById('imgurl-label');
-  srcfile_label     = document.getElementById('imgfile-label');
-  srcfitsurl_label  = document.getElementById('fitsurl-label');
-  srcfitsfile_label = document.getElementById('fitsfile-label');
-
-  srcurl_error      = document.getElementById('imgurl-error');
-  srcfile_error     = document.getElementById('imgfile-error');
-  srcfitsurl_error  = document.getElementById('fitsurl-error');
-  srcfitsfile_error = document.getElementById('fitsfile-error');
-
-  srcurl_explain      = document.getElementById('imgurl-explain');
-  srcfile_explain     = document.getElementById('imgfile-explain');
-  srcfitsurl_explain  = document.getElementById('fitsurl-explain');
-  srcfitsfile_explain = document.getElementById('fitsfile-explain');
+  //fitsOptions = document.getElementById('fits-options');
+  fitsOptions = fitscols;
 
   // we have to remove this div because otherwise we have multiple copies of
   // the "url" and "file" form fields.
   sources = document.getElementById('sources');
   removeAllChildren(sources);
 
-  sourceChanged();
+  filetypeChanged();
 
   scaleplus  = document.getElementById('scaleplus');
   scaleminus = document.getElementById('scaleminus');
@@ -312,19 +267,25 @@ function scalechanged() {
 <table id="formtable">
 
 <tr>
-<td class="l">Data source:</td>
-<td> {{ form.xysrc }} </td>
+<td class="l" rowspan="2" valign="top"> Data source: 
+<div class="explain">You can reference a URL <br />or upload a file.</div>
+</td>
+<td> {{ datasrc_url }} URL {{ form.url }} </td>
 </tr>
 
 <tr>
-<td class="l">
-<span id="activesource-label"> active-source-label </span>
-</td>
-<td>
-<span id="activesource-error" class="err"> active-source-error </span>
-<span id="activesource"> active source </span>
-<span id="activesource-explain" class="explain"> active-source-explain </span>
-</td>
+<!-- first td filled in by rowspan=2 above -->
+<td style="padding-top:2px;"> {{ datasrc_file }} File {{ form.file }} </td>
+</tr>
+
+<tr>
+<td class="l"> File type: </td>
+<td> {{ form.filetype }} </td>
+</tr>
+
+<tr style="padding-top:0px; padding-bottom:0px;">
+<td  style="padding-top:0px; padding-bottom:0px;" />
+<td id="options-holder" style="padding-top:0px; padding-bottom:0px;"></td>
 </tr>
 
 <tr>
