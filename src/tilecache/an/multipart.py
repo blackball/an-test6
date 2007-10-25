@@ -54,6 +54,7 @@ class StreamParser(object):
 	blocksize = 4096
 	error = False
 	needmore = False
+	bytes_parsed = 0
 
 	def __init__(self, fin=None):
 		self.fin = fin
@@ -61,6 +62,7 @@ class StreamParser(object):
 	# Returns False if EOF is reached or an error occurs
 	def readmore(self):
 		newdata = self.fin.read(self.blocksize)
+		#log('read %d' % len(newdata))
 		if len(newdata) == 0:
 			return False
 		return self.moreinput(newdata)
@@ -69,7 +71,9 @@ class StreamParser(object):
 	def moreinput(self, newdata):
 		self.data += newdata
 		self.needmore = False
-		while not (self.error or self.needmore):
+		while not (self.error or self.needmore or (len(self.data) == 0)):
+			#log('processing...')
+			#log('data len is %d, data is "%s"' % (len(self.data), self.data))
 			self.process()
 		return not self.error
 
@@ -81,6 +85,7 @@ class StreamParser(object):
 	# Drops 'nchars' bytes off the front of the data buffer.
 	def discard_data(self, nchars):
 		self.data = self.data[nchars:]
+		self.bytes_parsed += nchars
 
 
 class StateMachine(StreamParser):
@@ -126,25 +131,33 @@ class StateMachineState(object):
 
 class MessageParser(StateMachine):
 	# the state (a HeaderState object) that will parse the message header
-	header = None
+	header_state = None
+
+	# dictionary of headers from the header parser.
+	headers = None
 
 	# the state (a StateMachineState object) that will parse the message body
-	body = None
+	body_state = None
+
+	# how many bytes had been parsed when the body was reached.
+	body_offset = 0
 
 	def __init__(self, fin=None):
-		self.header = HeaderState(self)
+		self.header_state = HeaderState(self)
 		super(MessageParser, self).__init__(fin)
 
 	def initial_state(self):
-		return self.header
+		return self.header_state
 
 	def state_transition(self, trans):
 		if trans == 'header-done':
 			log('header finished.')
-			for k,v in self.header.headers.items():
+			self.headers = self.header_state.headers
+			for k,v in self.headers.items():
 				log('  ' + str(k) + " = " + str(v))
 
 			self.state_transition('body')
+			self.body_offset = self.bytes_parsed
 			return
 		elif trans == 'body':
 			self.body = self.get_body_state()
@@ -245,11 +258,11 @@ class Multipart(MessageParser):
 	# "preamble" state, which acts basically the same as a body that should
 	# be empty.
 	def get_body_state(self):
-		if not 'Content-Type' in self.header.headers:
+		if not 'Content-Type' in self.headers:
 			log('No Content-Type.')
 			self.error = True
 			return None
-		ct = self.header.headers['Content-Type']
+		ct = self.headers['Content-Type']
 		if not ct.startswith('multipart/form-data'):
 			log('Content-type is "%s", not multipart/form-data.' % ct)
 			self.error = True
@@ -374,6 +387,10 @@ class PartBodyState(StateMachineState):
 		if (ind == -1):
 			# no CR found; chomp the whole string.
 			ind = len(stream.data)
+		if (ind == 0):
+			# string starts with CR, is long enough to be the boundary, but
+			# isn't... chomp the whole thing.
+			ind = len(stream.data)
 		self.handle_data(stream.data[:ind])
 		stream.discard_data(ind)
 
@@ -441,6 +458,9 @@ class FileMultipart(Multipart):
 			return None
 		return self.writefields[field]
 
+	def set_bytes_written(self, nb):
+		self.currentpart['bytes-written'] = nb
+
 class FileBodyState(PartBodyState):
 	filename = None
 	fid = None
@@ -455,6 +475,7 @@ class FileBodyState(PartBodyState):
 	def handle_data(self, data):
 		self.datalen += len(data)
 		self.fid.write(data)
+		self.machine.set_bytes_written(self.datalen)
 
 	def get_data_length(self):
 		return self.datalen
@@ -466,9 +487,14 @@ class FileBodyState(PartBodyState):
 
 
 
-if __name__ == '__main__':
+def multipartmain(args):
 	#mp = Multipart(sys.stdin)
-	mp = FileMultipart(sys.stdin)
+	if len(sys.argv):
+		sys.argv = sys.argv[1:]
+		fin = open(sys.argv[0], 'rb')
+	else:
+		fin = sys.stdin
+	mp = FileMultipart(fin)
 	mp.writefields['file'] = '/tmp/contents-file'
 	#mp.blocksize = 1
 	while mp.readmore():
@@ -477,8 +503,14 @@ if __name__ == '__main__':
 		print 'Parser failed.'
 	else:
 		print 'Parser succeeded'
+		print 'Message headers:'
+		for k,v in mp.headers.items():
+			print '  ', k, '=', v
 		for p in mp.parts:
 			print '	 Part:'
 			for k,v in p.items():
 				print '	   ', k, '=', v
+
+if __name__ == '__main__':
+	multipartmain(sys.argv)
 
