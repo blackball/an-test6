@@ -135,6 +135,16 @@ cgitb.enable()
 print "Content-Type: text/html"
 print
 
+upload_base_dir = os.environ['UPLOAD_DIR']
+upload_id_field = os.environ['UPLOAD_ID_STRING']
+
+if not upload_base_dir:
+   upload_base_dir = '/tmp'
+if not upload_id_field:
+   upload_id_field = 'upload_id'
+
+
+
 
 # get some values from the query string
 # the query string has values in QUERY_STRING even though it's a POST

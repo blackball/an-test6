@@ -6,6 +6,50 @@ import sys
 def log(x):
     print x
 
+#
+# StreamParser - parse data a chunk at a time.
+# |
+# |--StateMachine - delegate parsing to one of several states.
+#    |              StateMachine has-a StateMachineState
+#    |
+#    |--Multipart - parses multipart/form-data POSTs.
+#
+#
+#
+# StateMachineState - parses according to the current state.
+# |
+# |--HeaderState - parses lines of text (terminated by CRLF) until a blank
+# |  |             line is found.
+# |  |
+# |  |--MainHeaderState - parses the main header of a POST, looking for
+# |     |                     "header: value" pairs.
+# |     |
+# |     |--PartHeaderState - parses the header of one part of a multi-part
+# |                          message.
+# |
+# |--PartBodyState - parses the body of one part of a multi-part message.
+# |
+# |--MultipartBodyState - parses the body of multipart/from-data messages,
+#                         by alternating between "part header" and "part body"
+#                         states.
+#                         MultipartBodyState has-a PartHeaderState
+#                         MultipartBodyState has-a PartBodyState
+
+
+#
+# I then tacked on the ability to write some parts to files and keep others
+# in memory:
+#
+# Multipart
+# |
+# |--FileMultipart
+#
+#
+# PartBodyState
+# |
+# |--FileBodyState - streams the body of one part of a multi-part message to
+#                    a file.
+
 class StreamParser(object):
     fin = None
     # unparsed data
@@ -37,6 +81,7 @@ class StreamParser(object):
     def process(self):
         pass
 
+	# Drops 'nchars' bytes off the front of the data buffer.
     def discard_data(self, nchars):
         self.data = self.data[nchars:]
 
@@ -62,9 +107,12 @@ class StateMachine(StreamParser):
         self.state.process()
 
 class StateMachineState(object):
+	# the StateMachine to which this state belongs.
     machine = None
+
     def __init__(self, machine=None):
         self.machine = machine
+
     def process(self):
         pass
 
@@ -75,9 +123,14 @@ LWSP = ' \t'
 ALPHANUM = r'A-Za-z0-9_\-'
 
 class Multipart(StateMachine):
-    mainheader = None
-    body = None
+	# the parts of this multi-part message.
+	# each part is a dictionary.
     parts = []
+
+	# the state (a MainHeaderState object) that will parse the primary header
+    mainheader = None
+
+    body = None
 
     def __init__(self, fin=None):
         self.mainheader = MainHeaderState(self)
@@ -89,10 +142,15 @@ class Multipart(StateMachine):
     def add_part(self, part):
         self.parts.append(part)
 
-    def get_part_body_state(self, mainbody):
+	def get_part_body_state(self, mainbody):
         return PartBodyState(self, mainbody)
 
+	# returns a StateMachineState to parse the body of the message.
     def get_body_state(self):
+        if not 'Content-Type' in self.mainheaders.headers:
+            log('No Content-Type.')
+            self.error = True
+			return None
         ct = self.mainheader.headers['Content-Type']
         if ct.startswith('multipart/form-data'):
             return self.get_multipart_body_state(ct)
@@ -100,6 +158,9 @@ class Multipart(StateMachine):
             log('Content-type is "%s", not multipart/form-data.' % ct)
         return None
 
+	# returns a StateMachineState to parse "multipart/form-data" message
+	# bodies.
+	#   ct: the content-type string.
     def get_multipart_body_state(self, ct):
         return MultipartBodyState(self, ct)
 
@@ -108,13 +169,18 @@ class Multipart(StateMachine):
         for k,v in self.mainheader.headers.items():
             log('  ' + str(k) + " = " + str(v))
         self.body = self.get_body_state()
-        self.state = self.body
-        if not self.state:
+        if not self.body:
             log('No body state found.')
             self.error = True
+		self.set_state(self.body)
 
 class HeaderState(StateMachineState):
     headers = None
+
+	# processes lines of text (terminated by CRLF) until a blank line is
+	# found.  Calls process_line() on each line.  Calls
+	# StreamParser.discard_data() after processing each line (except the last
+	# blank line).  Calls header_done() when the blank line has been found.
     def process(self):
         stream = self.machine
         if len(stream.data) < 2:
@@ -133,6 +199,7 @@ class HeaderState(StateMachineState):
 
     def header_done(self):
         pass
+
     def process_line(self, lineend):
         pass
 
@@ -141,9 +208,6 @@ class MainHeaderState(HeaderState):
         super(MainHeaderState, self).__init__(machine)
         self.headers = {}
     def header_done(self):
-        if not 'Content-Type' in self.headers:
-            log('No Content-Type.')
-            self.machine.error = True
         self.machine.main_header_done()
     def process_line(self, lineend):
         stream = self.machine
@@ -182,15 +246,21 @@ class MultipartBodyState(StateMachineState):
         self.boundary = res.group('boundary')
         log('boundary: "%s"' % self.boundary)
         super(MultipartBodyState, self).__init__(machine)
+		# The beginning of a multipart message is the boundary string, so our
+		# initial state is like the "part body" state - we're waiting to find
+		# the boundary.  We typically don't expect to find any data before the
+		# boundary.
         self.inheader = False
         self.bodyparser = self.get_body_parser()
 
+	# Returns a StateMachineState that will parse the next "part header".
     def get_header_parser(self):
         if self.headerparser:
             self.headerparser.reset_headers()
             return self.headerparser
         return PartHeaderState(self.machine, self)
 
+	# Returns a StateMachineState that will parse the next "part body".
     def get_body_parser(self):
         # call up to the parent so that subclassers only have to
         # override one class...
@@ -205,7 +275,8 @@ class MultipartBodyState(StateMachineState):
         else:
             self.bodyparser.process()
 
-    def part_header_done(self):
+	# Called by PartHeaderState when the end of the header is found.
+	def part_header_done(self):
         headers = self.headerparser.headers
 
         self.inheader = False
@@ -232,6 +303,7 @@ class MultipartBodyState(StateMachineState):
         self.machine.add_part(self.currentpart)
         self.bodyparser = self.get_body_parser()
 
+	# Called by PartBodyState when the end of the body is found.
     def part_body_done(self):
         if not self.currentpart:
             log('Preamble ended.')
@@ -244,9 +316,11 @@ class MultipartBodyState(StateMachineState):
         self.headerparser = self.get_header_parser()
         self.inheader = True
 
+	# Called by PartBodyState when the end of the last body is found.
     def last_part_body_done(self):
         log('Last body ended.')
         self.part_body_done()
+
 
 class PartHeaderState(MainHeaderState):
     body = None
@@ -283,10 +357,9 @@ class PartBodyState(StateMachineState):
             start = match.start(0)
             relen = match.end(0) - start
             if (start > 0):
-                # chomp some data off the front first.
+                # chomp the non-matching data off the front first.
                 self.handle_data(stream.data[:start])
                 stream.discard_data(start)
-
             stream.discard_data(relen)
             if match.group('dashdash'):
                 # it's the end of the last part.
@@ -295,13 +368,13 @@ class PartBodyState(StateMachineState):
                 self.part_body_done()
             return
 
-        # not found.  chomp the data up to the last CR, if it
+        # boundary not found.  chomp the data up to the last CR, if it
         # exists, or the whole string otherwise.
         ind = stream.data.rfind(CR)
         if (ind == -1):
-            # not found; chomp the whole string.
+            # no CR found; chomp the whole string.
             ind = len(stream.data)
-        self.handle_data(stream.data[:ind])
+		self.handle_data(stream.data[:ind])
         stream.discard_data(ind)
 
     def get_data_length(self):
@@ -324,11 +397,14 @@ class PartBodyState(StateMachineState):
         self.data = ''
 
 
-
-
 class FileMultipart(Multipart):
     writefields = {}
 
+	# Returns a StateMachineState to parse the body of one part of a
+	# multi-part message.  If this part's header contains a
+	# Content-Disposition header which has the "name" and "filename"
+	# parameters, and the "name" is a key in the "writefields"
+	# dictionary, then a FileBodyState() is returned.
     def get_part_body_state(self, mainbody):
         superme = super(FileMultipart, self)
         currentpart = mainbody.currentpart
@@ -348,6 +424,7 @@ class FileMultipart(Multipart):
             return superme.get_part_body_state(mainbody)
         return FileBodyState(self, mainbody, filename)
 
+	# Computes the filename to write the data of this "part body" to.
     def get_filename(self, field, filename, currentpart):
         if not field in self.writefields:
             return None

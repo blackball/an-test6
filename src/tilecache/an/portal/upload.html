@@ -5,11 +5,15 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head></head>
 <body>
-<form id="uploadform" method="post" action="/job/upload/" enctype="multipart/form-data">
+<form id="uploadform" method="post" action="/upload" enctype="multipart/form-data">
 {{ form.upload_id }}
 {{ form.file }} 
+
+{% comment %}
 <input type="submit" name="sub" value="submit" />
 <a href="javascript:document.forms.uploadform.submit();">upload</a>
+{% endcomment %}
+
 </form>
 </body>
 </html>

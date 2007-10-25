@@ -523,6 +523,21 @@ def upload(request):
 	c = RequestContext(request, ctxt)
 	return HttpResponse(t.render(c))
 
+def uploadform(request):
+	if not request.user.is_authenticated():
+		return HttpResponse('not authenticated')
+	if not request.GET:
+		return HttpResponse('no GET')
+
+	logging.debug("Upload form request.");
+	form = UploadForm(request.GET)
+	ctxt = {
+		'form' : form,
+		}
+	t = loader.get_template('portal/upload.html')
+	c = RequestContext(request, ctxt)
+	return HttpResponse(t.render(c))
+
 def uploadprogress(request):
 	if not request.user.is_authenticated():
 		return HttpResponse('not authenticated')
