@@ -10,31 +10,28 @@ def log(x):
 # StreamParser - parse data a chunk at a time.
 # |
 # |--StateMachine - delegate parsing to one of several states.
-#	 |				StateMachine has-a StateMachineState
+#	 |				StateMachine uses StateMachineState
 #	 |
-#	 |--Multipart - parses multipart/form-data POSTs.
+#    |--MessageParser - parses a message with a header and a body.
+#       |               MessageParser uses HeaderState
+#       |
+# 	    |--Multipart - parses multipart/form-data POSTs by alternating
+#                      between "part header" and "part body" states.
+#                      Multipart uses PartHeaderState
+#                      Multipart uses PartBodyState
 #
 #
 #
 # StateMachineState - parses according to the current state.
 # |
-# |--HeaderState - parses lines of text (terminated by CRLF) until a blank
-# |	 |			   line is found.
+# |--HeaderState - parses lines of text of the form "header: value",
+# |  |             terminated by CRLF, until a blank line is found.
 # |	 |
-# |	 |--MainHeaderState - parses the main header of a POST, looking for
-# |		|					  "header: value" pairs.
-# |		|
-# |		|--PartHeaderState - parses the header of one part of a multi-part
-# |							 message.
+# |	 |--PartHeaderState - parses the header of one part of a multi-part
+# |						  message.
 # |
 # |--PartBodyState - parses the body of one part of a multi-part message.
-# |
-# |--MultipartBodyState - parses the body of multipart/from-data messages,
-#						  by alternating between "part header" and "part body"
-#						  states.
-#						  MultipartBodyState has-a PartHeaderState
-#						  MultipartBodyState has-a PartBodyState
-
+#
 
 #
 # I then tacked on the ability to write some parts to files and keep others
@@ -115,6 +112,7 @@ class StateMachine(StreamParser):
 			return
 		log('no such state: "%s"' % nextstate)
 
+
 class StateMachineState(object):
 	# the StateMachine to which this state belongs.
 	machine = None
@@ -126,75 +124,161 @@ class StateMachineState(object):
 		pass
 
 
-CRLF = '\r\n'
-CR = '\r'
-LWSP = ' \t'
-ALPHANUM = r'A-Za-z0-9_\-'
+class MessageParser(StateMachine):
+	# the state (a HeaderState object) that will parse the message header
+	header = None
 
-class Multipart(StateMachine):
-	# the parts of this multi-part message.
-	# each part is a dictionary.
-	parts = []
-
-	# the state (a MainHeaderState object) that will parse the primary header
-	mainheader = None
-
-	# the state (a MultipartBodyState object) that will parse the message body
+	# the state (a StateMachineState object) that will parse the message body
 	body = None
 
 	def __init__(self, fin=None):
-		self.mainheader = MainHeaderState(self)
-		super(Multipart, self).__init__(fin)
+		self.header = HeaderState(self)
+		super(MessageParser, self).__init__(fin)
 
 	def initial_state(self):
-		return self.mainheader
+		return self.header
 
-	def state_transition(self, nextstate):
-		if nextstate == 'body':
-			log('main header finished.')
-			for k,v in self.mainheader.headers.items():
+	def state_transition(self, trans):
+		if trans == 'header-done':
+			log('header finished.')
+			for k,v in self.header.headers.items():
 				log('  ' + str(k) + " = " + str(v))
 
+			self.state_transition('body')
+			return
+		elif trans == 'body':
 			self.body = self.get_body_state()
 			if not self.body:
 				log('No body state found.')
 				self.error = True
 			self.set_state(self.body)
 			return
-		#if nextstate == '
-		super(Multipart, self).state_transition(nextstate)
+		super(MessageParser, self).state_transition(trans)
+
+		# Returns a StateMessageState to parse the body of the message.
+		def get_body_state(self):
+			return None
+
+CRLF = '\r\n'
+CR = '\r'
+LWSP = ' \t'
+ALPHANUM = r'A-Za-z0-9_\-'
+
+class Multipart(MessageParser):
+	# the parts of this multi-part message.
+	# each part is a dictionary.
+	parts = []
+
+	currentpart = None
+
+	boundary = None
+
+	def state_transition(self, trans):
+		log('state_transition to ' + trans)
+
+		if trans == 'part-header-start':
+			self.currentpart = {}
+			self.set_state(self.get_part_header_state())
+			return
+
+		elif trans == 'part-header-done':
+			headers = self.state.headers
+			self.currentpart['headers'] = headers
+
+			key = 'Content-Disposition'
+			if key in headers:
+				cd = headers[key]
+				cdre = re.compile(r'^form-data; name="(?P<name>[' + ALPHANUM + r']+)"' +
+								  r'(; filename="(?P<filename>[' + ALPHANUM + r']+)")?$')
+				match = cdre.match(cd)
+				if match:
+					field = match.group('name')
+					filename = match.group('filename')
+					if field:
+						self.currentpart['field'] = field
+						if filename:
+							self.currentpart['filename'] = filename
+			key = 'Content-Type'
+			if key in headers:
+				ct = headers[key]
+				self.currentpart['content-type'] = ct
+
+			self.state_transition('part-body-start')
+			return
+
+		elif trans == 'part-body-start':
+			self.set_state(self.get_part_body_state(self.boundary))
+			return
+
+		elif trans == 'part-body-done':
+			if not self.currentpart:
+				log('Preamble ended.')
+			else:
+				datalen = self.state.get_data_length()
+				data = self.state.get_data()
+				log('Body ended.  Got %d bytes of data.' % datalen)
+				log('Data is: ***%s***' % data)
+				if data:
+					self.currentpart['data'] = data
+				self.add_part(self.currentpart)
+
+			self.currentpart = {}
+			return
+
+		elif trans == 'start-next-part':
+			self.state_transition('part-header-start')
+			return
+
+		elif trans == 'last-part-body-done':
+			self.state_transition('end')
+			return
+
+		elif trans == 'end':
+			return
+
+		super(Multipart, self).state_transition(trans)
 
 	def add_part(self, part):
 		self.parts.append(part)
 
-	# returns a StateMachineState to parse the body of the message.
-	# dispatches based on the content-type.
+	# Overrides MessageParser.get_body_state(); starts us off in the
+	# "preamble" state, which acts basically the same as a body that should
+	# be empty.
 	def get_body_state(self):
-		if not 'Content-Type' in self.mainheader.headers:
+		if not 'Content-Type' in self.header.headers:
 			log('No Content-Type.')
 			self.error = True
 			return None
-		ct = self.mainheader.headers['Content-Type']
-		if ct.startswith('multipart/form-data'):
-			return self.get_multipart_body_state(ct)
-		else:
+		ct = self.header.headers['Content-Type']
+		if not ct.startswith('multipart/form-data'):
 			log('Content-type is "%s", not multipart/form-data.' % ct)
-		return None
+			self.error = True
+			return None
+		ctre = re.compile(r'^multipart/form-data; boundary=(?P<boundary>[' + ALPHANUM + r']+)$')
+		res = ctre.match(ct)
+		if not res:
+			log('no boundary found')
+			raise ValueError, 'boundary not found in Content-Type string.'
+		self.boundary = res.group('boundary')
+		log('boundary: "%s"' % self.boundary)
+		return self.get_part_body_state(self.boundary)
 
-	# returns a StateMachineState to parse "multipart/form-data" message
-	# bodies.
-	#	ct: the content-type string.
-	def get_multipart_body_state(self, ct):
-		return MultipartBodyState(self, ct)
+	# Returns a StateMachineState that will parse the next "part header".
+	def get_part_header_state(self):
+		return PartHeaderState(self)
 
-	# Called by MultipartBodyState, returns a StateMachineState to parse the
-	# body of one part of a multi-part message.
-	def get_part_body_state(self, mainbody):
-		return PartBodyState(self, mainbody)
+	# Returns a StateMachineState that will parse the next "part body".
+	#   "boundary" - the boundary of this multi-part message.
+	def get_part_body_state(self, boundary):
+		return PartBodyState(self, boundary)
 
 
 class HeaderState(StateMachineState):
 	headers = None
+
+	def __init__(self, machine=None):
+		super(HeaderState, self).__init__(machine)
+		self.headers = {}
 
 	# processes lines of text (terminated by CRLF) until a blank line is
 	# found.  Calls process_line() on each line.  Calls
@@ -217,17 +301,8 @@ class HeaderState(StateMachineState):
 		stream.discard_data(ind+2)
 
 	def header_done(self):
-		pass
+		self.machine.state_transition('header-done')
 
-	def process_line(self, lineend):
-		pass
-
-class MainHeaderState(HeaderState):
-	def __init__(self, machine=None):
-		super(MainHeaderState, self).__init__(machine)
-		self.headers = {}
-	def header_done(self):
-		self.machine.state_transition('body')
 	def process_line(self, lineend):
 		stream = self.machine
 		line = stream.data[:lineend]
@@ -239,136 +314,38 @@ class MainHeaderState(HeaderState):
 							'$')
 		match = linere.match(line)
 		if not match:
-			log('MainHeaderState: no match for line "%s"' % line)
+			log('HeaderState: no match for line "%s"' % line)
 			stream.error = True
 			return
-		log('matched: "%s"' % stream.data[match.start(0):match.end(0)])
+		#log('matched: "%s"' % stream.data[match.start(0):match.end(0)])
 		self.process_header(match.group('name'), match.group('value'))
 
 	def process_header(self, name, value):
 		self.headers[name] = value
 
 
-class MultipartBodyState(StateMachineState):
-	inheader = True
-	boundary = None
-	headerparser = None
-	bodyparser = None
-	currentpart = None
-
-	def __init__(self, machine, ct):
-		ctre = re.compile(r'^multipart/form-data; boundary=(?P<boundary>[' + ALPHANUM + r']+)$')
-		res = ctre.match(ct)
-		if not res:
-			log('no boundary found')
-			raise ValueError, 'boundary not found in Content-Type string.'
-		self.boundary = res.group('boundary')
-		log('boundary: "%s"' % self.boundary)
-		super(MultipartBodyState, self).__init__(machine)
-		# The beginning of a multipart message is the boundary string, so our
-		# initial state is like the "part body" state - we're waiting to find
-		# the boundary.	 We typically don't expect to find any data before the
-		# boundary.
-		self.inheader = False
-		self.bodyparser = self.get_body_parser()
-
-	# Returns a StateMachineState that will parse the next "part header".
-	def get_header_parser(self):
-		if self.headerparser:
-			self.headerparser.reset_headers()
-			return self.headerparser
-		return PartHeaderState(self.machine, self)
-
-	# Returns a StateMachineState that will parse the next "part body".
-	def get_body_parser(self):
-		# call up to the parent so that subclassers only have to
-		# override one class...
-		#PartBodyState(self.machine, self)
-		return self.machine.get_part_body_state(self)
-
-	def process(self):
-		stream = self.machine
-		#log('MultipartBodyState: parsing "%s"...' % stream.data[:64])
-		if self.inheader:
-			self.headerparser.process()
-		else:
-			self.bodyparser.process()
-
-	# Called by PartHeaderState when the end of the header is found.
-	def part_header_done(self):
-		headers = self.headerparser.headers
-
-		self.inheader = False
-		self.currentpart = {}
-		self.currentpart['headers'] = headers
-
-		key = 'Content-Disposition'
-		if key in headers:
-			cd = headers[key]
-			cdre = re.compile(r'^form-data; name="(?P<name>[' + ALPHANUM + r']+)"' +
-							  r'(; filename="(?P<filename>[' + ALPHANUM + r']+)")?$')
-			match = cdre.match(cd)
-			if match:
-				field = match.group('name')
-				filename = match.group('filename')
-				if field:
-					self.currentpart['field'] = field
-				if filename:
-					self.currentpart['filename'] = filename
-		key = 'Content-Type'
-		if key in headers:
-			ct = headers[key]
-			self.currentpart['content-type'] = ct
-
-		self.bodyparser = self.get_body_parser()
-
-	# Called by PartBodyState when the end of the body is found.
-	def part_body_done(self):
-		if not self.currentpart:
-			log('Preamble ended.')
-		else:
-			datalen = self.bodyparser.get_data_length()
-			data = self.bodyparser.get_data()
-			log('Body ended.  Got %d bytes of data.' % datalen)
-			log('Data is: ***%s***' % data)
-			if data:
-				self.currentpart['data'] = data
-			self.machine.add_part(self.currentpart)
-
-		self.headerparser = self.get_header_parser()
-		self.inheader = True
-
-	# Called by PartBodyState when the end of the last body is found.
-	def last_part_body_done(self):
-		log('Last body ended.')
-		self.part_body_done()
-
-
-class PartHeaderState(MainHeaderState):
-	body = None
-	def __init__(self, machine, body):
-		super(PartHeaderState, self).__init__(machine)
-		self.body = body
+class PartHeaderState(HeaderState):
 	def header_done(self):
 		log('part header finished.')
-		# chomp the CRLF.
-		self.machine.discard_data(2)
 		for k,v in self.headers.items():
 			log('  ' + str(k) + " = " + str(v))
-		self.body.part_header_done()
+		# chomp the CRLF.
+		self.machine.discard_data(2)
+		self.machine.state_transition('part-header-done')
+
 	def reset_headers(self):
 		self.headers = {}
 
 class PartBodyState(StateMachineState):
-	body = None
 	data = None
-	def __init__(self, machine, body):
+	boundary = None
+	def __init__(self, machine, boundary):
 		super(PartBodyState, self).__init__(machine)
-		self.body = body
+		self.boundary = boundary
 		self.reset_data()
 	def process(self):
 		stream = self.machine
-		bdy = self.body.boundary
+		bdy = self.boundary
 		if (len(stream.data) < len(bdy) + 8):
 			stream.needmore = True
 			return
@@ -383,11 +360,12 @@ class PartBodyState(StateMachineState):
 				self.handle_data(stream.data[:start])
 				stream.discard_data(start)
 			stream.discard_data(relen)
+			self.part_body_done()
 			if match.group('dashdash'):
 				# it's the end of the last part.
 				self.last_part_body_done()
 			else:
-				self.part_body_done()
+				self.start_next_part()
 			return
 
 		# boundary not found.  chomp the data up to the last CR, if it
@@ -406,10 +384,13 @@ class PartBodyState(StateMachineState):
 		return self.data
 
 	def part_body_done(self):
-		self.body.part_body_done()
+		self.machine.state_transition('part-body-done')
 
 	def last_part_body_done(self):
-		self.body.last_part_body_done()
+		self.machine.state_transition('last-part-body-done')
+
+	def start_next_part(self):
+		self.machine.state_transition('start-next-part')
 
 	def handle_data(self, data):
 		log('PartBodyState: handling data ***%s***' % data)
@@ -422,30 +403,37 @@ class PartBodyState(StateMachineState):
 class FileMultipart(Multipart):
 	writefields = {}
 
+	# Overrides Multipart.get_part_body_state().
+	#
 	# Returns a StateMachineState to parse the body of one part of a
 	# multi-part message.  If this part's header contains a
 	# Content-Disposition header which has the "name" and "filename"
 	# parameters, and the "name" is a key in the "writefields"
 	# dictionary, then a FileBodyState() is returned.
-	def get_part_body_state(self, mainbody):
+	def get_part_body_state(self, boundary):
+		#log('FileMultipart: get_part_body_state')
 		superme = super(FileMultipart, self)
-		currentpart = mainbody.currentpart
+		currentpart = self.currentpart
 		if not currentpart:
-			return superme.get_part_body_state(mainbody)
+			#log('no current part.')
+			return superme.get_part_body_state(boundary)
 
 		key = 'field'
 		fnkey = 'filename'
 		if not ((key in currentpart) and \
 				(fnkey in currentpart)):
-			return superme.get_part_body_state(mainbody)
+			#log('no field and filename keys.')
+			return superme.get_part_body_state(boundary)
 
 		fn = currentpart[fnkey]
 		field = currentpart[key]
 		filename = self.get_filename(field, fn, currentpart)
 		if not filename:
-			return superme.get_part_body_state(mainbody)
+			#log('filename is not in writefields.')
+			return superme.get_part_body_state(boundary)
 		currentpart['local-filename'] = filename
-		return FileBodyState(self, mainbody, filename)
+		log('writing this part to file %s' % filename)
+		return FileBodyState(self, boundary, filename)
 
 	# Computes the filename to write the data of this "part body" to.
 	def get_filename(self, field, filename, currentpart):
@@ -458,10 +446,10 @@ class FileBodyState(PartBodyState):
 	fid = None
 	datalen = 0
 
-	def __init__(self, machine, mainbody, filename):
+	def __init__(self, machine, boundary, filename):
 		self.filename = filename
 		self.fid = open(filename, 'wb')
-		super(FileBodyState, self).__init__(machine, mainbody)
+		super(FileBodyState, self).__init__(machine, boundary)
 		self.data = None
 
 	def handle_data(self, data):
@@ -475,6 +463,8 @@ class FileBodyState(PartBodyState):
 		self.fid.close()
 		self.fid = None
 		super(FileBodyState, self).part_body_done()
+
+
 
 if __name__ == '__main__':
 	#mp = Multipart(sys.stdin)
