@@ -43,7 +43,7 @@ import cgitb
 import multipart
 
 def log(x):
-	print x
+	print >> sys.stderr, x
 
 class Upload(multipart.FileMultipart):
    basedir = None
@@ -123,75 +123,137 @@ class Upload(multipart.FileMultipart):
    def write_progress(self):
       if not self.progress:
          return
-      f = open(self.progress, 'w')
-      f.write('starttime=%d\n' % self.starttime)
+
+      args = {}
+      args['starttime'] = self.starttime
+      if self.bytes_written > self.predictedsize:
+         self.predictedsize = self.bytes_written
       if self.predictedsize:
          sz = self.predictedsize
       else:
          sz = self.contentlength
-      f.write('totalsize=%d\n' % sz)
-      f.write('pid=%d\n' % os.getpid())
+
+      args['filesize'] = sz
       now = int(time.time())
-      f.write('timenow=%d\n' % now)
-      f.write('written=%d\n' % self.bytes_written)
+      args['timenow'] = now
+      args['written'] = self.bytes_written
       dt = now - self.starttime
-      f.write('elapsed=%d\n' % dt)
+      args['elapsed'] = dt
+      if sz:
+         args['pct'] = int(round(100 * self.bytes_written / float(sz)))
       if self.bytes_written and dt>0:
          avgspeed = self.bytes_written / float(dt)
-         f.write('speed=%f\n' % avgspeed)
+         args['speed'] = avgspeed
          left = sz - self.bytes_written
          if left < 0:
             left = 0
          eta = left / avgspeed
-         f.write('eta=%d\n' % int(eta))
-      f.close()
+         args['eta'] = eta
 
+      tag = '<progress'
+      for k,v in args.items():
+         tag += ' ' + k + '="' + str(v) + '"'
+      tag += ' />'
+
+      #f.write('pid=%d\n' % os.getpid())
+
+      f = open(self.progress + '.tmp', 'w')
+      f.write(tag + '\n')
+      f.close()
+      os.rename(self.progress + '.tmp', self.progress)
+
+
+
+def handler(req):
+   from mod_python import apache
+   req.content_type = 'text/html'
+   req.write("Upload starting...")
+   try:
+      upload_base_dir = os.environ['UPLOAD_DIR']
+   except KeyError:
+      upload_base_dir = '/tmp'
+   try: 
+      upload_id_field = os.environ['UPLOAD_ID_STRING']
+   except KeyError:
+      upload_id_field = 'upload_id'
+
+   up = Upload(req)
+   up.set_basedir(upload_base_dir)
+   up.set_id_field(upload_id_field)
+   #while up.readmore():
+   #   up.write_progress()
+
+   while True:
+      log('reading...')
+      ok = up.readmore()
+      if not ok:
+         break
+      log('writing progress...')
+      up.write_progress()
+
+   if up.error:
+      log('Parser failed.')
+      up.abort()
+
+   log('Parser succeeded')
+   log('Message headers:')
+   if up.headers:
+      for k,v in up.headers.items():
+         log('	   ' + str(k) +  '=' + str(v))
+   for p in up.parts:
+      log('	 Part:')
+      for k,v in p.items():
+         log('	   ' + str(k) +  '=' + str(v))
+
+   req.write('Upload complete.')
+   return apache.OK
 
 
 #########
 # main  #
 #########
 
-#cgitb.enable()
+if __name__ == '__main__':
+   #cgitb.enable()
 
-# send headers so that the browser doesn't freak out
-print "Content-Type: text/html"
-print
+   # send headers so that the browser doesn't freak out
+   print "Content-Type: text/html"
+   print
 
-try:
-   upload_base_dir = os.environ['UPLOAD_DIR']
-except KeyError:
-   upload_base_dir = '/tmp'
-try: 
-   upload_id_field = os.environ['UPLOAD_ID_STRING']
-except KeyError:
-   upload_id_field = 'upload_id'
+   try:
+      upload_base_dir = os.environ['UPLOAD_DIR']
+   except KeyError:
+      upload_base_dir = '/tmp'
+   try: 
+      upload_id_field = os.environ['UPLOAD_ID_STRING']
+   except KeyError:
+      upload_id_field = 'upload_id'
 
-up = Upload()
-#up.blocksize = 1
-up.set_basedir(upload_base_dir)
-up.set_id_field(upload_id_field)
-#while up.readmore():
-#   up.write_progress()
-while True:
-   print 'reading...'
-   ok = up.readmore()
-   if not ok:
-      break
-   print 'writing progress...'
-   sys.stdout.flush()
-   up.write_progress()
-if up.error:
-   print 'Parser failed.'
-   up.abort()
-else:
-   print 'Parser succeeded'
-   print 'Message headers:'
-   for k,v in up.headers.items():
-      print '  ', k, '=', v
+   up = Upload()
+   #up.blocksize = 1
+   up.set_basedir(upload_base_dir)
+   up.set_id_field(upload_id_field)
+   while up.readmore():
+      up.write_progress()
+   #while True:
+   #print 'reading...'
+   #ok = up.readmore()
+   #if not ok:
+   #   break
+   #print 'writing progress...'
+   #sys.stdout.flush()
+   #up.write_progress()
+   if up.error:
+      log('Parser failed.')
+      up.abort()
+   log('Parser succeeded')
+   log('Message headers:')
+   if up.headers:
+      for k,v in up.headers.items():
+         log('	   ' + str(k) +  '=' + str(v))
    for p in up.parts:
-      print '	 Part:'
+      log('	 Part:')
       for k,v in p.items():
-         print '	   ', k, '=', v
+         log('	   ' + str(k) +  '=' + str(v))
 
-print 'Upload complete.'
+   print 'Upload complete.'

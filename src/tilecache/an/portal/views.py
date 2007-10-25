@@ -550,9 +550,17 @@ def uploadprogress(request):
 	printvals(request)
 
 	if 'xml' in request.GET:
+		# HACK
+		f = open('/tmp/%s.progress' % id)
+		if not f:
+			return HttpResponse('no such id')
+		tag = f.read()
+		f.close()
+		if not len(tag):
+			return HttpResponse('no tag')
 		res = HttpResponse()
 		res['Content-type'] = 'text/xml'
-		res.write('<progress pct="60" />\n\n')
+		res.write(tag)
 		return res
 	
 	ctxt = {

@@ -4,7 +4,7 @@ import re
 import sys
 
 def log(x):
-	print x
+	print >> sys.stderr, x
 
 #
 # StreamParser - parse data a chunk at a time.
@@ -62,7 +62,7 @@ class StreamParser(object):
 	# Returns False if EOF is reached or an error occurs
 	def readmore(self):
 		newdata = self.fin.read(self.blocksize)
-		#log('read %d' % len(newdata))
+		log('read %d' % len(newdata))
 		if len(newdata) == 0:
 			return False
 		return self.moreinput(newdata)
