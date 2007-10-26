@@ -209,7 +209,9 @@ def handler(req):
         return apache.OK
     
     while up.readmore():
-         up.write_progress()
+        # For testing progress meter with fast connections :)
+        #time.sleep(1)
+        up.write_progress()
 
     #fcopy = open('/tmp/in', 'wb')
     #fcopy.write(hdr)
