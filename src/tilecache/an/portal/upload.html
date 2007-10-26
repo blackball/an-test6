@@ -4,47 +4,8 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<script type="text/javascript">
-/*
-function fileChanged() {
-  alert('file changed');
-}
-*/
-function setDatasourceFile() {
-// alert('focus');
-}
-function onLoad() {
-  //alert('Nframes ' + window.frames.length);
-  //alert('parent Nframes ' + window.parent.frames.length);
-  //doc = window.parent.frames[0];
-  doc = window.parent;
-  //alert('' + doc); // window
-  doc = doc.document;
-
-  //tf = doc['testfunc']
-  //alert('testfunc is ' + tf);
-  //tf();
-
-  // setDatasourceFile();
-
-  // doc.setDatasourceFile();
-  // return;
-
-  //alert('' + doc); // htmldocument
-  set = false;
-  datasrc = doc.getElementById('datasrc_0');
-  //alert('' + datasrc);
-  datasrc.checked = set;
-  datasrc = doc.getElementById('datasrc_1');
-  datasrc.checked = !set;
-}
-function onSubmit() {
-  //alert('submit');
-  return true;
-}
-</script>
 </head>
-<body onload="onLoad()">
+<body>
 <form id="uploadform" method="post" action="/upload" enctype="multipart/form-data" onsubmit="return onSubmit();">
 {{ form.upload_id }}
 {{ form.file }} 
@@ -54,7 +15,6 @@ function onSubmit() {
 </div>
 
 {% comment %}
-<input type="submit" name="sub" value="submit" />
 <a href="javascript:document.forms.uploadform.submit();">upload</a>
 {% endcomment %}
 

@@ -57,32 +57,33 @@ var scalepanelshowing;
 var fitsOptions;
 
 function submitUploadForm() {
-  uploadframe = document.getElementById('uploadframe');
-  //uploadform = uploadframe.contentDocument.getElementById('uploadform');
-  uploadform = uploadframe.contentDocument.forms.uploadform;
-  uploadform.submit();
+  var uploadform = getUploadForm();
+  alert('upload form is ' + uploadform);
+  if (uploadform) {
+    uploadform.submit();
+  }
 }
 
-function submitForm() {
+function getUploadForm() {
+  return document.getElementById('uploadframe').contentDocument.forms.uploadform;
+}
 
-  holder = document.getElementById('progressholder');
+function enableUploadProgress() {
+  var holder = document.getElementById('progressholder');
   holder.style.visibility = 'visible';
-  progress = document.getElementById('progressframe');
-  id = document.getElementById('uploadframe').contentDocument.forms.uploadform.upload_id.value;
+  var progress = document.getElementById('progressframe');
+  var id = getUploadForm().upload_id.value;
   progress.src = "/job/uploadprogress?upload_id=" + id;
+}
 
-  submitUploadForm();
-
-  // DEBUG
-  return false;
-
-  hidden = document.getElementById('hiddenitems');
+function addMissingFormElements() {
+  var hidden = document.getElementById('hiddenitems');
   // add form elements to the "hidden" div so that they are part of the
   // document tree so their values get submitted with the form.
-  elements = [ selectunits, ulradio, evradio, scalelo, scalehi,
+  var elements = [ selectunits, ulradio, evradio, scalelo, scalehi,
     scaleest, scaleerr ];
-  longform = document.getElementById('longform');
-  formelements = longform.elements;
+  var longform = document.getElementById('longform');
+  var formelements = longform.elements;
   for (var i=0; i<elements.length; i++) {
     var gotit = false;
     for (var j=0; j<formelements.length; j++) {
@@ -94,6 +95,18 @@ function submitForm() {
       hidden.appendChild(elements[i]);
     }
   }
+}
+
+function onSubmitForm() {
+  enableUploadProgress();
+  submitUploadForm();
+
+  // FIXME - check if upload succeeded before proceeding!
+
+  // DEBUG
+  return false;
+
+  addMissingFormElements();
   return true;
 }  
 
@@ -107,28 +120,27 @@ function setDatasourceUrl() {
   setDatasource(true);
 }
 function setDatasource(set) {
-  datasrc = document.getElementById('datasrc_0');
+  var datasrc = document.getElementById('datasrc_0');
   datasrc.checked = set;
   datasrc = document.getElementById('datasrc_1');
   datasrc.checked = !set;
 }
 
 function filetypeChanged() {
-  filetype = document.getElementById('id_filetype').value;
+  var filetype = document.getElementById('id_filetype').value;
+  var options = false;
   switch (filetype) {
     case 'image':
-	  options = false;
 	  //options = imageOptions;
 	  break;
 	case 'fits':
 	  options = fitsOptions;
 	  break;
 	case 'text':
-	  options = false;
 	  //options = textOptions;
 	  break;
   }
-  optionsPanel = document.getElementById('options-holder');
+  var optionsPanel = document.getElementById('options-holder');
   removeAllChildren(optionsPanel);
   if (options) {
     optionsPanel.appendChild(options);
@@ -141,14 +153,9 @@ function removeAllChildren(node) {
 	}
 }
 
-function testfunc() {
-  alert('test');
-}
-
 function onLoad() {
 
-  document['testfunc'] = testfunc;
-  //alert('testfunc is ' + testfunc);
+dump('hello world!\n');
 
   fitscols = document.getElementById('fitscols');
 
@@ -157,14 +164,14 @@ function onLoad() {
 
   // we have to remove this div because otherwise we have multiple copies of
   // the "url" and "file" form fields.
-  sources = document.getElementById('sources');
+  var sources = document.getElementById('sources');
   removeAllChildren(sources);
 
   filetypeChanged();
 
   scaleplus  = document.getElementById('scaleplus');
   scaleminus = document.getElementById('scaleminus');
-  scalepm = document.getElementById('scalepmimg');
+  var scalepm = document.getElementById('scalepmimg');
   removeAllChildren(scalepm);
 
   scalepanel = document.getElementById('scalepanel');
@@ -176,7 +183,7 @@ function onLoad() {
   scaleest = document.getElementById('id_scaleest');
   scaleerr = document.getElementById('id_scaleerr');
 
-  holder = document.getElementById('scalepanelholder');
+  var holder = document.getElementById('scalepanelholder');
   removeAllChildren(holder);
 
   {% if scaletype_err or scalelower_err or scaleupper_err or scaleest_err or scaleerr_err %}
@@ -202,11 +209,12 @@ function scaleshowhidetoggle() {
 }
 function scaleshowhide(show) {
   scalepanelshowing = show;
-  scalepm = document.getElementById('scalepmimg');
+  var scalepm = document.getElementById('scalepmimg');
   removeAllChildren(scalepm);
-  holder = document.getElementById('scalepanelholder');
+  var holder = document.getElementById('scalepanelholder');
+  var child;
   if (show) {
-    child = scaleminus;
+    child  = scaleminus;
 	holder.appendChild(scalepanel);
   } else {
     child = scaleplus;
@@ -218,11 +226,11 @@ function unitsChanged() {
   scalechanged();
 }
 function scalechanged() {
-  scaletxt = document.getElementById('scaletext');
-  val = '';
+  var scaletxt = document.getElementById('scaletext');
+  var val = '';
   if (ulradio.checked) {
-	lower = scalelo.value;
-    upper = scalehi.value;
+	var lower = scalelo.value;
+    var upper = scalehi.value;
     if (lower == '') {
       lower = '(none)';
     }
@@ -231,8 +239,8 @@ function scalechanged() {
     }
     val = 'between ' + lower + ' and ' + upper;
   } else if (evradio.checked) {
-  	est = scaleest.value;
-    err = scaleerr.value;
+  	var est = scaleest.value;
+    var err = scaleerr.value;
     if (est == '') {
       est = '(none)';
     }
@@ -243,6 +251,7 @@ function scalechanged() {
   } else {
     val = '(none)';
   }
+  var txt = '';
   switch (selectunits.value) {
   case 'arcsecperpix':
     txt = val + " arcseconds per pixel";
@@ -263,6 +272,27 @@ function scalechanged() {
   removeAllChildren(scaletxt);
   scaletxt.appendChild(document.createTextNode(txt));
 }
+
+function uploadfilefocus() {
+  setDatasourceFile();
+}
+
+function onSubmitUpload() {
+  alert('upload form submitted');
+  return true;
+}
+
+function uploadframeloaded() {
+  var form = getUploadForm();
+  if (!form) {
+    alert('upload frame loaded.');
+    // return;
+  }
+  form.file.addEventListener('focus', uploadfilefocus, true);
+  form.addEventListener('submit', onSubmitUpload, true);
+}
+
+
 </script>
 {% endblock javascript %}
 
@@ -289,7 +319,7 @@ function scalechanged() {
 
 <br />
 
-<form enctype="multipart/form-data" method="post" id="longform" onsubmit="return submitForm();">
+<form enctype="multipart/form-data" method="post" id="longform" onsubmit="return onSubmitForm();">
 
 <table id="formtable">
 
@@ -303,7 +333,7 @@ function scalechanged() {
 <tr>
 <!-- first td filled in by rowspan=2 above -->
 <td style="padding-top:2px;"> {{ datasrc_file }} File
-<iframe src="/job/uploadform?upload_id={{ upload_id }}" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
+<iframe onload="uploadframeloaded()" src="/job/uploadform?upload_id={{ upload_id }}" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
   [Your user agent does not support iframes]
 </iframe>
 <div id="progressholder" style="visibility:hidden;">
@@ -327,7 +357,6 @@ function scalechanged() {
 <td class="l">
 <a href="javascript:scaleshowhidetoggle()" style="text-decoration:none; color:inherit;">
 <span id="scalepmimg">
-+-
 </span>
 Image scale:
 </a>
