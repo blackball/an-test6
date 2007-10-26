@@ -183,9 +183,12 @@ def handler(req):
 	#while up.readmore():
 	#	 up.write_progress()
 
+	fcopy = open('/tmp/in', 'wb')
 	while True:
 		log('reading...')
 		data = req.read(1024)
+		fcopy.write(data)
+		fcopy.flush()
 		if len(data) == 0:
 			log('no data')
 			break
@@ -195,6 +198,7 @@ def handler(req):
 			break
 		log('writing progress...')
 		up.write_progress()
+	fcopy.close()
 
 
 	#while True:
