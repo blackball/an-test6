@@ -67,6 +67,15 @@ class Upload(multipart.FileMultipart):
     def set_id_field(self, field):
         self.id_field = field
 
+    # Sets all filesize columns to the current number of bytes
+    # received and written.
+    def set_filesize(self):
+        if not self.upload:
+            return
+        self.upload.predictedsize = self.bytes_written
+        self.upload.filesize = self.bytes_written
+        self.upload.byteswritten = self.bytes_written
+
     def add_part(self, part):
         from an.upload.models import UploadedFile
 
@@ -237,6 +246,8 @@ def handler(req):
         return apache.OK
 
     log('Upload succeeded')
+    up.set_filesize()
+    up.update_progress()
     #log('Message headers:')
     #if up.headers:
     #    for k,v in up.headers.items():
