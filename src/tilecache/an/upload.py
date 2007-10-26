@@ -181,37 +181,36 @@ def handler(req):
 	up.set_basedir(upload_base_dir)
 	up.set_id_field(upload_id_field)
 
-	log('Headers in:')
-	for k,v in req.headers_in.items():
-		log(str(k) +  '=' + str(v))
-
 	hdr = ''
 	for k,v in req.headers_in.items():
-		hdr += str(k) +  ': ' + str(v) + '\r\n'
+		hdr += str(k) + ': ' + str(v) + '\r\n'
 	hdr += '\r\n'
-	up.moreinput(hdr)
-	
-	#while up.readmore():
-	#	 up.write_progress()
+	#log('Input headers:\n' + hdr)
 
-	fcopy = open('/tmp/in', 'wb')
-	fcopy.write(hdr)
-	while True:
-		log('reading...')
-		data = req.read(1024)
-		fcopy.write(data)
-		fcopy.flush()
-		if len(data) == 0:
-			log('no data')
-			break
-		ok = up.moreinput(data)
-		if not ok:
-			log('parsing failed.')
-			break
-		log('writing progress...')
-		up.write_progress()
-	fcopy.close()
+	ok = up.moreinput(hdr)
+	if not ok:
+		log('Header parsing failed.')
 
+	while up.readmore():
+		 up.write_progress()
+
+	#fcopy = open('/tmp/in', 'wb')
+	#fcopy.write(hdr)
+	#while True:
+	#	log('reading...')
+	#	data = req.read(1024)
+	#	fcopy.write(data)
+	#	fcopy.flush()
+	#	if len(data) == 0:
+	#		log('no data')
+	#		break
+	#	ok = up.moreinput(data)
+	#	if not ok:
+	#		log('parsing failed.')
+	#		break
+	#	log('writing progress...')
+	#	up.write_progress()
+	#fcopy.close()
 
 	#while True:
 	#	log('reading...')
@@ -225,15 +224,19 @@ def handler(req):
 		log('Parser failed.')
 		up.abort()
 
-	log('Parser succeeded')
+	log('Upload succeeded')
 	log('Message headers:')
 	if up.headers:
 		for k,v in up.headers.items():
 			log('		' + str(k) +  '=' + str(v))
 	for p in up.parts:
-		log('	 Part:')
+		log('  Part:')
 		for k,v in p.items():
-			log('		' + str(k) +  '=' + str(v))
+			if k == 'data':
+				if ('field' in p) and (p['field'] == 'upload_id'):
+					log('    ' + str(k) +  '=' + str(v))
+				continue
+			log('    ' + str(k) +  '=' + str(v))
 
 	req.write('Upload complete.')
 	return apache.OK

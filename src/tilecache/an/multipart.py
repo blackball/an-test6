@@ -202,7 +202,7 @@ class Multipart(MessageParser):
 			if key in headers:
 				cd = headers[key]
 				cdre = re.compile(r'^form-data; name="(?P<name>[' + ALPHANUM + r']+)"' +
-								  r'(; filename="(?P<filename>[' + ALPHANUM + r']+)")?$')
+								  r'(; filename="(?P<filename>[' + ALPHANUM + r'\.' + r']+)")?$')
 				match = cdre.match(cd)
 				if match:
 					field = match.group('name')
@@ -410,7 +410,7 @@ class PartBodyState(StateMachineState):
 		self.machine.state_transition('start-next-part')
 
 	def handle_data(self, data):
-		log('PartBodyState: handling data ***%s***' % data)
+		#log('PartBodyState: handling data ***%s***' % data)
 		self.data += data
 
 	def reset_data(self):
