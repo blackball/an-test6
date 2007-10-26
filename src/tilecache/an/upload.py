@@ -245,7 +245,26 @@ def handler(req):
             log('    ' + str(k) +  '=' + str(v))
 
     #for p in up.parts:
-        
+    formvals = up.get_form_values()
+    log('form values:')
+    for k,v in formvals.items():
+        log('  ' + str(k) +  '=' + str(v))
+
+    filevals = up.get_uploaded_files()
+    log('uploaded files:')
+    for f in filevals:
+        for k,v in f.items():
+            log('  ' + str(k) +  '=' + str(v))
+        log('')
+
+    if len(filevals) == 0:
+        req.write('no such file.\n' + postfix)
+        return apache.OK
+
+    thefile = filevals[0]
+    if thefile['length'] == 0:
+        req.write('empty file.\n' + postfix)
+        return apache.OK
 
     req.write('done.</p>\n')
     req.write('<div style="visibility:hidden;" id="upload-succeeded" />')

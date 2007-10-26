@@ -186,6 +186,38 @@ class Multipart(MessageParser):
 
     boundary = None
 
+    # returns a dictionary that maps normal form elements to
+    # their data values.
+    def get_form_values(self):
+        res = {}
+        for p in self.parts:
+            if not 'field' in p or not 'data' in p:
+                continue
+            field = p['field']
+            data = p['data']
+            if field and data:
+                res[field] = data
+        return res
+
+    def get_uploaded_files(self):
+        res = []
+        for p in self.parts:
+            if not ('field' in p and
+                    'filename' in p and
+                    'local-filename' in p and
+                    'datalen' in p):
+                continue
+            f = {}
+            f['field'] = p['field']
+            f['user-filename'] = p['filename']
+            f['filename'] = p['local-filename']
+            f['length'] = p['datalen']
+            res.append(f)
+
+        #if len(res) == 0:
+        #    return None
+        return res
+
     def state_transition(self, trans):
         log('state_transition to ' + trans)
 
@@ -202,15 +234,21 @@ class Multipart(MessageParser):
             if key in headers:
                 cd = headers[key]
                 cdre = re.compile(r'^form-data; name="(?P<name>[' + ALPHANUM + r']+)"' +
-                                  r'(; filename="(?P<filename>[' + ALPHANUM + r'\.' + r'])")?$')
+                                  r'(?P<filename_given>; filename="(?P<filename>[' + ALPHANUM + r'\.' + r']*)")?$')
                 match = cdre.match(cd)
                 if match:
                     field = match.group('name')
                     filename = match.group('filename')
+                    given = match.group('filename_given')
                     if field:
                         self.currentpart['field'] = field
+                    if given:
                         if filename:
                             self.currentpart['filename'] = filename
+                        else:
+                            self.currentpart['filename'] = ''
+                else:
+                    log('Failed to parse Content-Disposition: ' + cd)
             key = 'Content-Type'
             if key in headers:
                 ct = headers[key]
@@ -233,6 +271,8 @@ class Multipart(MessageParser):
                 log('Data is: ***%s***' % data)
                 if data:
                     self.currentpart['data'] = data
+                else:
+                    self.currentpart['datalen'] = datalen
                 self.add_part(self.currentpart)
 
             self.currentpart = {}
@@ -439,7 +479,7 @@ class FileMultipart(Multipart):
         fnkey = 'filename'
         if not ((key in currentpart) and \
                 (fnkey in currentpart)):
-            #log('no field and filename keys.')
+            log('SaveToFile: no field and filename keys.')
             return superme.get_part_body_state(boundary)
 
         fn = currentpart[fnkey]
