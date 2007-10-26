@@ -2,8 +2,11 @@ from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.template import Context, RequestContext, loader
 from django import newforms as forms
+from django.newforms import ValidationError
+
 from models import UploadedFile
 import logging
+import os.path
 
 from an import gmaps_config
 
@@ -13,6 +16,20 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s',
                     filename=logfile,
                     )
+
+class UploadIdField(forms.CharField):
+    def clean(self, value):
+        val = super(UploadIdField, self).clean(value)
+        if not val:
+            return val
+        ups = UploadedFile.objects.all().filter(uploadid=val)
+        if not ups or len(ups)==0:
+            raise ValidationError('Invalid upload ID')
+        up = ups[0]
+        path = up.get_filename()
+        if not os.path.exists(path):
+            raise ValidationError('No file for that upload id')
+        return up
 
 class UploadForm(forms.Form):
     upload_id = forms.CharField(max_length=32, widget=forms.HiddenInput)

@@ -8,6 +8,7 @@ from django.newforms import widgets
 
 from an.portal.models import Job
 from an.upload.models import UploadedFile
+from an.upload.views  import UploadIdField
 
 import re
 import time
@@ -33,11 +34,6 @@ logging.basicConfig(level=logging.DEBUG,
                     filename=logfile,
                     )
 
-try:
-    upload_base_dir = os.environ['UPLOAD_DIR']
-except KeyError:
-    upload_base_dir = '/tmp'
-
 class LoginForm(forms.Form):
     username = forms.EmailField()
     password = forms.CharField(max_length=100, widget=forms.PasswordInput)
@@ -50,30 +46,6 @@ class ForgivingURLField(forms.URLField):
                 value.startswith('http://ftp://')):
             value = value[7:]
         return super(ForgivingURLField, self).clean(value)
-
-uploadid_re = re.compile('[A-Za-z0-9]{%i}$' % (sha.digest_size*2))
-
-class UploadId(object):
-    localpath = None
-    id = None
-    def __init__(self, id, path):
-        self.id = id
-        self.localpath = path
-    def __str__(self):
-        #return ('<UploadId: id=%s>' % self.id)
-        return self.id
-
-class UploadIdField(forms.RegexField):
-    def clean(self, value):
-        val = super(UploadIdField, self).clean(value)
-        if not val:
-            return val
-        if not uploadid_re.match(val):
-            raise ValidationError('Invalid upload ID')
-        path = upload_base_dir + '/' + val
-        if not os.path.exists(path):
-            raise ValidationError('No file for that upload id')
-        return UploadId(val, path)
 
 class SimpleURLForm(forms.Form):
     url = ForgivingURLField(initial='http://',
@@ -96,8 +68,7 @@ class FullForm(forms.Form):
         attrs={'onchange':'filetypeChanged()',
                'onkeyup':'filetypeChanged()'}))
 
-    upload_id = UploadIdField(uploadid_re,
-                              widget=forms.HiddenInput(),
+    upload_id = UploadIdField(widget=forms.HiddenInput(),
                               required=False)
 
     scaleunits = forms.ChoiceField(choices=Job.scaleunit_CHOICES,

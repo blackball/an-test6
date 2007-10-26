@@ -42,6 +42,9 @@ class UploadedFile(models.Model):
 
     #def __init__(self, ):
 
+    def __str__(self):
+        return self.uploadid
+
     def validateId(self, field_data, all_data):
         if not self.isValidId(field_data):
             raise validators.ValidationError('Invalid upload ID')
