@@ -6,12 +6,12 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 <head>
 </head>
 <body>
-<form id="uploadform" method="post" action="/upload" enctype="multipart/form-data" onsubmit="return onSubmit();">
+<form id="uploadform" method="post" action="/upload" enctype="multipart/form-data">
 {{ form.upload_id }}
 {{ form.file }} 
 
 <div style="visibility:hidden;">
-<input type="submit" name="submit" value="submit" />
+<input type="submit" name="sub" value="submit" />
 </div>
 
 {% comment %}

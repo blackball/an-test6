@@ -56,6 +56,27 @@ var scalepanelshowing;
 //var textOptions;
 var fitsOptions;
 
+var upload_id;
+
+function onSubmitUpload() {
+  alert('upload form submitted');
+  return true;
+}
+
+function uploadframeloaded() {
+  var form = getUploadForm();
+  if (!form) {
+    //alert('upload frame loaded.');
+	return;
+  }
+  if (form.hasProperty('file')) {
+  //if ('file' in form) {
+    upload_id = form.upload_id.value;
+    form.file.addEventListener('focus', setDatasourceFile, true);
+    form.addEventListener('submit', onSubmitUpload, true);
+  }
+}
+
 function submitUploadForm() {
   var uploadform = getUploadForm();
   alert('upload form is ' + uploadform);
@@ -65,15 +86,20 @@ function submitUploadForm() {
 }
 
 function getUploadForm() {
-  return document.getElementById('uploadframe').contentDocument.forms.uploadform;
+  var doc = document.getElementById('uploadframe').contentDocument;
+  var forms = doc.forms;
+  if ('uploadform' in forms) {
+    return forms.uploadform;
+  }
+  return false;
 }
 
 function enableUploadProgress() {
   var holder = document.getElementById('progressholder');
   holder.style.visibility = 'visible';
   var progress = document.getElementById('progressframe');
-  var id = getUploadForm().upload_id.value;
-  progress.src = "/job/uploadprogress?upload_id=" + id;
+  //var id = getUploadForm().upload_id.value;
+  progress.src = "/job/uploadprogress?upload_id=" + upload_id;
 }
 
 function addMissingFormElements() {
@@ -98,8 +124,10 @@ function addMissingFormElements() {
 }
 
 function onSubmitForm() {
-  enableUploadProgress();
-  submitUploadForm();
+  if (document.getElementById('datasrc_1').checked) {
+    enableUploadProgress();
+    submitUploadForm();
+  }
 
   // FIXME - check if upload succeeded before proceeding!
 
@@ -271,25 +299,6 @@ function scalechanged() {
   }
   removeAllChildren(scaletxt);
   scaletxt.appendChild(document.createTextNode(txt));
-}
-
-function uploadfilefocus() {
-  setDatasourceFile();
-}
-
-function onSubmitUpload() {
-  alert('upload form submitted');
-  return true;
-}
-
-function uploadframeloaded() {
-  var form = getUploadForm();
-  if (!form) {
-    alert('upload frame loaded.');
-    // return;
-  }
-  form.file.addEventListener('focus', uploadfilefocus, true);
-  form.addEventListener('submit', onSubmitUpload, true);
 }
 
 
