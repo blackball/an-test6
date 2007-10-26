@@ -180,10 +180,22 @@ def handler(req):
 	up = Upload(req)
 	up.set_basedir(upload_base_dir)
 	up.set_id_field(upload_id_field)
+
+	log('Headers in:')
+	for k,v in req.headers_in.items():
+		log(str(k) +  '=' + str(v))
+
+	hdr = ''
+	for k,v in req.headers_in.items():
+		hdr += str(k) +  ': ' + str(v) + '\r\n'
+	hdr += '\r\n'
+	up.moreinput(hdr)
+	
 	#while up.readmore():
 	#	 up.write_progress()
 
 	fcopy = open('/tmp/in', 'wb')
+	fcopy.write(hdr)
 	while True:
 		log('reading...')
 		data = req.read(1024)

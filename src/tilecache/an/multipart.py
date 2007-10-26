@@ -323,7 +323,7 @@ class HeaderState(StateMachineState):
 							'(?P<name>[' + ALPHANUM + r']+)' +
 							r':' +
 							r'[' + LWSP + r']+' +
-							r'(?P<value>[' + LWSP + ';/="' + ALPHANUM + r']+)' +
+							r'(?P<value>[' + LWSP + r'\.\(\)\?,+*:;/="' + ALPHANUM + r']+)' +
 							'$')
 		match = linere.match(line)
 		if not match:
