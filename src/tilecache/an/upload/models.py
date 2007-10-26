@@ -40,6 +40,8 @@ class UploadedFile(models.Model):
         return upload_base_dir + '/' + uid
     getFilenameForId = staticmethod(getFilenameForId)
 
+    #def __init__(self, ):
+
     def validateId(self, field_data, all_data):
         if not self.isValidId(field_data):
             raise validators.ValidationError('Invalid upload ID')
@@ -51,12 +53,12 @@ class UploadedFile(models.Model):
     user = models.ForeignKey(User, editable=False,
                              blank=True, null=True)
 
-    starttime = models.PositiveIntegerField()
-    nowtime = models.PositiveIntegerField()
-    predictedsize = models.PositiveIntegerField()
-    byteswritten = models.PositiveIntegerField()
-    filesize = models.PositiveIntegerField()
-    errorstring = models.CharField(max_length=256, null=True)
+    starttime = models.PositiveIntegerField(default=0)
+    nowtime = models.PositiveIntegerField(default=0)
+    predictedsize = models.PositiveIntegerField(default=0)
+    byteswritten = models.PositiveIntegerField(default=0)
+    filesize = models.PositiveIntegerField(default=0)
+    errorstring = models.CharField(max_length=256, null=True, default='')
 
     def xml(self):
         err = self.errorstring

@@ -85,7 +85,8 @@ class Upload(multipart.FileMultipart):
             return
 
         log('Setting ID to %s' % id)
-
+        self.id = id
+        
         # We will have read the Content-Length header by now...
         key = 'Content-Length'
         if not key in self.headers:
@@ -106,9 +107,6 @@ class Upload(multipart.FileMultipart):
                                    starttime=now,
                                    nowtime=now,
                                    predictedsize=predictedsize,
-                                   byteswritten=0,
-                                   filesize=0,
-                                   errorstring='',
                                    )
 
         self.filename = self.upload.get_filename()
@@ -139,7 +137,6 @@ class Upload(multipart.FileMultipart):
         self.upload.byteswritten = self.bytes_written
         self.upload.errorstring = self.errorstring
         self.upload.save()
-
 
     # Computes the filename to write the data of this "part body" to.
     def get_filename(self, field, filename, currentpart):

@@ -1,4 +1,3 @@
-from an.portal.models import Job
 from django import newforms as forms
 from django.newforms import ValidationError
 from django.http import HttpResponse
@@ -6,6 +5,10 @@ from django.http import HttpResponseRedirect
 from django.template import Context, RequestContext, loader
 import django.contrib.auth as auth
 from django.newforms import widgets
+
+from an.portal.models import Job
+from an.upload.models import UploadedFile
+
 import re
 import time
 import random
@@ -381,14 +384,6 @@ def submit(request):
 
     return HttpResponse(txt)
 
-
-
-class UploadForm(forms.Form):
-    upload_id = forms.CharField(max_length=32, widget=forms.HiddenInput)
-    file = forms.FileField(widget=forms.FileInput(
-        attrs={'size':'40'}))
-
-
 def printvals(request):
     if request.POST:
         logging.debug('POST values:')
@@ -402,110 +397,6 @@ def printvals(request):
         logging.debug('FILES values:')
         for k,v in request.FILES.items():
             logging.debug('  %s = %s' % (str(k), str(v)))
-
-
-def upload(request):
-    if not request.user.is_authenticated():
-        return HttpResponse('not authenticated')
-
-    logging.debug("Upload request.");
-
-    if request.GET:
-        form = UploadForm(request.GET)
-    elif request.POST:
-        form = UploadForm(request.POST, request.FILES)
-    else:
-        form = UploadForm()
-
-    if request.POST:
-        logging.debug('POST values:')
-        for k,v in request.POST.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
-    if request.GET:
-        logging.debug('GET values:')
-        for k,v in request.GET.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
-    if request.FILES:
-        logging.debug('FILES values:')
-        for k,v in request.FILES.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
-
-
-    if form.is_valid():
-        sz = len(form.cleaned_data['file'].content)
-        logging.debug("Successful upload: file size %d" % sz)
-        return HttpResponse("file uploaded: size %d" % sz)
-    else:
-        logging.debug('Invalid form: errors:')
-        for k,v in form.errors.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
-
-    ctxt = {
-        'form' : form,
-        }
-
-    t = loader.get_template('portal/upload.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
-
-def uploadform(request):
-    if not request.user.is_authenticated():
-        return HttpResponse('not authenticated')
-
-    id = str(time.time()) + str(random.random())
-    h = sha.new()
-    h.update(id)
-    id = h.hexdigest()
-
-    logging.debug("Upload form request.");
-    form = UploadForm({'upload_id': id})
-    ctxt = {
-        'form' : form,
-        }
-    t = loader.get_template('portal/upload.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
-
-def uploadprogress(request):
-    if not request.user.is_authenticated():
-        return HttpResponse('not authenticated')
-    if not request.GET:
-        return HttpResponse('no GET')
-    if not 'upload_id' in request.GET:
-        return HttpResponse('no upload_id')
-    id = request.GET['upload_id']
-    logging.debug("Upload progress request for id %s" % id)
-    printvals(request)
-
-    if 'xml' in request.GET:
-        # HACK - this path should be a config option!
-        f = open('/tmp/%s.progress' % id)
-        if not f:
-            return HttpResponse('no such id')
-        tag = f.read()
-        f.close()
-        if not len(tag):
-            return HttpResponse('no tag')
-        res = HttpResponse()
-        res['Content-type'] = 'text/xml'
-        res.write(tag)
-        return res
-    
-    ctxt = {
-        'refresh' : ('5; URL=/job/uploadprogress?upload_id=%s' % id),
-        'time_sofar' : '0:10',
-        'time_remaining' : '0:30',
-        'bytes_sofar' : '100 k',
-        'bytes_total' : '500 k',
-        'showstats' : False,
-
-        'pct' : 0,
-
-        'xmlurl' : ('/job/uploadprogress?xml&upload_id=%s' % id),
-        }
-    t = loader.get_template('portal/uploadprogress2.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
 
 # Note, if there are *ANY* errors in the form, it will have no
 # 'cleaned_data' array.
@@ -529,9 +420,6 @@ def newlong(request):
 
     if 'jobvals' in request.session:
         del request.session['jobvals']
-
-    # Note, if there are *ANY* errors, the form will have no 'cleaned_data'
-    # array.
 
     logging.debug('Errors:')
     if form._errors:
@@ -563,8 +451,14 @@ def newlong(request):
     ds0 = render[0].tag()
     ds1 = render[1].tag()
 
+    uploadform = '/upload/form'
+    progressform = '/upload/progress_ajax?upload_id='
+
     ctxt = {
         'form' : form,
+        'uploadform' : uploadform,
+        'progressform' : progressform,
+        'myurl' : '/job/newlong/',
         'scale_ul' : r0txt,
         'scale_ee' : r1txt,
         'datasrc_url' : ds0,

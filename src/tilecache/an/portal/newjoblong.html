@@ -80,7 +80,7 @@ function uploadSucceeded() {
 function uploadFailed() {
   //alert('upload failed.');
   var up = document.getElementById('uploadframe');
-  up.src = '/job/uploadform?upload_id={{upload_id}}';
+  up.src = '{{ uploadform }}';
 }
 
 function uploadFinished() {
@@ -131,7 +131,7 @@ function enableUploadProgress() {
   holder.style.visibility = 'visible';
   var progress = document.getElementById('progressframe');
   holder.style.height = progress.height;
-  progress.src = "/job/uploadprogress?upload_id=" + upload_id;
+  progress.src = '{{ progressform }}' + upload_id;
 }
 
 function addMissingFormElements() {
@@ -360,7 +360,7 @@ function scalechanged() {
 
 <br />
 
-<form action="/job/newlong2/" enctype="multipart/form-data" method="post" id="longform" onsubmit="return onSubmitForm();">
+<form action="{{ myurl }}" enctype="multipart/form-data" method="post" id="longform" onsubmit="return onSubmitForm();">
 {{form.upload_id}}
 
 <table id="formtable">
@@ -382,7 +382,7 @@ function scalechanged() {
 <tr>
 <!-- first td filled in by rowspan=2 above -->
 <td style="padding-top:2px; vertical-align:top;"> {{ datasrc_file }} File
-<iframe onload="uploadframeloaded()" src="/job/uploadform" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
+<iframe onload="uploadframeloaded()" src="{{ uploadform }}" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
   [Your user agent does not support iframes]
 </iframe>
 <div id="progressholder" style="visibility:hidden; height:0px;">
