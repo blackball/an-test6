@@ -141,7 +141,15 @@ function removeAllChildren(node) {
 	}
 }
 
+function testfunc() {
+  alert('test');
+}
+
 function onLoad() {
+
+  document['testfunc'] = testfunc;
+  //alert('testfunc is ' + testfunc);
+
   fitscols = document.getElementById('fitscols');
 
   //fitsOptions = document.getElementById('fits-options');
@@ -299,7 +307,7 @@ function scalechanged() {
   [Your user agent does not support iframes]
 </iframe>
 <div id="progressholder" style="visibility:hidden;">
-<iframe src="" scrolling="no" frameborder="1" id="progressframe" style="width:25em; height:2em;">
+<iframe src="" scrolling="no" frameborder="0" id="progressframe" style="width:25em; height:3em;">
 </iframe>
 </div>
 </td>

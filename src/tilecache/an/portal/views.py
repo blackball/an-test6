@@ -463,8 +463,11 @@ def submit(request):
 class UploadForm(forms.Form):
 	upload_id = forms.CharField(max_length=32, widget=forms.HiddenInput)
 	file = forms.FileField(widget=forms.FileInput(
-		attrs={'size':'40',}
-		))
+		attrs={'size':'40',
+			   #'onchange':'fileChanged()',
+			   'onfocus':'setDatasourceFile()',
+			   'onclick':'setDatasourceFile()',
+			   }))
 
 
 def printvals(request):

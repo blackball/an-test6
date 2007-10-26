@@ -167,7 +167,8 @@ class Upload(multipart.FileMultipart):
 def handler(req):
 	from mod_python import apache
 	req.content_type = 'text/html'
-	req.write("Upload starting...")
+	req.write('Upload in progress...')
+	#req.write("Upload starting...")
 	try:
 		upload_base_dir = os.environ['UPLOAD_DIR']
 	except KeyError:
@@ -238,7 +239,7 @@ def handler(req):
 				continue
 			log('    ' + str(k) +  '=' + str(v))
 
-	req.write('Upload complete.')
+	req.write('done.')
 	return apache.OK
 
 
