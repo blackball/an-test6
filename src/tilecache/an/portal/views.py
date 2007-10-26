@@ -357,95 +357,6 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
-def newlong(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
-
-    if request.POST:
-        logging.debug('POST values:')
-        for k,v in request.POST.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
-        form = FullForm(request.POST, request.FILES)
-    else:
-        form = FullForm()
-
-    #form.full_clean()
-    if form.is_valid():
-        print 'Yay'
-        request.session['jobvals'] = form.cleaned_data
-        return HttpResponseRedirect('/job/submit')
-
-    if 'jobvals' in request.session:
-        del request.session['jobvals']
-
-    # Note, if there are *ANY* errors, the form will have no 'cleaned_data'
-    # array.
-
-    logging.debug('Errors:')
-    if form._errors:
-        for k,v in form._errors.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
-
-    #print 'scaletype is', form.getclean('scaletype')
-    #scaletype = form['scaletype'].field
-    #widg = scaletype.widget
-    #val = widg.value_from_datadict(request.POST, request.FILES, 'scaletype')
-    #print 'scaletype val is', val
-
-    # Ugh, special rendering for radio checkboxes....
-    scaletype = form['scaletype'].field
-    widg = scaletype.widget
-    attrs = widg.attrs
-    if request.POST:
-        val = widg.value_from_datadict(request.POST, None, 'scaletype')
-    else:
-        val = form.getclean('scaletype') or scaletype.initial
-    render = widg.get_renderer('scaletype', val, attrs)
-    #print 'scaletype val is', val
-    r0 = render[0]
-    r1 = render[1]
-    r0txt = r0.tag()
-    r1txt = r1.tag()
-    #print 'checkbox 0:', r0txt
-    #print 'checkbox 1:', r1txt
-
-    ctxt = {
-        'form' : form,
-        'scale_ul' : r0txt,
-        'scale_ee' : r1txt,
-        }
-    errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr',
-                  'tweakorder', 'xcol', 'ycol', 'scaletype' ]
-    for f in errfields:
-        ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
-
-    if request.POST:
-        #form.is_valid()
-
-        if request.FILES:
-            f1 = request.FILES['file']
-            print 'file is', repr(f1)
-        else:
-            print 'no file uploaded'
-
-        urlerr  = len(form['url'].errors)  and form['url'].errors [0] or None
-        fileerr = len(form['file'].errors) and form['file'].errors[0] or None
-        print 'url error is', urlerr
-        print 'file error is', fileerr
-        val = form['xysrc'].field.clean(request.POST['xysrc'])
-        if val == 'url':
-            ctxt['imgurl_err'] = urlerr
-        elif val == 'file':
-            ctxt['imgfile_err'] = fileerr
-        elif val == 'fitsurl':
-            ctxt['fitsurl_err'] = urlerr
-        elif val == 'fitsfile':
-            ctxt['fitsfile_err'] = fileerr
-
-    t = loader.get_template('portal/newjoblong.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
-
 def submit(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
@@ -587,7 +498,10 @@ def uploadprogress(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
-def newlong2(request):
+# Note, if there are *ANY* errors in the form, it will have no
+# 'cleaned_data' array.
+
+def newlong(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
 

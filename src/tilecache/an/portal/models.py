@@ -51,7 +51,7 @@ class Job(models.Model):
 							 primary_key=True)
 
 	user = models.ForeignKey(User, editable=False)
-	xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
+	#xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
 	url = models.URLField(blank=True)
 
 	# filename of the uploaded file on the user's machine.
