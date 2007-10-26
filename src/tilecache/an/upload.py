@@ -76,14 +76,18 @@ class Upload(multipart.FileMultipart):
             idre = re.compile('^[A-Za-z0-9]+$')
             if not idre.match(id):
                 log('Invalid id "%s"' % id)
-                self.abort()
+                self.error = True
+                self.errorstring = 'Invalid upload ID'
+                return
             self.set_id(id)
             self.write_progress()
             # We will have read the Content-Length header by now...
             key = 'Content-Length'
             if not key in self.headers:
                 log('Content-Length unknown.')
-                self.abort()
+                self.error = True
+                self.errorstring = 'Content-Length unknown'
+                return
             self.contentlength = int(self.headers[key])
 
     def abort(self):
@@ -96,7 +100,9 @@ class Upload(multipart.FileMultipart):
         self.progress = self.filename + '.progress'
         if (os.path.exists(self.progress) or os.path.exists(self.filename)):
             log('Upload ID "%s" already exists.' % id)
-            self.abort()
+            self.error = True
+            self.errorstring = 'Upload ID already exists'
+            return
 
     # Computes the filename to write the data of this "part body" to.
     def get_filename(self, field, filename, currentpart):
@@ -150,6 +156,9 @@ class Upload(multipart.FileMultipart):
             eta = left / avgspeed
             args['eta'] = eta
 
+        if self.errorstring:
+            args['error'] = self.errorstring
+
         tag = '<progress'
         for k,v in args.items():
             tag += ' ' + k + '="' + str(v) + '"'
@@ -163,6 +172,8 @@ class Upload(multipart.FileMultipart):
         os.rename(self.progress + '.tmp', self.progress)
 
 
+
+#def fail(req, up, 
 
 def handler(req):
     from mod_python import apache
@@ -194,6 +205,7 @@ def handler(req):
     if not ok:
         log('Header parsing failed.')
         req.write('upload failed (reading headers)\n' + postfix)
+        #up.write_progress()
         return apache.OK
     
     while up.readmore():
@@ -228,6 +240,7 @@ def handler(req):
     if up.error:
         log('Parser failed.')
         req.write('upload failed (reading body)\n' + postfix)
+        up.write_progress()
         return apache.OK
 
     log('Upload succeeded')
@@ -259,11 +272,17 @@ def handler(req):
 
     if len(filevals) == 0:
         req.write('no such file.\n' + postfix)
+        up.error = True
+        up.errorstring = 'No such file.'
+        up.write_progress()
         return apache.OK
 
     thefile = filevals[0]
     if thefile['length'] == 0:
         req.write('empty file.\n' + postfix)
+        up.error = True
+        up.errorstring = 'Empty file.'
+        up.write_progress()
         return apache.OK
 
     req.write('done.</p>\n')

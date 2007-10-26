@@ -53,6 +53,7 @@ class StreamParser(object):
     data = ''
     blocksize = 4096
     error = False
+    errorstring = None
     needmore = False
     bytes_parsed = 0
 
@@ -105,6 +106,7 @@ class StateMachine(StreamParser):
         if not self.state:
             log('Error: no state')
             self.error = True
+            self.errorstring = 'Server error (no state)'
             return
         self.state.process()
 
@@ -164,6 +166,7 @@ class MessageParser(StateMachine):
             if not self.body:
                 log('No body state found.')
                 self.error = True
+                self.errorstring = 'Server error (no body state)'
             self.set_state(self.body)
             return
         super(MessageParser, self).state_transition(trans)
@@ -301,11 +304,13 @@ class Multipart(MessageParser):
         if not 'Content-Type' in self.headers:
             log('No Content-Type.')
             self.error = True
+            self.errorstring = 'No Content-Type header'
             return None
         ct = self.headers['Content-Type']
         if not ct.startswith('multipart/form-data'):
             log('Content-type is "%s", not multipart/form-data.' % ct)
             self.error = True
+            self.errorstring = 'Content-Type is not multipart/form-data'
             return None
         ctre = re.compile(r'^multipart/form-data; boundary=(?P<boundary>[' + ALPHANUM + r']+)$')
         res = ctre.match(ct)
@@ -368,7 +373,8 @@ class HeaderState(StateMachineState):
         match = linere.match(line)
         if not match:
             log('HeaderState: no match for line "%s"' % line)
-            stream.error = True
+            # Be forgiving...
+            #stream.error = True
             return
         #log('matched: "%s"' % stream.data[match.start(0):match.end(0)])
         self.process_header(match.group('name'), match.group('value'))

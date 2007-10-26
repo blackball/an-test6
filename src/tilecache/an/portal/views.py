@@ -529,15 +529,22 @@ def upload(request):
 def uploadform(request):
     if not request.user.is_authenticated():
         return HttpResponse('not authenticated')
-    if not request.GET:
-        return HttpResponse('no GET')
-    if not 'upload_id' in request.GET:
-        return HttpResponse('no upload_id in GET')
-    id = request.GET['upload_id']
-    if len(id) == 0:
-        return HttpResponse('empty upload_id')
+    #if not request.GET:
+    #    return HttpResponse('no GET')
+    #if not 'upload_id' in request.GET:
+    #    return HttpResponse('no upload_id in GET')
+    #id = request.GET['upload_id']
+    #if len(id) == 0:
+    #    return HttpResponse('empty upload_id')
+
+    id = str(time.time()) + str(random.random())
+    h = sha.new()
+    h.update(id)
+    id = h.hexdigest()
+
     logging.debug("Upload form request.");
-    form = UploadForm(request.GET)
+    #form = UploadForm(request.GET)
+    form = UploadForm({'upload_id': id})
     ctxt = {
         'form' : form,
         }

@@ -15,6 +15,7 @@ div.c {margin-left:auto; margin-right:auto; text-align:center;}
 </style>
 <script type="text/javascript">
 var req;
+var reload = true;
 
 function removeAllChildren(node) {
 	while (node.childNodes.length) {
@@ -57,6 +58,20 @@ function processIt() {
     return true;
   }
   debug('parsing...');
+
+  err = prog[0].getAttribute('error');
+  if (err) {
+    txt = document.getElementById('meter_text');
+	removeAllChildren(txt);
+	txt.appendChild(document.createTextNode(err));
+	fore = document.getElementById('meter_fore');
+    fore.style.width = '0px';
+	back = document.getElementById('meter_back');
+	back.style.background = 'pink';
+    reload = false;
+	return true;
+  }
+
   pct = prog[0].getAttribute('pct');
   debug('pct = ' + pct);
   txt = document.getElementById('meter_text');
@@ -64,13 +79,18 @@ function processIt() {
   txt.appendChild(document.createTextNode('' + pct + '%'));
   fore = document.getElementById('meter_fore');
   fore.style.width = '' + pct + '%';
+  if (pct == 100) {
+    reload = false;
+  }
   return true;
 }
 
 function contentReady() {
   if (processIt()) {
-    // do it again!
-    setTimeout('sendRequest()', 5000)
+    if (reload) {
+	  // do it again!
+      setTimeout('sendRequest()', 5000)
+    }
   }
 }
 
