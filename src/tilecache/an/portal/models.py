@@ -8,127 +8,126 @@ from django.contrib.auth.models import User
 # sqlite>   (paste CREATE TABLE statement)
 
 class Job(models.Model):
-	xysrc_CHOICES = (
-		('url', 'URL'),
-		('file', 'File'),
-		('fitsfile', 'FITS table file'),
-		('fitsurl', 'FITS table URL'),
-		)
 
-	scaleunit_CHOICES = (
-		('arcsecperpix', 'arcseconds per pixel'),
-		('arcminwidth' , 'width of the field (in arcminutes)'), 
-		('degreewidth' , 'width of the field (in degrees)'),
-		('focalmm'     , 'focal length of the lens (for 35mm film equivalent sensor)'),
-		)
+    datasrc_CHOICES = (
+        ('url', 'URL'),
+        ('file', 'File'),
+        )
 
-	scaletype_CHOICES = (
-		('ul', 'lower and upper bounds'),
-		('ev', 'estimate and error bound'),
-		)
+    filetype_CHOICES = (
+        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
+        ('fits', 'FITS table of source locations'),
+        ('text', 'Text list of source locations'),
+        )
 
-	#parity_CHOICES = (
-	#	('pos', 'Positive'),
-	#	('neg', 'Negative'),
-	#	('both', 'Try both'),
-	#	)
+    scaleunit_CHOICES = (
+        ('arcsecperpix', 'arcseconds per pixel'),
+        ('arcminwidth' , 'width of the field (in arcminutes)'), 
+        ('degreewidth' , 'width of the field (in degrees)'),
+        ('focalmm'     , 'focal length of the lens (for 35mm film equivalent sensor)'),
+        )
 
-	parity_CHOICES = (
-		(2, 'Try both simultaneously'),
-		(0, 'Positive'),
-		(1, 'Negative'),
-		)
+    scaletype_CHOICES = (
+        ('ul', 'lower and upper bounds'),
+        ('ev', 'estimate and error bound'),
+        )
 
-	status_CHOICES = (
-		('not-submitted', 'Submission failed'),
-		('queued', 'Queued'),
-		('started', 'Started'),
-		('solved', 'Solved'),
-		('failed', 'Failed')
-		)
+    parity_CHOICES = (
+        (2, 'Try both simultaneously'),
+        (0, 'Positive'),
+        (1, 'Negative'),
+        )
 
-	jobid = models.CharField(max_length=32, unique=True, editable=False,
-							 primary_key=True)
+    status_CHOICES = (
+        ('not-submitted', 'Submission failed'),
+        ('queued', 'Queued'),
+        ('started', 'Started'),
+        ('solved', 'Solved'),
+        ('failed', 'Failed')
+        )
 
-	user = models.ForeignKey(User, editable=False)
-	#xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
-	url = models.URLField(blank=True)
+    jobid = models.CharField(max_length=32, unique=True, editable=False,
+                             primary_key=True)
 
-	# filename of the uploaded file on the user's machine.
-	userfilename = models.CharField(max_length=256, editable=False, blank=True)
-	# content-type of the uploaded file, if it was compressed
-	compressedtype = models.CharField(max_length=64, editable=False, blank=True)
-	# content-type of the uploaded file, after compression
-	filetype = models.CharField(max_length=64, editable=False)
+    user = models.ForeignKey(User, editable=False)
+    #xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
+    url = models.URLField(blank=True)
 
-	# sha-1 hash of the uncompressed file.
-	filehash = models.CharField(max_length=40, editable=False)
+    # filename of the uploaded file on the user's machine.
+    userfilename = models.CharField(max_length=256, editable=False, blank=True)
+    # content-type of the uploaded file, if it was compressed
+    compressedtype = models.CharField(max_length=64, editable=False, blank=True)
+    # content-type of the uploaded file, after compression
+    filetype = models.CharField(max_length=64, editable=False)
 
-	# for FITS tables, the names of the X and Y columns.
-	xcol = models.CharField(max_length=16, blank=True)
-	ycol = models.CharField(max_length=16, blank=True)
+    # sha-1 hash of the uncompressed file.
+    filehash = models.CharField(max_length=40, editable=False)
 
-	# size of the field
-	imagew = models.PositiveIntegerField(editable=False)
-	imageh = models.PositiveIntegerField(editable=False)
+    # for FITS tables, the names of the X and Y columns.
+    xcol = models.CharField(max_length=16, blank=True)
+    ycol = models.CharField(max_length=16, blank=True)
 
-	# scale factor for rendering images; <=1.
-	displayscale = models.DecimalField(max_digits=10, decimal_places=10, editable=False)
-	# size to render images.
-	displayw = models.PositiveIntegerField(editable=False)
-	displayh = models.PositiveIntegerField(editable=False)
+    # size of the field
+    imagew = models.PositiveIntegerField(editable=False)
+    imageh = models.PositiveIntegerField(editable=False)
 
-	#parity = models.CharField(max_length=5, choices=parity_CHOICES,
-	#						  default='both')
-	parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
-											  default=2, radio_admin=True,
-											  core=True)
+    # scale factor for rendering images; <=1.
+    displayscale = models.DecimalField(max_digits=10, decimal_places=10, editable=False)
+    # size to render images.
+    displayw = models.PositiveIntegerField(editable=False)
+    displayh = models.PositiveIntegerField(editable=False)
 
-	# image scale.
-	scaleunits = models.CharField(max_length=16, choices=scaleunit_CHOICES,
-								  default='degreewidth')
-	scaletype  = models.CharField(max_length=3, choices=scaletype_CHOICES,
-								  default='ul')
-	scalelower = models.DecimalField(max_digits=20, decimal_places=10,
-									 default=0.1, blank=True)
-	scaleupper = models.DecimalField(max_digits=20, decimal_places=10,
-									 default=180, blank=True)
-	scaleest   = models.DecimalField(max_digits=20, decimal_places=10, blank=True)
-	scaleerr   = models.DecimalField(max_digits=20, decimal_places=10, blank=True)
+    #parity = models.CharField(max_length=5, choices=parity_CHOICES,
+    #                         default='both')
+    parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
+                                              default=2, radio_admin=True,
+                                              core=True)
 
-	# tweak.
-	tweak = models.BooleanField(default=True)
-	tweakorder = models.PositiveSmallIntegerField(default=2)
+    # image scale.
+    scaleunits = models.CharField(max_length=16, choices=scaleunit_CHOICES,
+                                  default='degreewidth')
+    scaletype  = models.CharField(max_length=3, choices=scaletype_CHOICES,
+                                  default='ul')
+    scalelower = models.DecimalField(max_digits=20, decimal_places=10,
+                                     default=0.1, blank=True)
+    scaleupper = models.DecimalField(max_digits=20, decimal_places=10,
+                                     default=180, blank=True)
+    scaleest   = models.DecimalField(max_digits=20, decimal_places=10, blank=True)
+    scaleerr   = models.DecimalField(max_digits=20, decimal_places=10, blank=True)
 
-	#
-	status = models.CharField(max_length=16, choices=status_CHOICES, editable=False)
-	failurereason = models.CharField(max_length=256, editable=False)
+    # tweak.
+    tweak = models.BooleanField(default=True)
+    tweakorder = models.PositiveSmallIntegerField(default=2)
 
-	# times
-	submittime = models.DateTimeField(editable=False)
-	starttime  = models.DateTimeField(editable=False)
-	finishtime = models.DateTimeField(editable=False)
+    #
+    status = models.CharField(max_length=16, choices=status_CHOICES, editable=False)
+    failurereason = models.CharField(max_length=256, editable=False)
 
-	## These fields don't go in the database.
+    # times
+    submittime = models.DateTimeField(editable=False)
+    starttime  = models.DateTimeField(editable=False)
+    finishtime = models.DateTimeField(editable=False)
 
-	# filename of the uploaded file on the local machine.
-	localfilename = None
+    ## These fields don't go in the database.
+
+    # filename of the uploaded file on the local machine.
+    localfilename = None
 
 
-#	def __init__(self, vals):
-#		super(Job,self).__init__()
-#		xysrc = vals['xysrc']
-#		self.xysrc = xysrc
-#	if xysrc == 'file':
-#		## FIXME
-#		pass
-#	elif xysrc == 'url':
-#		job.url = vals['url']
-#	elif xysrc == 'fitsfile':
-#	elif xysrc == 'fitsurl':
-#		job.url = vals['url']
-#	else:
-#		raise ValueError, 'unknown xysrc'
+#   def __init__(self, vals):
+#       super(Job,self).__init__()
+#       xysrc = vals['xysrc']
+#       self.xysrc = xysrc
+#   if xysrc == 'file':
+#       ## FIXME
+#       pass
+#   elif xysrc == 'url':
+#       job.url = vals['url']
+#   elif xysrc == 'fitsfile':
+#   elif xysrc == 'fitsurl':
+#       job.url = vals['url']
+#   else:
+#       raise ValueError, 'unknown xysrc'
 
 
 

@@ -13,6 +13,7 @@ from an import settings
 import logging
 from an import gmaps_config
 import sha
+import os.path
 
 # Adding a user:
 # > python manage.py shell
@@ -28,6 +29,11 @@ logging.basicConfig(level=logging.DEBUG,
                     filename=logfile,
                     )
 
+try:
+    upload_base_dir = os.environ['UPLOAD_DIR']
+except KeyError:
+    upload_base_dir = '/tmp'
+
 class LoginForm(forms.Form):
     username = forms.EmailField()
     password = forms.CharField(max_length=100, widget=forms.PasswordInput)
@@ -41,6 +47,28 @@ class ForgivingURLField(forms.URLField):
             value = value[7:]
         return super(ForgivingURLField, self).clean(value)
 
+uploadid_re = re.compile('[A-Za-z0-9]{%i}' % (sha.digest_size*2))
+
+class UploadId(object):
+    localpath = None
+    id = None
+    def __init__(self, id, path):
+        self.id = id
+        self.localpath = path
+    def __str__(self):
+        #return ('<UploadId: id=%s>' % self.id)
+        return self.id
+
+class UploadIdField(forms.RegexField):
+    def clean(self, value):
+        val = super(UploadIdField, self).clean(value)
+        if not val:
+            return val
+        path = upload_base_dir + '/' + val
+        if not os.path.exists(path):
+            raise ValidationError, 'No file for that upload id'
+        return UploadId(val, path)
+
 class SimpleURLForm(forms.Form):
     url = ForgivingURLField(initial='http://',
                             widget=forms.TextInput(attrs={'size':'50'}))
@@ -50,46 +78,22 @@ class SimpleFileForm(forms.Form):
 
 class FullForm(forms.Form):
 
-    datasrc_CHOICES = (
-        ('url', 'URL'),
-        ('file', 'File'),
-        )
-
-    filetype_CHOICES = (
-        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
-        ('fits', 'FITS table of source locations'),
-        ('text', 'Text list of source locations'),
-        )
-
-    datasrc = forms.ChoiceField(choices=datasrc_CHOICES,
+    datasrc = forms.ChoiceField(choices=Job.datasrc_CHOICES,
                                 initial='url',
                                 widget=forms.RadioSelect(
         attrs={'id':'datasrc',
-               'onclick':'datasourceChanged()'}),
-                                # HACK
-                                required=False
-                                )
+               'onclick':'datasourceChanged()'}))
 
-    filetype = forms.ChoiceField(choices=filetype_CHOICES,
+    filetype = forms.ChoiceField(choices=Job.filetype_CHOICES,
                                  initial='image',
                                  widget=forms.Select(
         attrs={'onchange':'filetypeChanged()',
-               'onkeyup':'filetypeChanged()'}),
-                                 # HACK
-                                 required=False
-                                 )
+               'onkeyup':'filetypeChanged()'}))
 
-    upload_id = forms.CharField(widget=forms.HiddenInput(),
-                                required=False)
+    upload_id = UploadIdField(uploadid_re,
+                              widget=forms.HiddenInput(),
+                              required=False)
 
-    xysrc = forms.ChoiceField(choices=Job.xysrc_CHOICES,
-                              initial='url',
-                              widget=forms.Select(
-        attrs={'onchange':'sourceChanged()',
-               'onkeyup':'sourceChanged()'}),
-                              # HACK
-                              required=False
-                              )
     scaleunits = forms.ChoiceField(choices=Job.scaleunit_CHOICES,
                                    widget=forms.Select(
         attrs={'onchange':'unitsChanged()',
@@ -180,25 +184,27 @@ class FullForm(forms.Form):
 
     def clean(self):
         """Take a shower"""
-        xysrc = self.getclean('xysrc')
-        print 'clean() called; xysrc is', xysrc
-        if (xysrc == 'url') or (xysrc == 'fitsurl'):
-            urlerr = self.geterror('url')
-            urlval = self.getclean('url')
-            print 'url error:', urlerr
-            print 'url value:', urlval
-            if urlerr is None:
-                if urlval is None or (len(urlval) == 0):
-                    self._errors['url'] = ['URL is required']
-        elif (xysrc == 'file') or (xysrc == 'fitsfile'):
-            if not self.geterror('file'):
-                file = self.getclean('file')
-                print 'file is',repr(file)
-                print 'file in self.files is',repr('file' in self.files and self.files['file'] or None)
-                if not file:
-                    self._errors['file'] = ['You must upload a file.']
+        src = self.getclean('datasrc')
+        if src == 'url':
+            if self.geterror('file'):
+                del self._errors['file']
+            url = self.getclean('url')
+            logging.debug('url is ' + str(url))
+            if not (url and len(url)) and not self.geterror('url'):
+                self.errors['url'] = ['URL is required']
 
-        if (xysrc == 'fitsfile') or (xysrc == 'fitsurl'):
+        elif src == 'file':
+            if self.geterror('url'):
+                del self._errors['url']
+            fil = self.getclean('file')
+            uploadid = self.getclean('upload_id')
+            # FIXME - umm... little more checking here :)
+            logging.debug('file is ' + str(fil) + ', upload id is ' + str(uploadid))
+            if not (fil or uploadid):
+                self._errors['file'] = ['You must upload a file']
+
+        filetype = self.getclean('filetype')
+        if filetype == 'fits':
             xcol = self.getclean('xcol')
             ycol = self.getclean('ycol')
             fitscol = re.compile('^[\w_-]+$')
@@ -219,7 +225,7 @@ class FullForm(forms.Form):
             if not order:
                 self._errors['tweakorder'] = ['Tweak order is required if tweak is enabled.']
 
-        print 'form clean(): scaletype is', self.getclean('scaletype')
+        logging.debug('form clean(): scaletype is ' + self.getclean('scaletype'))
         scaletype = self.getclean('scaletype')
         if scaletype == 'ul':
             if not self.geterror('scalelower') and not self.geterror('scaleupper'):
