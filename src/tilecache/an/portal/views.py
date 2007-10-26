@@ -580,6 +580,6 @@ def newlong(request):
         else:
             print 'no file uploaded'
 
-    t = loader.get_template('portal/newjoblong2.html')
+    t = loader.get_template('portal/newjoblong.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
