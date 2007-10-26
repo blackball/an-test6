@@ -80,7 +80,6 @@ function uploadSucceeded() {
 function uploadFailed() {
   //alert('upload failed.');
   var up = document.getElementById('uploadframe');
-  //up.location = '/job/uploadform?upload_id={{upload_id}}';
   up.src = '/job/uploadform?upload_id={{upload_id}}';
 }
 

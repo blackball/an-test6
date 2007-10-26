@@ -529,13 +529,6 @@ def upload(request):
 def uploadform(request):
     if not request.user.is_authenticated():
         return HttpResponse('not authenticated')
-    #if not request.GET:
-    #    return HttpResponse('no GET')
-    #if not 'upload_id' in request.GET:
-    #    return HttpResponse('no upload_id in GET')
-    #id = request.GET['upload_id']
-    #if len(id) == 0:
-    #    return HttpResponse('empty upload_id')
 
     id = str(time.time()) + str(random.random())
     h = sha.new()
@@ -543,7 +536,6 @@ def uploadform(request):
     id = h.hexdigest()
 
     logging.debug("Upload form request.");
-    #form = UploadForm(request.GET)
     form = UploadForm({'upload_id': id})
     ctxt = {
         'form' : form,
@@ -564,7 +556,7 @@ def uploadprogress(request):
     printvals(request)
 
     if 'xml' in request.GET:
-        # HACK
+        # HACK - this path should be a config option!
         f = open('/tmp/%s.progress' % id)
         if not f:
             return HttpResponse('no such id')
@@ -635,7 +627,6 @@ def newlong2(request):
     r0txt = r0.tag()
     r1txt = r1.tag()
 
-
     datasrc = form['datasrc'].field
     widg = datasrc.widget
     attrs = widg.attrs
@@ -647,14 +638,8 @@ def newlong2(request):
     ds0 = render[0].tag()
     ds1 = render[1].tag()
 
-    id = str(time.time()) + str(random.random())
-    h = sha.new()
-    h.update(id)
-    id = h.hexdigest()
-
     ctxt = {
         'form' : form,
-        'upload_id' : id,
         'scale_ul' : r0txt,
         'scale_ee' : r1txt,
         'datasrc_url' : ds0,
