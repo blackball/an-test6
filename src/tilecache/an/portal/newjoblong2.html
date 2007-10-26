@@ -103,6 +103,8 @@ function uploadframeloaded() {
   var doc = getUploadDoc();
   if (doc.getElementById('id_file')) {
     upload_id = form.upload_id.value;
+	// set the main form's upload_id hidden field...
+	document.forms.longform.upload_id.value = upload_id;
     form.file.addEventListener('focus', setDatasourceFile, true);
     form.addEventListener('submit', onSubmitUpload, true);
   }
@@ -359,6 +361,7 @@ function scalechanged() {
 <br />
 
 <form action="/job/newlong2/" enctype="multipart/form-data" method="post" id="longform" onsubmit="return onSubmitForm();">
+{{form.upload_id}}
 
 <table id="formtable">
 

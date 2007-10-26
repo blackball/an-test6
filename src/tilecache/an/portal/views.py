@@ -79,6 +79,8 @@ class FullForm(forms.Form):
                                  required=False
                                  )
 
+    upload_id = forms.CharField(widget=forms.HiddenInput(),
+                                required=False)
 
     xysrc = forms.ChoiceField(choices=Job.xysrc_CHOICES,
                               initial='url',
