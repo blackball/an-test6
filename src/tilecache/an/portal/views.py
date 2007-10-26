@@ -48,7 +48,7 @@ class ForgivingURLField(forms.URLField):
             value = value[7:]
         return super(ForgivingURLField, self).clean(value)
 
-uploadid_re = re.compile('[A-Za-z0-9]{%i}' % (sha.digest_size*2))
+uploadid_re = re.compile('[A-Za-z0-9]{%i}$' % (sha.digest_size*2))
 
 class UploadId(object):
     localpath = None
@@ -65,6 +65,8 @@ class UploadIdField(forms.RegexField):
         val = super(UploadIdField, self).clean(value)
         if not val:
             return val
+        if not uploadid_re.match(val):
+            raise ValidationError('Invalid upload ID')
         path = upload_base_dir + '/' + val
         if not os.path.exists(path):
             raise ValidationError('No file for that upload id')

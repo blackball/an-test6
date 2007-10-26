@@ -1,5 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core import validators
+import sha
+import re
+import time
+import random
+import os.path
+import logging
 
 # To install a new database table:
 # > python manage.py sql portal
@@ -49,8 +56,12 @@ class Job(models.Model):
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
 
+    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
+
+    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+
     user = models.ForeignKey(User, editable=False)
-    #xysrc = models.CharField(max_length=16, choices=xysrc_CHOICES)
+
     url = models.URLField(blank=True)
 
     # filename of the uploaded file on the user's machine.
@@ -77,8 +88,6 @@ class Job(models.Model):
     displayw = models.PositiveIntegerField(editable=False)
     displayh = models.PositiveIntegerField(editable=False)
 
-    #parity = models.CharField(max_length=5, choices=parity_CHOICES,
-    #                         default='both')
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
                                               default=2, radio_admin=True,
                                               core=True)

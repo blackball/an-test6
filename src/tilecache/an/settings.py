@@ -85,6 +85,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
 	'django.contrib.admin',
 	'an.tile',
+	'an.upload',
 	'an.portal',
 )
 
