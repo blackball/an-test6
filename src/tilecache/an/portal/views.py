@@ -1,5 +1,6 @@
 from an.portal.models import Job
 from django import newforms as forms
+from django.newforms import ValidationError
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.template import Context, RequestContext, loader
@@ -66,7 +67,7 @@ class UploadIdField(forms.RegexField):
             return val
         path = upload_base_dir + '/' + val
         if not os.path.exists(path):
-            raise ValidationError, 'No file for that upload id'
+            raise ValidationError('No file for that upload id')
         return UploadId(val, path)
 
 class SimpleURLForm(forms.Form):
