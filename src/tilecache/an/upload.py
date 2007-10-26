@@ -169,7 +169,7 @@ def handler(req):
     req.content_type = 'text/html'
     req.write('<html><head></head><body>')
     req.write('<p>Upload in progress...\n')
-    #req.write("Upload starting...")
+    postfix = '</p></body></html>'
     try:
         upload_base_dir = os.environ['UPLOAD_DIR']
     except KeyError:
@@ -183,6 +183,7 @@ def handler(req):
     up.set_basedir(upload_base_dir)
     up.set_id_field(upload_id_field)
 
+    # Re-format the input headers to pass to the parser...
     hdr = ''
     for k,v in req.headers_in.items():
         hdr += str(k) + ': ' + str(v) + '\r\n'
@@ -192,7 +193,9 @@ def handler(req):
     ok = up.moreinput(hdr)
     if not ok:
         log('Header parsing failed.')
-
+        req.write('upload failed (reading headers)\n' + postfix)
+        return apache.OK
+    
     while up.readmore():
          up.write_progress()
 
@@ -224,21 +227,25 @@ def handler(req):
 
     if up.error:
         log('Parser failed.')
-        up.abort()
+        req.write('upload failed (reading body)\n' + postfix)
+        return apache.OK
 
     log('Upload succeeded')
-    log('Message headers:')
-    if up.headers:
-        for k,v in up.headers.items():
-            log('       ' + str(k) +  '=' + str(v))
+    #log('Message headers:')
+    #if up.headers:
+    #    for k,v in up.headers.items():
+    #        log('       ' + str(k) +  '=' + str(v))
     for p in up.parts:
         log('  Part:')
         for k,v in p.items():
             if k == 'data':
-                if ('field' in p) and (p['field'] == 'upload_id'):
+                if ('field' in p) and (p['field'] == upload_id_field):
                     log('    ' + str(k) +  '=' + str(v))
                 continue
             log('    ' + str(k) +  '=' + str(v))
+
+    #for p in up.parts:
+        
 
     req.write('done.</p>\n')
     req.write('<div style="visibility:hidden;" id="upload-succeeded" />')
