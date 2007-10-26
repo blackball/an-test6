@@ -58,26 +58,23 @@ var fitsOptions;
 
 var upload_id;
 
-var main_form_submitted = false;
+/**
+  It seems that when you call form.submit(), the form's
+  onsubmit() event doesn't get triggered.  This is pretty handy
+  for us, because is lets us distinguish between user- and
+  program-driven submits.
+*/
 
 function onSubmitUpload() {
-  alert('onSubmitUpload()');
-  if (!main_form_submitted) {
-    alert('submitting main form instead...');
-    //enableUploadProgress();
-	//document.forms.longform.submit();
-	onSubmitForm();
-    return false;
-  }
-  alert('onSubmitUpload() returning true.');
+  //alert('onSubmitUpload()');
+  enableUploadProgress();
   return true;
 }
 
 function uploadSucceeded() {
-/*
-  alert('upload succeeded: main form ' +
-    (main_form_submitted ? '' : 'not ') + 'submitted');
-*/
+  //alert('upload succeeded: submitting main form.');
+  addMissingFormElements();
+  document.forms.longform.submit();
 }
 
 function uploadFinished() {
@@ -86,7 +83,7 @@ function uploadFinished() {
     //alert('upload succeeded')
 	uploadSucceeded();
   } else {
-    alert('upload failed')
+    //alert('upload failed')
   }
 }
 
@@ -94,7 +91,6 @@ function uploadframeloaded() {
   var form = getUploadForm();
   if (!form) {
     uploadFinished();
-	//alert('no upload form');
 	return;
   }
   var doc = getUploadDoc();
@@ -102,14 +98,11 @@ function uploadframeloaded() {
     upload_id = form.upload_id.value;
     form.file.addEventListener('focus', setDatasourceFile, true);
     form.addEventListener('submit', onSubmitUpload, true);
-  } else {
-    alert('no file child');
   }
 }
 
 function submitUploadForm() {
   var uploadform = getUploadForm();
-  //alert('upload form is ' + uploadform);
   if (uploadform) {
     uploadform.submit();
   }
@@ -120,22 +113,14 @@ function getUploadDoc() {
 }
 
 function getUploadForm() {
-  var doc = document.getElementById('uploadframe').contentDocument;
+  var doc = getUploadDoc();
   return doc.getElementById('uploadform');
-  /*
-  var forms = doc.forms;
-  if ('uploadform' in forms) {
-    return forms.uploadform;
-  }
-  return false;
-  */
 }
 
 function enableUploadProgress() {
   var holder = document.getElementById('progressholder');
   holder.style.visibility = 'visible';
   var progress = document.getElementById('progressframe');
-  //var id = getUploadForm().upload_id.value;
   progress.src = "/job/uploadprogress?upload_id=" + upload_id;
 }
 
@@ -161,27 +146,22 @@ function addMissingFormElements() {
 }
 
 function onSubmitForm() {
-
-  alert('onSubmitForm()');
-
-  main_form_submitted = true;
-  if (document.getElementById('datasrc_1').checked) {
-    alert('submitting upload form...');
-    enableUploadProgress();
+  //alert('onSubmitForm()');
+  if (isDatasourceFile()) {
+    //alert('submitting upload form instead.');
+	onSubmitUpload();
     submitUploadForm();
+	return false;
   }
 
-  // FIXME - check if upload succeeded before proceeding!
-
-  // DEBUG
-  //return false;
-
+  // URL submissions.
   addMissingFormElements();
-
-  alert('onSubmitForm() returning true.');
-
   return true;
 }  
+
+function isDatasourceFile() {
+  return document.getElementById('datasrc_1').checked;
+}
 
 function datasourceChanged() {
 }
@@ -227,9 +207,6 @@ function removeAllChildren(node) {
 }
 
 function onLoad() {
-
-dump('hello world!\n');
-
   fitscols = document.getElementById('fitscols');
 
   //fitsOptions = document.getElementById('fits-options');
@@ -373,7 +350,7 @@ function scalechanged() {
 
 <br />
 
-<form enctype="multipart/form-data" method="post" id="longform" onsubmit="return onSubmitForm();">
+<form action="/job/newlong2" enctype="multipart/form-data" method="post" id="longform" onsubmit="return onSubmitForm();">
 
 <table id="formtable">
 
@@ -381,7 +358,14 @@ function scalechanged() {
 <td class="l" rowspan="2" valign="top"> Data source: 
 <div class="explain">You can reference a URL <br />or upload a file.</div>
 </td>
-<td> {{ datasrc_url }} URL {{ form.url }} </td>
+<td>
+{% if url_err %}
+<span class="err" style="margin-left:4em;">{{ url_err }}</span>
+<br />
+{% endif %}
+{{ datasrc_url }} URL
+{{ form.url }}
+</td>
 </tr>
 
 <tr>

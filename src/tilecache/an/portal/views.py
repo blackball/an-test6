@@ -654,7 +654,8 @@ def newlong2(request):
         'datasrc_file' : ds1,
         }
     errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr',
-                  'tweakorder', 'xcol', 'ycol', 'scaletype', 'datasrc' ]
+                  'tweakorder', 'xcol', 'ycol', 'scaletype', 'datasrc',
+                  'url' ]
     for f in errfields:
         ctxt[f + '_err'] = len(form[f].errors) and form[f].errors[0] or None
 
