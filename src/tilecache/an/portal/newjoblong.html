@@ -131,7 +131,13 @@ function enableUploadProgress() {
   holder.style.visibility = 'visible';
   var progress = document.getElementById('progressframe');
   holder.style.height = progress.height;
-  progress.src = '{{ progressform }}' + upload_id;
+
+  {% if inline_progress %}
+    startProgressMeter(upload_id);
+  {% else %}
+    progress.src = '{{ progressform }}' + upload_id;
+  {% endif %}
+
 }
 
 function addMissingFormElements() {
@@ -333,6 +339,9 @@ function scalechanged() {
   scaletxt.appendChild(document.createTextNode(txt));
 }
 
+{% if inline_progress %}
+{{ progress_meter_js }}
+{% endif %}
 
 </script>
 {% endblock javascript %}
@@ -386,8 +395,17 @@ function scalechanged() {
   [Your user agent does not support iframes]
 </iframe>
 <div id="progressholder" style="visibility:hidden; height:0px;">
-<iframe src="" scrolling="no" frameborder="0" id="progressframe" style="width:25em; height:3em;">
-</iframe>
+
+{% if inline_progress %}
+  <div id="progressframe" style="width:25em; height:3em;">
+  {{ progress_meter_html }}
+  </div>
+{% else %}
+  <iframe src="" scrolling="no" frameborder="0" id="progressframe" style="width:25em; height:3em;" >
+  [no iframes for you!]
+  </iframe>
+{% endif %}
+
 </div>
 </td>
 </tr>

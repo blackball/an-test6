@@ -36,15 +36,14 @@ class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(
         attrs={'size':'40'}))
 
-xmlurl = '/upload/xml?upload_id='
+xmlurl = '/upload/xml/?upload_id='
 
 def get_ajax_html(name=''):
     ctxt = {
         'name' : name,
         }
     t = loader.get_template('upload/progress-ajax-meter.html')
-    c = RequestContext(request, ctxt)
-    return t.render(c)
+    return t.render(Context(ctxt))
 
 def get_ajax_javascript(name=''):
     ctxt = {
@@ -52,8 +51,7 @@ def get_ajax_javascript(name=''):
         'xmlurl' : xmlurl,
         }
     t = loader.get_template('upload/progress-ajax-meter.js')
-    c = RequestContext(request, ctxt)
-    return t.render(c)
+    return t.render(Context(ctxt))
 
 def progress_ajax(request):
     if not request.user.is_authenticated():
@@ -94,6 +92,7 @@ def uploadform(request):
     return HttpResponse(t.render(c))
 
 def progress_xml(request):
+    logging.debug('XML request')
     if not request.user.is_authenticated():
         return HttpResponse('not authenticated')
     if not request.GET:
@@ -101,6 +100,7 @@ def progress_xml(request):
     if not 'upload_id' in request.GET:
         return HttpResponse('no upload_id')
     id = request.GET['upload_id']
+    logging.debug('XML request for id ' + id)
     ups = UploadedFile.objects.all().filter(uploadid=id)
     if not len(ups):
         return HttpResponse('no such id')

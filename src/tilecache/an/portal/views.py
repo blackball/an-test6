@@ -9,6 +9,7 @@ from django.newforms import widgets
 from an.portal.models import Job
 from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
+import an.upload as upload
 
 import re
 import time
@@ -422,8 +423,18 @@ def newlong(request):
     ds0 = render[0].tag()
     ds1 = render[1].tag()
 
-    uploadform = '/upload/form'
-    progressform = '/upload/progress_ajax?upload_id='
+    uploadform = '/upload/form/'
+
+    inline = False
+
+    if inline:
+        progress_meter_html = upload.views.get_ajax_html()
+        progress_meter_js   = upload.views.get_ajax_javascript()
+        progressform = ''
+    else:
+        progress_meter_html = ''
+        progress_meter_js   = ''
+        progressform = '/upload/progress_ajax/?upload_id='
 
     ctxt = {
         'form' : form,
@@ -434,7 +445,11 @@ def newlong(request):
         'scale_ee' : r1txt,
         'datasrc_url' : ds0,
         'datasrc_file' : ds1,
+        'progress_meter_html' : progress_meter_html,
+        'progress_meter_js' :progress_meter_js,
+        'inline_progress' : inline,
         }
+
     errfields = [ 'scalelower', 'scaleupper', 'scaleest', 'scaleerr',
                   'tweakorder', 'xcol', 'ycol', 'scaletype', 'datasrc',
                   'url' ]

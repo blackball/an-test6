@@ -1,42 +1,68 @@
-var req{{name}};
-var reload{{name}} = true;
-var period{{name}} = 2000;
-var failed{{name}} = false;
-var succeeded{{name}} = false;
-var id{{name}} = '';
+var pm_req{{name}};
+var pm_reload{{name}} = true;
+var pm_period{{name}} = 2000;
+var pm_failed{{name}} = false;
+var pm_succeeded{{name}} = false;
+var pm_id{{name}} = '';
+
+function stopProgressMeter{{name}}() {
+	pm_reload{{name}} = false;
+}
 
 function startProgressMeter{{name}}(id) {
-	id{{name}} = id;
-	reload{{name}} = true;
-	failed{{name}} = false;
-	succeeded{{name}} = false;
-	sendRequest{{name}}();
+	//alert('StartProgressMeter(' + id + ')');
+	pm_id{{name}} = id;
+	pm_reload{{name}} = true;
+	pm_failed{{name}} = false;
+	pm_succeeded{{name}} = false;
+	pm_sendRequest{{name}}();
 }
 
-function sendRequest{{name}}() {
-	req = new XMLHttpRequest();
-	req.onreadystatechange = contentReady{{name}};
-	req.open("GET", '{{ xmlurl }}' + id{{name}}, true);
-	req.send("");
+function pm_sendRequest{{name}}() {
+	pm_req{{name}} = new XMLHttpRequest();
+	pm_req{{name}}.onreadystatechange = pm_contentReady{{name}};
+	var url = '{{ xmlurl }}' + pm_id{{name}}
+	//alert('Open ' + url);
+	pm_req{{name}}.open('GET', url, true);
+	pm_req{{name}}.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
+	//alert('send()');
+	pm_req{{name}}.send('');
+	//pm_req{{name}}.send();
 }
 
-function processIt{{name}}() {
-	var req = req{{name}}
-	if (!req) {
+function pm_processIt{{name}}() {
+	//alert('Processing response.');
+	if (!pm_req{{name}}) {
+		//alert('no req');
 		return false;
 	}
-	if (req.readyState != 4) {
+	//alert('req state: ' + pm_req{{name}}.readyState);
+	if (pm_req{{name}}.readyState != 4) {
+		if (pm_req{{name}}.readyState == 1) {
+			//alert('send()');
+			//pm_req{{name}}.send();
+			//pm_req{{name}}.send('');
+		}
+		if (pm_req{{name}}.readyState == 2) {
+			//alert('req stat 2, status: ' + pm_req{{name}}.status + ', ' + pm_req{{name}}.statusText);
+		} else {
+			//alert('req state: ' + pm_req{{name}}.readyState);
+		}
 		return false;
 	}
-	if (req.status != 200) {
+	if (pm_req{{name}}.status != 200) {
+		alert('req status ' + pm_req{{name}}.status);
 		return true;
 	}
-	xml = req.responseXML;
+	xml = pm_req{{name}}.responseXML;
 	if (!xml) {
+		alert('not xml');
 		return true;
 	}
+	//alert('got xml');
 	prog = xml.getElementsByTagName('progress');
 	if (!prog.length) {
+		alert('no progress');
 		return true;
 	}
 
@@ -52,8 +78,10 @@ function processIt{{name}}() {
 		fore.style.width = '0px';
 		back = document.getElementById('meter_back{{name}}');
 		back.style.background = 'pink';
-		reload{{name}} = false;
-		failed{{name}} = true;
+		pm_reload{{name}} = false;
+		pm_failed{{name}} = true;
+		//alert('got error');
+		alert('error ' + err);
 		return true;
 	}
 
@@ -66,17 +94,18 @@ function processIt{{name}}() {
 	fore = document.getElementById('meter_fore{{name}}');
 	fore.style.width = '' + pct + '%';
 	if (pct == 100) {
-		reload{{name}} = false;
-		succeeded{{name}} = false;
+		pm_reload{{name}} = false;
+		pm_succeeded{{name}} = false;
 	}
+	alert('pct ' + pct);
 	return true;
 }
 
-function contentReady{{name}}() {
-	if (processIt{{name}}()) {
-		if (reload{{name}}) {
+function pm_contentReady{{name}}() {
+	if (pm_processIt{{name}}()) {
+		if (pm_reload{{name}}) {
 			// do it again!
-			setTimeout('sendRequest{{name}}()', period{{name}});
+			setTimeout('pm_sendRequest{{name}}()', pm_period{{name}});
 		}
 	}
 }
