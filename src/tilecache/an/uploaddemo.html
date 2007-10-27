@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html 
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+<link rel="shortcut icon" type="image/x-icon" href="/anmedia/favicon.ico" />
+<link rel="icon" type="image/png" href="/anmedia/favicon.png" />
+
+<script type="text/javascript">
+var upload_id;
+
+function onSubmitUpload() {
+  //alert('onSubmitUpload()');
+  enableUploadProgress();
+  return true;
+}
+
+function uploadSucceeded() {
+  //alert('upload succeeded: submitting main form.');
+  // document.forms.longform.submit();
+}
+
+function uploadFailed() {
+  //alert('upload failed.');
+  var up = document.getElementById('uploadframe');
+  up.src = '{{ uploadform }}';
+}
+
+function uploadFinished() {
+  var doc = getUploadDoc();
+  if (doc.getElementById('upload-succeeded')) {
+    //alert('upload succeeded')
+	uploadSucceeded();
+  } else {
+    //alert('upload failed')
+	uploadFailed();
+  }
+}
+
+function uploadframeloaded() {
+  var form = getUploadForm();
+  if (!form) {
+    uploadFinished();
+	return;
+  }
+  var doc = getUploadDoc();
+  if (doc.getElementById('id_file')) {
+    upload_id = form.upload_id.value;
+    form.addEventListener('submit', onSubmitUpload, true);
+  }
+}
+
+function submitUploadForm() {
+  var uploadform = getUploadForm();
+  if (uploadform) {
+    uploadform.submit();
+  }
+}
+
+function getUploadDoc() {
+  return document.getElementById('uploadframe').contentDocument;
+}
+
+function getUploadForm() {
+  var doc = getUploadDoc();
+  return doc.getElementById('uploadform');
+}
+
+function enableUploadProgress() {
+  var holder = document.getElementById('progressholder');
+  //holder.style.visibility = 'visible';
+  var progress = document.getElementById('progressframe');
+  //holder.style.height = progress.height;
+
+  {% if inline_progress %}
+    startProgressMeter(upload_id);
+  {% else %}
+    progress.src = '{{ progressform }}' + upload_id;
+  {% endif %}
+}
+
+function removeAllChildren(node) {
+	while (node.childNodes.length) {
+		node.removeChild(node.childNodes[0]);
+	}
+}
+
+function onLoad() {
+}
+
+{% if inline_progress %}
+{{ progress_meter_js }}
+{% endif %}
+
+</script>
+
+</head>
+
+<body onload="onLoad()">
+
+<iframe onload="uploadframeloaded()" src="{{ uploadform }}" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
+  [Your user agent does not support iframes]
+</iframe>
+
+<div id="progressholder">
+
+{% comment %}
+ style="visibility:hidden; height:0px;">
+{% endcomment %}
+
+{% if inline_progress %}
+  <div id="progressframe" style="width:25em; height:3em;">
+  {{ progress_meter_html }}
+  </div>
+{% else %}
+  <iframe src="" scrolling="no" frameborder="0" id="progressframe" style="width:25em; height:3em;" >
+  [no iframes for you!]
+  </iframe>
+{% endif %}
+</div>
+
+</body>
+</html>

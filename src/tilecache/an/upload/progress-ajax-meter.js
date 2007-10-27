@@ -80,8 +80,7 @@ function pm_processIt{{name}}() {
 		back.style.background = 'pink';
 		pm_reload{{name}} = false;
 		pm_failed{{name}} = true;
-		//alert('got error');
-		alert('error ' + err);
+		//alert('error ' + err);
 		return true;
 	}
 
@@ -97,7 +96,7 @@ function pm_processIt{{name}}() {
 		pm_reload{{name}} = false;
 		pm_succeeded{{name}} = false;
 	}
-	alert('pct ' + pct);
+	//alert('pct ' + pct);
 	return true;
 }
 
