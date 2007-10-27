@@ -24,7 +24,7 @@ class UploadIdField(forms.CharField):
             return val
         ups = UploadedFile.objects.all().filter(uploadid=val)
         if not ups or len(ups)==0:
-            raise ValidationError('Invalid upload ID')
+            raise ValidationError('That upload ID wasn\'t uploaded')
         up = ups[0]
         path = up.get_filename()
         if not os.path.exists(path):

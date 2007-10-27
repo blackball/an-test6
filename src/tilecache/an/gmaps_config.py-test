@@ -15,3 +15,5 @@ imgdir = "/data2/apod-solves"
 
 tempdir = "/tmp"
 
+siteid = 'test'
+jobdir = '/home/gmaps/test/web-data'

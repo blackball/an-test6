@@ -12,14 +12,14 @@ from an.upload.views  import UploadIdField
 import an.upload as upload
 
 import quads.image2pnm as image2pnm
+from an import gmaps_config
+from an import settings
 
+import urllib
 import re
 import time
 import random
-from an import settings
-#import sys
 import logging
-from an import gmaps_config
 import sha
 import os.path
 
@@ -33,7 +33,8 @@ import os.path
 
 logfile = gmaps_config.portal_logfile
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s %(message)s',
+                    #format='%(asctime)s %(levelname)s %(message)s',
+                    format='%(message)s',
                     filename=logfile,
                     )
 
@@ -168,10 +169,15 @@ class FullForm(forms.Form):
         if src == 'url':
             if self.geterror('file'):
                 del self._errors['file']
+            if self.geterror('upload_id'):
+                del self._errors['upload_id']
             url = self.getclean('url')
             logging.debug('url is ' + str(url))
-            if not (url and len(url)) and not self.geterror('url'):
-                self.errors['url'] = ['URL is required']
+            if not self.geterror('url'):
+                if not (url and len(url)):
+                    self._errors['url'] = ['URL is required']
+                elif not url.startswith('http://') or url.startswith('ftp://'):
+                    self._errors['url'] = ['Only http and ftp URLs are supported']
 
         elif src == 'file':
             if self.geterror('url'):
@@ -205,7 +211,7 @@ class FullForm(forms.Form):
             if not order:
                 self._errors['tweakorder'] = ['Tweak order is required if tweak is enabled.']
 
-        logging.debug('form clean(): scaletype is ' + self.getclean('scaletype'))
+        logging.debug('form clean(): scaletype is %s' % self.getclean('scaletype'))
         scaletype = self.getclean('scaletype')
         if scaletype == 'ul':
             if not self.geterror('scalelower') and not self.geterror('scaleupper'):
@@ -346,17 +352,52 @@ def newfile(request):
 def submit(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
+    job = request.session['job']
+    if not job:
+        return HttpResponse('no job in session')
+        
+    #logging.debug('submit: Job values:')
+    #for k,v in request.session['jobvals'].items():
+    #    logging.debug('  %s = %s' % (str(k), str(v)))
+    #form = FullForm(request.POST, request.FILES)
+    #if not form.is_valid():
+    #    return HttpResponseRedirect('/job/newlong')
+    #job = Job(form.cleaned_data)
 
-    logging.debug('Job values:')
-    for k,v in request.session['jobvals'].items():
-        logging.debug('  %s = %s' % (str(k), str(v)))
+    logging.debug('submit(): Job is: ' + str(job))
 
-    txt = "<pre>Job values:\n"
-    for k,v in request.session['jobvals'].items():
-        txt += '  ' + str(k) + ' = ' + str(v) + '\n'
-    txt += "</pre>"
+    #job.set_jobid(Job.generate_jobid())
+    job.create_job_dir()
+    origfile = job.get_orig_file()
 
-    return HttpResponse(txt)
+    logging.debug('Job: ' + str(job))
+
+    if job.datasrc == 'url':
+        # download the URL.
+        #f = urllib.urlopen(url, 
+        logging.debug('Retrieving URL...')
+        f = urllib.urlretrieve(job.url, origfile)
+
+    elif job.datasrc == 'file':
+        # move the uploaded file.
+        #uid = job.uploaded
+        #if not uid:
+        #return HttpResponse('no upload_id')
+        tempfile = job.uploaded.get_filename()
+        logging.debug('upload_id is ' + uid + ', tempfile is ' + tempfile)
+        rename(tempfile, origfile)
+
+    else:
+        return HttpResponse('no datasrc')
+
+    job.save()
+
+    res = HttpResponse()
+    res['Content-Type'] = 'text/plain'
+    res.write('Job: ' + str(job))
+    return res
+#txt = "<pre>Job: " + str(job) + "</pre>"
+#return HttpResponse(txt)
 
 def printvals(request):
     if request.POST:
@@ -389,7 +430,35 @@ def newlong(request):
 
     if form.is_valid():
         print 'Yay'
-        request.session['jobvals'] = form.cleaned_data
+        #request.session['jobvals'] = form.cleaned_data
+        job = Job(datasrc = form.getclean('datasrc'),
+                  user = request.user,
+                  url = form.getclean('url'),
+                  uploaded = form.getclean('upload_id'),
+                  xcol = form.getclean('xcol'),
+                  ycol = form.getclean('ycol'),
+                  parity = form.getclean('parity'),
+                  scaleunits = form.getclean('scaleunits'),
+                  scaletype = form.getclean('scaletype'),
+                  scalelower = form.getclean('scalelower'),
+                  scaleupper = form.getclean('scaleupper'),
+                  scaleest = form.getclean('scaleest'),
+                  scaleerr = form.getclean('scaleerr'),
+                  tweak = form.getclean('tweak'),
+                  tweakorder = form.getclean('tweakorder'),
+                  #submittime = time.time(),
+                  )
+        job.user = request.user
+        #job.save()
+
+        logging.debug('Form is valid.')
+        for k,v in form.cleaned_data.items():
+            logging.debug('  %s = %s' % (str(k), str(v)))
+
+        logging.debug('Job: ' + str(job))
+
+        request.session['job'] = job
+        #return HttpResponse('ok')
         return HttpResponseRedirect('/job/submit')
 
     if 'jobvals' in request.session:
