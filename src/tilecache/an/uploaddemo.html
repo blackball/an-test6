@@ -100,6 +100,15 @@ function onLoad() {
 
 <body onload="onLoad()">
 
+{% if inline_progress %}
+This is the <b>inline</b> version.
+Go to the <a href="/upload-demo/">non-inline</a> (iframe) version.
+{% else %}
+This is the <b>non-inline</b> (iframe) version.
+Go to the <a href="/upload-demo/?inline">inline</a> version.
+{% endif %}
+<br />
+
 <iframe onload="uploadframeloaded()" src="{{ uploadform }}" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
   [Your user agent does not support iframes]
 </iframe>

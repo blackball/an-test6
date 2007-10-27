@@ -7,6 +7,8 @@ def view(request):
 
     # Inline or IFRAME?
     inline = False
+    if 'inline' in request.GET:
+        inline = True
 
     if inline:
         progress_meter_html = uploadviews.get_ajax_html()
