@@ -36,6 +36,12 @@ class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(
         attrs={'size':'40'}))
 
+def get_ajax_html():
+    pass
+
+def get_ajax_javascript():
+    pass
+
 def uploadform(request):
     if not request.user.is_authenticated():
         return HttpResponse('not authenticated')

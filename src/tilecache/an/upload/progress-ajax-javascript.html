@@ -1,0 +1,84 @@
+var req;
+var reload = true;
+
+function removeAllChildren(node) {
+	while (node.childNodes.length) {
+		node.removeChild(node.childNodes[0]);
+	}
+}
+
+function sendRequest() {
+  req = new XMLHttpRequest();
+  req.onreadystatechange = contentReady;
+  req.open("GET", "{{ xmlurl }}", true);
+  req.send("");
+}
+
+function debug(txt) {
+//  dbg = document.getElementById('debugarea');
+//  dbg.value += txt + '\n';
+}
+
+function processIt() {
+  if (!req) {
+    return false;
+  }
+  if (req.readyState != 4) {
+    debug('ready state = ' + req.readyState);
+    return false;
+  }
+  if (req.status != 200) {
+    debug('status = ' + req.status);
+    return true;
+  }
+  xml = req.responseXML;
+  if (!xml) {
+    debug('response is not xml');
+    return true;
+  }
+  prog = xml.getElementsByTagName('progress');
+  if (!prog.length) {
+    debug('no xml progress element found.');
+    return true;
+  }
+  debug('parsing...');
+
+  err = prog[0].getAttribute('error');
+  if (err) {
+    txt = document.getElementById('meter_text');
+	removeAllChildren(txt);
+	txt.appendChild(document.createTextNode(err));
+	fore = document.getElementById('meter_fore');
+    fore.style.width = '0px';
+	back = document.getElementById('meter_back');
+	back.style.background = 'pink';
+    reload = false;
+	return true;
+  }
+
+  pct = prog[0].getAttribute('pct');
+  debug('pct = ' + pct);
+  txt = document.getElementById('meter_text');
+  removeAllChildren(txt);
+  txt.appendChild(document.createTextNode('' + pct + '%'));
+  fore = document.getElementById('meter_fore');
+  fore.style.width = '' + pct + '%';
+  if (pct == 100) {
+    reload = false;
+  }
+  return true;
+}
+
+function contentReady() {
+  if (processIt()) {
+    if (reload) {
+	  // do it again!
+      setTimeout('sendRequest()', 2000)
+    }
+  }
+}
+
+function onLoad() {
+  sendRequest();
+}
+
