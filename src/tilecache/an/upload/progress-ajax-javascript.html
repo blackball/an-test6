@@ -14,34 +14,24 @@ function sendRequest() {
   req.send("");
 }
 
-function debug(txt) {
-//  dbg = document.getElementById('debugarea');
-//  dbg.value += txt + '\n';
-}
-
 function processIt() {
   if (!req) {
     return false;
   }
   if (req.readyState != 4) {
-    debug('ready state = ' + req.readyState);
     return false;
   }
   if (req.status != 200) {
-    debug('status = ' + req.status);
     return true;
   }
   xml = req.responseXML;
   if (!xml) {
-    debug('response is not xml');
     return true;
   }
   prog = xml.getElementsByTagName('progress');
   if (!prog.length) {
-    debug('no xml progress element found.');
     return true;
   }
-  debug('parsing...');
 
   err = prog[0].getAttribute('error');
   if (err) {
@@ -57,7 +47,6 @@ function processIt() {
   }
 
   pct = prog[0].getAttribute('pct');
-  debug('pct = ' + pct);
   txt = document.getElementById('meter_text');
   removeAllChildren(txt);
   txt.appendChild(document.createTextNode('' + pct + '%'));
