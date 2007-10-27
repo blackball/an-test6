@@ -11,6 +11,8 @@ from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
 import an.upload as upload
 
+import quads.image2pnm as image2pnm
+
 import re
 import time
 import random
@@ -345,14 +347,14 @@ def submit(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
 
+    logging.debug('Job values:')
+    for k,v in request.session['jobvals'].items():
+        logging.debug('  %s = %s' % (str(k), str(v)))
+
     txt = "<pre>Job values:\n"
     for k,v in request.session['jobvals'].items():
         txt += '  ' + str(k) + ' = ' + str(v) + '\n'
     txt += "</pre>"
-
-    logging.debug('Job values:')
-    for k,v in request.session['jobvals'].items():
-        logging.debug('  %s = %s' % (str(k), str(v)))
 
     return HttpResponse(txt)
 
