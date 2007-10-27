@@ -36,11 +36,46 @@ class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(
         attrs={'size':'40'}))
 
-def get_ajax_html():
-    pass
+xmlurl = '/upload/xml?upload_id='
 
-def get_ajax_javascript():
-    pass
+def get_ajax_html(name=''):
+    ctxt = {
+        'name' : name,
+        }
+    t = loader.get_template('upload/progress-ajax-meter.html')
+    c = RequestContext(request, ctxt)
+    return t.render(c)
+
+def get_ajax_javascript(name=''):
+    ctxt = {
+        'name' : name,
+        'xmlurl' : xmlurl,
+        }
+    t = loader.get_template('upload/progress-ajax-meter.js')
+    c = RequestContext(request, ctxt)
+    return t.render(c)
+
+def progress_ajax(request):
+    if not request.user.is_authenticated():
+        return HttpResponse('not authenticated')
+    if not request.GET:
+        return HttpResponse('no GET')
+    if not 'upload_id' in request.GET:
+        return HttpResponse('no upload_id')
+    id = request.GET['upload_id']
+    logging.debug("Upload progress meter for id %s" % id)
+
+    html = get_ajax_html()
+    js = get_ajax_javascript()
+
+    ctxt = {
+        'javascript' : js,
+        'meter' : html,
+        'id' : id,
+        }
+    t = loader.get_template('upload/progress-ajax.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
 
 def uploadform(request):
     if not request.user.is_authenticated():
@@ -77,21 +112,4 @@ def progress_xml(request):
     res['Content-type'] = 'text/xml'
     res.write(tag)
     return res
-
-def progress_ajax(request):
-    if not request.user.is_authenticated():
-        return HttpResponse('not authenticated')
-    if not request.GET:
-        return HttpResponse('no GET')
-    if not 'upload_id' in request.GET:
-        return HttpResponse('no upload_id')
-    id = request.GET['upload_id']
-    logging.debug("Upload progress request for id %s" % id)
-
-    ctxt = {
-        'xmlurl' : ('/upload/xml?upload_id=%s' % id),
-        }
-    t = loader.get_template('upload/progress-ajax.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
 
