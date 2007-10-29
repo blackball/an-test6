@@ -77,14 +77,35 @@ class Upload(multipart.FileMultipart):
         self.upload.byteswritten = self.bytes_written
 
     def add_part(self, part):
-        from an.upload.models import UploadedFile
-
         super(Upload, self).add_part(part)
 
-        if (not 'field' in part) or (not 'data' in part):
+        # Here we're looking for the "upload_id" part.
+        if 'field' in part and 'data' in part and \
+           part['field'] == self.id_field:
+            self.id_part(part)
+
+        if 'field' in part and 'filename' in part:
+            self.file_part(part)
+
+        #for k in part:
+        #    log('part: ' + str(k))
+
+
+    # called from add_part when the part containing the file is
+    # encountered.
+    def file_part(self, part):
+        from an.upload.models import UploadedFile
+        if not self.upload:
             return
-        if part['field'] != self.id_field:
-            return
+        if 'filename' in part:
+            log('Filename on the user\'s machine: "%s"' % part['filename'])
+            self.upload.userfilename = part['filename']
+            self.update_progress()
+
+    # called from add_part when the part containing the upload_id
+    # field is encountered.
+    def id_part(self, part):
+        from an.upload.models import UploadedFile
 
         id = part['data']
         if not UploadedFile.isValidId(id):
@@ -124,12 +145,9 @@ class Upload(multipart.FileMultipart):
             self.error = True
             self.errorstring = 'Upload ID already exists'
             return
-
-
         #log('Upload ID "%s" already exists.' % id)
         #self.error = True
         #self.errorstring = 'Upload ID already exists'
-
         self.update_progress()
 
     def update_progress(self):
@@ -137,10 +155,6 @@ class Upload(multipart.FileMultipart):
             return
         if self.bytes_written > self.upload.predictedsize:
             self.upload.predictedsize = self.bytes_written
-        #if self.upload.predictedsize:
-        #    sz = self.upload.predictedsize
-        #else:
-        #    sz = self.contentlength
         now = int(time.time())
         self.upload.nowtime = now
         self.upload.byteswritten = self.bytes_written
@@ -170,10 +184,6 @@ def handler(req):
 
     # Need this to compensate for mod_python hiding the environment...
     os.environ.update(req.subprocess_env)
-
-    #log('Environment variables:')
-    #for k,v in os.environ.items():
-    #    log('  ' + str(k) +  '=' + str(v))
 
     from an.upload.models import UploadedFile
 

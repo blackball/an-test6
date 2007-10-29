@@ -56,6 +56,8 @@ class UploadedFile(models.Model):
     user = models.ForeignKey(User, editable=False,
                              blank=True, null=True)
 
+    userfilename = models.CharField(max_length=256, editable=False, blank=True, null=True)
+
     starttime = models.PositiveIntegerField(default=0)
     nowtime = models.PositiveIntegerField(default=0)
     predictedsize = models.PositiveIntegerField(default=0)

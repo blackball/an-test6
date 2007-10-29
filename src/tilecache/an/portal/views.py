@@ -22,6 +22,8 @@ import random
 import logging
 import sha
 import os.path
+import tempfile
+import math
 
 # Adding a user:
 # > python manage.py shell
@@ -75,7 +77,8 @@ class FullForm(forms.Form):
     upload_id = UploadIdField(widget=forms.HiddenInput(),
                               required=False)
 
-    scaleunits = forms.ChoiceField(choices=Job.scaleunit_CHOICES,
+    scaleunits = forms.ChoiceField(choices=Job.scaleunits_CHOICES,
+                                   initial=Job.scaleunits_default,
                                    widget=forms.Select(
         attrs={'onchange':'unitsChanged()',
                'onkeyup':'unitsChanged()'}))
@@ -356,17 +359,8 @@ def submit(request):
     if not job:
         return HttpResponse('no job in session')
         
-    #logging.debug('submit: Job values:')
-    #for k,v in request.session['jobvals'].items():
-    #    logging.debug('  %s = %s' % (str(k), str(v)))
-    #form = FullForm(request.POST, request.FILES)
-    #if not form.is_valid():
-    #    return HttpResponseRedirect('/job/newlong')
-    #job = Job(form.cleaned_data)
-
     logging.debug('submit(): Job is: ' + str(job))
 
-    #job.set_jobid(Job.generate_jobid())
     job.create_job_dir()
     origfile = job.get_orig_file()
 
@@ -383,12 +377,88 @@ def submit(request):
         #uid = job.uploaded
         #if not uid:
         #return HttpResponse('no upload_id')
-        tempfile = job.uploaded.get_filename()
-        logging.debug('upload_id is ' + uid + ', tempfile is ' + tempfile)
-        rename(tempfile, origfile)
+        temp = job.uploaded.get_filename()
+        logging.debug('uploaded tempfile is ' + temp)
+        os.rename(temp, origfile)
 
     else:
         return HttpResponse('no datasrc')
+
+    # Handle compressed files.
+    (f, uncomp) = tempfile.mkstemp()
+    os.close(f)
+    comp = image2pnm.uncompress_file(origfile, uncomp)
+    if comp is None:
+        os.unlink(uncomp)
+        uncomp = origfile
+    else:
+        logging.debug('Input file was compressed: %s' % comp)
+        job.compressedtype = comp
+    # Compute hash of uncompressed file.
+    job.compute_filehash(uncomp)
+
+    if job.filetype == 'image':
+        logging.debug('Converting image...')
+        (f, pnmfile) = tempfile.mkstemp()
+        os.close(f)
+        andir = gmaps_config.basedir + 'quads/'
+        (imgtype, errstr) = image2pnm.image2pnm(uncomp, pnmfile, None, False, False, andir, False)
+        if errstr:
+            err = 'Error converting image file: %s' % errstr
+            logging.debug(err)
+            job.status = 'not-submitted'
+            job.failurereason = err
+            job.save()
+            return HttpResponse(err)
+
+        logging.debug('Image type: %s', imgtype)
+        job.imgtype = imgtype
+        logging.debug('Wrote pnm file %s', pnmfile)
+
+        cmd = 'pnmfile %s' % pnmfile
+        (filein, fileout) = os.popen2(cmd)
+        out = fileout.read().strip()
+        logging.debug('pnmfile output: ' + out)
+        pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
+        match = pat.search(out)
+        if not match:
+            logging.debug('No match.')
+            return HttpResponse('couldn\'t find file size')
+        w = int(match.group('width'))
+        h = int(match.group('height'))
+        job.imagew = w
+        job.imageh = h
+        pnmtype = match.group('pnmtype')
+        logging.debug('Type %s, w %i, h %i' % (pnmtype, w, h))
+
+        if pnmtype == 'P':
+            # reduce to PGM.
+            (f, ppmfile) = tempfile.mkstemp()
+            os.close(f)
+            cmd = 'ppmtopgm %s %s' % (pnmfile, ppmfile)
+            os.system(cmd)
+            os.unlink(pnmfile)
+            pnmfile = ppmfile
+
+        # shrink
+        job.displayscale = max(1, int(math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2)))))
+        job.displayw = int(round(w / float(job.displayscale)))
+        job.displayh = int(round(h / float(job.displayscale)))
+
+        if job.displayscale != 1:
+            (f, smallppm) = tempfile.mkstemp()
+            os.close(f)
+            cmd = 'pnmscale -reduce %i %s > %s' % (job.displayscale, pnmfile, smallppm)
+            logging.debug('command: ' + cmd)
+            os.system(cmd)
+            logging.debug('small ppm file %s' % smallppm)
+
+    elif job.filetype == 'fits':
+        pass
+    elif job.filetype == 'text':
+        pass
+    else:
+        return HttpResponse('no filetype')
 
     job.save()
 
@@ -432,6 +502,7 @@ def newlong(request):
         print 'Yay'
         #request.session['jobvals'] = form.cleaned_data
         job = Job(datasrc = form.getclean('datasrc'),
+                  filetype = form.getclean('filetype'),
                   user = request.user,
                   url = form.getclean('url'),
                   uploaded = form.getclean('upload_id'),

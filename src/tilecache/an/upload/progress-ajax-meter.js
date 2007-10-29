@@ -18,6 +18,14 @@ function startProgressMeter{{name}}(id) {
 	pm_sendRequest{{name}}();
 }
 
+function pm_debug{{name}}(str) {
+	txt = document.getElementById('meter_text{{name}}');
+	while (txt.childNodes.length) {
+		txt.removeChild(txt.childNodes[0]);
+	}
+	txt.appendChild(document.createTextNode(str));
+}
+
 function pm_sendRequest{{name}}() {
 	pm_req{{name}} = new XMLHttpRequest();
 	pm_req{{name}}.onreadystatechange = pm_contentReady{{name}};
@@ -51,18 +59,21 @@ function pm_processIt{{name}}() {
 		return false;
 	}
 	if (pm_req{{name}}.status != 200) {
-		alert('req status ' + pm_req{{name}}.status);
+		//alert('req status ' + pm_req{{name}}.status);
+		pm_debug{{name}}('req status ' + pm_req{{name}}.status);
 		return true;
 	}
 	xml = pm_req{{name}}.responseXML;
 	if (!xml) {
-		alert('not xml');
+		//alert('not xml');
+		pm_debug{{name}}('not xml');
 		return true;
 	}
 	//alert('got xml');
 	prog = xml.getElementsByTagName('progress');
 	if (!prog.length) {
-		alert('no progress');
+		//alert('no progress');
+		pm_debug{{name}}('no progress');
 		return true;
 	}
 

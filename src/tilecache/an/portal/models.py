@@ -33,12 +33,13 @@ class Job(models.Model):
         ('text', 'Text list of source locations'),
         )
 
-    scaleunit_CHOICES = (
+    scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
         ('arcminwidth' , 'width of the field (in arcminutes)'), 
         ('degreewidth' , 'width of the field (in degrees)'),
         ('focalmm'     , 'focal length of the lens (for 35mm film equivalent sensor)'),
         )
+    scaleunits_default = 'degreewidth'
 
     scaletype_CHOICES = (
         ('ul', 'lower and upper bounds'),
@@ -83,10 +84,12 @@ class Job(models.Model):
     # filename of the uploaded file on the user's machine.
     #userfilename = models.CharField(max_length=256, editable=False, blank=True)
 
-    # content-type of the uploaded file, if it was compressed
-    compressedtype = models.CharField(max_length=64, editable=False, blank=True)
-    # content-type of the uploaded file, after compression
-    filetype = models.CharField(max_length=64, editable=False)
+    # type of the uploaded file, if it was compressed
+    # ("gz", "bz2", etc)
+    compressedtype = models.CharField(max_length=8, editable=False, blank=True)
+    # type of the uploaded file, after compression
+    # ("jpg", "png", "gif", "fits", etc)
+    imgtype = models.CharField(max_length=16, editable=False)
 
     # sha-1 hash of the uncompressed file.
     filehash = models.CharField(max_length=40, editable=False)
@@ -99,7 +102,7 @@ class Job(models.Model):
     imagew = models.PositiveIntegerField(editable=False, null=True)
     imageh = models.PositiveIntegerField(editable=False, null=True)
 
-    # scale factor for rendering images; <=1.
+    # 1 / (scale factor) for rendering images; >=1.
     displayscale = models.DecimalField(max_digits=10, decimal_places=10, editable=False, null=True)
     # size to render images.
     displayw = models.PositiveIntegerField(editable=False, null=True)
@@ -110,8 +113,8 @@ class Job(models.Model):
                                               core=True)
 
     # image scale.
-    scaleunits = models.CharField(max_length=16, choices=scaleunit_CHOICES,
-                                  default='degreewidth')
+    scaleunits = models.CharField(max_length=16, choices=scaleunits_CHOICES,
+                                  default=scaleunits_default)
     scaletype  = models.CharField(max_length=3, choices=scaletype_CHOICES,
                                   default='ul')
     scalelower = models.DecimalField(max_digits=20, decimal_places=10,
@@ -142,13 +145,41 @@ class Job(models.Model):
     jobdir = None
 
     def __str__(self):
-        s = '<Job %s, datasrc %s' % (self.jobid, self.datasrc)
+        s = '<Job %s, user %s' % (self.jobid, self.user.username)
+        #, datasrc %s' , self.datasrc)
         if self.datasrc == 'url':
             s += ', url ' + self.url
         elif self.datasrc == 'file':
-            s += ', file ' + self.uploaded
+            #s += ', file ' + str(self.uploaded)
+            #s += ' (originally "%s")' % self.uploaded.userfilename
+            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
+        s += ', ' + self.filetype
+        if self.filetype == 'image' and self.imgtype:
+            s += ', ' + self.imgtype
+        if self.compressedtype:
+            s += ', compressed ' + self.compressedtype
+        pstrs = [ 'pos', 'neg', 'both' ]
+        s += ', parity ' + pstrs[int(self.parity)]
+        if self.scaletype == 'ul':
+            s += ', scale [%g, %g] %s' % (self.scalelower, self.scaleupper, self.scaleunits)
+        elif self.scaletype == 'ev':
+            s += ', scale [%g +- %g %%] %s' % (self.scaleest, self.scaleerr, self.scaleunits)
+        if self.tweak:
+            s += ', tweak order ' + str(self.tweakorder)
+        else:
+            s += ', no tweak'
         s += '>'
         return s
+
+    def compute_filehash(self, fn):
+        h = sha.new()
+        f = open(fn, 'rb')
+        while True:
+            d = f.read(4096)
+            if len(d) == 0:
+                break
+            h.update(d)
+        self.filehash = h.hexdigest()
 
     #def set_jobid(self, jid):
     #    self.jobid = jid
