@@ -12,6 +12,7 @@ from an.upload.views  import UploadIdField
 import an.upload as upload
 
 import quads.image2pnm as image2pnm
+import quads.fits2fits as fits2fits
 from an import gmaps_config
 from an import settings
 
@@ -24,6 +25,9 @@ import sha
 import os.path
 import tempfile
 import math
+import popen2
+import select
+#import fcntl
 
 # Adding a user:
 # > python manage.py shell
@@ -352,6 +356,143 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
+def FileConversionError(Exception):
+    errstr = None
+    def __init__(self, errstr):
+        super(FileConversionError, self).__init__()
+        self.errstr = errstr
+    def __str__(self):
+        return errstr
+    
+#def makeNonBlocking(fd):
+#    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+#    try:
+#        fcntl.fcntl(fd, fcntl.F_SETFL, fl | fcntl.O_NDELAY)
+#    except AttributeError:
+#        fcntl.fcntl(fd, fcntl.F_SETFL, fl | fcntl.FNDELAY)
+
+def run_command(cmd):
+    child = popen2.Popen3(cmd)
+    (fout, fin, ferr) = (child.fromchild, child.tochild, child.childerr)
+    #(stdout, stdin, stderr) = popen2.popen3(cmd)
+    fin.close()
+    stdout = fout.fileno()
+    stderr = ferr.fileno()
+    #makeNonBlocking(stdout)
+    #makeNonBlocking(stderr)
+    out = err = ''
+    outeof = erreof = 0
+    block = 1024
+    while True:
+        s=[]
+        if not outeof:
+            s.append(stdout)
+        if not erreof:
+            s.append(stderr)
+        if not len(s):
+            break
+        (ready, nil1, nil2) = select.select(s, [], [])
+        if stdout in ready:
+            outchunk = os.read(stdout, block)
+            if len(outchunk) == 0:
+                outeof = 1
+            out += outchunk
+        if stderr in ready:
+            errchunk = os.read(stderr, block)
+            if len(errchunk) == 0:
+                erreof = 1
+            err += errchunk
+    fout.close()
+    ferr.close()
+    w = child.wait()
+    if not os.WIFEXITED(w):
+        return (-100, out, err)
+    rtn = os.WEXITSTATUS(w)
+    return (rtn, out, err)
+
+def create_file(job, fn, opts=[]):
+    tempdir = gmaps_config.tempdir
+    basename = tempdir + '/' + job.jobid + '-'
+    fullfn = basename + fn
+    if os.path.exists(fullfn):
+        return fullfn
+    if fn == 'uncomp':
+        orig = job.get_orig_file()
+        check = 'check-compressed' in opts
+        if (not check) and job.compressedtype is None:
+            return orig
+        comp = image2pnm.uncompress_file(orig, fullfn)
+        if check:
+            logging.debug('Input file was compressed: %s' % comp)
+            job.compressedtype = comp
+        return fullfn
+    
+    elif fn == 'pnm':
+        infn = create_file(job, 'uncomp', opts)
+        andir = gmaps_config.basedir + 'quads/'
+        (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, andir, False)
+        if errstr:
+            err = 'Error converting image file: %s' % errstr
+            logging.debug(err)
+            raise FileConversionError(errstr)
+        return fullfn
+
+    elif fn == 'pgm':
+        # run 'pnmfile' on the pnm.
+        infn = create_file(job, 'pnm', opts)
+        cmd = 'pnmfile %s' % infn
+        (filein, fileout) = os.popen2(cmd)
+        filein.close()
+        out = fileout.read().strip()
+        logging.debug('pnmfile output: ' + out)
+        pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
+        match = pat.search(out)
+        if not match:
+            logging.debug('No match.')
+            return HttpResponse('couldn\'t find file size')
+        w = int(match.group('width'))
+        h = int(match.group('height'))
+        pnmtype = match.group('pnmtype')
+        logging.debug('Type %s, w %i, h %i' % (pnmtype, w, h))
+        if 'save-imgsize' in opts:
+            job.imagew = w
+            job.imageh = h
+        if pnmtype == 'G':
+            return infn
+        cmd = 'ppmtopgm %s %s' % (infn, fullfn)
+        logging.debug('running: ' + cmd)
+        os.system(cmd)
+
+    elif fn == 'fitsimg':
+        check = 'check-imgtype' in opts
+        if check:
+            # check the uncompressed input image type...
+            infn = create_file(job, 'uncomp', opts)
+            (job.imgtype, errmsg) = image2pnm.get_image_type(infn)
+            if errmsg:
+                logging.debug(errmsg)
+                raise FileConversionError(errmsg)
+
+        # fits image: fits2fits it.
+        if job.imgtype == image2pnm.fitstype:
+            errmsg = fits2fits.fits2fits(infn, fullfn, False)
+            if errmsg:
+                logging.debug(errmsg)
+                raise FileConversionError(errmsg)
+            return fullfn
+
+        # else, convert to pgm and run pnm2fits.
+        infn = create_file(job, 'pgm', opts)
+        cmd = 'pnmtofits %s > %s' % infn, fullfn
+        logging.debug('Running: ' + cmd)
+        (rtnval, stdout, stderr) = run_command(cmd)
+        if rtnval:
+            errmsg = 'pnmtofits failed: ' + stderr
+            logging.debug(errmsg)
+            raise FileConversionError(errmsg)
+        return fullfn
+
+
 def submit(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
@@ -385,19 +526,16 @@ def submit(request):
         return HttpResponse('no datasrc')
 
     # Handle compressed files.
-    (f, uncomp) = tempfile.mkstemp()
-    os.close(f)
-    comp = image2pnm.uncompress_file(origfile, uncomp)
-    if comp is None:
-        os.unlink(uncomp)
-        uncomp = origfile
-    else:
-        logging.debug('Input file was compressed: %s' % comp)
-        job.compressedtype = comp
+    uncomp = create_file(job, origfile, ['check-compressed'])
+
     # Compute hash of uncompressed file.
     job.compute_filehash(uncomp)
 
     if job.filetype == 'image':
+        # create fits image to feed to image2xy
+        fitsimg = create_file(job, 'fitsimg',
+                              ['check-imgtype', 'save-imgsize'])
+
         logging.debug('Converting image...')
         (f, pnmfile) = tempfile.mkstemp()
         os.close(f)
