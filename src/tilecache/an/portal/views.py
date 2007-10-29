@@ -356,13 +356,13 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
-def FileConversionError(Exception):
+class FileConversionError(Exception):
     errstr = None
     def __init__(self, errstr):
-        super(FileConversionError, self).__init__()
+        #super(FileConversionError, self).__init__()
         self.errstr = errstr
     def __str__(self):
-        return errstr
+        return self.errstr
     
 #def makeNonBlocking(fd):
 #    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -372,7 +372,7 @@ def FileConversionError(Exception):
 #        fcntl.fcntl(fd, fcntl.F_SETFL, fl | fcntl.FNDELAY)
 
 def run_command(cmd):
-    child = popen2.Popen3(cmd)
+    child = popen2.Popen3(cmd, True)
     (fout, fin, ferr) = (child.fromchild, child.tochild, child.childerr)
     #(stdout, stdin, stderr) = popen2.popen3(cmd)
     fin.close()
@@ -411,6 +411,7 @@ def run_command(cmd):
     return (rtn, out, err)
 
 def create_file(job, fn, opts=[]):
+    logging.debug('create_file(%s)' % fn)
     tempdir = gmaps_config.tempdir
     basename = tempdir + '/' + job.jobid + '-'
     fullfn = basename + fn
@@ -430,6 +431,7 @@ def create_file(job, fn, opts=[]):
     elif fn == 'pnm':
         infn = create_file(job, 'uncomp', opts)
         andir = gmaps_config.basedir + 'quads/'
+        logging.debug('Converting %s to %s...\n' % (infn, fullfn))
         (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, andir, False)
         if errstr:
             err = 'Error converting image file: %s' % errstr
@@ -459,9 +461,10 @@ def create_file(job, fn, opts=[]):
             job.imageh = h
         if pnmtype == 'G':
             return infn
-        cmd = 'ppmtopgm %s %s' % (infn, fullfn)
+        cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
         logging.debug('running: ' + cmd)
         os.system(cmd)
+        return fullfn
 
     elif fn == 'fitsimg':
         check = 'check-imgtype' in opts
@@ -483,7 +486,7 @@ def create_file(job, fn, opts=[]):
 
         # else, convert to pgm and run pnm2fits.
         infn = create_file(job, 'pgm', opts)
-        cmd = 'pnmtofits %s > %s' % infn, fullfn
+        cmd = 'pnmtofits %s > %s' % (infn, fullfn)
         logging.debug('Running: ' + cmd)
         (rtnval, stdout, stderr) = run_command(cmd)
         if rtnval:
@@ -492,6 +495,9 @@ def create_file(job, fn, opts=[]):
             raise FileConversionError(errmsg)
         return fullfn
 
+    errmsg = 'Unimplemented: create_file(%s)' % fn
+    logging.debug(errmsg)
+    raise FileConversionError(errmsg)
 
 def submit(request):
     if not request.user.is_authenticated():
@@ -526,7 +532,7 @@ def submit(request):
         return HttpResponse('no datasrc')
 
     # Handle compressed files.
-    uncomp = create_file(job, origfile, ['check-compressed'])
+    uncomp = create_file(job, 'uncomp', ['check-compressed'])
 
     # Compute hash of uncompressed file.
     job.compute_filehash(uncomp)
