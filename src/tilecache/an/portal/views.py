@@ -536,60 +536,19 @@ def submit(request):
         fitsimg = create_file(job, 'fitsimg',
                               ['check-imgtype', 'save-imgsize'])
 
-        logging.debug('Converting image...')
-        (f, pnmfile) = tempfile.mkstemp()
-        os.close(f)
-        andir = gmaps_config.basedir + 'quads/'
-        (imgtype, errstr) = image2pnm.image2pnm(uncomp, pnmfile, None, False, False, andir, False)
-        if errstr:
-            err = 'Error converting image file: %s' % errstr
-            logging.debug(err)
-            job.status = 'not-submitted'
-            job.failurereason = err
-            job.save()
-            return HttpResponse(err)
-
-        logging.debug('Image type: %s', imgtype)
-        job.imgtype = imgtype
-        logging.debug('Wrote pnm file %s', pnmfile)
-
-        cmd = 'pnmfile %s' % pnmfile
-        (filein, fileout) = os.popen2(cmd)
-        out = fileout.read().strip()
-        logging.debug('pnmfile output: ' + out)
-        pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
-        match = pat.search(out)
-        if not match:
-            logging.debug('No match.')
-            return HttpResponse('couldn\'t find file size')
-        w = int(match.group('width'))
-        h = int(match.group('height'))
-        job.imagew = w
-        job.imageh = h
-        pnmtype = match.group('pnmtype')
-        logging.debug('Type %s, w %i, h %i' % (pnmtype, w, h))
-
-        if pnmtype == 'P':
-            # reduce to PGM.
-            (f, ppmfile) = tempfile.mkstemp()
-            os.close(f)
-            cmd = 'ppmtopgm %s %s' % (pnmfile, ppmfile)
-            os.system(cmd)
-            os.unlink(pnmfile)
-            pnmfile = ppmfile
+        logging.debug('created fits image %s' % fitsimg)
 
         # shrink
-        job.displayscale = max(1, int(math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2)))))
-        job.displayw = int(round(w / float(job.displayscale)))
-        job.displayh = int(round(h / float(job.displayscale)))
-
-        if job.displayscale != 1:
-            (f, smallppm) = tempfile.mkstemp()
-            os.close(f)
-            cmd = 'pnmscale -reduce %i %s > %s' % (job.displayscale, pnmfile, smallppm)
-            logging.debug('command: ' + cmd)
-            os.system(cmd)
-            logging.debug('small ppm file %s' % smallppm)
+        #job.displayscale = max(1, int(math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2)))))
+        #job.displayw = int(round(w / float(job.displayscale)))
+        #job.displayh = int(round(h / float(job.displayscale)))
+        #if job.displayscale != 1:
+        #    (f, smallppm) = tempfile.mkstemp()
+        #    os.close(f)
+        #    cmd = 'pnmscale -reduce %i %s > %s' % (job.displayscale, pnmfile, smallppm)
+        #    logging.debug('command: ' + cmd)
+        #    os.system(cmd)
+        #    logging.debug('small ppm file %s' % smallppm)
 
     elif job.filetype == 'fits':
         pass
