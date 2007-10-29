@@ -4,6 +4,18 @@ from pylab import *
 from numpy import *
 import ransac
 
+def all_dists(a,b): 
+    "returns D[i,j] == || a[i,:]-b[j,:] ||" 
+    n1,m1 = a.shape 
+    n2,m2 = b.shape 
+    assert m1 == m2 
+    dists = zeros((n1,n2),'d') 
+    for d in xrange(m1): 
+        x1 = a[:,d] 
+        x2 = b[:,d] 
+        dists += subtract.outer(x1, x2)**2
+    return sqrt(dists)
+
 def readxylist(fn):
     hdus = pyfits.open(fn)
     table = hdus[1].data
@@ -65,7 +77,7 @@ figure()
 plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field')
 plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index')
 legend()
-title('stars which were found in correspondence using prior on covariance')
+title('correspondening stars with prior covariance')
 
 ################################################################################
 # DIRECT RATIO ESTIMATE
@@ -104,6 +116,7 @@ plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index',markersize=8)
 plot(fxykeep[:,0], fxykeep[:,1], 'gx', label='field',markersize=8)
 #scatter(fxykeep[:,0], fxykeep[:,1], 130, marker='+',facecolor='green', label='field')
 axis([0,fxymax[0],0,fxymax[1]])
+title('original correspondences')
 
 figure()
 #scatter(ixy[:,0], ixy[:,1], 130, marker='s', label='index', facecolor='#ffffff')
@@ -120,8 +133,9 @@ fxycorr_inliers = correct(fxykeep[inliers], quadcenter, coeffs)
 #plot(ixykeep[:,0], ixykeep[:,1], 'r+', label='index')
 #plot(ixy[:,0], ixy[:,1], 'r+', label='index')
 plot([quadcenter[0]], [quadcenter[1]], 'ys', label='quad center')
+axis([0,fxymax[0],0,fxymax[1]])
 legend()
-title('stars which were found in correspondence using prior on covariance CORRECTED')
+title('corrected for radial')
 show()
 
 
