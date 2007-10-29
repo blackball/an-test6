@@ -86,7 +86,8 @@ struct uf_t {
 
 /* Finds the root of this set (which is the min label) but collapses
  * intermediate labels as it goes. */
-inline short unsigned int collapsing_find_minlabel(short unsigned int label, short unsigned int *equivs)
+inline short unsigned int collapsing_find_minlabel(short unsigned int label,
+                                                   short unsigned int *equivs)
 {
 	int min;
 	min = label;

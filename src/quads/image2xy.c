@@ -228,8 +228,6 @@ int main(int argc, char *argv[]) {
 			exit( -1);
 		}
 
-		// OH MY GOD the horror.    <-- Keir is easily spooked.
-
 		fits_get_img_size(fptr, 2, naxisn, &status);
 		if (status) {
 			fits_report_error(stderr, status);

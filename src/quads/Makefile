@@ -207,6 +207,11 @@ demo_dsmooth: demo_dsmooth.o dsmooth.o \
 ctmf.o: ctmf.c
 
 image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
+PNG2XY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
+	dselip.o dsigma.o dsmooth.o png2xy.o simplexy.o radix.o qsort_reentrant.o \
+	ctmf.o $(COMMON)/cairoutils.o
+png2xy: $(PNG2XY_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
 
 fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
 
