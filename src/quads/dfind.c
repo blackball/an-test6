@@ -127,6 +127,7 @@ int dfind2(int *image,
 				continue;
 
 			/* Store location of each 'on' pixel. May be inefficient on 64 bit with large ptrs */
+			// FIXME switch to a blocklist!!!!
 			if (num_on_pixels >= max_num_on_pixels) {
 				max_num_on_pixels *= 2;
 				on_pixels = realloc(on_pixels, sizeof(int*) * max_num_on_pixels);
@@ -141,6 +142,7 @@ int dfind2(int *image,
 
 			} else {
 				/* New blob */
+				// FIXME this part should become uf_new_group()
 				if (maxlabel >= maxgroups) {
 					maxgroups *= 2;
 					equivs = realloc(equivs, sizeof(short unsigned int) * maxgroups);
@@ -153,7 +155,10 @@ int dfind2(int *image,
 				if (maxlabel == 0xFFFF) {
 					fprintf(stderr, "simplexy: ERROR: Exceeded labels. Shrink your image.\n");
 					exit(1);
+					// FIXME before moving to full ints, we could also try
+					// collapsing maxlabels.
 				}
+				// to here
 			}
 
 			thislabel  = object[nx*iy + ix];
