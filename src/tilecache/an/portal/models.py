@@ -4,6 +4,7 @@ import time
 import random
 import os.path
 import logging
+import stat
 
 from datetime import date
 
@@ -70,7 +71,6 @@ class Job(models.Model):
         kwargs['jobid'] = Job.generate_jobid()
         super(Job, self).__init__(*args, **kwargs)
         self.jobdir = self.get_job_dir()
-        self.origfilename = 'original'
 
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
@@ -84,15 +84,8 @@ class Job(models.Model):
     url = models.URLField(blank=True)
 
     uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
-    # filename of the uploaded file on the user's machine.
-    #userfilename = models.CharField(max_length=256, editable=False, blank=True)
 
-    # type of the uploaded file, if it was compressed
-    # ("gz", "bz2", etc)
-    # never mind, we don't care.
-    #compressedtype = models.CharField(max_length=8, editable=False, blank=True, null=True)
-
-    # type of the uploaded file, after uncompression
+    # type of the uploaded file, after decompression
     # ("jpg", "png", "gif", "fits", etc)
     imgtype = models.CharField(max_length=16, editable=False)
 
@@ -142,9 +135,6 @@ class Job(models.Model):
     starttime  = models.DateTimeField(editable=False, null=True)
     finishtime = models.DateTimeField(editable=False, null=True)
 
-    # filename of the original uploaded file
-    origfilename = models.CharField(max_length=256, editable=False, blank=True)
-
     ## These fields don't go in the database.
 
     jobdir = None
@@ -161,8 +151,6 @@ class Job(models.Model):
         s += ', ' + self.filetype
         if self.filetype == 'image' and self.imgtype:
             s += ', ' + self.imgtype
-        if self.compressedtype:
-            s += ', compressed ' + self.compressedtype
         pstrs = [ 'pos', 'neg', 'both' ]
         s += ', parity ' + pstrs[int(self.parity)]
         if self.scaletype == 'ul':
@@ -195,16 +183,11 @@ class Job(models.Model):
             h.update(d)
         self.filehash = h.hexdigest()
 
-    #def set_jobid(self, jid):
-    #    self.jobid = jid
-    #    self.jobdir = self.get_job_dir()
-    #    self.origfilename = 'original'
-
     def get_filename(self, fn):
         return os.path.join(self.get_job_dir(), fn)
 
     def get_orig_file(self):
-        return self.get_job_filename(self.origfilename)
+        return self.get_filename('original')
 
     def get_job_dir(self):
         d = os.path.join(*([config.jobdir,] + self.jobid.split('-')))
@@ -216,6 +199,7 @@ class Job(models.Model):
         if os.path.exists(d):
             return
         os.makedirs(d)
+        os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
 
     def generate_jobid():
         today = date.today()
@@ -224,20 +208,6 @@ class Job(models.Model):
         return jobid
     generate_jobid = staticmethod(generate_jobid)
 
-#   def __init__(self, vals):
-#       super(Job,self).__init__()
-#       xysrc = vals['xysrc']
-#       self.xysrc = xysrc
-#   if xysrc == 'file':
-#       ## FIXME
-#       pass
-#   elif xysrc == 'url':
-#       job.url = vals['url']
-#   elif xysrc == 'fitsfile':
-#   elif xysrc == 'fitsurl':
-#       job.url = vals['url']
-#   else:
-#       raise ValueError, 'unknown xysrc'
 
 
 

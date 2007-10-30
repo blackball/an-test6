@@ -10,5 +10,5 @@ logging.basicConfig(level=logging.DEBUG,
                     filename=logfile,
                     )
 
-def log(msg):
-    logging.debug(msg)
+def log(*msg):
+    logging.debug(' '.join(msg))

@@ -1,9 +1,21 @@
 #! /usr/bin/env python
 
-import logging
 import os
-import os.path
 import sys
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'an.settings'
+sys.path.extend(['/home/gmaps/test/tilecache',
+                 '/home/gmaps/test/an-common',
+                 '/home/gmaps/test/',
+                 '/home/gmaps/django/lib/python2.4/site-packages'])
+
+import an.gmaps_config as config
+
+os.environ['LD_LIBRARY_PATH'] = '/home/gmaps/test/an-common'
+os.environ['PATH'] = '/bin:/usr/bin:/home/gmaps/test/quads'
+
+import logging
+import os.path
 import urllib
 
 from django.db import models
@@ -39,8 +51,11 @@ if __name__ == '__main__':
     # go to the job directory.
     os.chdir(jobdir)
 
-    job = Job.objects.all().filter(jobid=jobid)
+    jobset = Job.objects.all().filter(jobid=jobid)
+    if len(jobset) != 1:
+        bailout('Found %i jobs, not 1' % len(jobset))
 
+    job = jobset[0]
     log('Running job: ' + str(job))
     if not job:
         sys.exit(-1)
@@ -119,11 +134,12 @@ if __name__ == '__main__':
     blindlog = 'blind.log'
     # shell into compute server...
     cmd = ('(echo %(jobid)s; '
-           'tar cf - --ignore-failed-read %(axyfile)s) | '
+           ' tar cf - --ignore-failed-read %(axyfile)s) | '
            'ssh -x -T %(sshconfig)s 2>>%(logfile)s | '
            'tar xf - --atime-preserve -m --exclude=%(axyfile)s '
-           '>>%(logfile)s 2>&1)' %
-           dict(jobid=jobid, axyfile=axyfile,
+           '>>%(logfile)s 2>&1' %
+           dict(jobid=jobid, axyfile=axy,
                 sshconfig=sshconfig, logfile=blindlog))
-    
+
+    log('Running command:', cmd)
     os.system(cmd)

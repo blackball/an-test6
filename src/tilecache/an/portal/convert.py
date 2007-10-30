@@ -1,3 +1,11 @@
+import os
+import os.path
+import re
+
+import an.gmaps_config as gmaps_config
+import quads.image2pnm as image2pnm
+import quads.fits2fits as fits2fits
+
 from an.portal.log import log
 from an.portal.run_command import run_command
 
@@ -28,9 +36,9 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'pnm':
         infn = convert(job, 'uncomp', store_imgtype, store_imgsize)
-        andir = gmaps_config.basedir + 'quads/'
+        #andir = gmaps_config.basedir + 'quads/'
         log('Converting %s to %s...\n' % (infn, fullfn))
-        (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, andir, False)
+        (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, None, False)
         if errstr:
             err = 'Error converting image file: %s' % errstr
             log(err)

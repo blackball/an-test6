@@ -28,6 +28,7 @@
 #include <libgen.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <regex.h>
 
 #include <pthread.h>
@@ -209,16 +210,14 @@ static void file_created(childinfo* info, struct inotify_event* evt,
 		q_it = 1;
 	}
 
-	/*
-	  if (!strcmp(base, inputfile))
-	  q_it = 1;
-	*/
+	loggit("File created: %s.");
+
 	free(pathcopy);
 	if (!q_it) {
-		//loggit("Ignoring file %s.\n", path);
+		loggit("Ignoring file %s.\n", path);
 		return;
 	}
-	//loggit("Queuing file %s.\n", path);
+	loggit("Queuing file %s.\n", path);
 	queue_append(path);
 	fprintf(info->pipeout, "%s\n", path);
 	fflush(info->pipeout);
@@ -259,12 +258,10 @@ static void handle_event(childinfo* info, struct inotify_event* evt) {
 	snprintf(buf, sizeof(buf), "%s/%s", dir, evt->name);
 	path = buf;
 
-	/*
-	  loggit("Path: %s\n", path);
-	  loggit("Events:");
-	  print_events(flog, evt->mask);
-	  loggit("\n");
-	*/
+	loggit("Path: %s\n", path);
+	loggit("Events:");
+	print_events(flog, evt->mask);
+	loggit("\n");
 
 	if ((evt->mask & IN_UNMOUNT) ||
 		((evt->mask & IN_DELETE_SELF) && (evt->wd == il_get(info->wds, 0)))) {
@@ -321,6 +318,18 @@ static void handle_event(childinfo* info, struct inotify_event* evt) {
 			   (!(evt->mask & IN_ISDIR))) {
 		// created a file.
 		file_created(info, evt, path);
+	} else if (evt->mask & IN_CREATE) {
+		// symlink?
+		struct stat st;
+		if (lstat(path, &st)) {
+			loggit("stat(%s) failed: %s\n", path, strerror(errno));
+			return;
+		}
+		if (S_ISLNK(st.st_mode)) {
+			file_created(info, evt, path);
+		} else {
+			loggit("File created, not a symlink: %s\n", path);
+		}
 	}
 }
 
