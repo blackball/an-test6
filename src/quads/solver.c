@@ -438,6 +438,7 @@ static void add_stars(pquad* pq, uint* field, int fieldoffset,
         // If we've hit the end of the recursion (we're adding the last star),
         // call try_all_codes to try the quad we've built.
         if (adding == n_to_add-1) {
+            // (when not testing, TRY_ALL_CODES is just try_all_codes.)
             TRY_ALL_CODES(pq, field, dimquad, solver, tol2);
         } else {
             // Else recurse.
