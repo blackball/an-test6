@@ -36,10 +36,10 @@ class Job(models.Model):
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
         ('arcminwidth' , 'width of the field (in arcminutes)'), 
-        ('degreewidth' , 'width of the field (in degrees)'),
+        ('degwidth' , 'width of the field (in degrees)'),
         ('focalmm'     , 'focal length of the lens (for 35mm film equivalent sensor)'),
         )
-    scaleunits_default = 'degreewidth'
+    scaleunits_default = 'degwidth'
 
     scaletype_CHOICES = (
         ('ul', 'lower and upper bounds'),
@@ -86,7 +86,7 @@ class Job(models.Model):
 
     # type of the uploaded file, if it was compressed
     # ("gz", "bz2", etc)
-    compressedtype = models.CharField(max_length=8, editable=False, blank=True)
+    compressedtype = models.CharField(max_length=8, editable=False, blank=True, null=True)
     # type of the uploaded file, after compression
     # ("jpg", "png", "gif", "fits", etc)
     imgtype = models.CharField(max_length=16, editable=False)
@@ -170,6 +170,15 @@ class Job(models.Model):
             s += ', no tweak'
         s += '>'
         return s
+
+    def get_scale_bounds(self):
+        if self.scaletype == 'ul':
+            return (self.scalelower, self.scaleupper)
+        elif self.scaletype == 'ev':
+            return (self.scaleest * (1 - self.scaleerr / 100.0),
+                    self.scaleest * (1 + self.scaleerr / 100.0))
+        else:
+            return None
 
     def compute_filehash(self, fn):
         h = sha.new()

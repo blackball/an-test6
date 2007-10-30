@@ -424,12 +424,16 @@ def create_file(job, fn, opts=[]):
             return orig
         comp = image2pnm.uncompress_file(orig, fullfn)
         if check:
-            logging.debug('Input file was compressed: %s' % comp)
-            job.compressedtype = comp
+            logging.debug('Input file compression: %s' % comp)
+            if comp:
+                job.compressedtype = comp
+        if comp is None:
+            return orig
         return fullfn
-    
+
     elif fn == 'pnm':
         infn = create_file(job, 'uncomp', opts)
+        check = 'check-imgtype' in opts
         andir = gmaps_config.basedir + 'quads/'
         logging.debug('Converting %s to %s...\n' % (infn, fullfn))
         (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, andir, False)
@@ -437,6 +441,8 @@ def create_file(job, fn, opts=[]):
             err = 'Error converting image file: %s' % errstr
             logging.debug(err)
             raise FileConversionError(errstr)
+        if check:
+            job.imgtype = imgtype
         return fullfn
 
     elif fn == 'pgm':
@@ -495,6 +501,19 @@ def create_file(job, fn, opts=[]):
             raise FileConversionError(errmsg)
         return fullfn
 
+    elif fn == 'xyls':
+        infn = create_file(job, 'fitsimg', opts)
+        cmd = 'image2xy -o %s %s' % (fullfn, infn)
+        logging.debug('running: ' + cmd)
+        (rtn, out, err) = run_command(cmd)
+        if rtn:
+            errmsg = 'Source extraction failed: ' + err
+            logging.debug('Image2xy failed: rtn val %d' % rtn)
+            logging.debug('stdout: ' + out)
+            logging.debug('stderr: ' + err)
+            raise FileConversionError(errmsg)
+        return fullfn
+    
     errmsg = 'Unimplemented: create_file(%s)' % fn
     logging.debug(errmsg)
     raise FileConversionError(errmsg)
@@ -539,10 +558,42 @@ def submit(request):
 
     if job.filetype == 'image':
         # create fits image to feed to image2xy
-        fitsimg = create_file(job, 'fitsimg',
-                              ['check-imgtype', 'save-imgsize'])
+        #fitsimg = create_file(job, 'fitsimg',
+        #                      ['check-imgtype', 'save-imgsize'])
+        #logging.debug('created fits image %s' % fitsimg)
 
-        logging.debug('created fits image %s' % fitsimg)
+        xylist = create_file(job, 'xyls',
+                             ['check-imgtype', 'save-imgsize'])
+        logging.debug('created xylist %s' % xylist)
+
+        (lower, upper) = job.get_scale_bounds()
+
+        axy = 'job.axy'
+
+        cmd = 'augment-xylist -x %s -o %s --solved solved ' \
+              '--match match.fits --rdls index.rd.fits ' \
+              '--wcs wcs.fits --sort-column FLUX ' \
+              '--scale-units %s --scale-low %g --scale-high %g ' \
+              '--fields 1' % \
+              (xylist, axy, job.scaleunits, lower, upper)
+        if job.tweak:
+            cmd += ' --tweak-order %i' % job.tweakorder
+        else:
+            cmd += ' --no-tweak'
+
+        jobdir = job.get_job_dir()
+        os.chdir(jobdir)
+
+        logging.debug('running: ' + cmd)
+        (rtn, out, err) = run_command(cmd)
+        if rtn:
+            logging.debug('out: ' + out)
+            logging.debug('err: ' + err)
+            return HttpResponse('Creating axy file failed: ' + err)
+
+        axypath = jobdir + '/' + axy
+
+        logging.debug('created file ' + axypath)
 
         # shrink
         #job.displayscale = max(1, int(math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2)))))
