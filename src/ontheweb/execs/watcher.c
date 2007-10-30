@@ -1,3 +1,21 @@
+/*
+ This file is part of the Astrometry.net suite.
+ Copyright 2007 Dustin Lang.
+
+ The Astrometry.net suite is free software; you can redistribute
+ it and/or modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation, version 2.
+
+ The Astrometry.net suite is distributed in the hope that it will be
+ useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with the Astrometry.net suite ; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -9,6 +27,8 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <regex.h>
 
 #include <pthread.h>
 #include <sys/inotify.h>
@@ -29,14 +49,17 @@
 
 static const char* OPTIONS = "hDl:c:n:w:";
 
-static char* blind = "blind < %s";
-static char* inputfile = "input";
+static char* command = "echo %s";
+static char* newfilepattern = NULL;
+static regex_t newfilere;
 static char* qfile = "queue";
 static char* qtempfile = "queue.tmp";
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage:\n\n"
 			"%s [options], where options include:\n"
+			"      [-p <pattern>]: only run the command on files that match the given\n"
+			"                      POSIX extended regex.  Default: accept everything.\n"
 			"      [-D]: become a daemon; implies logging to the default\n"
 			"           file (\"watcher.log\" in the current directory)\n"
 			"           if logging is not specified with -l.\n"
@@ -47,7 +70,7 @@ static void printHelp(char* progname) {
 			"      [-n <nthreads>]: number of worker threads to run simultaneously.\n"
 			"           default: 1\n"
 			"      [-w <watch-dir>]: watch an additional directory.\n"
-			"\n", progname, blind);
+			"\n", progname, command);
 }
 
 static pthread_t childthread;
@@ -179,8 +202,17 @@ static void file_created(childinfo* info, struct inotify_event* evt,
 	int q_it = 0;
 	pathcopy = strdup(path);
 	base = basename(pathcopy);
-	if (!strcmp(base, inputfile))
+
+	if (newfilepattern) {
+		q_it = (regexec(&newfilere, path, 0, NULL, 0) == 0);
+	} else {
 		q_it = 1;
+	}
+
+	/*
+	  if (!strcmp(base, inputfile))
+	  q_it = 1;
+	*/
 	free(pathcopy);
 	if (!q_it) {
 		//loggit("Ignoring file %s.\n", path);
@@ -390,7 +422,7 @@ static void run(char* path) {
 		loggit("Failed to chdir to %s: %s\n", dir, strerror(errno));
 		goto bailout;
 	}
-	if (snprintf(cmdline, sizeof(cmdline), blind, path) >= sizeof(cmdline)) {
+	if (snprintf(cmdline, sizeof(cmdline), command, path) >= sizeof(cmdline)) {
 		loggit("Command line was too long.\n");
 		goto bailout;
 	}
@@ -405,12 +437,12 @@ static void run(char* path) {
 	}
 	if (WIFSIGNALED(ret) &&
 		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
-		loggit("Blind was killed.\n");
+		loggit("Command was killed.\n");
 	} else {
 		if (WEXITSTATUS(ret) == 127) {
-			loggit("Blind executable not found.  Command-line: \"%s\"\n", cmdline);
+			loggit("Command not found.  Command-line: \"%s\"\n", cmdline);
 		} else {
-			loggit("Blind return value: %i\n", WEXITSTATUS(ret));
+			loggit("Command return value: %i\n", WEXITSTATUS(ret));
 		}
 	}
 	if (chdir("/")) {
@@ -580,6 +612,9 @@ int main(int argc, char** args) {
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+		case 'p':
+			newfilepattern = optarg;
+			break;
 		case 'w':
 			pl_append(watchpaths, strdup(optarg));
 			break;
@@ -590,7 +625,7 @@ int main(int argc, char** args) {
 			logfile = optarg;
 			break;
 		case 'c':
-			blind = optarg;
+			command = optarg;
 			break;
 		case 'n':
 			nworkers = atoi(optarg);
@@ -619,6 +654,16 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 		flog = f;
+	}
+
+	if (newfilepattern) {
+		int err = regcomp(&newfilere, newfilepattern, REG_EXTENDED | REG_NOSUB);
+		if (err) {
+			char errmsg[256];
+			regerror(err, &newfilere, errmsg, sizeof(errmsg));
+			fprintf(stderr, "Failed to compile regular expression:\n%s\n", errmsg);
+			exit(-1);
+		}
 	}
 
 	q = pl_new(16);
