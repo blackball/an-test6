@@ -1,8 +1,24 @@
 #! /usr/bin/env python
 
-import sys
+import logging
 import os
 import os.path
+import sys
+import urllib
+
+from django.db import models
+
+import an.gmaps_config as config
+
+from an.portal.models import Job
+from an.upload.models import UploadedFile
+from an.portal.log import log
+
+def bailout(job, reason):
+    job.status = 'Failed'
+    job.failurereason = reason
+    job.save()
+    sys.exit(-1)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -10,30 +26,29 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     sshconfig = sys.argv[1]
-    jobfile = sys.argv[2]
+    joblink = sys.argv[2]
 
     # jobfile should be a symlink; get the destination.
-    link = os.readlink(jobfile)
+    jobdir = os.readlink(joblink)
 
     # the name of the jobfile is its jobid.
-    jobid = os.path.basename(jobfile)
-
-    # get the job directory.
-    jobdir = os.path.dirname(link)
+    jobid = os.path.basename(joblink)
 
     # go to the job directory.
     os.chdir(jobdir)
 
-    axyfile = os.path.basename(link)
+    job = Job.objects.all().filter(jobid=jobid)
+
+    log('Running job: ' + str(job))
+    if not job:
+        sys.exit(-1)
 
     origfile = job.get_orig_file()
-
-    logging.debug('Job: ' + str(job))
 
     if job.datasrc == 'url':
         # download the URL.
         #f = urllib.urlopen(url, 
-        logging.debug('Retrieving URL...')
+        log('Retrieving URL...')
         f = urllib.urlretrieve(job.url, origfile)
 
     elif job.datasrc == 'file':
@@ -42,11 +57,11 @@ if __name__ == '__main__':
         #if not uid:
         #return HttpResponse('no upload_id')
         temp = job.uploaded.get_filename()
-        logging.debug('uploaded tempfile is ' + temp)
+        log('uploaded tempfile is ' + temp)
         os.rename(temp, origfile)
 
     else:
-        return HttpResponse('no datasrc')
+        bailout('no datasrc')
 
     # Handle compressed files.
     uncomp = create_file(job, 'uncomp', ['check-compressed'])
@@ -60,11 +75,11 @@ if __name__ == '__main__':
         # create fits image to feed to image2xy
         #fitsimg = create_file(job, 'fitsimg',
         #                      ['check-imgtype', 'save-imgsize'])
-        #logging.debug('created fits image %s' % fitsimg)
+        #log('created fits image %s' % fitsimg)
 
         xylist = create_file(job, 'xyls',
                              ['check-imgtype', 'save-imgsize'])
-        logging.debug('created xylist %s' % xylist)
+        log('created xylist %s' % xylist)
 
         (lower, upper) = job.get_scale_bounds()
 
@@ -84,16 +99,16 @@ if __name__ == '__main__':
         jobdir = job.get_job_dir()
         os.chdir(jobdir)
 
-        logging.debug('running: ' + cmd)
+        log('running: ' + cmd)
         (rtn, out, err) = run_command(cmd)
         if rtn:
-            logging.debug('out: ' + out)
-            logging.debug('err: ' + err)
+            log('out: ' + out)
+            log('err: ' + err)
             return HttpResponse('Creating axy file failed: ' + err)
 
         axypath = jobdir + '/' + axy
 
-        logging.debug('created file ' + axypath)
+        log('created file ' + axypath)
 
         # shrink
         #job.displayscale = max(1, int(math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2)))))
@@ -103,9 +118,9 @@ if __name__ == '__main__':
         #    (f, smallppm) = tempfile.mkstemp()
         #    os.close(f)
         #    cmd = 'pnmscale -reduce %i %s > %s' % (job.displayscale, pnmfile, smallppm)
-        #    logging.debug('command: ' + cmd)
+        #    log('command: ' + cmd)
         #    os.system(cmd)
-        #    logging.debug('small ppm file %s' % smallppm)
+        #    log('small ppm file %s' % smallppm)
 
     elif job.filetype == 'fits':
         return HttpResponse('fits tables not implemented')

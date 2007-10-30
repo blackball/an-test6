@@ -1,33 +1,35 @@
-from django import newforms as forms
-from django.newforms import ValidationError
-from django.http import HttpResponse
-from django.http import HttpResponseRedirect
-from django.template import Context, RequestContext, loader
-import django.contrib.auth as auth
-from django.newforms import widgets
-
-from an.portal.models import Job
-from an.upload.models import UploadedFile
-from an.upload.views  import UploadIdField
-import an.upload as upload
-
-import quads.image2pnm as image2pnm
-import quads.fits2fits as fits2fits
-from an import gmaps_config
-from an import settings
-
-import urllib
+import logging
+import os.path
+import random
 import re
 import time
-import random
-import logging
 import sha
-import os.path
 import tempfile
 import math
 import popen2
 import select
 #import fcntl
+
+import django.contrib.auth as auth
+
+from django import newforms as forms
+from django.newforms import ValidationError
+from django.http import HttpResponse
+from django.http import HttpResponseRedirect
+from django.template import Context, RequestContext, loader
+from django.newforms import widgets
+
+import an.upload as upload
+import quads.image2pnm as image2pnm
+import quads.fits2fits as fits2fits
+
+from an.portal.models import Job
+from an.upload.models import UploadedFile
+from an.upload.views  import UploadIdField
+
+from an import gmaps_config
+from an import settings
+from an.portal.log import log
 
 # Adding a user:
 # > python manage.py shell
@@ -36,13 +38,6 @@ import select
 # >>> passwd = 'password'
 # >>> user = User.objects.create_user(email, email, passwd)
 # >>> user.save()
-
-logfile = gmaps_config.portal_logfile
-logging.basicConfig(level=logging.DEBUG,
-                    #format='%(asctime)s %(levelname)s %(message)s',
-                    format='%(message)s',
-                    filename=logfile,
-                    )
 
 class LoginForm(forms.Form):
     username = forms.EmailField()
@@ -179,7 +174,7 @@ class FullForm(forms.Form):
             if self.geterror('upload_id'):
                 del self._errors['upload_id']
             url = self.getclean('url')
-            logging.debug('url is ' + str(url))
+            log('url is ' + str(url))
             if not self.geterror('url'):
                 if not (url and len(url)):
                     self._errors['url'] = ['URL is required']
@@ -192,7 +187,7 @@ class FullForm(forms.Form):
             fil = self.getclean('file')
             uploadid = self.getclean('upload_id')
             # FIXME - umm... little more checking here :)
-            logging.debug('file is ' + str(fil) + ', upload id is ' + str(uploadid))
+            log('file is ' + str(fil) + ', upload id is ' + str(uploadid))
             if not (fil or uploadid):
                 self._errors['file'] = ['You must upload a file']
 
@@ -218,7 +213,7 @@ class FullForm(forms.Form):
             if not order:
                 self._errors['tweakorder'] = ['Tweak order is required if tweak is enabled.']
 
-        logging.debug('form clean(): scaletype is %s' % self.getclean('scaletype'))
+        log('form clean(): scaletype is %s' % self.getclean('scaletype'))
         scaletype = self.getclean('scaletype')
         if scaletype == 'ul':
             if not self.geterror('scalelower') and not self.geterror('scaleupper'):
@@ -253,19 +248,19 @@ def login(request, redirect_to=None):
     authfailed = False
     usererr = None
     passerr = None
-    logging.debug('login()')
+    log('login()')
     if form.is_valid():
         username = form.cleaned_data['username']
         password = form.cleaned_data['password']
 
-        logging.debug('calling auth.authenticate()...')
+        log('calling auth.authenticate()...')
         user = auth.authenticate(username=username, password=password)
-        logging.debug('auth.authenticate() returned.')
+        log('auth.authenticate() returned.')
         if user is not None:
             if user.is_active:
-                logging.debug('calling auth.login().')
+                log('calling auth.login().')
                 auth.login(request, user)
-                logging.debug('auth.login() returned.')
+                log('auth.login() returned.')
                 # Success
                 return HttpResponseRedirect('/job/newurl')
             else:
@@ -298,9 +293,9 @@ def logout(request):
     return HttpResponseRedirect('/login')
 
 def newurl(request):
-    logging.debug('calling user.is_authenticated()...')
+    log('calling user.is_authenticated()...')
     ok = request.user.is_authenticated()
-    logging.debug('user.is_authenticated() returned', ok)
+    log('user.is_authenticated() returned', ok)
     #if not request.user.is_authenticated():
     if not ok:
         return HttpResponseRedirect('/login')
@@ -356,30 +351,12 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
-class FileConversionError(Exception):
-    errstr = None
-    def __init__(self, errstr):
-        #super(FileConversionError, self).__init__()
-        self.errstr = errstr
-    def __str__(self):
-        return self.errstr
-    
-#def makeNonBlocking(fd):
-#    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-#    try:
-#        fcntl.fcntl(fd, fcntl.F_SETFL, fl | fcntl.O_NDELAY)
-#    except AttributeError:
-#        fcntl.fcntl(fd, fcntl.F_SETFL, fl | fcntl.FNDELAY)
-
 def run_command(cmd):
     child = popen2.Popen3(cmd, True)
     (fout, fin, ferr) = (child.fromchild, child.tochild, child.childerr)
-    #(stdout, stdin, stderr) = popen2.popen3(cmd)
     fin.close()
     stdout = fout.fileno()
     stderr = ferr.fileno()
-    #makeNonBlocking(stdout)
-    #makeNonBlocking(stderr)
     out = err = ''
     outeof = erreof = 0
     block = 1024
@@ -410,114 +387,6 @@ def run_command(cmd):
     rtn = os.WEXITSTATUS(w)
     return (rtn, out, err)
 
-def create_file(job, fn, opts=[]):
-    logging.debug('create_file(%s)' % fn)
-    tempdir = gmaps_config.tempdir
-    basename = tempdir + '/' + job.jobid + '-'
-    fullfn = basename + fn
-    if os.path.exists(fullfn):
-        return fullfn
-    if fn == 'uncomp':
-        orig = job.get_orig_file()
-        check = 'check-compressed' in opts
-        if (not check) and job.compressedtype is None:
-            return orig
-        comp = image2pnm.uncompress_file(orig, fullfn)
-        if check:
-            logging.debug('Input file compression: %s' % comp)
-            if comp:
-                job.compressedtype = comp
-        if comp is None:
-            return orig
-        return fullfn
-
-    elif fn == 'pnm':
-        infn = create_file(job, 'uncomp', opts)
-        check = 'check-imgtype' in opts
-        andir = gmaps_config.basedir + 'quads/'
-        logging.debug('Converting %s to %s...\n' % (infn, fullfn))
-        (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, andir, False)
-        if errstr:
-            err = 'Error converting image file: %s' % errstr
-            logging.debug(err)
-            raise FileConversionError(errstr)
-        if check:
-            job.imgtype = imgtype
-        return fullfn
-
-    elif fn == 'pgm':
-        # run 'pnmfile' on the pnm.
-        infn = create_file(job, 'pnm', opts)
-        cmd = 'pnmfile %s' % infn
-        (filein, fileout) = os.popen2(cmd)
-        filein.close()
-        out = fileout.read().strip()
-        logging.debug('pnmfile output: ' + out)
-        pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
-        match = pat.search(out)
-        if not match:
-            logging.debug('No match.')
-            return HttpResponse('couldn\'t find file size')
-        w = int(match.group('width'))
-        h = int(match.group('height'))
-        pnmtype = match.group('pnmtype')
-        logging.debug('Type %s, w %i, h %i' % (pnmtype, w, h))
-        if 'save-imgsize' in opts:
-            job.imagew = w
-            job.imageh = h
-        if pnmtype == 'G':
-            return infn
-        cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
-        logging.debug('running: ' + cmd)
-        os.system(cmd)
-        return fullfn
-
-    elif fn == 'fitsimg':
-        check = 'check-imgtype' in opts
-        if check:
-            # check the uncompressed input image type...
-            infn = create_file(job, 'uncomp', opts)
-            (job.imgtype, errmsg) = image2pnm.get_image_type(infn)
-            if errmsg:
-                logging.debug(errmsg)
-                raise FileConversionError(errmsg)
-
-        # fits image: fits2fits it.
-        if job.imgtype == image2pnm.fitstype:
-            errmsg = fits2fits.fits2fits(infn, fullfn, False)
-            if errmsg:
-                logging.debug(errmsg)
-                raise FileConversionError(errmsg)
-            return fullfn
-
-        # else, convert to pgm and run pnm2fits.
-        infn = create_file(job, 'pgm', opts)
-        cmd = 'pnmtofits %s > %s' % (infn, fullfn)
-        logging.debug('Running: ' + cmd)
-        (rtnval, stdout, stderr) = run_command(cmd)
-        if rtnval:
-            errmsg = 'pnmtofits failed: ' + stderr
-            logging.debug(errmsg)
-            raise FileConversionError(errmsg)
-        return fullfn
-
-    elif fn == 'xyls':
-        infn = create_file(job, 'fitsimg', opts)
-        cmd = 'image2xy -o %s %s' % (fullfn, infn)
-        logging.debug('running: ' + cmd)
-        (rtn, out, err) = run_command(cmd)
-        if rtn:
-            errmsg = 'Source extraction failed: ' + err
-            logging.debug('Image2xy failed: rtn val %d' % rtn)
-            logging.debug('stdout: ' + out)
-            logging.debug('stderr: ' + err)
-            raise FileConversionError(errmsg)
-        return fullfn
-    
-    errmsg = 'Unimplemented: create_file(%s)' % fn
-    logging.debug(errmsg)
-    raise FileConversionError(errmsg)
-
 def submit(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
@@ -525,7 +394,7 @@ def submit(request):
     if not job:
         return HttpResponse('no job in session')
         
-    logging.debug('submit(): Job is: ' + str(job))
+    log('submit(): Job is: ' + str(job))
 
     job.create_job_dir()
     job.save()
@@ -544,7 +413,7 @@ def jobstatus(request):
     if not job:
         return HttpResponse('no job in session')
 
-    logging.debug('jobstatus: Job is: ' + str(job))
+    log('jobstatus: Job is: ' + str(job))
     
     res = HttpResponse()
     res['Content-Type'] = 'text/plain'
@@ -555,17 +424,17 @@ def jobstatus(request):
 
 def printvals(request):
     if request.POST:
-        logging.debug('POST values:')
+        log('POST values:')
         for k,v in request.POST.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
+            log('  %s = %s' % (str(k), str(v)))
     if request.GET:
-        logging.debug('GET values:')
+        log('GET values:')
         for k,v in request.GET.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
+            log('  %s = %s' % (str(k), str(v)))
     if request.FILES:
-        logging.debug('FILES values:')
+        log('FILES values:')
         for k,v in request.FILES.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
+            log('  %s = %s' % (str(k), str(v)))
 
 # Note, if there are *ANY* errors in the form, it will have no
 # 'cleaned_data' array.
@@ -575,9 +444,9 @@ def newlong(request):
         return HttpResponseRedirect('/login')
 
     if request.POST:
-        logging.debug('POST values:')
+        log('POST values:')
         for k,v in request.POST.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
+            log('  %s = %s' % (str(k), str(v)))
         form = FullForm(request.POST, request.FILES)
     else:
         form = FullForm()
@@ -606,11 +475,11 @@ def newlong(request):
         job.user = request.user
         #job.save()
 
-        logging.debug('Form is valid.')
+        log('Form is valid.')
         for k,v in form.cleaned_data.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
+            log('  %s = %s' % (str(k), str(v)))
 
-        logging.debug('Job: ' + str(job))
+        log('Job: ' + str(job))
 
         request.session['job'] = job
         #return HttpResponse('ok')
@@ -619,10 +488,10 @@ def newlong(request):
     if 'jobvals' in request.session:
         del request.session['jobvals']
 
-    logging.debug('Errors:')
+    log('Errors:')
     if form._errors:
         for k,v in form._errors.items():
-            logging.debug('  %s = %s' % (str(k), str(v)))
+            log('  %s = %s' % (str(k), str(v)))
 
     # Ugh, special rendering for radio checkboxes....
     scaletype = form['scaletype'].field

@@ -1,18 +1,21 @@
-from django.db import models
-from django.contrib.auth.models import User
-from django.core import validators
-
-from an.upload.models import UploadedFile
-
 import sha
 import re
 import time
 import random
 import os.path
 import logging
+
 from datetime import date
 
+from django.db import models
+from django.contrib.auth.models import User
+from django.core import validators
+
 import an.gmaps_config as config
+
+from an.upload.models import UploadedFile
+
+
 
 # To install a new database table:
 # > python manage.py sql portal
