@@ -7,6 +7,7 @@ Author: Keir Mierle 2007
 import sys
 import os
 import tempfile
+from fits2fits import fits2fits as fits2fits
 
 fitstype = "FITS image data"
 
@@ -40,55 +41,84 @@ def do_command(cmd):
         print >>sys.stderr, 'Command failed: %s' % cmd
         sys.exit(-1)
 
-def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits,
-                  mydir, quiet):
-    #if not quiet:
-    #    log('Running: ', 'file -b -N -L %s' % shell_escape(infile))
-    filein, fileout = os.popen2('file -b -N -L %s' % shell_escape(infile))
+# Run the "file" command, return the trimmed output.
+def run_file(fn):
+    (filein, fileout) = os.popen2('file -b -N -L %s' % shell_escape(fn))
     typeinfo = fileout.read().strip()
-    if not quiet:
-        log('\"file\" output:', typeinfo)
-    
     # Trim extra data after the ,
     comma_pos = typeinfo.find(',')
     if comma_pos != -1:
         typeinfo = typeinfo[:comma_pos]
+    return typeinfo
+
+def uncompress_file(infile, uncompressed, outdir=None, typeinfo=None, quiet=True):
+    """
+    infile: input filename.
+    uncompressed: output filename.
+    typeinfo: output from the 'file' command; if None we'll run 'file'.
+    quiet: don't print any informational messages.
+
+    Returns: comptype
+    comptype: None if the file wasn't compressed, or 'gz' or 'bz2'.
+    """
+    if not typeinfo:
+        typeinfo = run_file(infile)
+    if not typeinfo in compcmds:
+        return None
+    assert uncompressed != infile
+    if not quiet:
+        log('compressed file, dumping to:', uncompressed)
+    (ext, cmd) = compcmds[typeinfo]
+    do_command(cmd % (shell_escape(infile), shell_escape(uncompressed)))
+    return ext
+
+def get_image_type(infile):
+    typeinfo = run_file(infile)
+    if not typeinfo in imgcmds:
+        return (None, 'Unknown image type "%s"' % typeinfo)
+    (ext, cmd) = imgcmds[typeinfo]
+    return (ext, None)
+
+def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
+              mydir, quiet):
+    """
+    infile: input filename.
+    outfile: output filename.
+    sanitized: for FITS images, output filename of sanitized (fits2fits'd) image.
+    force_ppm: boolean, convert PGM to PPM so that the output is always PPM.
+
+    Returns: (type, error)
+
+    - type: (string): image type: 'jpg', 'png', 'gif', etc., or None if
+       image type isn't recognized.
+
+    - error: (string): error string, or None
+    """
+    typeinfo = run_file(infile)
+    if not typeinfo in imgcmds:
+        return (None, 'Image type not recognized:', typeinfo)
+
+    tempfiles = []
 
     # If it's a FITS file we want to filter it first because of the many
-    # misbehaved FITS files around. fits2fits is a sanitizer.
+    # misbehaved FITS files. fits2fits is a sanitizer.
     if (typeinfo == fitstype) and (not no_fits2fits):
-        assert sanitized != infile
-        new_infile = sanitized
-        cmd = 'fits2fits.py '
-        if not quiet:
-            cmd += '--verbose '
-        cmd += '%s %s' % (shell_escape(infile), shell_escape(new_infile))
-        if mydir:
-            # add path...
-            cmd = mydir + cmd
-        do_command(cmd)
-        infile = new_infile
-
-    # Recurse if we're compressed
-    if typeinfo in compcmds:
-        assert uncompressed != infile
-        new_infile = uncompressed
-        if not quiet:
-            log('compressed file, dumping to:', new_infile)
-        ext, cmd = compcmds[typeinfo]
-        do_command(cmd % (shell_escape(infile), shell_escape(new_infile)))
-        print "compressed"
-        print ext
-        return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits, mydir, quiet)
-
-    if not typeinfo in imgcmds:
-        log('ERROR: image type not recognized:', typeinfo)
-        return -1
+        if not sanitized:
+            (f, sanitized) = tempfile.mkstemp('sanitized', outfile_file, outfile_dir)
+            os.close(f)
+            tempfiles.append(sanitized)
+        else:
+            assert sanitized != infile
+        errstr = fits2fits(infile, sanitized, not quiet)
+        if errstr:
+            return (None, errstr)
+        infile = sanitized
 
     if force_ppm:
         original_outfile = outfile
-        outfile_dir, outfile_file = os.path.split(outfile)
-        filehandle, outfile = tempfile.mkstemp('pnm', outfile_file, outfile_dir)
+        (outfile_dir, outfile_file) = os.path.split(outfile)
+        (f, outfile) = tempfile.mkstemp('pnm', outfile_file, outfile_dir)
+        os.close(f)
         if not quiet:
             log('temporary output file: ', outfile)
 
@@ -100,20 +130,49 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2f
     if quiet:
         cmd = cmd + " 2>/dev/null"
     do_command(cmd % (shell_escape(infile), shell_escape(outfile)))
-    print ext
 
     if force_ppm:
-        filein, fileout = os.popen2('file -b -N -L %s' % shell_escape(outfile))
-        typeinfo = fileout.read()
-        typeinfo.strip()
+        typeinfo = run_file(outfile)
         if (typeinfo.startswith("Netpbm PGM")):
             # Convert to PPM.
             do_command("pgmtoppm white %s > %s" % (shell_escape(outfile), shell_escape(original_outfile)))
-            os.unlink(outfile)
+            tempfiles.append(outfile)
         else:
             os.rename(outfile, original_outfile)
 
+    for fn in tempfiles:
+        os.unlink(fn)
+
     # Success
+    return (ext, None)
+    
+
+def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits,
+                  mydir, quiet):
+    typeinfo = run_file(infile)
+
+    tempfiles = []
+    if not uncompressed:
+        (outfile_dir, outfile_file) = os.path.split(outfile)
+        (f, uncompressed) = tempfile.mkstemp(None, 'uncomp', outdir)
+        os.close(f)
+        tempfiles.append(uncompressed)
+
+    comp = uncompress_file(infile, uncompressed, typeinfo, quiet)
+    if comp:
+        print 'compressed'
+        print comp
+        infile = uncompressed
+
+    (imgtype, errstr) = image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits, mydir, quiet)
+
+    for fn in tempfiles:
+        os.unlink(fn)
+
+    if errstr:
+        log('ERROR: %s' % errstr)
+        return -1
+    print imgtype
     return 0
 
 def main():
@@ -150,10 +209,10 @@ def main():
     if not options.outfile:
         parser.error('required argument missing: outfile')
 
-    if not options.uncompressed_outfile:
-        options.uncompressed_outfile = options.infile+'.raw'
-    if not options.sanitized_outfile:
-        options.sanitized_outfile = options.infile+'.sanitized.fits'
+    #if not options.uncompressed_outfile:
+    #    options.uncompressed_outfile = options.infile+'.raw'
+    #if not options.sanitized_outfile:
+    #    options.sanitized_outfile = options.infile+'.sanitized.fits'
 
     # Find the path to this executable and use it to find other Astrometry.net
     # executables.
