@@ -4,17 +4,12 @@ from pylab import *
 from numpy import *
 import ransac
 
-def all_dists(a,b): 
+
+def all_dists(a,b):
     "returns D[i,j] == || a[i,:]-b[j,:] ||" 
-    n1,m1 = a.shape 
-    n2,m2 = b.shape 
-    assert m1 == m2 
-    dists = zeros((n1,n2),'d') 
-    for d in xrange(m1): 
-        x1 = a[:,d] 
-        x2 = b[:,d] 
-        dists += subtract.outer(x1, x2)**2
-    return sqrt(dists)
+   return sqrt((a*a).sum(1).reshape(-1,1) +
+               (b*b).sum(1).reshape(1,-1)
+               - 2* dot(a,b.T))
 
 def readxylist(fn):
     hdus = pyfits.open(fn)
