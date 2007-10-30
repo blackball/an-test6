@@ -204,6 +204,9 @@ class Job(models.Model):
     
     def create_job_dir(self):
         d = self.get_job_dir()
+        # HACK - more careful here...
+        if os.path.exists(d):
+            return
         os.makedirs(d)
 
     def generate_jobid():

@@ -1,6 +1,8 @@
 basedir = "/home/gmaps/test/"
 tcdir = basedir + "tilecache/"
 
+jobqueuedir = basedir + "job-queue/"
+
 logfile = basedir + "tilecache-django.log"
 tilerender = tcdir + "render/tilerender"
 sipso = basedir + "an-common/_sip.so"

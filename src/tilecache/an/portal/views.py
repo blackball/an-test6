@@ -620,19 +620,11 @@ def submit(request):
 
     job.save()
 
-
-    # submit the axy file.
-    
+    # enqueue the axy file.
+    link = gmaps_config.jobqueuedir + job.jobid
+    os.symlink(axypath, link)
 
     return jobstatus(request)
-
-
-    #res = HttpResponse()
-    #res['Content-Type'] = 'text/plain'
-    #res.write('Job: ' + str(job))
-    #return res
-#txt = "<pre>Job: " + str(job) + "</pre>"
-#return HttpResponse(txt)
 
 def jobstatus(request):
     if not request.user.is_authenticated():
@@ -643,6 +635,10 @@ def jobstatus(request):
 
     logging.debug('jobstatus: Job is: ' + str(job))
     
+    res = HttpResponse()
+    res['Content-Type'] = 'text/plain'
+    res.write('Job submitted: ' + str(job))
+    return res
 
 
 
