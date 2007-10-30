@@ -47,7 +47,7 @@
    to handle them.
  */
 
-static const char* OPTIONS = "hDl:c:n:w:";
+static const char* OPTIONS = "hDl:c:n:w:p:";
 
 static char* command = "echo %s";
 static char* newfilepattern = NULL;
