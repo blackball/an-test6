@@ -556,6 +556,8 @@ def submit(request):
     # Compute hash of uncompressed file.
     job.compute_filehash(uncomp)
 
+    axypath = None
+
     if job.filetype == 'image':
         # create fits image to feed to image2xy
         #fitsimg = create_file(job, 'fitsimg',
@@ -608,20 +610,41 @@ def submit(request):
         #    logging.debug('small ppm file %s' % smallppm)
 
     elif job.filetype == 'fits':
+        return HttpResponse('fits tables not implemented')
         pass
     elif job.filetype == 'text':
+        return HttpResponse('text files not implemented')
         pass
     else:
         return HttpResponse('no filetype')
 
     job.save()
 
-    res = HttpResponse()
-    res['Content-Type'] = 'text/plain'
-    res.write('Job: ' + str(job))
-    return res
+
+    # submit the axy file.
+    
+
+    return jobstatus(request)
+
+
+    #res = HttpResponse()
+    #res['Content-Type'] = 'text/plain'
+    #res.write('Job: ' + str(job))
+    #return res
 #txt = "<pre>Job: " + str(job) + "</pre>"
 #return HttpResponse(txt)
+
+def jobstatus(request):
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+    job = request.session['job']
+    if not job:
+        return HttpResponse('no job in session')
+
+    logging.debug('jobstatus: Job is: ' + str(job))
+    
+
+
 
 def printvals(request):
     if request.POST:
