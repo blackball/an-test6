@@ -6,9 +6,6 @@ import time
 import sha
 import tempfile
 import math
-import popen2
-import select
-#import fcntl
 
 import django.contrib.auth as auth
 
@@ -351,42 +348,6 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
-def run_command(cmd):
-    child = popen2.Popen3(cmd, True)
-    (fout, fin, ferr) = (child.fromchild, child.tochild, child.childerr)
-    fin.close()
-    stdout = fout.fileno()
-    stderr = ferr.fileno()
-    out = err = ''
-    outeof = erreof = 0
-    block = 1024
-    while True:
-        s=[]
-        if not outeof:
-            s.append(stdout)
-        if not erreof:
-            s.append(stderr)
-        if not len(s):
-            break
-        (ready, nil1, nil2) = select.select(s, [], [])
-        if stdout in ready:
-            outchunk = os.read(stdout, block)
-            if len(outchunk) == 0:
-                outeof = 1
-            out += outchunk
-        if stderr in ready:
-            errchunk = os.read(stderr, block)
-            if len(errchunk) == 0:
-                erreof = 1
-            err += errchunk
-    fout.close()
-    ferr.close()
-    w = child.wait()
-    if not os.WIFEXITED(w):
-        return (-100, out, err)
-    rtn = os.WEXITSTATUS(w)
-    return (rtn, out, err)
-
 def submit(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
@@ -419,8 +380,6 @@ def jobstatus(request):
     res['Content-Type'] = 'text/plain'
     res.write('Job submitted: ' + str(job))
     return res
-
-
 
 def printvals(request):
     if request.POST:

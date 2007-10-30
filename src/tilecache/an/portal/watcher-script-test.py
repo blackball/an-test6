@@ -13,6 +13,8 @@ import an.gmaps_config as config
 from an.portal.models import Job
 from an.upload.models import UploadedFile
 from an.portal.log import log
+from an.portal.convert import convert
+from an.portal.run_command import run_command
 
 def bailout(job, reason):
     job.status = 'Failed'
@@ -47,15 +49,11 @@ if __name__ == '__main__':
 
     if job.datasrc == 'url':
         # download the URL.
-        #f = urllib.urlopen(url, 
         log('Retrieving URL...')
         f = urllib.urlretrieve(job.url, origfile)
 
     elif job.datasrc == 'file':
         # move the uploaded file.
-        #uid = job.uploaded
-        #if not uid:
-        #return HttpResponse('no upload_id')
         temp = job.uploaded.get_filename()
         log('uploaded tempfile is ' + temp)
         os.rename(temp, origfile)
@@ -64,26 +62,18 @@ if __name__ == '__main__':
         bailout('no datasrc')
 
     # Handle compressed files.
-    uncomp = create_file(job, 'uncomp', ['check-compressed'])
+    uncomp = convert(job, 'uncomp')
 
     # Compute hash of uncompressed file.
     job.compute_filehash(uncomp)
 
-    axypath = None
+    axy = 'job.axy'
+    axypath = job.get_filename(axy)
 
     if job.filetype == 'image':
-        # create fits image to feed to image2xy
-        #fitsimg = create_file(job, 'fitsimg',
-        #                      ['check-imgtype', 'save-imgsize'])
-        #log('created fits image %s' % fitsimg)
-
-        xylist = create_file(job, 'xyls',
-                             ['check-imgtype', 'save-imgsize'])
+        xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
         log('created xylist %s' % xylist)
-
         (lower, upper) = job.get_scale_bounds()
-
-        axy = 'job.axy'
 
         cmd = ('augment-xylist -x %s -o %s --solved solved '
                '--match match.fits --rdls index.rd.fits '
@@ -96,17 +86,12 @@ if __name__ == '__main__':
         else:
             cmd += ' --no-tweak'
 
-        jobdir = job.get_job_dir()
-        os.chdir(jobdir)
-
         log('running: ' + cmd)
         (rtn, out, err) = run_command(cmd)
         if rtn:
             log('out: ' + out)
             log('err: ' + err)
-            return HttpResponse('Creating axy file failed: ' + err)
-
-        axypath = jobdir + '/' + axy
+            bailout('Creating axy file failed: ' + err)
 
         log('created file ' + axypath)
 
@@ -123,25 +108,22 @@ if __name__ == '__main__':
         #    log('small ppm file %s' % smallppm)
 
     elif job.filetype == 'fits':
-        return HttpResponse('fits tables not implemented')
-        pass
+        bailout('fits tables not implemented')
     elif job.filetype == 'text':
-        return HttpResponse('text files not implemented')
-        pass
+        bailout('text files not implemented')
     else:
-        return HttpResponse('no filetype')
+        bailout('no filetype')
 
+    job.save()
 
-
-
-    log = 'blind.log'
-
+    blindlog = 'blind.log'
     # shell into compute server...
-    cmd = ('(echo %(jobid)s;'
+    cmd = ('(echo %(jobid)s; '
            'tar cf - --ignore-failed-read %(axyfile)s) | '
            'ssh -x -T %(sshconfig)s 2>>%(logfile)s | '
            'tar xf - --atime-preserve -m --exclude=%(axyfile)s '
            '>>%(logfile)s 2>&1)' %
            dict(jobid=jobid, axyfile=axyfile,
-                sshconfig=sshconfig, logfile=logfile))
+                sshconfig=sshconfig, logfile=blindlog))
     
+    os.system(cmd)

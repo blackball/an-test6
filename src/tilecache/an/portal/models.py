@@ -89,8 +89,10 @@ class Job(models.Model):
 
     # type of the uploaded file, if it was compressed
     # ("gz", "bz2", etc)
-    compressedtype = models.CharField(max_length=8, editable=False, blank=True, null=True)
-    # type of the uploaded file, after compression
+    # never mind, we don't care.
+    #compressedtype = models.CharField(max_length=8, editable=False, blank=True, null=True)
+
+    # type of the uploaded file, after uncompression
     # ("jpg", "png", "gif", "fits", etc)
     imgtype = models.CharField(max_length=16, editable=False)
 
@@ -198,11 +200,14 @@ class Job(models.Model):
     #    self.jobdir = self.get_job_dir()
     #    self.origfilename = 'original'
 
+    def get_filename(self, fn):
+        return os.path.join(self.get_job_dir(), fn)
+
     def get_orig_file(self):
-        return self.get_job_dir() + '/' + self.origfilename
+        return self.get_job_filename(self.origfilename)
 
     def get_job_dir(self):
-        d = config.jobdir + '/' + self.jobid.replace('-', '/')
+        d = os.path.join(*([config.jobdir,] + self.jobid.split('-')))
         return d
     
     def create_job_dir(self):
