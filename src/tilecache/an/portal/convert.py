@@ -1,3 +1,4 @@
+import math
 import os
 import os.path
 import re
@@ -16,7 +17,17 @@ class FileConversionError(Exception):
         self.errstr = errstr
     def __str__(self):
         return self.errstr
-    
+
+def run_convert_command(cmd):
+    log('Command: ' + cmd)
+    (rtn, stdout, stderr) = run_command(cmd)
+    if rtn:
+        errmsg = 'Command failed: ' + cmd + ': ' + stderr
+        log(errmsg + '; rtn val %d' % rtn)
+        log('out: ' + stdout);
+        log('err: ' + stderr);
+        raise FileConversionError(errmsg)
+
 def convert(job, fn, store_imgtype=False, store_imgsize=False):
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir
@@ -70,8 +81,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         if pnmtype == 'G':
             return infn
         cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
-        log('running: ' + cmd)
-        os.system(cmd)
+        run_convert_command(cmd)
         return fullfn
 
     elif fn == 'fitsimg':
@@ -94,12 +104,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         # else, convert to pgm and run pnm2fits.
         infn = convert(job, 'pgm', store_imgtype, store_imgsize)
         cmd = 'pnmtofits %s > %s' % (infn, fullfn)
-        log('Running: ' + cmd)
-        (rtnval, stdout, stderr) = run_command(cmd)
-        if rtnval:
-            errmsg = 'pnmtofits failed: ' + stderr
-            log(errmsg)
-            raise FileConversionError(errmsg)
+        run_convert_command(cmd)
         return fullfn
 
     elif fn == 'xyls':
@@ -107,32 +112,19 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         sxylog = job.get_filename('simplexy.out')
         sxyerr = job.get_filename('simplexy.err')
         cmd = 'image2xy -o %s %s > %s 2> %s' % (fullfn, infn, sxylog, sxyerr)
-        log('running: ' + cmd)
-        (rtn, out, err) = run_command(cmd)
-        if rtn:
-            errmsg = 'Source extraction failed.'
-            log('Image2xy failed: rtn val %d' % rtn)
-            raise FileConversionError(errmsg)
+        run_convert_command(cmd)
         return fullfn
 
     elif fn == 'wcsinfo':
         infn = job.get_filename('wcs.fits')
         cmd = 'wcsinfo %s > %s' % (infn, fullfn)
-        (rtn, stdout, stderr) = run_command(cmd)
-        if rtn:
-            errmsg = 'wcsinfo failed.'
-            log('wcsinfo failed: rtn val %d' % rtn)
-            raise FileConversionError(errmsg)
+        run_convert_command(cmd)
         return fullfn
 
     elif fn == 'objsinfield':
         infn = job.get_filename('wcs.fits')
         cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j > %s' % (infn, fullfn)
-        (rtn, stdout, stderr) = run_command(cmd)
-        if rtn:
-            errmsg = 'plot-constellations failed.'
-            log('plot-constellations failed: rtn val %d' % rtn)
-            raise FileConversionError(errmsg)
+        run_convert_command(cmd)
         return fullfn
 
     elif fn == 'fullsizepng':
@@ -141,16 +133,55 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
             return fullfn
         infn = convert(job, 'pnm', store_imgtype, store_imgsize)
         cmd = 'pnmtopng %s > %s' % (infn, fullfn)
-        log('Command: ' + cmd)
-        (rtn, stdout, stderr) = run_command(cmd)
-        if rtn:
-            errmsg = 'pnmtopng failed.'
-            log('pnmtopng failed: rtn val %d' % rtn)
-            log('out: ' + stdout);
-            log('err: ' + stderr);
-            raise FileConversionError(errmsg)
+        run_convert_command(cmd)
         return fullfn
-    
+
+    elif fn == 'indexxyls':
+        wcsfn = job.get_filename('wcs.fits')
+        indexrdfn = job.get_filename('index.rd.fits')
+        if not (os.path.exists(wcsfn) and os.path.exists(indexrdfn)):
+            errmsg('indexxyls: WCS and Index rdls files don\'t exist.')
+            raise FileConversionError(errmsg)
+        cmd = 'wcs-rd2xy -w %s -i %s -o %s' % (wcsfn, indexrdfn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
+    #elif fn == 'overlay':
+    #    imgfn = convert(job, 'pnm-small-dim', store_imgtype, store_imgsize)
+    #    ixyfn = convert(job, 'indexxyls', store_imgtype, store_imgsize)
+
+    elif fn == 'pnm-small':
+        imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        if not job.displayscale:
+            w = job.imagew
+            h = job.imageh
+            job.displayscale = max(1.0, math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2))))
+            job.displayw = int(round(w / float(job.displayscale)))
+            job.displayh = int(round(h / float(job.displayscale)))
+            job.save()
+        # (don't make this an elif)
+        if job.displayscale == 1:
+            return imgfn
+        cmd = 'pnmscale -reduce %g %s > %s' % (float(job.displayscale), imgfn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'annotation':
+        imgfn = convert(job, 'pnm-small', store_imgtype, store_imgsize)
+        wcsfn = job.get_filename('wcs.fits')
+        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
+               (wcsfn, fullfn, 1.0/job.displayscale, imgfn))
+        run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'annotation-big':
+        imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        wcsfn = job.get_filename('wcs.fits')
+        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s' %
+               (wcsfn, fullfn, imgfn))
+        run_convert_command(cmd)
+        return fullfn
+
     errmsg = 'Unimplemented: convert(%s)' % fn
     log(errmsg)
     raise FileConversionError(errmsg)

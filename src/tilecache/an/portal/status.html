@@ -18,6 +18,11 @@ th {border-width: 0;}
 #onsky > a:visited { color:white; }
 #onsky > a:hover { color:gray; }
 #onsky > a:active { color:yellow; }
+#annotation { margin-left:auto; margin-right:auto; text-align:center; }
+#annotation > a:link { color:white; }
+#annotation > a:visited { color:white; }
+#annotation > a:hover { color:gray; }
+#annotation > a:active { color:yellow; }
 #gmapslink { margin-left:auto; margin-right:auto; text-align:center; }
 
 #objs2 {width:40%; margin-left:auto; margin-right:auto; }
@@ -61,6 +66,13 @@ Your field contains:
 </p>
 </div>
 <hr />
+
+<div id="annotation">
+<p>Your field plus annotations:</p>
+<a href="{{ annotation_big }}"><img src="{{ annotation }}" alt="your image plus our annotations" /></a>
+</div>
+<hr />
+
 {% endif %}
 
 <div id="onsky">
@@ -73,6 +85,18 @@ Your field contains:
 <div id="gmapslink">
 <a href="{{ gmapslink }}">View in Google Maps browser</a>
 </div>
+
+{% comment %}
+<div id="overlay">
+<p>Your field plus our index objects:
+<br />Green: stars from the index
+<br />Red: stars from your image
+<br />
+<a href="{{ overlay_big }}"><img src="{{ overlay }}" alt="our index stars plus your image stars" /></a>
+</p>
+</div>
+<hr />
+{% endcomment %}
 
 {% endif %}
 

@@ -99,7 +99,7 @@ class Job(models.Model):
     imagew = models.PositiveIntegerField(editable=False, null=True)
     imageh = models.PositiveIntegerField(editable=False, null=True)
 
-    # 1 / (scale factor) for rendering images; >=1.
+    # shrink factor (= 1 / (scale factor)) for rendering images; >=1.
     displayscale = models.DecimalField(max_digits=10, decimal_places=10, editable=False, null=True)
     # size to render images.
     displayw = models.PositiveIntegerField(editable=False, null=True)

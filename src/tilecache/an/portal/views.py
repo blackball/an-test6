@@ -453,6 +453,13 @@ def jobstatus(request):
                  float(wcsinfo['dec_center']), job.get_relative_job_dir())))
         ctxt['gmapslink'] = url
 
+        #ctxt['overlay'] = '/job/getfile?f=overlay'
+        #ctxt['overlay_big'] = '/job/getfile?f=overlay-big'
+        #ctxt['const_overlay'] = '/job/getfile?f=const-overlay'
+        #ctxt['const_overlay_big'] = '/job/getfile?f=const-overlay-big'
+        ctxt['annotation'] = '/job/getfile?f=annotation'
+        ctxt['annotation_big'] = '/job/getfile?f=annotation-big'
+
     else:
         logfn = job.get_filename('blind.log')
         if os.path.exists(logfn):
@@ -471,6 +478,37 @@ def jobstatus(request):
 #res['Content-Type'] = 'text/plain'
 #res.write('Job submitted: ' + str(job))
 #return res
+
+def getfile(request):
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+    job = request.session['job']
+    if not job:
+        return HttpResponse('no job in session')
+    if not request.GET:
+        return HttpResponse('no GET')
+    if not 'f' in request.GET:
+        return HttpResponse('no f=')
+    jobset = Job.objects.all().filter(jobid=job.jobid)
+    if len(jobset) != 1:
+        bailout('Found %i jobs, not 1' % len(jobset))
+    job = jobset[0]
+
+    f = request.GET['f']
+
+    pngimages = [ #'overlay', 'overlay-big',
+                  'annotation', 'annotation-big' ]
+
+    if not f in pngimages:
+        return HttpResponse('bad f')
+        
+    fn = convert(job, f)
+    res = HttpResponse()
+    res['Content-Type'] = 'image/png'
+    f = open(fn)
+    res.write(f.read())
+    f.close()
+    return res
 
 def printvals(request):
     if request.POST:
