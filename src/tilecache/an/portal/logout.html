@@ -1,0 +1,7 @@
+<div id="logout">
+<form name="logoutform" method="post" action="/logout/">
+Logged in as <b>{{ user.username }}</b>. &nbsp;
+{#<input type="submit" name="logout" value="Logout" />#}
+<a href="javascript:document.logoutform.submit()">Logout</a>
+</form>
+</div>

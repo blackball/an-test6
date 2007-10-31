@@ -129,8 +129,6 @@ if __name__ == '__main__':
     else:
         bailout('no filetype')
 
-    job.save()
-
     blindlog = 'blind.log'
     # shell into compute server...
     cmd = ('(echo %(jobid)s; '
@@ -141,5 +139,34 @@ if __name__ == '__main__':
            dict(jobid=jobid, axyfile=axy,
                 sshconfig=sshconfig, logfile=blindlog))
 
+    job.set_starttime_now()
+    job.save()
+
     log('Running command:', cmd)
-    os.system(cmd)
+    w = os.system(cmd)
+
+    job.set_finishtime_now()
+    job.save()
+
+    if not os.WIFEXITED(w):
+        bailout('Solver didn\'t exit normally.')
+
+    rtn = os.WEXITSTATUS(w)
+    if rtn:
+        log('Solver failed with return value %i' % rtn)
+        bailout('Solver failed.')
+
+    log('Command completed successfully.')
+
+    # Record results in the job database.
+
+    if os.path.exists(job.get_filename('solved')):
+        job.solved = True
+        job.status = 'Solved'
+    else:
+        job.status = 'Failed'
+        job.failurereason = 'Did not solve.'
+
+    job.save()
+
+    sys.exit(0)

@@ -1,24 +1,24 @@
+import datetime
 import logging
+import math
 import os.path
 import random
 import re
-import time
 import sha
 import tempfile
-import math
+import time
 
 import django.contrib.auth as auth
 
 from django import newforms as forms
 from django.newforms import ValidationError
-from django.http import HttpResponse
-from django.http import HttpResponseRedirect
-from django.template import Context, RequestContext, loader
+from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets
+from django.template import Context, RequestContext, loader
 
 import an.upload as upload
-import quads.image2pnm as image2pnm
 import quads.fits2fits as fits2fits
+import quads.image2pnm as image2pnm
 
 from an.portal.models import Job
 from an.upload.models import UploadedFile
@@ -305,7 +305,8 @@ def newurl(request):
             job.user = user
             job.xysrc = 'url'
             request.session['job'] = job
-            return HttpResponseRedirect('/job/submit')
+            submit_job(job)
+            return HttpResponseRedirect('/job/status')
         else:
             urlerr = form['url'].errors[0]
     else:
@@ -332,7 +333,8 @@ def newfile(request):
             job.user = user
             job.xysrc = 'file'
             request.session['job'] = job
-            return HttpResponseRedirect('/job/submit')
+            submit_job(job)
+            return HttpResponseRedirect('/job/status')
         else:
             fileerr = form['file'].errors[0]
     else:
@@ -348,24 +350,17 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
-def submit(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
-    job = request.session['job']
-    if not job:
-        return HttpResponse('no job in session')
-        
+def submit_job(job):
     log('submit(): Job is: ' + str(job))
-
     job.create_job_dir()
+    job.set_submittime_now()
+    job.status = 'Queued'
     job.save()
 
     # enqueue the axy file.
     jobdir = job.get_job_dir()
     link = gmaps_config.jobqueuedir + job.jobid
     os.symlink(jobdir, link)
-
-    return jobstatus(request)
 
 def jobstatus(request):
     if not request.user.is_authenticated():
@@ -375,11 +370,17 @@ def jobstatus(request):
         return HttpResponse('no job in session')
 
     log('jobstatus: Job is: ' + str(job))
-    
-    res = HttpResponse()
-    res['Content-Type'] = 'text/plain'
-    res.write('Job submitted: ' + str(job))
-    return res
+
+    ctxt = {
+        'jobid' : job.jobid,
+        }
+    t = loader.get_template('portal/status.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+#res = HttpResponse()
+#res['Content-Type'] = 'text/plain'
+#res.write('Job submitted: ' + str(job))
+#return res
 
 def printvals(request):
     if request.POST:
@@ -441,8 +442,8 @@ def newlong(request):
         log('Job: ' + str(job))
 
         request.session['job'] = job
-        #return HttpResponse('ok')
-        return HttpResponseRedirect('/job/submit')
+        submit_job(job)
+        return HttpResponseRedirect('/job/status')
 
     if 'jobvals' in request.session:
         del request.session['jobvals']

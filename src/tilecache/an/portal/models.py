@@ -1,12 +1,11 @@
-import sha
-import re
-import time
-import random
-import os.path
+import datetime
 import logging
+import os.path
+import random
+import re
+import sha
 import stat
-
-from datetime import date
+import time
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -135,6 +134,8 @@ class Job(models.Model):
     starttime  = models.DateTimeField(editable=False, null=True)
     finishtime = models.DateTimeField(editable=False, null=True)
 
+    solved = models.BooleanField(default=False)
+
     ## These fields don't go in the database.
 
     jobdir = None
@@ -163,6 +164,13 @@ class Job(models.Model):
             s += ', no tweak'
         s += '>'
         return s
+
+    def set_submittime_now(self):
+        self.submittime = Job.timenow()
+    def set_starttime_now(self):
+        self.starttime = Job.timenow()
+    def set_finishtime_now(self):
+        self.finishtime = Job.timenow()
 
     def get_scale_bounds(self):
         if self.scaletype == 'ul':
@@ -202,12 +210,12 @@ class Job(models.Model):
         os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
 
     def generate_jobid():
-        today = date.today()
+        today = datetime.date.today()
         jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
                                     today.month, random.randint(0, 99999999))
         return jobid
     generate_jobid = staticmethod(generate_jobid)
 
-
-
-
+    def timenow():
+        return datetime.datetime.utcnow()
+    timenow = staticmethod(timenow)
