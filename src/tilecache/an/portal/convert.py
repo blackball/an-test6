@@ -134,6 +134,22 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
             log('plot-constellations failed: rtn val %d' % rtn)
             raise FileConversionError(errmsg)
         return fullfn
+
+    elif fn == 'fullsizepng':
+        fullfn = job.get_filename('fullsize.png')
+        if os.path.exists(fullfn):
+            return fullfn
+        infn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        cmd = 'pnmtopng %s > %s' % (infn, fullfn)
+        log('Command: ' + cmd)
+        (rtn, stdout, stderr) = run_command(cmd)
+        if rtn:
+            errmsg = 'pnmtopng failed.'
+            log('pnmtopng failed: rtn val %d' % rtn)
+            log('out: ' + stdout);
+            log('err: ' + stderr);
+            raise FileConversionError(errmsg)
+        return fullfn
     
     errmsg = 'Unimplemented: convert(%s)' % fn
     log(errmsg)

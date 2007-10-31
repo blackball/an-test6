@@ -7,11 +7,27 @@ Astrometry.net Job {{ jobid }}: {{ jobstatus }}
 {% block inlinecss %}
 #logout { float:right; padding:5px; margin-top:0; margin-bottom:auto;}
 #logo { float:left; width:300px; padding:5px;}
-.c { margin-left:auto; margin-right:auto; text-align:center; }
+h3.c { text-align:center; }
+p.c { text-align:center; }
+ul.c { text-align:center; }
+.c { margin-left:auto; margin-right:auto; }
+td {border-width: 0;}
+th {border-width: 0;}
+#onsky { margin-left:auto; margin-right:auto; text-align:center; }
+#onsky > a:link { color:white; }
+#onsky > a:visited { color:white; }
+#onsky > a:hover { color:gray; }
+#onsky > a:active { color:yellow; }
+#gmapslink { margin-left:auto; margin-right:auto; text-align:center; }
+
+#objs2 {width:40%; margin-left:auto; margin-right:auto; }
+
 .bigbutton { font-size:110%; padding:2px; padding-left:10px; padding-right:10px; margin:10px; }
 {% endblock inlinecss %}
 
 {% comment %}
+#objs {margin-left:auto; margin-right:auto; width:100%; }
+.c { margin-left:auto; margin-right:auto; text-align:center; }
 #logo { width:300px; margin-left:auto; margin-right:auto; text-align:center; padding:5px;}
 {% endcomment %}
 
@@ -33,6 +49,31 @@ and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
 
 <hr />
 
+{% if objsinfield %}
+<div id="objs2">
+<p>
+Your field contains:
+<ul>
+{% for obj in objsinfield %}
+<li> {{ obj }} </li>
+{% endfor %}
+</ul>
+</p>
+</div>
+<hr />
+{% endif %}
+
+<div id="onsky">
+<p>Your field on the sky:</p>
+{% for zimg,zlink in zoomimgs %}
+<a href="{{ zlink }}"><img src="{{ zimg }}" alt="your field on the sky" /></a>
+{% endfor %}
+</div>
+
+<div id="gmapslink">
+<a href="{{ gmapslink }}">View in Google Maps browser</a>
+</div>
+
 {% endif %}
 
 
@@ -41,11 +82,24 @@ and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
 
 <tr><th colspan="2">Job Status</th></tr>
 
-<tr><th>Job Id:</th><td> {{ jobid }} </td></tr>
-<tr><th>Job Status:</th><td> {{ jobstatus }} </td></tr>
+<tr><td>Job Id:</td><td> {{ jobid }} </td></tr>
+<tr><td>Job Status:</td><td> {{ jobstatus }} </td></tr>
 
 </table>
 
+{% if jobsolved %}
+{% else %}
+
+<table cellpadding="3" border="1" class="c">
+
+<tr><th>Tail of the Log File</th></tr>
+
+<tr><td> {{ logfile_tail }} </td></tr>
+
+</table>
+
+
+{% endif %}
 
 
 {% endblock content %}

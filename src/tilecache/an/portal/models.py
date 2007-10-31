@@ -198,12 +198,17 @@ class Job(models.Model):
     def get_filename(self, fn):
         return os.path.join(self.get_job_dir(), fn)
 
+    def get_relative_filename(self, fn):
+        return os.path.join(self.get_relative_job_dir(), fn)
+
     def get_orig_file(self):
         return self.get_filename('original')
 
     def get_job_dir(self):
-        d = os.path.join(*([config.jobdir,] + self.jobid.split('-')))
-        return d
+        return os.path.join(config.jobdir, self.get_relative_job_dir())
+
+    def get_relative_job_dir(self):
+        return os.path.join(*self.jobid.split('-'))
     
     def create_job_dir(self):
         d = self.get_job_dir()

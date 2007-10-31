@@ -19,3 +19,7 @@ tempdir = "/tmp"
 
 siteid = 'test'
 jobdir = '/home/gmaps/test/web-data'
+
+gmaps_base = 'http://oven.cosmo.fas.nyu.edu/'
+gmaps_url = gmaps_base + 'tilecache2/'
+tileurl = gmaps_base + 'tile/get/'

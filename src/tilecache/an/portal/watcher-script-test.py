@@ -85,6 +85,8 @@ if __name__ == '__main__':
     axy = 'job.axy'
     axypath = job.get_filename(axy)
 
+    log('PATH is ' + ', '.join(sys.path))
+
     if job.filetype == 'image':
         xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
         log('created xylist %s' % xylist)
@@ -139,6 +141,7 @@ if __name__ == '__main__':
            dict(jobid=jobid, axyfile=axy,
                 sshconfig=sshconfig, logfile=blindlog))
 
+    job.status = 'Running'
     job.set_starttime_now()
     job.save()
 

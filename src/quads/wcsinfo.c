@@ -57,6 +57,9 @@ int main(int argc, char** args) {
     double pixscale;
     double fldw, fldh;
     double ramin, ramax, decmin, decmax;
+	//double mxlo, mxhi, mylo, myhi;
+	double dm;
+	int merczoom;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -149,5 +152,16 @@ int main(int argc, char** args) {
     printf("ramin %g\n", ramin);
     printf("ramax %g\n", ramax);
 
+	// merc zoom level
+	/*
+	  mxlo = ra2mercx(ramax);
+	  mxhi = ra2mercx(ramin);
+	  mylo = dec2mercy(decmax);
+	  myhi = dec2mercy(decmin);
+	*/
+	dm = MAX(fabs(ra2mercx(ramax) - ra2mercx(ramin)), fabs(dec2mercy(decmax) - dec2mercy(decmin)));
+	merczoom = 0 - (int)floor(log(dm) / log(2.0));
+	//printf("dm %g\n", dm);
+	printf("merczoom %i\n", merczoom);
 	return 0;
 }

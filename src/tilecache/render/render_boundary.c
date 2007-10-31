@@ -15,6 +15,7 @@
 
 char* wcs_dirs[] = {
 	"/home/gmaps/ontheweb-data/",
+	"/home/gmaps/test/web-data/",
 	"/home/gmaps/apod-solves",
 };
 

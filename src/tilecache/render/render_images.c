@@ -33,6 +33,7 @@ char* image_dir = "/home/gmaps/apod-solves";
 
 char* user_image_dirs[] = {
 	"/home/gmaps/ontheweb-data/",
+	"/home/gmaps/test/web-data/",
 	"/home/gmaps/gmaps-rdls/",
 };
 

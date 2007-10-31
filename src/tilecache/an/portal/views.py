@@ -19,6 +19,7 @@ from django.template import Context, RequestContext, loader
 import an.upload as upload
 import quads.fits2fits as fits2fits
 import quads.image2pnm as image2pnm
+import an.portal.mercator as merc
 
 from an.portal.models import Job
 from an.upload.models import UploadedFile
@@ -404,16 +405,64 @@ def jobstatus(request):
 
         objsfn = convert(job, 'objsinfield', store_imgtype=True, store_imgsize=True)
         f = open(objsfn)
-        objs = f.read()
+        objtxt = f.read()
         f.close()
+        objs = objtxt.strip().split('\n')
 
         ctxt['objsinfield'] = objs
 
-        #log('wcsinfo:')
-        #for k,v in wcsinfo.items():
-        #    log('  %s = %s' % (k, v))
+        # deg
+        fldsz = math.sqrt(job.imagew * job.imageh) * float(wcsinfo['pixscale']) / 3600.0
+
+        url = (gmaps_config.tileurl + '?layers=tycho,grid,userboundary' +
+               '&arcsinh&wcsfn=%s' % job.get_relative_filename('wcs.fits'))
+        smallstyle = '&w=300&h=300&lw=3'
+        largestyle = '&w=1024&h=1024&lw=5'
+        steps = [ {              'gain':-0.5,  'dashbox':0.1,   'center':False },
+                  {'limit':18,   'gain':-0.25, 'dashbox':0.01,  'center':True, 'dm':0.05 },
+                  {'limit':1.8,  'gain':0.5,                    'center':True, 'dm':0.005 },
+                  ]
+
+        zlist = []
+        for s in steps:
+            if 'limit' in s and fldsz > s['limit']:
+                break
+            if s['center']:
+                xmerc = float(wcsinfo['ra_center_merc'])
+                ymerc = float(wcsinfo['dec_center_merc'])
+                ralo = merc.merc2ra(xmerc + s['dm'])
+                rahi = merc.merc2ra(xmerc - s['dm'])
+                declo = merc.merc2dec(ymerc - s['dm'])
+                dechi = merc.merc2dec(ymerc + s['dm'])
+                bb = [ralo, declo, rahi, dechi]
+            else:
+                bb = [0, -85, 360, 85]
+            urlargs = ('&gain=%g' % s['gain']) + ('&bb=' + ','.join(map(str, bb)))
+            if 'dashbox' in s:
+                urlargs += '&dashbox=%g' % s['dashbox']
+
+            zlist.append([url + smallstyle + urlargs,
+                          url + largestyle + urlargs])
+        ctxt['zoomimgs'] = zlist
+
+        # HACK
+        fn = convert(job, 'fullsizepng')
+        url = (gmaps_config.gmaps_url +
+               ('?zoom=%i&ra=%.3f&dec=%.3f&userimage=%s' %
+                (int(wcsinfo['merczoom']), float(wcsinfo['ra_center']),
+                 float(wcsinfo['dec_center']), job.get_relative_job_dir())))
+        ctxt['gmapslink'] = url
+
     else:
-        log('job not solved')
+        logfn = job.get_filename('blind.log')
+        if os.path.exists(logfn):
+            f = open()
+            logfiletxt = f.read()
+            f.close()
+            lines = logfiletxt.split('\n')
+            lines = lines[-10:]
+            log('job not solved')
+            ctxt['logfile_tail'] = lines
 
     t = loader.get_template('portal/status.html')
     c = RequestContext(request, ctxt)
