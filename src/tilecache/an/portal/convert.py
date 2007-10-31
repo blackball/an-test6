@@ -124,6 +124,16 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
             log('wcsinfo failed: rtn val %d' % rtn)
             raise FileConversionError(errmsg)
         return fullfn
+
+    elif fn == 'objsinfield':
+        infn = job.get_filename('wcs.fits')
+        cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j > %s' % (infn, fullfn)
+        (rtn, stdout, stderr) = run_command(cmd)
+        if rtn:
+            errmsg = 'plot-constellations failed.'
+            log('plot-constellations failed: rtn val %d' % rtn)
+            raise FileConversionError(errmsg)
+        return fullfn
     
     errmsg = 'Unimplemented: convert(%s)' % fn
     log(errmsg)

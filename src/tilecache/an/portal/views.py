@@ -380,6 +380,11 @@ def jobstatus(request):
     log('jobstatus: Job is: ' + str(job))
     log('job.solved is ' + str(job.solved))
 
+    ctxt = {
+        'jobid' : job.jobid,
+        'jobstatus' : job.status,
+        'jobsolved' : job.solved,
+        }
     if job.solved:
         wcsinfofn = convert(job, 'wcsinfo', store_imgtype=True, store_imgsize=True)
         f = open(wcsinfofn)
@@ -390,22 +395,26 @@ def jobstatus(request):
             s = ln.split(' ')
             if len(s) == 2:
                 wcsinfo[s[0]] = s[1]
+
+        ctxt['racenter']  = '%.2f' % float(wcsinfo['ra_center'])
+        ctxt['deccenter'] = '%.2f' % float(wcsinfo['dec_center'])
+        ctxt['fieldw'] = '%.2f' % float(wcsinfo['fieldw'])
+        ctxt['fieldh'] = '%.2f' % float(wcsinfo['fieldh'])
+        ctxt['fieldunits'] = wcsinfo['fieldunits']
+
+        objsfn = convert(job, 'objsinfield', store_imgtype=True, store_imgsize=True)
+        f = open(objsfn)
+        objs = f.read()
+        f.close()
+
+        ctxt['objsinfield'] = objs
+
         #log('wcsinfo:')
         #for k,v in wcsinfo.items():
         #    log('  %s = %s' % (k, v))
     else:
         log('job not solved')
 
-    ctxt = {
-        'jobid' : job.jobid,
-        'jobstatus' : job.status,
-        'jobsolved' : job.solved,
-        'racenter' : '%.2f' % float(wcsinfo['ra_center']),
-        'deccenter' : '%.2f' % float(wcsinfo['dec_center']),
-        'fieldw' : '%.2f' % float(wcsinfo['fieldw']),
-        'fieldh' : '%.2f' % float(wcsinfo['fieldh']),
-        'fieldunits' : wcsinfo['fieldunits'],
-        }
     t = loader.get_template('portal/status.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))

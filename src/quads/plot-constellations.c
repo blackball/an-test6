@@ -47,13 +47,14 @@
 #include "constellations.h"
 #include "brightstars.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjv";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvL";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
     printf("\nUsage: %s\n"
            "   -w <WCS input file>\n"
-           "   -o <image output file; \"-\" for stdout>\n"
+		   "   ( -L: just list the items in the field\n"
+           " OR  -o <image output file; \"-\" for stdout>  )\n"
            "   [-p]: write PPM output - default is PNG\n"
            "   (  [-i <PPM input file>]\n"
            "   OR [-W <width> -H <height>] )\n"
@@ -105,7 +106,7 @@ int main(int argc, char** args) {
 
     double label_offset = 15.0;
 
-    int W, H;
+    int W = 0, H = 0;
     unsigned char* img;
 
     bool NGC = FALSE, constell = FALSE;
@@ -116,12 +117,17 @@ int main(int argc, char** args) {
     bool verbose = FALSE;
 	double ra, dec, px, py;
 	int i, N;
+	bool justlist = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
         case 'h':
             print_help(args[0]);
             exit(0);
+		case 'L':
+			justlist = TRUE;
+			outfn = NULL;
+			break;
         case 'v':
             verbose = TRUE;
             break;
@@ -172,16 +178,18 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
-    if (!outfn || !wcsfn) {
-        fprintf(stderr, "Need -o and -w args.\n");
+    if (!(outfn || justlist) || !wcsfn) {
+        fprintf(stderr, "Need (-o or -L) and -w args.\n");
         print_help(args[0]);
         exit(-1);
     }
-    if (!(infn || (W>0 && H>0))) {
-        fprintf(stderr, "Need -i or (-W and -H) args.\n");
-        print_help(args[0]);
-        exit(-1);
-    }
+	/*
+	  if (!(infn || (W>0 && H>0))) {
+	  fprintf(stderr, "Need -i or (-W and -H) args.\n");
+	  print_help(args[0]);
+	  exit(-1);
+	  }
+	*/
 
     if (!(NGC || constell || bright)) {
         fprintf(stderr, "Neither constellations, bright stars, nor NGC overlays selected!\n");
@@ -205,7 +213,7 @@ int main(int argc, char** args) {
             exit(-1);
         }
         cairoutils_rgba_to_argb32(img, W, H);
-    } else {
+    } else if (!justlist) {
         // Allocate a black image.
         img = calloc(4 * W * H, 1);
     }
@@ -221,17 +229,28 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
+	if (!W || !H) {
+		W = sip.wcstan.imagew;
+		H = sip.wcstan.imageh;
+	}
+	if (!W || !H) {
+		fprintf(stderr, "Image W,H unknown.\n");
+		exit(-1);
+	}
+
     srand(0);
 
-    target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
-    cairo = cairo_create(target);
-    cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
-    cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
-    cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-    cairo_scale(cairo, scale, scale);
-    //cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_select_font_face(cairo, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_set_font_size(cairo, fontsize);
+	if (!justlist) {
+		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
+		cairo = cairo_create(target);
+		cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
+		cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
+		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+		cairo_scale(cairo, scale, scale);
+		//cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		cairo_select_font_face(cairo, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size(cairo, fontsize);
+	}
 
     if (constell) {
 		N = constellations_n();
@@ -280,13 +299,15 @@ int main(int argc, char** args) {
 				continue;
 			}
 
-            r = (rand() % 128) + 127;
-            g = (rand() % 128) + 127;
-            b = (rand() % 128) + 127;
-			cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
+			if (!justlist) {
+				r = (rand() % 128) + 127;
+				g = (rand() % 128) + 127;
+				b = (rand() % 128) + 127;
+				cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
+				cairo_set_line_width(cairo, cw);
+			}
 
-            // Draw circles around each star.
-            cairo_set_line_width(cairo, cw);
+			// Draw circles around each star.
             // Also find center of mass (of the in-bounds stars)
             cmass[0] = cmass[1] = cmass[2] = 0.0;
             for (i=0; i<il_size(inboundstars); i++) {
@@ -297,8 +318,10 @@ int main(int argc, char** args) {
                     continue;
 				if (px < 0 || py < 0 || px*scale > W || py*scale > H)
 					continue;
-                cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
-                cairo_stroke(cairo);
+				if (!justlist) {
+					cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
+					cairo_stroke(cairo);
+				}
                 radecdeg2xyzarr(ra, dec, xyz);
                 cmass[0] += xyz[0];
                 cmass[1] += xyz[1];
@@ -325,6 +348,9 @@ int main(int argc, char** args) {
 			} else {
 				printf("Part of the constellation %s (%s)\n", longname, shortname);
 			}
+
+			if (justlist)
+				continue;
 
 			// If the label will be off-screen, move it back on.
 			cairo_text_extents(cairo, shortname, &textents);
@@ -379,10 +405,11 @@ int main(int argc, char** args) {
         double dy;
         cairo_font_extents_t extents;
 
-        cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-
-        cairo_font_extents(cairo, &extents);
-        dy = extents.ascent * 0.5;
+		if (!justlist) {
+			cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+			cairo_font_extents(cairo, &extents);
+			dy = extents.ascent * 0.5;
+		}
 
         // Code stolen from wcs-annotate.c
         // arcsec/pixel
@@ -390,6 +417,8 @@ int main(int argc, char** args) {
         // arcmin
         imsize = imscale * (imin(W, H) / scale) / 60.0;
         N = ngc_num_entries();
+
+		if (verbose) fprintf(stderr, "Checking %i NGC/IC objects.\n", N);
 
         for (i=0; i<N; i++) {
             ngc_entry* ngc = ngc_get_entry(i);
@@ -429,16 +458,17 @@ int main(int argc, char** args) {
 
 			printf("%s\n", text);
 
-            cairo_move_to(cairo, px + label_offset, py + dy);
-            cairo_show_text(cairo, text);
+			if (!justlist) {
+				cairo_move_to(cairo, px + label_offset, py + dy);
+				cairo_show_text(cairo, text);
+				pixsize = ngc->size * 60.0 / imscale;
+				cairo_move_to(cairo, px + pixsize/2.0, py);
+				cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
+				//fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
+				cairo_stroke(cairo);
+			}
 			free(text);
 			sl_free2(str);
-
-            pixsize = ngc->size * 60.0 / imscale;
-            cairo_move_to(cairo, px + pixsize/2.0, py);
-            cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
-            //fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
-            cairo_stroke(cairo);
         }
     }
 
@@ -447,13 +477,16 @@ int main(int argc, char** args) {
         cairo_font_extents_t extents;
 		pl* brightstars = pl_new(16);
 
-		cairo_set_source_rgba(cairo, 0.75, 0.75, 0.75, 0.8);
-        cairo_font_extents(cairo, &extents);
-        dy = extents.ascent * 0.5;
-
-		cairo_set_line_width(cairo, cw);
+		if (!justlist) {
+			cairo_set_source_rgba(cairo, 0.75, 0.75, 0.75, 0.8);
+			cairo_font_extents(cairo, &extents);
+			dy = extents.ascent * 0.5;
+			cairo_set_line_width(cairo, cw);
+		}
 
 		N = bright_stars_n();
+		if (verbose) fprintf(stderr, "Checking %i bright stars.\n", N);
+
 		for (i=0; i<N; i++) {
 			const brightstar_t* bs = bright_stars_get(i);
 
@@ -496,15 +529,22 @@ int main(int argc, char** args) {
 			else
 				printf("The star %s\n", bs->name);
 
-            cairo_move_to(cairo, px + label_offset, py + dy);
-            cairo_show_text(cairo, text);
-			cairo_stroke(cairo);
+			if (!justlist) {
+				cairo_move_to(cairo, px + label_offset, py + dy);
+				cairo_show_text(cairo, text);
+				cairo_stroke(cairo);
+			}
 			free(text);
 
-			cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
-			cairo_stroke(cairo);
+			if (!justlist) {
+				cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
+				cairo_stroke(cairo);
+			}
 		}
 	}
+
+	if (justlist)
+		return 0;
 
     // Convert image for output...
     cairoutils_argb32_to_rgba(img, W, H);
