@@ -1,0 +1,23 @@
+{% extends "portal/newjob.html" %}
+
+{% block newjobcontent %}
+<form enctype="multipart/form-data" method="post">
+
+{% if urlerr %}
+<div class="err"> {{ urlerr }} </div>
+{% endif %}
+
+<p style="text-align:center">
+{{ form.url }}
+<input name="submit" value="Submit" type="submit" />
+</p>
+
+<div id="switch_views">
+<a href="/job/newfile">switch to file upload version</a>
+&nbsp;&nbsp;
+<a href="/job/newlong">switch to full version</a>
+</div>
+
+</form>
+{% endblock newjobcontent %}
+

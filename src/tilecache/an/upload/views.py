@@ -75,17 +75,25 @@ def progress_ajax(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
-def uploadform(request):
-    if not request.user.is_authenticated():
-        return HttpResponse('not authenticated')
-
+def get_uploadform_body():
     id = UploadedFile.generateId()
-
-    logging.debug("Upload form request.");
     form = UploadForm({'upload_id': id})
     ctxt = {
         'form' : form,
         'action' : '/uploader',
+        }
+    t = loader.get_template('upload/upload-body.html')
+    c = Context(ctxt)
+    return t.render(c)
+
+def uploadform(request):
+    if not request.user.is_authenticated():
+        return HttpResponse('not authenticated')
+    logging.debug("Upload form request.");
+
+    body = get_uploadform_body()
+    ctxt = {
+        'body' : body,
         }
     t = loader.get_template('upload/upload.html')
     c = RequestContext(request, ctxt)

@@ -11,4 +11,4 @@ logging.basicConfig(level=logging.DEBUG,
                     )
 
 def log(*msg):
-    logging.debug(' '.join(msg))
+    logging.debug(' '.join(map(str, msg)))

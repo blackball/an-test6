@@ -11,9 +11,9 @@ import time
 import django.contrib.auth as auth
 
 from django import newforms as forms
-from django.newforms import ValidationError
+from django.db import models
 from django.http import HttpResponse, HttpResponseRedirect
-from django.newforms import widgets
+from django.newforms import widgets, ValidationError
 from django.template import Context, RequestContext, loader
 
 import an.upload as upload
@@ -55,8 +55,9 @@ class SimpleURLForm(forms.Form):
     url = ForgivingURLField(initial='http://',
                             widget=forms.TextInput(attrs={'size':'50'}))
 
-class SimpleFileForm(forms.Form):
-    file = forms.FileField(widget=forms.FileInput(attrs={'size':'40'}))
+class SimpleFancyFileForm(forms.Form):
+    upload_id = UploadIdField(widget=forms.HiddenInput(),
+                              required=False)
 
 class FullForm(forms.Form):
 
@@ -247,19 +248,14 @@ def login(request, redirect_to=None):
     authfailed = False
     usererr = None
     passerr = None
-    log('login()')
     if form.is_valid():
         username = form.cleaned_data['username']
         password = form.cleaned_data['password']
 
-        log('calling auth.authenticate()...')
         user = auth.authenticate(username=username, password=password)
-        log('auth.authenticate() returned.')
         if user is not None:
             if user.is_active:
-                log('calling auth.login().')
                 auth.login(request, user)
-                log('auth.login() returned.')
                 # Success
                 return HttpResponseRedirect('/job/newurl')
             else:
@@ -292,63 +288,59 @@ def logout(request):
     return HttpResponseRedirect('/login')
 
 def newurl(request):
-    log('calling user.is_authenticated()...')
-    ok = request.user.is_authenticated()
-    log('user.is_authenticated() returned', ok)
-    #if not request.user.is_authenticated():
-    if not ok:
+    if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
     urlerr = None
     if len(request.POST):
         form = SimpleURLForm(request.POST)
         if form.is_valid():
             url = form.cleaned_data['url']
-            job = Job()
-            job.user = user
-            job.filetype = 'image'
-            job.datasrc = 'url'
+            job = Job(user = request.user,
+                      filetype = 'image',
+                      datasrc = 'url',
+                      )
             submit_job(request, job)
-            return HttpResponseRedirect('/job/status/')
+            return HttpResponseRedirect(get_status_url(job))
         else:
             urlerr = form['url'].errors[0]
     else:
-        del request.session['jobid']
+        if 'jobid' in request.session:
+            del request.session['jobid']
         form = SimpleURLForm()
         
-    t = loader.get_template('portal/newjobsimple.html')
+    t = loader.get_template('portal/newjoburl.html')
     c = RequestContext(request, {
         'form' : form,
-        'isurl' : True,
         'urlerr' : urlerr,
-        'fileerr' : None,
         })
     return HttpResponse(t.render(c))
+
+def get_status_url(job):
+    return '/job/status/?jobid=' + job.jobid
 
 def newfile(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
-    fileerr = None
     if len(request.POST):
-        form = SimpleFileForm(request.POST, request.FILES)
+        form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
-            job = Job()
-            job.user = user
-            job.filetype = 'image'
-            job.datasrc = 'file'
+            job = Job(user = request.user,
+                      filetype = 'image',
+                      datasrc = 'file',
+                      uploaded = form.cleaned_data['upload_id'],
+                      )
             submit_job(request, job)
-            return HttpResponseRedirect('/job/status/')
-        else:
-            fileerr = form['file'].errors[0]
+            return HttpResponseRedirect(get_status_url(job))
     else:
-        del request.session['jobid']
-        form = SimpleFileForm()
+        if 'jobid' in request.session:
+            del request.session['jobid']
+        form = SimpleFancyFileForm()
         
-    t = loader.get_template('portal/newjobsimple.html')
+    t = loader.get_template('portal/newjobfile.html')
     c = RequestContext(request, {
         'form' : form,
-        'isurl' : False,
-        'urlerr' : None,
-        'fileerr' : fileerr,
+        'uploadform' : '/upload/form/',
+        'progressform' : '/upload/progress_ajax/?upload_id='
         })
     return HttpResponse(t.render(c))
 
@@ -365,23 +357,45 @@ def submit_job(request, job):
     link = gmaps_config.jobqueuedir + job.jobid
     os.symlink(jobdir, link)
 
-def getsessionjob(request):
-    if not 'jobid' in request.session:
-        log('no jobid in session')
-        return None
-    jobid = request.session['jobid']
+def getjobbyid(jobid):
     jobset = Job.objects.all().filter(jobid=jobid)
     if len(jobset) != 1:
         log('Found %i jobs, not 1' % len(jobset))
     job = jobset[0]
     return job
 
+def getsessionjob(request):
+    if not 'jobid' in request.session:
+        log('no jobid in session')
+        return None
+    jobid = request.session['jobid']
+    return getjobbyid(jobid)
+
+#def getgetjob(request):
+#    if not request.GET:
+#        return HttpResponse('no GET')
+#    if not 'jobid' in request.GET:
+#        return HttpResponse('no jobid')
+#    jobid = request.GET['jobid']
+#    job = getjobbyid(jobid)
+#    if not job:
+#        return HttpResponse('no such job')
+
 def jobstatus(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
-    job = getsessionjob(request)
+    #if not request.user.is_authenticated():
+    #    return HttpResponseRedirect('/login')
+    #job = getsessionjob(request)
+    #if not job:
+    #    return HttpResponse('no job in session')
+
+    if not request.GET:
+        return HttpResponse('no GET')
+    if not 'jobid' in request.GET:
+        return HttpResponse('no jobid')
+    jobid = request.GET['jobid']
+    job = getjobbyid(jobid)
     if not job:
-        return HttpResponse('no job in session')
+        return HttpResponse('no such job')
 
     log('jobstatus: Job is: ' + str(job))
     log('job.solved is ' + str(job.solved))
@@ -472,7 +486,7 @@ def jobstatus(request):
             logfiletxt = f.read()
             f.close()
             lines = logfiletxt.split('\n')
-            lines = lines[-10:]
+            lines = '\n'.join(lines[-10:])
             log('job not solved')
             ctxt['logfile_tail'] = lines
 
@@ -481,13 +495,23 @@ def jobstatus(request):
     return HttpResponse(t.render(c))
 
 def getfile(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
-    job = getsessionjob(request)
-    if not job:
-        return HttpResponse('no job in session')
+    #if not request.user.is_authenticated():
+    #    return HttpResponseRedirect('/login')
+    #job = getsessionjob(request)
+    #if not job:
+    #    return HttpResponse('no job in session')
+    #if not request.GET:
+    #    return HttpResponse('no GET')
+
     if not request.GET:
         return HttpResponse('no GET')
+    if not 'jobid' in request.GET:
+        return HttpResponse('no jobid')
+    jobid = request.GET['jobid']
+    job = getjobbyid(jobid)
+    if not job:
+        return HttpResponse('no such job')
+
     if not 'f' in request.GET:
         return HttpResponse('no f=')
 
@@ -563,7 +587,7 @@ def newlong(request):
         log('Job: ' + str(job))
 
         submit_job(request, job)
-        return HttpResponseRedirect('/job/status/')
+        return HttpResponseRedirect(get_status_url(job))
 
     if 'jobid' in request.session:
         del request.session['jobid']
