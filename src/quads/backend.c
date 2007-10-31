@@ -64,6 +64,7 @@ static void print_help(const char* progname)
 	printf("Usage:   %s [options] <augmented xylist>\n"
 	       "   [-c <backend config file>]  (default: \"backend.cfg\" in the directory ../etc/ relative to the directory containing the \"backend\" executable)\n"
 	       "   [-i <blind input filename>]: save the input file used for blind.\n"
+           "   [-v]: verbose\n"
 	       "\n", progname);
 }
 
@@ -87,6 +88,7 @@ struct backend {
 	char* blind;
 	double minwidth;
 	double maxwidth;
+    int cpulimit;
 };
 typedef struct backend backend_t;
 
@@ -218,6 +220,8 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			backend->minwidth = atof(nextword);
 		} else if (is_word(line, "maxwidth ", &nextword)) {
 			backend->maxwidth = atof(nextword);
+		} else if (is_word(line, "cpulimit ", &nextword)) {
+			backend->cpulimit = atoi(nextword);
 		} else if (is_word(line, "depths ", &nextword)) {
             int i;
             //
@@ -970,6 +974,7 @@ backend_t* backend_new()
 	// Default scale estimate: field width, in degrees:
 	backend->minwidth = 0.1;
 	backend->maxwidth = 180.0;
+    backend->cpulimit = 600;
 	return backend;
 }
 

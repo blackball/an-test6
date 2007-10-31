@@ -27,7 +27,7 @@ cd $jobid
 tar xf -
 
 # stderr goes back over the ssh tunnel to the log file on oven.
-$BACKEND -c $BACKEND_CFG -i blind.in $AXY > backend.out
+$BACKEND -c $BACKEND_CFG -i blind.in -v $AXY > backend.out
 
 # Send back all the files we generated!
 tar cf - *
