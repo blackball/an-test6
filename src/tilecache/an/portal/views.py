@@ -23,6 +23,7 @@ import quads.image2pnm as image2pnm
 from an.portal.models import Job
 from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
+from an.portal.convert import convert
 
 from an import gmaps_config
 from an import settings
@@ -356,6 +357,7 @@ def submit_job(job):
     job.set_submittime_now()
     job.status = 'Queued'
     job.save()
+    #request.session['job'] = job
 
     # enqueue the axy file.
     jobdir = job.get_job_dir()
@@ -368,11 +370,41 @@ def jobstatus(request):
     job = request.session['job']
     if not job:
         return HttpResponse('no job in session')
+    #log('jobstatus: Job is: ' + str(job))
+    #log('job.solved is ' + str(job.solved))
+    jobset = Job.objects.all().filter(jobid=job.jobid)
+    if len(jobset) != 1:
+        bailout('Found %i jobs, not 1' % len(jobset))
+    job = jobset[0]
 
     log('jobstatus: Job is: ' + str(job))
+    log('job.solved is ' + str(job.solved))
+
+    if job.solved:
+        wcsinfofn = convert(job, 'wcsinfo', store_imgtype=True, store_imgsize=True)
+        f = open(wcsinfofn)
+        wcsinfotxt = f.read()
+        f.close()
+        wcsinfo = {}
+        for ln in wcsinfotxt.split('\n'):
+            s = ln.split(' ')
+            if len(s) == 2:
+                wcsinfo[s[0]] = s[1]
+        #log('wcsinfo:')
+        #for k,v in wcsinfo.items():
+        #    log('  %s = %s' % (k, v))
+    else:
+        log('job not solved')
 
     ctxt = {
         'jobid' : job.jobid,
+        'jobstatus' : job.status,
+        'jobsolved' : job.solved,
+        'racenter' : '%.2f' % float(wcsinfo['ra_center']),
+        'deccenter' : '%.2f' % float(wcsinfo['dec_center']),
+        'fieldw' : '%.2f' % float(wcsinfo['fieldw']),
+        'fieldh' : '%.2f' % float(wcsinfo['fieldh']),
+        'fieldunits' : wcsinfo['fieldunits'],
         }
     t = loader.get_template('portal/status.html')
     c = RequestContext(request, ctxt)

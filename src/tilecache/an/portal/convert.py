@@ -114,6 +114,16 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
             log('Image2xy failed: rtn val %d' % rtn)
             raise FileConversionError(errmsg)
         return fullfn
+
+    elif fn == 'wcsinfo':
+        infn = job.get_filename('wcs.fits')
+        cmd = 'wcsinfo %s > %s' % (infn, fullfn)
+        (rtn, stdout, stderr) = run_command(cmd)
+        if rtn:
+            errmsg = 'wcsinfo failed.'
+            log('wcsinfo failed: rtn val %d' % rtn)
+            raise FileConversionError(errmsg)
+        return fullfn
     
     errmsg = 'Unimplemented: convert(%s)' % fn
     log(errmsg)

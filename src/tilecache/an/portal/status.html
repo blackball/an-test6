@@ -1,27 +1,50 @@
 {% extends "portal/base.html" %}
 
 {% block title %}
-Astrometry.net Job Status: {{ jobid }}
+Astrometry.net Job {{ jobid }}: {{ jobstatus }}
 {% endblock title %}
 
 {% block inlinecss %}
 #logout { float:right; padding:5px; margin-top:0; margin-bottom:auto;}
-#logo { width:300px; margin-left:auto; margin-right:auto; text-align:center; padding:5px;}
-#banner { text-align:center; padding:5px;}
-.err { font-size:110%; color:red; text-align:center;}
-#switch_views { font-size:75%; text-align:center; color:#999; }
-#switch_views a { color:#999; }
+#logo { float:left; width:300px; padding:5px;}
+.c { margin-left:auto; margin-right:auto; text-align:center; }
 .bigbutton { font-size:110%; padding:2px; padding-left:10px; padding-right:10px; margin:10px; }
 {% endblock inlinecss %}
 
+{% comment %}
+#logo { width:300px; margin-left:auto; margin-right:auto; text-align:center; padding:5px;}
+{% endcomment %}
+
 {% block loggedin %}
-{% include logout.html %}
+{% include "portal/logout.html" %}
 {% endblock loggedin %}
 
 {% block content %}
 <div style="clear:both;">
 </div>
 
+<hr />
+
+{% if jobsolved %}
+<h3 class="c">Your field is at RA,Dec = ( {{ racenter }}, {{ deccenter }} ) degrees
+<br />
+and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
+</h3>
+
+<hr />
+
+{% endif %}
+
+
+
+<table cellpadding="3" border="1" class="c">
+
+<tr><th colspan="2">Job Status</th></tr>
+
+<tr><th>Job Id:</th><td> {{ jobid }} </td></tr>
+<tr><th>Job Status:</th><td> {{ jobstatus }} </td></tr>
+
+</table>
 
 
 

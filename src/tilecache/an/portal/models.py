@@ -143,6 +143,10 @@ class Job(models.Model):
     def __str__(self):
         s = '<Job %s, user %s' % (self.jobid, self.user.username)
         #, datasrc %s' , self.datasrc)
+        if self.status:
+            s += ', %s' % self.status
+        if self.solved:
+            s += ', solved'
         if self.datasrc == 'url':
             s += ', url ' + self.url
         elif self.datasrc == 'file':
