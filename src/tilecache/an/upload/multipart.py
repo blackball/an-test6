@@ -2,6 +2,7 @@
 
 import re
 import sys
+import os
 
 def log(x):
     print >> sys.stderr, x
@@ -529,6 +530,10 @@ class FileBodyState(PartBodyState):
     def part_body_done(self):
         self.fid.close()
         self.fid = None
+        key = 'UPLOAD_FILE_MODE'
+        if key in os.environ:
+            mode = int(os.environ['UPLOAD_FILE_MODE'], 0)
+            os.chmod(self.filename, mode)
         super(FileBodyState, self).part_body_done()
 
 

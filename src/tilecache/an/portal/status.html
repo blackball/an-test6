@@ -12,7 +12,6 @@ p.c { text-align:center; }
 ul.c { text-align:center; }
 .c { margin-left:auto; margin-right:auto; }
 td {border-width: 0;}
-th {border-width: 0;}
 #onsky { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky > a:link { color:white; }
 #onsky > a:visited { color:white; }
@@ -31,6 +30,7 @@ th {border-width: 0;}
 {% endblock inlinecss %}
 
 {% comment %}
+th {border-width: 0;}
 #objs {margin-left:auto; margin-right:auto; width:100%; }
 .c { margin-left:auto; margin-right:auto; text-align:center; }
 #logo { width:300px; margin-left:auto; margin-right:auto; text-align:center; padding:5px;}
@@ -86,6 +86,8 @@ Your field contains:
 <a href="{{ gmapslink }}">View in Google Maps browser</a>
 </div>
 
+<hr />
+
 {% comment %}
 <div id="overlay">
 <p>Your field plus our index objects:
@@ -100,7 +102,7 @@ Your field contains:
 
 {% endif %}
 
-
+<p />
 
 <table cellpadding="3" border="1" class="c">
 
@@ -108,7 +110,16 @@ Your field contains:
 
 <tr><td>Job Id:</td><td> {{ jobid }} </td></tr>
 <tr><td>Job Status:</td><td> {{ jobstatus }} </td></tr>
-
+<tr><td>Submitted:</td><td> {{ jobsubmittime }} </td></tr>
+<tr><td>Started:</td><td> {{ jobstarttime }} </td></tr>
+<tr><td>Finished:</td><td> {{ jobfinishtime }} </td></tr>
+<tr><td>(RA, Dec) center:</td><td> ({{ racenter }}, {{ deccenter }}) degrees</td></tr>
+<tr><td>(RA, Dec) center (H:M:S, D:M:S):</td><td> ({{ racenter_hms }}, {{ deccenter_dms }}) </td></tr>
+<tr><td>Orientation:</td><td> {{ orientation }} deg E of N</td></tr>
+<tr><td>Pixel scale:</td><td> {{ pixscale }} arcsec/pixel</td></tr>
+<tr><td>Parity (sign(det(CD))):</td><td> {{ parity }}</td></tr>
+<tr><td>Field size:</td><td> {{ fieldw }} x {{ fieldh }} {{ fieldunits }}</td></tr>
+<tr><td>WCS FITS header:</td><td><a href="{{ wcsurl }}">wcs.fits</a></td></tr>
 </table>
 
 {% if jobsolved %}

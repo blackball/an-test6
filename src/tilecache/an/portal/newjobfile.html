@@ -47,9 +47,9 @@ function uploadFailed() {
 
 function submitUploadForm() {
   var uploadform = getUploadForm();
-  if (uploadform) {
+  //if (uploadform) {
     uploadform.submit();
-  }
+  //}
 }
 
 function onSubmitForm() {
@@ -89,7 +89,7 @@ function uploadFinished() {
 {% endcomment %}
 
 {% block newjobcontent %}
-<form method="post" id="mainform">
+<form method="post" id="mainform" onsubmit="return onSubmitForm();">
 <p style="text-align:center">
 
 <iframe onload="uploadframeloaded()" src="{{ uploadform }}" scrolling="no" frameborder="0" id="uploadframe"

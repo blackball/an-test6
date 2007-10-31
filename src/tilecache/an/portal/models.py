@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.core import validators
 
 import an.gmaps_config as config
+from an.portal.log import log
 
 from an.upload.models import UploadedFile
 
@@ -64,6 +65,7 @@ class Job(models.Model):
         )
 
     def __init__(self, *args, **kwargs):
+        log('__init__')
         for k,v in kwargs.items():
             if v is None:
                 del kwargs[k]
@@ -176,6 +178,13 @@ class Job(models.Model):
     def set_finishtime_now(self):
         self.finishtime = Job.timenow()
 
+    def format_submittime(self):
+        return Job.format_time(self.submittime)
+    def format_starttime(self):
+        return Job.format_time(self.starttime)
+    def format_finishtime(self):
+        return Job.format_time(self.finishtime)
+
     def get_scale_bounds(self):
         if self.scaletype == 'ul':
             return (self.scalelower, self.scaleupper)
@@ -215,8 +224,10 @@ class Job(models.Model):
         # HACK - more careful here...
         if os.path.exists(d):
             return
-        os.makedirs(d)
-        os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
+        mode = 0770
+        os.makedirs(d, mode)
+        #os.chmod(d, 0770)
+        #os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
 
     def generate_jobid():
         today = datetime.date.today()
@@ -228,3 +239,10 @@ class Job(models.Model):
     def timenow():
         return datetime.datetime.utcnow()
     timenow = staticmethod(timenow)
+
+    def format_time(t):
+        if not t:
+            return None
+        return t.strftime('%Y-%m-%d %H:%M:%S+Z')
+    format_time = staticmethod(format_time)
+    

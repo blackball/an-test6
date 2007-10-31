@@ -56,8 +56,7 @@ class SimpleURLForm(forms.Form):
                             widget=forms.TextInput(attrs={'size':'50'}))
 
 class SimpleFancyFileForm(forms.Form):
-    upload_id = UploadIdField(widget=forms.HiddenInput(),
-                              required=False)
+    upload_id = UploadIdField(widget=forms.HiddenInput())
 
 class FullForm(forms.Form):
 
@@ -298,6 +297,7 @@ def newurl(request):
             job = Job(user = request.user,
                       filetype = 'image',
                       datasrc = 'url',
+                      url = url,
                       )
             submit_job(request, job)
             return HttpResponseRedirect(get_status_url(job))
@@ -321,6 +321,10 @@ def get_status_url(job):
 def newfile(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
+
+    log('newfile()')
+    printvals(request)
+
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
@@ -329,8 +333,11 @@ def newfile(request):
                       datasrc = 'file',
                       uploaded = form.cleaned_data['upload_id'],
                       )
+            log('newfile: submitting job ' + str(job))
             submit_job(request, job)
             return HttpResponseRedirect(get_status_url(job))
+        else:
+            log('form not valid.')
     else:
         if 'jobid' in request.session:
             del request.session['jobid']
@@ -346,6 +353,7 @@ def newfile(request):
 
 def submit_job(request, job):
     log('submit(): Job is: ' + str(job))
+    os.umask(07)
     job.create_job_dir()
     job.set_submittime_now()
     job.status = 'Queued'
@@ -357,19 +365,22 @@ def submit_job(request, job):
     link = gmaps_config.jobqueuedir + job.jobid
     os.symlink(jobdir, link)
 
-def getjobbyid(jobid):
+def get_job(jobid):
     jobset = Job.objects.all().filter(jobid=jobid)
     if len(jobset) != 1:
         log('Found %i jobs, not 1' % len(jobset))
     job = jobset[0]
     return job
 
+def get_url(job, fn):
+    return '/job/getfile?jobid=%s&f=%s' % (job.jobid, fn)
+
 def getsessionjob(request):
     if not 'jobid' in request.session:
         log('no jobid in session')
         return None
     jobid = request.session['jobid']
-    return getjobbyid(jobid)
+    return get_job(jobid)
 
 #def getgetjob(request):
 #    if not request.GET:
@@ -393,18 +404,33 @@ def jobstatus(request):
     if not 'jobid' in request.GET:
         return HttpResponse('no jobid')
     jobid = request.GET['jobid']
-    job = getjobbyid(jobid)
+    job = get_job(jobid)
     if not job:
         return HttpResponse('no such job')
 
     log('jobstatus: Job is: ' + str(job))
-    log('job.solved is ' + str(job.solved))
+    #log('job.solved is ' + str(job.solved))
 
     ctxt = {
         'jobid' : job.jobid,
         'jobstatus' : job.status,
         'jobsolved' : job.solved,
         }
+
+    #x = job.submittime
+    #if x:
+    #    ctxt['jobsubmittime'] = x.strftime('%Y-%m-%d %H:%M:%S%z')#str(x)
+    #x = job.starttime
+    #if x:
+    #    ctxt['jobstarttime'] = str(x)
+    #x = job.finishtime
+    #if x:
+    #    ctxt['jobfinishtime'] = str(x)
+
+    ctxt.update({ 'jobsubmittime' : job.format_submittime(),
+                  'jobstarttime' : job.format_starttime(),
+                  'jobfinishtime' : job.format_finishtime(), })
+
     if job.solved:
         wcsinfofn = convert(job, 'wcsinfo', store_imgtype=True, store_imgsize=True)
         f = open(wcsinfofn)
@@ -416,18 +442,30 @@ def jobstatus(request):
             if len(s) == 2:
                 wcsinfo[s[0]] = s[1]
 
-        ctxt['racenter']  = '%.2f' % float(wcsinfo['ra_center'])
-        ctxt['deccenter'] = '%.2f' % float(wcsinfo['dec_center'])
-        ctxt['fieldw'] = '%.2f' % float(wcsinfo['fieldw'])
-        ctxt['fieldh'] = '%.2f' % float(wcsinfo['fieldh'])
-        ctxt['fieldunits'] = wcsinfo['fieldunits']
+        ctxt.update({'racenter' : '%.2f' % float(wcsinfo['ra_center']),
+                     'deccenter': '%.2f' % float(wcsinfo['dec_center']),
+                     'fieldw'   : '%.2f' % float(wcsinfo['fieldw']),
+                     'fieldh'   : '%.2f' % float(wcsinfo['fieldh']),
+                     'fieldunits': wcsinfo['fieldunits'],
+                     'racenter_hms' : wcsinfo['ra_center_hms'],
+                     'deccenter_dms' : wcsinfo['dec_center_dms'],
+                     'orientation' : '%.3f' % float(wcsinfo['orientation']),
+                     'pixscale' : '%.4g' % float(wcsinfo['pixscale']),
+                     'parity' : (float(wcsinfo['det']) > 0 and 'Positive' or 'Negative'),
+                     'wcsurl' : get_url(job, 'wcs.fits'),
+                     })
+
+
 
         objsfn = convert(job, 'objsinfield', store_imgtype=True, store_imgsize=True)
         f = open(objsfn)
         objtxt = f.read()
         f.close()
-        objs = objtxt.strip().split('\n')
-
+        objs = objtxt.strip()
+        if len(objs):
+            objs = objs.split('\n')
+        else:
+            objs = []
         ctxt['objsinfield'] = objs
 
         # deg
@@ -474,10 +512,8 @@ def jobstatus(request):
 
         #ctxt['overlay'] = '/job/getfile?f=overlay'
         #ctxt['overlay_big'] = '/job/getfile?f=overlay-big'
-        #ctxt['const_overlay'] = '/job/getfile?f=const-overlay'
-        #ctxt['const_overlay_big'] = '/job/getfile?f=const-overlay-big'
-        ctxt['annotation'] = '/job/getfile?f=annotation'
-        ctxt['annotation_big'] = '/job/getfile?f=annotation-big'
+        ctxt['annotation'] = get_url(job, 'annotation')
+        ctxt['annotation_big'] = get_url(job, 'annotation-big')
 
     else:
         logfn = job.get_filename('blind.log')
@@ -508,7 +544,7 @@ def getfile(request):
     if not 'jobid' in request.GET:
         return HttpResponse('no jobid')
     jobid = request.GET['jobid']
-    job = getjobbyid(jobid)
+    job = get_job(jobid)
     if not job:
         return HttpResponse('no such job')
 

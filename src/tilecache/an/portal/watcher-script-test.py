@@ -71,6 +71,7 @@ if __name__ == '__main__':
         # move the uploaded file.
         temp = job.uploaded.get_filename()
         log('uploaded tempfile is ' + temp)
+        log('rename(%s, %s)' % (temp, origfile))
         os.rename(temp, origfile)
 
     else:
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     axy = 'job.axy'
     axypath = job.get_filename(axy)
 
-    log('PATH is ' + ', '.join(sys.path))
+    #log('PATH is ' + ', '.join(sys.path))
 
     if job.filetype == 'image':
         xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
@@ -111,18 +112,6 @@ if __name__ == '__main__':
             bailout('Creating axy file failed: ' + err)
 
         log('created file ' + axypath)
-
-        # shrink
-        #job.displayscale = max(1, int(math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2)))))
-        #job.displayw = int(round(w / float(job.displayscale)))
-        #job.displayh = int(round(h / float(job.displayscale)))
-        #if job.displayscale != 1:
-        #    (f, smallppm) = tempfile.mkstemp()
-        #    os.close(f)
-        #    cmd = 'pnmscale -reduce %i %s > %s' % (job.displayscale, pnmfile, smallppm)
-        #    log('command: ' + cmd)
-        #    os.system(cmd)
-        #    log('small ppm file %s' % smallppm)
 
     elif job.filetype == 'fits':
         bailout('fits tables not implemented')
