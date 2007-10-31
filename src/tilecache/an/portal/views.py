@@ -305,14 +305,14 @@ def newurl(request):
             url = form.cleaned_data['url']
             job = Job()
             job.user = user
-            job.xysrc = 'url'
-            request.session['job'] = job
-            submit_job(job)
-            return HttpResponseRedirect('/job/status')
+            job.filetype = 'image'
+            job.datasrc = 'url'
+            submit_job(request, job)
+            return HttpResponseRedirect('/job/status/')
         else:
             urlerr = form['url'].errors[0]
     else:
-        request.session['job'] = None
+        del request.session['jobid']
         form = SimpleURLForm()
         
     t = loader.get_template('portal/newjobsimple.html')
@@ -333,14 +333,14 @@ def newfile(request):
         if form.is_valid():
             job = Job()
             job.user = user
-            job.xysrc = 'file'
-            request.session['job'] = job
-            submit_job(job)
-            return HttpResponseRedirect('/job/status')
+            job.filetype = 'image'
+            job.datasrc = 'file'
+            submit_job(request, job)
+            return HttpResponseRedirect('/job/status/')
         else:
             fileerr = form['file'].errors[0]
     else:
-        request.session['job'] = None
+        del request.session['jobid']
         form = SimpleFileForm()
         
     t = loader.get_template('portal/newjobsimple.html')
@@ -352,31 +352,36 @@ def newfile(request):
         })
     return HttpResponse(t.render(c))
 
-def submit_job(job):
+def submit_job(request, job):
     log('submit(): Job is: ' + str(job))
     job.create_job_dir()
     job.set_submittime_now()
     job.status = 'Queued'
     job.save()
-    #request.session['job'] = job
+    request.session['jobid'] = job.jobid
 
     # enqueue the axy file.
     jobdir = job.get_job_dir()
     link = gmaps_config.jobqueuedir + job.jobid
     os.symlink(jobdir, link)
 
+def getsessionjob(request):
+    if not 'jobid' in request.session:
+        log('no jobid in session')
+        return None
+    jobid = request.session['jobid']
+    jobset = Job.objects.all().filter(jobid=jobid)
+    if len(jobset) != 1:
+        log('Found %i jobs, not 1' % len(jobset))
+    job = jobset[0]
+    return job
+
 def jobstatus(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
-    job = request.session['job']
+    job = getsessionjob(request)
     if not job:
         return HttpResponse('no job in session')
-    #log('jobstatus: Job is: ' + str(job))
-    #log('job.solved is ' + str(job.solved))
-    jobset = Job.objects.all().filter(jobid=job.jobid)
-    if len(jobset) != 1:
-        bailout('Found %i jobs, not 1' % len(jobset))
-    job = jobset[0]
 
     log('jobstatus: Job is: ' + str(job))
     log('job.solved is ' + str(job.solved))
@@ -463,7 +468,7 @@ def jobstatus(request):
     else:
         logfn = job.get_filename('blind.log')
         if os.path.exists(logfn):
-            f = open()
+            f = open(logfn)
             logfiletxt = f.read()
             f.close()
             lines = logfiletxt.split('\n')
@@ -474,25 +479,17 @@ def jobstatus(request):
     t = loader.get_template('portal/status.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
-#res = HttpResponse()
-#res['Content-Type'] = 'text/plain'
-#res.write('Job submitted: ' + str(job))
-#return res
 
 def getfile(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
-    job = request.session['job']
+    job = getsessionjob(request)
     if not job:
         return HttpResponse('no job in session')
     if not request.GET:
         return HttpResponse('no GET')
     if not 'f' in request.GET:
         return HttpResponse('no f=')
-    jobset = Job.objects.all().filter(jobid=job.jobid)
-    if len(jobset) != 1:
-        bailout('Found %i jobs, not 1' % len(jobset))
-    job = jobset[0]
 
     f = request.GET['f']
 
@@ -541,7 +538,6 @@ def newlong(request):
 
     if form.is_valid():
         print 'Yay'
-        #request.session['jobvals'] = form.cleaned_data
         job = Job(datasrc = form.getclean('datasrc'),
                   filetype = form.getclean('filetype'),
                   user = request.user,
@@ -558,10 +554,7 @@ def newlong(request):
                   scaleerr = form.getclean('scaleerr'),
                   tweak = form.getclean('tweak'),
                   tweakorder = form.getclean('tweakorder'),
-                  #submittime = time.time(),
                   )
-        job.user = request.user
-        #job.save()
 
         log('Form is valid.')
         for k,v in form.cleaned_data.items():
@@ -569,12 +562,11 @@ def newlong(request):
 
         log('Job: ' + str(job))
 
-        request.session['job'] = job
-        submit_job(job)
-        return HttpResponseRedirect('/job/status')
+        submit_job(request, job)
+        return HttpResponseRedirect('/job/status/')
 
-    if 'jobvals' in request.session:
-        del request.session['jobvals']
+    if 'jobid' in request.session:
+        del request.session['jobid']
 
     log('Errors:')
     if form._errors:
