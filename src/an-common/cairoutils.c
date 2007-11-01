@@ -210,7 +210,7 @@ static int streamout(FILE* fout, unsigned char* img, int W, int H, int format) {
         for (i=0; i<(H*W); i++) {
             unsigned char* pix = img + 4*i;
             if (fwrite(pix, 1, 3, fout) != 3) {
-                fprintf(stderr, "Failed to write pixels for PPM output.\n");
+                fprintf(stderr, "Failed to write pixels for PPM output: %s\n", strerror(errno));
                 return -1;
             }
         }
