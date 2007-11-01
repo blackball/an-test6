@@ -1,4 +1,5 @@
 import os
+import os.path
 import re
 
 from ftplib import FTP
@@ -7,8 +8,6 @@ from ftplib import FTP
 class crawler(object):
     dirstack = [ '' ]
     currentdir = None
-    #filelist = []
-    #nomatches = []
 
     ffiles = None
     fdirs = None
@@ -51,16 +50,9 @@ class crawler(object):
         m = self.ire.match(s)
         if not m:
             print 'no match'
-            #nomatches.append(currentdir + '/' + s)
             self.fnomatches.write(self.currentdir + ' ' + s + '\n')
             self.fnomatches.flush()
             return
-        #print 'dir:', m.group('dir')
-        #print 'size:', m.group('size')
-        #print 'month:', m.group('month')
-        #print 'day:', m.group('day')
-        #print 'time:', m.group('time')
-        #print 'name:', m.group('name')
 
         d = m.group('dir')
         name = m.group('name')
@@ -71,29 +63,42 @@ class crawler(object):
             self.fdirs.write(path + '\n')
             self.fdirs.flush()
         else:
-            #self.filelist.append(path)
             self.ffiles.write(path + '\n')
             self.ffiles.flush()
 
 
 
 if __name__ == '__main__':
-    ftp = FTP('galex.stsci.edu')
-    ftp.login()
+    ftp = None
 
     crawl = crawler()
 
-    crawl.currentdir = ''
+    if os.path.exists('dirstack'):
+        f = open('dirstack', 'rb')
+        stack = f.read().strip().split('\n')
+        #stack = []
+        #for ln in f:
+        #    stack.append(ln)
+        print 'Dirstack:'
+        for d in stack:
+            print d
+        print '(end dirstack)'
+        crawl.set_dirstack(stack)
+
+    nrequests = 0
+    
     while len(crawl.dirstack):
+        if not ftp or not (nrequests % 100):
+            if ftp:
+                ftp.quit()
+            ftp = FTP('galex.stsci.edu')
+            ftp.login('anonymous', 'dstn@cs.toronto.edu')
+            ftp.set_debuglevel(2)
+
         d = crawl.dirstack.pop()
         crawl.currentdir = d
         print 'listing "%s"' % d
         ftp.dir(d, crawl.add_item)
         crawl.write_stack()
+        nrequests += 1
 
-    #print '\n\n\nFiles:\n\n\n'
-    #for f in filelist:
-    #    print f
-    #print '\n\n\nUnmatched:\n\n\n'
-    #for f in nomatches:
-    #    print f
