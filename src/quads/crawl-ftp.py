@@ -88,19 +88,25 @@ if __name__ == '__main__':
     nrequests = 0
     
     while len(crawl.dirstack):
-        if not ftp or not (nrequests % 100):
+        if not ftp or not (nrequests % 10):
             if ftp:
                 print 'closing connection.'
                 ftp.quit()
             print 'opening connection'
             ftp = FTP('galex.stsci.edu')
             ftp.login('anonymous', 'dstn@cs.toronto.edu')
-            ftp.set_debuglevel(2)
+            #ftp.set_debuglevel(2)
 
         d = crawl.dirstack.pop()
         crawl.currentdir = d
         print 'listing "%s"' % d
-        ftp.dir(d, crawl.add_item)
-        crawl.write_stack()
-        nrequests += 1
+        try:
+            ftp.dir(d, crawl.add_item)
+            crawl.write_stack()
+            nrequests += 1
+        except Exceptions, e:
+            print 'caught exception:', e
+            crawl.dirstack.append(d)
+            ftp.close()
+            ftp = None
 

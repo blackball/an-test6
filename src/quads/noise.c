@@ -27,13 +27,12 @@
 #include "mathutil.h"
 #include "starutil.h"
 
-void sample_field_in_circle(double* center, double radius,
-							double* point) {
-	double noisemag, noiseangle;
-	noisemag = radius * sqrt(0.25 * uniform_sample(0.0, 1.0));
-	noiseangle = uniform_sample(0.0, 2.0*M_PI);
-	point[0] = center[0] + cos(noiseangle) * noisemag;
-	point[1] = center[1] + sin(noiseangle) * noisemag;
+void sample_in_circle(const double* center, double radius,
+                      double* point) {
+    int i;
+    for (i=0; i<2; i++) {
+        point[i] = gaussian_sample(center[i], radius);
+    }
 }
 
 void sample_star_in_circle(double* center, double ABangle,
@@ -97,20 +96,10 @@ void add_star_noise(const double* real, double noisestd, double* noisy) {
 }
 
 void add_field_noise(const double* real, double noisestd, double* noisy) {
-	//double mag, angle;
-    double mag1, mag2;
-    /*
-     // magnitude of noise
-     mag = gaussian_sample(0.0, noisestd);
-     // direction
-     angle = uniform_sample(0.0, 2.0*M_PI);
-     mag1 = mag * sin(angle);
-     mag2 = mag * cos(angle);
-     */
-    mag1 = gaussian_sample(0.0, noisestd);
-    mag2 = gaussian_sample(0.0, noisestd);
-	noisy[0] = real[0] + mag1;
-	noisy[1] = real[1] + mag2;
+    int i;
+    for (i=0; i<2; i++) {
+        noisy[i] = gaussian_sample(real[i], noisestd);
+    }
 }
 
 void compute_star_code(const double* xyz, int dimquads, double* code) {

@@ -270,6 +270,8 @@ wcs-rd2xy: wcs-rd2xy.o $(UTIL_OBJS) \
 
 noisesim: noisesim.o noise.o $(ANUTILS_LIB)
 
+noisesim2: noisesim2.o noise.o svd.o $(ANUTILS_LIB)
+
 hpgrid: hpgrid.o $(ANUTILS_LIB)
 
 get-healpix: get-healpix.o $(ANUTILS_LIB)
