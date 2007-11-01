@@ -1,20 +1,20 @@
 /*
-  This file is part of the Astrometry.net suite.
-  Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+ This file is part of the Astrometry.net suite.
+ Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
 
-  The Astrometry.net suite is free software; you can redistribute
-  it and/or modify it under the terms of the GNU General Public License
-  as published by the Free Software Foundation, version 2.
+ The Astrometry.net suite is free software; you can redistribute
+ it and/or modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation, version 2.
 
-  The Astrometry.net suite is distributed in the hope that it will be
-  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+ The Astrometry.net suite is distributed in the hope that it will be
+ useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with the Astrometry.net suite ; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-*/
+ You should have received a copy of the GNU General Public License
+ along with the Astrometry.net suite ; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ */
 
 #include <assert.h>
 #include <math.h>
@@ -189,20 +189,20 @@ void verify_hit(startree* skdt,
 	indexpix = realloc(indexpix, NI * 2 * sizeof(double));
 
 	/*
-	  if (DEBUGVERIFY) {
-	  double minx,maxx,miny,maxy;
-	  miny = minx = HUGE_VAL;
-	  maxx = maxy = -HUGE_VAL;
-	  for (i=0; i<NI; i++) {
-	  minx = min(indexpix[i*2  ], minx);
-	  maxx = max(indexpix[i*2  ], maxx);
-	  miny = min(indexpix[i*2+1], miny);
-	  maxy = max(indexpix[i*2+1], maxy);
-	  }
-	  debug("Range of index objs: x:[%g,%g], y:[%g,%g]\n",
-	  minx, maxx, miny, maxy);
-	  }
-	*/
+     if (DEBUGVERIFY) {
+     double minx,maxx,miny,maxy;
+     miny = minx = HUGE_VAL;
+     maxx = maxy = -HUGE_VAL;
+     for (i=0; i<NI; i++) {
+     minx = min(indexpix[i*2  ], minx);
+     maxx = max(indexpix[i*2  ], maxx);
+     miny = min(indexpix[i*2+1], miny);
+     maxy = max(indexpix[i*2+1], maxy);
+     }
+     debug("Range of index objs: x:[%g,%g], y:[%g,%g]\n",
+     minx, maxx, miny, maxy);
+     }
+     */
 	debug("Number of field stars: %i\n", vf->NF);
 	debug("Number of index stars: %i\n", NI);
 
@@ -227,7 +227,7 @@ void verify_hit(startree* skdt,
 		maxsweep = MAX(maxsweep, sweeps[i]);
 	}
 
-        // Prime the array where we store conflicting-match info.
+    // Prime the array where we store conflicting-match info.
 	bestprob = malloc(vf->NF * sizeof(double));
 	for (i=0; i<vf->NF; i++)
 		bestprob[i] = -HUGE_VAL;
@@ -238,12 +238,12 @@ void verify_hit(startree* skdt,
 	}
 
 	if (do_gamma) {
-            // Find the midpoint of AB of the quad in pixel space.
-            qc[0] = 0.5 * (vf->field[2*mo->field[0]  ] + vf->field[2*mo->field[1]  ]);
-            qc[1] = 0.5 * (vf->field[2*mo->field[0]+1] + vf->field[2*mo->field[1]+1]);
-            // Find the radius-squared of the quad = distsq(qc, A)
-            rquad2 = distsq(vf->field + 2*mo->field[0], qc, 2);
-			debug("Quad radius = %g pixels\n", sqrt(rquad2));
+        // Find the midpoint of AB of the quad in pixel space.
+        qc[0] = 0.5 * (vf->field[2*mo->field[0]  ] + vf->field[2*mo->field[1]  ]);
+        qc[1] = 0.5 * (vf->field[2*mo->field[0]+1] + vf->field[2*mo->field[1]+1]);
+        // Find the radius-squared of the quad = distsq(qc, A)
+        rquad2 = distsq(vf->field + 2*mo->field[0], qc, 2);
+        debug("Quad radius = %g pixels\n", sqrt(rquad2));
 	}
 
 	// p(background) = 1/(W*H) of the image.
@@ -313,15 +313,15 @@ void verify_hit(startree* skdt,
 			assert(fldind < vf->NF);
 
 			if (do_gamma) {
-                            // Distance from the quad center of this field star:
-                            R2 = distsq(vf->field+fldind*2, qc, 2);
+                // Distance from the quad center of this field star:
+                R2 = distsq(vf->field+fldind*2, qc, 2);
 
-                            // Variance of a field star at that distance from the 
-                            // quad center:
-                            // FIXME!
-                            sigma2 = verify_pix2 * (1.0 + R2/rquad2);
+                // Variance of a field star at that distance from the 
+                // quad center:
+                // FIXME!
+                sigma2 = verify_pix2 * (1.0 + R2/rquad2);
 			} else
-                            sigma2 = verify_pix2;
+                sigma2 = verify_pix2;
 
 			// don't bother computing the logprob if it's tiny...
 			//if (bestd2 > 100.0 * sigma2)
