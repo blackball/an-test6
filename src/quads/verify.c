@@ -29,40 +29,8 @@
 
 #include "blind_wcs.h"
 
-#define HISTNINDEX 0
-
-#if HISTNINDEX
-#include "histogram.h"
-static histogram* hist = NULL;
-#endif
-
-void verify_init() {
-#if HISTNINDEX
-    if (hist)
-        histogram_free(hist);
-    hist = histogram_new_binsize(0.0, 1000.0, 10.0);
-#endif
-}
-
-void verify_cleanup() {
-#if HISTNINDEX
-    fflush(stdout);
-    fflush(stderr);
-    printf("\n\n");
-    printf("Number of index objects in the field:\n");
-    printf("NI=");
-    histogram_print_matlab(hist, stdout);
-    printf("\n\n");
-    printf("Bin centers:\n");
-    printf("NIbins=");
-    histogram_print_matlab_bin_centers(hist, stdout);
-    printf("\n\n");
-    if (hist)
-        histogram_free(hist);
-#endif
-}
-
-
+void verify_init() {}
+void verify_cleanup() {}
 
 #define DEBUGVERIFY 0
 #if DEBUGVERIFY
@@ -258,12 +226,6 @@ void verify_hit(startree* skdt,
 		sweeps[i] = skdt->sweep[res->inds[i]];
 		maxsweep = MAX(maxsweep, sweeps[i]);
 	}
-
-#if HISTNINDEX
-        if (hist) {
-            histogram_add(hist, NI);
-        }
-#endif
 
         // Prime the array where we store conflicting-match info.
 	bestprob = malloc(vf->NF * sizeof(double));
