@@ -29,15 +29,6 @@
 
 #include "blind_wcs.h"
 
-// FOR TESTING
-/*
-static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
-							   double fieldarea, double logprob_background,
-							   double logprob_distractor, double* qc,
-							   double verify_pix2, double rquad2,
-							   double* field);
-*/
-
 #define HISTNINDEX 0
 
 #if HISTNINDEX
@@ -302,14 +293,6 @@ void verify_hit(startree* skdt,
 	debug("log(p(background)) = %g\n", logprob_background);
 	debug("log(p(distractor)) = %g\n", logprob_distractor);
 
-	/*
-	  if (0) {
-	  write_prob_terrain(itree, NF, NI, fieldW*fieldH, logprob_background,
-	  logprob_distractor, qc, verify_pix2, rquad2,
-	  field);
-	  }
-	*/
-
 	Nmin = MIN(NI, vf->NF);
 
 	bestlogodds = -HUGE_VAL;
@@ -460,78 +443,3 @@ void verify_hit(startree* skdt,
 	matchobj_compute_overlap(mo);
 }
 
-
-
-
-
-// TEST
-/*
-static void writeFloat(FILE* fid, float f) {
-	if (fwrite(&f, sizeof(float), 1, fid) != 1) {
-		fprintf(stderr, "failed to write float.\n");
-		exit(-1);
-	}
-}
-static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
-							   double fieldarea, double logprob_background,
-							   double logprob_distractor, double* qc,
-							   double verify_pix2, double rquad2,
-							   double* field) {
-	int x1, x2, y1, y2;
-	int x,y;
-	double treebblo[2], treebbhi[2];
-	static int nv = 0;
-	char fn[256];
-	FILE* fout;
-	int i;
-
-	sprintf(fn, "ver%04i.dat", nv);
-	nv++;
-	fprintf(stderr, "Writing %s...\n", fn);
-	fout = fopen(fn, "wb");
-	if (!fout) {
-		fprintf(stderr, "failed to open verify data file.\n");
-		exit(-1);
-	}
-	kdtree_get_bboxes(itree, 0, treebblo, treebbhi);
-	x1 = y1 = 0;
-	x2 = (int)treebbhi[0] + 10;
-	y2 = (int)treebbhi[1] + 10;
-	writeFloat(fout, x1);
-	writeFloat(fout, x2);
-	writeFloat(fout, y1);
-	writeFloat(fout, y2);
-	writeFloat(fout, NF);
-	writeFloat(fout, NI);
-	writeFloat(fout, fieldarea);
-	writeFloat(fout, logprob_background);
-	writeFloat(fout, logprob_distractor);
-	for (y=y1; y<=y2; y++) {
-		for (x=x1; x<=x2; x++) {
-			double bestd2;
-			double sigma2;
-			double cutoffd2;
-			double R2;
-			double logprob;
-			int ind;
-			double pt[2];
-			pt[0] = x;
-			pt[1] = y;
-			// Distance from the quad center of this field star:
-			R2 = distsq(pt, qc, 2);
-			// Variance of a field star at that distance from the quad center:
-			sigma2 = verify_pix2 * ((1.5*1.5) + R2/rquad2);
-			cutoffd2 = HUGE_VAL;
-			ind = kdtree_nearest_neighbour_within(itree, pt, cutoffd2, &bestd2);
-			// p(foreground):
-			logprob = -log(2.0 * M_PI * sigma2 * NI) -(bestd2 / (2.0 * sigma2));
-			writeFloat(fout, logprob);
-		}
-	}
-	for (i=0; i<NF; i++) {
-		writeFloat(fout, field[i*2]);
-		writeFloat(fout, field[i*2+1]);
-	}
-	fclose(fout);
-}
-*/

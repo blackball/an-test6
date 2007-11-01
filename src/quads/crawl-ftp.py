@@ -90,7 +90,9 @@ if __name__ == '__main__':
     while len(crawl.dirstack):
         if not ftp or not (nrequests % 100):
             if ftp:
+                print 'closing connection.'
                 ftp.quit()
+            print 'opening connection'
             ftp = FTP('galex.stsci.edu')
             ftp.login('anonymous', 'dstn@cs.toronto.edu')
             ftp.set_debuglevel(2)
