@@ -1164,6 +1164,12 @@ int main(int argc, char** args)
 			arcsecperpix = deg2arcsec(backend->maxwidth) / job->imagew;
 			dl_append(job->scales, arcsecperpix);
 		}
+
+        // The job can only decrease the CPU limit.
+        if (!job->cpulimit || job->cpulimit > backend->cpulimit) {
+            job->cpulimit = backend->cpulimit;
+        }
+
 		qfits_header_destroy(hdr);
 
         if (verbose) {
