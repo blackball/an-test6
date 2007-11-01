@@ -13,6 +13,7 @@
 #include <regex.h>
 #include <cairo.h>
 #include <math.h>
+#include <getopt.h>
 
 #include "cairoutils.h"
 #include "dimage.h"
@@ -46,6 +47,29 @@ unsigned char* to_bw_u8(unsigned char *image, int imW, int imH) {
 	return image_bw;
 }
 
+char* OPTIONS = "ht:m:g:n:N:";
+
+void print_help_and_exit(char* progname) {
+	printf("print out a track matrix for a reconstruction\n");
+	printf("usage: %s -t <track_file.ts> -m <reconstruction.mr> -e <ground_truth.exr>\n", progname);
+	printf("  -h           this message\n");
+	printf("  -t<track>    track data\n");
+	printf("  -m<metric>   metric reconstruction to evaluate\n");
+	printf("  -g<truth>    ground truth to evaluate against\n");
+	printf("  -n<int>      first frame of ground truth\n");
+	printf("  -N<int>      last frame of ground truth\n");
+	exit(-1);
+}
+
+void exit_error(char* progname, char *msg) {
+	fprintf(stderr, msg);
+	print_help_and_exit(progname);
+}
+#define ERROR(msg) exit_error(argv[0], "ERROR: " msg "\n")
+
+// getopt needs constant flag addresses
+int with_flux=0;
+
 int main(int argc, char *argv[]) {
 	struct dirent **namelist;
 	int i, n, N, peak;
@@ -67,6 +91,7 @@ int main(int argc, char *argv[]) {
 	int npeaks;
 
 	char *fname = argv[1];
+	int c;
 
 	dpsf = 1.0;
 	plim = 8.0;
@@ -77,10 +102,58 @@ int main(int argc, char *argv[]) {
 	halfbox = 100;
 	maxnpeaks = 10000;
 
-	if (argc != 2) {
+	enum {
+		MAXPER = 1,
+		MAXNPEAKS,
+		MAXSIZE,
+		HALFBOX,
+		DLIM,
+		DPSF,
+		SADDLE,
+		PLIM,
+	};
+	while (1)
+	{
+		static struct option long_options[] = {
+			{"flux",                  no_argument, &with_flux,  1      },
+			{"max-peaks-per-object",  required_argument, 0, MAXPER    },
+			{"max-peaks",             required_argument, 0, MAXNPEAKS },
+			{"max-peaks-size",        required_argument, 0, MAXSIZE   },
+			{"median-filter-radius",  required_argument, 0, HALFBOX   },
+			{"min-dist",              required_argument, 0, DLIM      },
+			{"psf",                   required_argument, 0, DPSF      },
+			{"saddle",                required_argument, 0, SADDLE    },
+			{"sigmas",                required_argument, 0, PLIM      },
+			{0, 0, 0, 0}
+		};
+		int option_index = 0;
+		c = getopt_long (argc, argv, "", long_options, &option_index);
+
+		if (c == -1)
+			break;
+
+		switch (c) {
+			case 0         : break; /* do nothing on no-arg flags */
+			case MAXPER    : maxper     = atof(optarg); break;
+			case MAXNPEAKS : maxnpeaks  = atoi(optarg); break;
+			case MAXSIZE   : maxsize    = atoi(optarg); break;
+			case HALFBOX   : halfbox    = atoi(optarg); break;
+			case DLIM      : dlim       = atof(optarg); break;
+			case DPSF      : dpsf       = atof(optarg); break;
+			case SADDLE    : saddle     = atof(optarg); break;
+			case PLIM      : plim       = atof(optarg); break;
+			default:
+							 abort ();
+		}
+	}
+
+	if (optind != argc-1) {
 		fprintf(stderr, "usage: png2xy image.[png|jpg]\n");
 		exit(1);
 	}
+
+	fname = argv[optind];
+
 	if (!is_image(fname)) {
 		fprintf(stderr, "not an image.\n");
 		exit(1);
@@ -135,7 +208,10 @@ int main(int argc, char *argv[]) {
 
 	/* output to CSV */
 	for (i=0; i<npeaks; i++) {
-		printf("%g,%g,%g\n", x[i],y[i],flux[i]);
+		if (with_flux)
+			printf("%g,%g,%g\n", x[i],y[i],flux[i]);
+		else
+			printf("%g,%g\n", x[i],y[i]);
 	}
 
 	free(image);

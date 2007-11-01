@@ -189,7 +189,8 @@ test_simplexy-main.c: make-tests.sh test_simplexy.c
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
 	bash make-tests.sh $(ALL_TEST_FILES_C) > test.c
-test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(ANUTILS_LIB)
+test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(ANUTILS_LIB) $(CAIRO_LIB) $(COMMON)/cairoutils.o 
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
 
 # END OF KEIR'S SUPER SIMPLE TESTING FRAMEWORK
 ######################################################

@@ -127,31 +127,31 @@ int simplexy(float *image,
              float *y,
              float *flux,
              int *npeaks,
-             int verbose) {
-  
-  int i;
-  float *simage = NULL;
-  
-  if (verbose) {
-    fprintf(stderr, "simplexy: nx=%d, ny=%d\n", nx, ny);
-    fprintf(stderr, "simplexy: dpsf=%f, plim=%f, dlim=%f, saddle=%f\n",
-	    dpsf, plim, dlim, saddle);
-    fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d, maxsize=%d, halfbox=%d\n",
-	    maxper, maxnpeaks, maxsize, halfbox);
-  }
+			 int verbose) {
 
-  /* median smooth */
-  /* NB: over-write simage to save malloc */
-  simage = (float *) malloc(nx * ny * sizeof(float));
-  dmedsmooth(image, nx, ny, halfbox, simage);
-  for (i=0; i<nx*ny; i++)
-    simage[i] = image[i] - simage[i];
-  if (verbose)
-    fprintf(stderr, "simplexy: finished dmedsmooth().\n");
+	int i;
+	float *simage = NULL;
 
-  return simplexy_continue(image, nx, ny, dpsf, plim, dlim, saddle, maxper,  
-             maxnpeaks, maxsize, sigma, x, y, flux, npeaks, verbose,
-	     simage);
+	if (verbose) {
+		fprintf(stderr, "simplexy: nx=%d, ny=%d\n", nx, ny);
+		fprintf(stderr, "simplexy: dpsf=%f, plim=%f, dlim=%f, saddle=%f\n",
+				dpsf, plim, dlim, saddle);
+		fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d, maxsize=%d, halfbox=%d\n",
+				maxper, maxnpeaks, maxsize, halfbox);
+	}
+
+	/* median smooth */
+	/* NB: over-write simage to save malloc */
+	simage = (float *) malloc(nx * ny * sizeof(float));
+	dmedsmooth(image, nx, ny, halfbox, simage);
+	for (i=0; i<nx*ny; i++)
+		simage[i] = image[i] - simage[i];
+	if (verbose)
+		fprintf(stderr, "simplexy: finished dmedsmooth().\n");
+
+	return simplexy_continue(image, nx, ny, dpsf, plim, dlim, saddle, maxper,  
+			maxnpeaks, maxsize, sigma, x, y, flux, npeaks, verbose,
+			simage);
 }
 
 int simplexy_u8(unsigned char *image,
