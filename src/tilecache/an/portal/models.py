@@ -194,6 +194,29 @@ class Job(models.Model):
         else:
             return None
 
+    def friendly_parity(self):
+        pstrs = [ 'Positive', 'Negative', 'Try both' ]
+        return pstrs[int(self.parity)]
+
+    def friendly_scale(self):
+        val = None
+        if self.scaletype == 'ul':
+            #val = 'between %.2f and %.2f' % (self.scalelower, self.scaleupper)
+            val = '%.2f to %.2f' % (self.scalelower, self.scaleupper)
+        elif self.scaletype == 'ev':
+            val = '%.2f plus or minus %.2f%%' % (self.scaleest, self.scaleerr)
+
+        txt = None
+        if self.scaleunits == 'arcsecperpix':
+            txt = val + ' arcseconds per pixel'
+        elif self.scaleunits == 'arcminwidth':
+            txt = val + ' arcminutes wide'
+        elif self.scaleunits == 'degwidth':
+            txt = val + ' degrees wide'
+        elif self.scaleunits == 'focalmm':
+            txt = 'focal length of ' + val + ' mm'
+        return txt
+
     def compute_filehash(self, fn):
         h = sha.new()
         f = open(fn, 'rb')

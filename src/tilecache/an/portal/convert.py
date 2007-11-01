@@ -18,7 +18,7 @@ class FileConversionError(Exception):
     def __str__(self):
         return self.errstr
 
-def run_convert_command(cmd):
+def run_convert_command(cmd, deleteonfail=None):
     log('Command: ' + cmd)
     (rtn, stdout, stderr) = run_command(cmd)
     if rtn:
@@ -26,7 +26,26 @@ def run_convert_command(cmd):
         log(errmsg + '; rtn val %d' % rtn)
         log('out: ' + stdout);
         log('err: ' + stderr);
+        if deleteonfail:
+            os.unlink(deleteonfail)
         raise FileConversionError(errmsg)
+
+def run_pnmfile(fn):
+    cmd = 'pnmfile %s' % fn
+    (filein, fileout) = os.popen2(cmd)
+    filein.close()
+    out = fileout.read().strip()
+    log('pnmfile output: ' + out)
+    pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
+    match = pat.search(out)
+    if not match:
+        log('No match.')
+        return None
+    w = int(match.group('width'))
+    h = int(match.group('height'))
+    pnmtype = match.group('pnmtype')
+    log('Type %s, w %i, h %i' % (pnmtype, w, h))
+    return (w, h, pnmtype)
 
 def convert(job, fn, store_imgtype=False, store_imgsize=False):
     log('convert(%s)' % fn)
@@ -61,19 +80,10 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'pgm':
         # run 'pnmfile' on the pnm.
         infn = convert(job, 'pnm', store_imgtype, store_imgsize)
-        cmd = 'pnmfile %s' % infn
-        (filein, fileout) = os.popen2(cmd)
-        filein.close()
-        out = fileout.read().strip()
-        log('pnmfile output: ' + out)
-        pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
-        match = pat.search(out)
-        if not match:
-            log('No match.')
+        x = run_pnmfile(infn)
+        if x is None:
             return HttpResponse('couldn\'t find file size')
-        w = int(match.group('width'))
-        h = int(match.group('height'))
-        pnmtype = match.group('pnmtype')
+        (w, h, pnmtype) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
         if store_imgsize:
             job.imagew = w
@@ -81,6 +91,18 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         if pnmtype == 'G':
             return infn
         cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'ppm':
+        imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        x = run_pnmfile(imgfn)
+        if x is None:
+            return HttpResponse('pnmfile failed')
+        (w, h, pnmtype) = x
+        if pnmtype == 'P':
+            return imgfn
+        cmd = 'pgmtoppm white %s > %s' % (imgfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
@@ -146,10 +168,6 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         run_convert_command(cmd)
         return fullfn
 
-    #elif fn == 'overlay':
-    #    imgfn = convert(job, 'pnm-small-dim', store_imgtype, store_imgsize)
-    #    ixyfn = convert(job, 'indexxyls', store_imgtype, store_imgsize)
-
     elif fn == 'pnm-small':
         imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
         if not job.displayscale:
@@ -166,8 +184,20 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'annotation':
+    elif fn == 'ppm-small':
         imgfn = convert(job, 'pnm-small', store_imgtype, store_imgsize)
+        x = run_pnmfile(imgfn)
+        if x is None:
+            return HttpResponse('pnmfile failed')
+        (w, h, pnmtype) = x
+        if pnmtype == 'P':
+            return imgfn
+        cmd = 'pgmtoppm white %s > %s' % (imgfn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'annotation':
+        imgfn = convert(job, 'ppm-small', store_imgtype, store_imgsize)
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/job.displayscale, imgfn))
@@ -175,11 +205,37 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'annotation-big':
-        imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        imgfn = convert(job, 'ppm', store_imgtype, store_imgsize)
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s' %
                (wcsfn, fullfn, imgfn))
         run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'sources':
+        imgfn = convert(job, 'ppm-small', store_imgtype, store_imgsize)
+        xyls = job.get_filename('job.axy')
+        scale = 1.0 / float(job.displayscale)
+        commonargs = ('-i %s -x %g -y %g -w 2 -S %g -C red' %
+                      (xyls, scale, scale, scale))
+        cmd = (('plotxy %s -I %s -N 100 -r 6 -P' %
+                (commonargs, imgfn)) +
+               (' | plotxy -I - %s -n 100 -N 500 -r 4 > %s' %
+                (commonargs, fullfn)))
+        run_convert_command(cmd, fullfn)
+        return fullfn
+
+    elif fn == 'sources-big':
+        imgfn = convert(job, 'ppm', store_imgtype, store_imgsize)
+        xyls = job.get_filename('job.axy')
+        commonargs = ('-i %s -x %g -y %g -w 2 -C red' %
+                      (xyls, 1, 1))
+        cmd = (('plotxy %s -I %s -N 100 -r 6 -P' %
+                (commonargs, imgfn)) +
+               (' | plotxy -I - %s -n 100 -N 500 -r 4 > %s' %
+                (commonargs, fullfn)))
+        log('Command: ' + cmd)
+        run_convert_command(cmd, fullfn)
         return fullfn
 
     errmsg = 'Unimplemented: convert(%s)' % fn

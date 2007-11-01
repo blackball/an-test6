@@ -409,27 +409,25 @@ def jobstatus(request):
         return HttpResponse('no such job')
 
     log('jobstatus: Job is: ' + str(job))
-    #log('job.solved is ' + str(job.solved))
 
     ctxt = {
         'jobid' : job.jobid,
         'jobstatus' : job.status,
         'jobsolved' : job.solved,
+        'jobsubmittime' : job.format_submittime(),
+        'jobstarttime' : job.format_starttime(),
+        'jobfinishtime' : job.format_finishtime(),
+        'logurl' : get_url(job, 'blind.log'),
+        'job' : job,
+        'joburl' : (job.datasrc == 'url') and job.url or None,
+        'jobfile' : (job.datasrc == 'file') and job.uploaded.userfilename or None,
+        'jobscale' : job.friendly_scale(),
+        'jobparity' : job.friendly_parity(),
+        'sources' : get_url(job, 'sources'),
+        'sources_big' : get_url(job, 'sources-big'),
         }
 
-    #x = job.submittime
-    #if x:
-    #    ctxt['jobsubmittime'] = x.strftime('%Y-%m-%d %H:%M:%S%z')#str(x)
-    #x = job.starttime
-    #if x:
-    #    ctxt['jobstarttime'] = str(x)
-    #x = job.finishtime
-    #if x:
-    #    ctxt['jobfinishtime'] = str(x)
 
-    ctxt.update({ 'jobsubmittime' : job.format_submittime(),
-                  'jobstarttime' : job.format_starttime(),
-                  'jobfinishtime' : job.format_finishtime(), })
 
     if job.solved:
         wcsinfofn = convert(job, 'wcsinfo', store_imgtype=True, store_imgsize=True)
@@ -500,7 +498,6 @@ def jobstatus(request):
 
             zlist.append([url + smallstyle + urlargs,
                           url + largestyle + urlargs])
-        ctxt['zoomimgs'] = zlist
 
         # HACK
         fn = convert(job, 'fullsizepng')
@@ -508,12 +505,13 @@ def jobstatus(request):
                ('?zoom=%i&ra=%.3f&dec=%.3f&userimage=%s' %
                 (int(wcsinfo['merczoom']), float(wcsinfo['ra_center']),
                  float(wcsinfo['dec_center']), job.get_relative_job_dir())))
-        ctxt['gmapslink'] = url
 
-        #ctxt['overlay'] = '/job/getfile?f=overlay'
-        #ctxt['overlay_big'] = '/job/getfile?f=overlay-big'
-        ctxt['annotation'] = get_url(job, 'annotation')
-        ctxt['annotation_big'] = get_url(job, 'annotation-big')
+        ctxt.update({
+            'gmapslink' : url,
+            'zoomimgs'  : zlist,
+            'annotation': get_url(job, 'annotation'),
+            'annotation_big' : get_url(job, 'annotation-big'),
+            })
 
     else:
         logfn = job.get_filename('blind.log')
@@ -522,13 +520,20 @@ def jobstatus(request):
             logfiletxt = f.read()
             f.close()
             lines = logfiletxt.split('\n')
-            lines = '\n'.join(lines[-10:])
+            lines = '\n'.join(lines[-16:])
             log('job not solved')
-            ctxt['logfile_tail'] = lines
+
+            ctxt.update({
+                'logfile_tail' : lines,
+                })
 
     t = loader.get_template('portal/status.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
+
+def file_size(fn):
+    st = os.stat(fn)
+    return st.st_size
 
 def getfile(request):
     #if not request.user.is_authenticated():
@@ -553,19 +558,42 @@ def getfile(request):
 
     f = request.GET['f']
 
-    pngimages = [ #'overlay', 'overlay-big',
-                  'annotation', 'annotation-big' ]
+    pngimages = [ 'annotation', 'annotation-big',
+                  'sources', 'sources-big' ]
 
-    if not f in pngimages:
-        return HttpResponse('bad f')
-        
-    fn = convert(job, f)
     res = HttpResponse()
-    res['Content-Type'] = 'image/png'
-    f = open(fn)
-    res.write(f.read())
-    f.close()
-    return res
+    if f in pngimages:
+        fn = convert(job, f)
+        res['Content-Type'] = 'image/png'
+        res['Content-Length'] = file_size(fn)
+        f = open(fn)
+        res.write(f.read())
+        f.close()
+        return res
+
+    binaryfiles = [ 'wcs.fits', 'match.fits' ]
+    if f in binaryfiles:
+        fn = job.get_filename(f)
+        res['Content-Type'] = 'application/octet-stream'
+        res['Content-Disposition'] = 'attachment; filename="' + f + '"'
+        res['Content-Length'] = file_size(fn)
+        f = open(fn)
+        res.write(f.read())
+        f.close()
+        return res
+
+    textfiles = [ 'blind.log' ]
+    if f in textfiles:
+        fn = job.get_filename(f)
+        res['Content-Type'] = 'text/plain'
+        res['Content-Disposition'] = 'inline'
+        res['Content-Length'] = file_size(fn)
+        f = open(fn)
+        res.write(f.read())
+        f.close()
+        return res
+
+    return HttpResponse('bad f')
 
 def printvals(request):
     if request.POST:

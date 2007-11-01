@@ -22,6 +22,11 @@ td {border-width: 0;}
 #annotation > a:visited { color:white; }
 #annotation > a:hover { color:gray; }
 #annotation > a:active { color:yellow; }
+#sources { margin-left:auto; margin-right:auto; text-align:center; }
+#sources > a:link { color:white; }
+#sources > a:visited { color:white; }
+#sources > a:hover { color:gray; }
+#sources > a:active { color:yellow; }
 #gmapslink { margin-left:auto; margin-right:auto; text-align:center; }
 
 #objs2 {width:40%; margin-left:auto; margin-right:auto; }
@@ -88,21 +93,9 @@ Your field contains:
 
 <hr />
 
-{% comment %}
-<div id="overlay">
-<p>Your field plus our index objects:
-<br />Green: stars from the index
-<br />Red: stars from your image
-<br />
-<a href="{{ overlay_big }}"><img src="{{ overlay }}" alt="our index stars plus your image stars" /></a>
-</p>
-</div>
-<hr />
-{% endcomment %}
-
 {% endif %}
 
-<p />
+<br />
 
 <table cellpadding="3" border="1" class="c">
 
@@ -111,8 +104,13 @@ Your field contains:
 <tr><td>Job Id:</td><td> {{ jobid }} </td></tr>
 <tr><td>Job Status:</td><td> {{ jobstatus }} </td></tr>
 <tr><td>Submitted:</td><td> {{ jobsubmittime }} </td></tr>
+{% if jobstarttime %}
 <tr><td>Started:</td><td> {{ jobstarttime }} </td></tr>
+{% endif %}
+{% if jobfinishtime %}
 <tr><td>Finished:</td><td> {{ jobfinishtime }} </td></tr>
+{% endif %}
+{% if jobsolved %}
 <tr><td>(RA, Dec) center:</td><td> ({{ racenter }}, {{ deccenter }}) degrees</td></tr>
 <tr><td>(RA, Dec) center (H:M:S, D:M:S):</td><td> ({{ racenter_hms }}, {{ deccenter_dms }}) </td></tr>
 <tr><td>Orientation:</td><td> {{ orientation }} deg E of N</td></tr>
@@ -120,21 +118,63 @@ Your field contains:
 <tr><td>Parity (sign(det(CD))):</td><td> {{ parity }}</td></tr>
 <tr><td>Field size:</td><td> {{ fieldw }} x {{ fieldh }} {{ fieldunits }}</td></tr>
 <tr><td>WCS FITS header:</td><td><a href="{{ wcsurl }}">wcs.fits</a></td></tr>
+<tr><td>Source extraction:</td><td><a href="{{ sources }}">sources.png</a></td></tr>
+<tr><td>Source extraction (big):</td><td><a href="{{ sources_big }}">sources-big.png</a></td></tr>
+{% endif %}
+{% if jobstarttime %}
+<tr><td>Solver log file:</td><td><a href="{{ logurl }}">blind.log</a></td></tr>
+{% endif %}
 </table>
+
+<hr />
+
+{% if not jobsolved and jobfinishtime %}
+
+<div id="sources">
+<p>Source extraction:</p>
+<a href="{{ sources_big }}"><img src="{{ sources }}" alt="source extraction for your images" /></a>
+</div>
+
+<hr />
+{% endif %}
 
 {% if jobsolved %}
 {% else %}
+<br />
+
+<table cellpadding="3" border="1" class="c">
+<tr><th>Tail of the Log File</th></tr>
+<tr><td><pre>{{ logfile_tail }}</pre></td></tr>
+</table>
+
+<hr />
+{% endif %}
 
 <table cellpadding="3" border="1" class="c">
 
-<tr><th>Tail of the Log File</th></tr>
+<tr><th colspan="2">Job Parameters</th></tr>
 
-<tr><td><pre>{{ logfile_tail }}</pre></td></tr>
+{% if joburl %}
+<tr><td> URL: </td><td> {{ joburl }} </td></tr>
+{% endif %}
+{% if jobfile %}
+<tr><td> File: </td><td> {{ jobfile }} </td></tr>
+{% endif %}
+<tr><td> Field scale: </td><td> {{ jobscale }} </td></tr>
+{% if job.tweak %}
+<tr><td> Tweak order: </td><td> {{ job.tweakorder }} </td></tr>
+{% else %}
+<tr><td> Tweak: </td><td> No </td></tr>
+{% endif %}
+<tr><td> Parity: </td><td> {{ jobparity }} </td></tr>
+
+{% comment %}
+<tr><td> </td><td> </td></tr>
+{% endcomment %}
 
 </table>
 
-
-{% endif %}
-
+<br />
+<br />
 
 {% endblock content %}
