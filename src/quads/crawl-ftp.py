@@ -1,6 +1,7 @@
 import os
 import os.path
 import re
+import sys
 
 from ftplib import FTP
 
@@ -14,9 +15,9 @@ class crawler(object):
     fnomatches = None
 
     def __init__(self):
-        self.ffiles = open('files', 'wb')
-        self.fdirs = open('dirs', 'wb')
-        self.fnomatches = open('nomatch', 'wb')
+        self.ffiles = open('files', 'ab')
+        self.fdirs = open('dirs', 'ab')
+        self.fnomatches = open('nomatch', 'ab')
 
     ire = re.compile(r'^(?P<dir>.)' + # 'd' or '-'
                      r'.{9}' + # mode
@@ -88,11 +89,12 @@ if __name__ == '__main__':
     nrequests = 0
     
     while len(crawl.dirstack):
-        if not ftp or not (nrequests % 10):
+        if not ftp: # or not (nrequests % 100):
             if ftp:
                 print 'closing connection.'
                 ftp.quit()
             print 'opening connection'
+            sys.stdout.flush()
             ftp = FTP('galex.stsci.edu')
             ftp.login('anonymous', 'dstn@cs.toronto.edu')
             #ftp.set_debuglevel(2)
@@ -100,12 +102,14 @@ if __name__ == '__main__':
         d = crawl.dirstack.pop()
         crawl.currentdir = d
         print 'listing "%s"' % d
+        sys.stdout.flush()
         try:
             ftp.dir(d, crawl.add_item)
             crawl.write_stack()
             nrequests += 1
         except Exception, e:
             print 'caught exception:', e
+            sys.stdout.flush()
             crawl.dirstack.append(d)
             ftp.close()
             ftp = None
