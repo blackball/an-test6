@@ -254,11 +254,12 @@ int main(int argc, char** args) {
     // the rest of the stars in the field...
     if (line) {
         for (i=dimquads; i<N; i++) {
-            //fieldstars[2*i + 0] = uniform_sample(0.0, imgsize);
-            double s = uniform_sample(-0.5, 0.5);
-            //s = s*s * (s > 0 ? 1 : -1);
-            s = sqrt(fabs(s)) * (s > 0 ? 1 : -1);
-            fieldstars[2*i + 0] = (s+0.5) * imgsize;
+            /* Sample with uniform density in L^2 space:
+             double s = uniform_sample(-0.5, 0.5);
+             s = sqrt(fabs(s)) * (s > 0 ? 1 : -1);
+             fieldstars[2*i + 0] = (s+0.5) * imgsize;
+             */
+            fieldstars[2*i + 0] = uniform_sample(0.0, imgsize);
             fieldstars[2*i + 1] = cy;
         }
     } else {
