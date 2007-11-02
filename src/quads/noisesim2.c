@@ -34,12 +34,13 @@
 #include "svd.h"
 #include "noise.h"
 
-const char* OPTIONS = "hi:f:q:n:a:s:L";
+const char* OPTIONS = "hi:f:q:n:a:s:LQ:";
 
 void print_help(char* progname) {
     printf("Usage: %s\n"
            "   [-i <index-jitter>]: noise in the index stars, in pixels; default 1\n"
            "   [-f <field-jitter>]: noise in the image, in pixels; default 1\n"
+           "   [-Q <index quad jitter>]: noise to add to the index quad stars; default = same as the rest of the index stars.\n"
            "   [-q <dimquads>]: set number of stars per \"quad\"; default 4\n"
            "   [-n <n-samples>]: number of stars to draw; default 1000\n"
            "   [-a <quad-scale>]: distance between stars A and B, in pixels; default 100\n"
@@ -179,12 +180,14 @@ int main(int argc, char** args) {
     double* indexstars;
     double* indexproj;
 
+    double indexquadnoise = -1.0;
+
     int line = 0;
 
     transform T;
 
-    //srand((unsigned int)time(NULL));
-    srand(0);
+    srand((unsigned int)time(NULL));
+    //srand(0);
 
 	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
@@ -194,6 +197,8 @@ int main(int argc, char** args) {
         case '?':
             print_help(args[0]);
             exit(-1);
+        case 'Q':
+            indexquadnoise = atof(optarg);
         case 'L':
             line = 1;
             break;
@@ -228,6 +233,10 @@ int main(int argc, char** args) {
         exit(-1);
     }
     dimcodes = 2 * (dimquads - 2);
+
+    if (indexquadnoise == -1.0) {
+        indexquadnoise = indexnoise;
+    }
 
     fieldstars = malloc(2 * N * sizeof(double));
     indexstars = malloc(2 * N * sizeof(double));
@@ -273,7 +282,10 @@ int main(int argc, char** args) {
 
 
     // add noise to index stars...
-    for (i=0; i<N; i++) {
+    for (i=0; i<dimquads; i++) {
+        add_field_noise(indexstars + 2*i, indexquadnoise, indexstars + 2*i);
+    }
+    for (i=dimquads; i<N; i++) {
         add_field_noise(indexstars + 2*i, indexnoise, indexstars + 2*i);
     }
 
@@ -327,6 +339,8 @@ int main(int argc, char** args) {
      fprintf(stderr, "%g,%g;", indexstars[2*i], indexstars[2*i+1]);
      fprintf(stderr, "];\n");
      */
+
+    fprintf(stderr, "codedist=%g;\n", codedist);
 
     fprintf(stderr, "fieldstars=[");
     for (i=0; i<N; i++)
