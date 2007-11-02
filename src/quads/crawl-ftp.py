@@ -1,6 +1,7 @@
 import os
 import os.path
 import re
+import socket
 import sys
 
 from ftplib import FTP
@@ -87,7 +88,8 @@ if __name__ == '__main__':
         crawl.set_dirstack(stack)
 
     nrequests = 0
-    
+    socket.setdefaulttimeout(10)
+
     while len(crawl.dirstack):
         if not ftp: # or not (nrequests % 100):
             if ftp:
