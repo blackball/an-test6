@@ -227,10 +227,10 @@ class Job(models.Model):
         s += '>'
         return s
 
-    def datasrc(self):
-        if self.field:
-            return self.field.datasrc
-        return None
+    #def datasrc(self):
+    #    if self.field:
+    #        return self.field.datasrc
+    #    return None
 
     def set_submittime_now(self):
         self.submittime = Job.timenow()

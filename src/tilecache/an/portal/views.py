@@ -434,6 +434,8 @@ def jobstatus(request):
     if not job:
         return HttpResponse('no such job')
 
+    field = job.field
+
     log('jobstatus: Job is: ' + str(job))
 
     ctxt = {
@@ -445,8 +447,8 @@ def jobstatus(request):
         'jobfinishtime' : job.format_finishtime(),
         'logurl' : get_url(job, 'blind.log'),
         'job' : job,
-        'joburl' : (job.datasrc() == 'url') and job.field.url or None,
-        'jobfile' : (job.datasrc() == 'file') and job.field.uploaded.userfilename or None,
+        'joburl' : (field.datasrc == 'url') and field.url or None,
+        'jobfile' : (field.datasrc == 'file') and field.uploaded.userfilename or None,
         'jobscale' : job.friendly_scale(),
         'jobparity' : job.friendly_parity(),
         'sources' : get_url(job, 'sources'),
@@ -493,7 +495,7 @@ def jobstatus(request):
         ctxt['objsinfield'] = objs
 
         # deg
-        fldsz = math.sqrt(job.imagew * job.imageh) * float(wcsinfo['pixscale']) / 3600.0
+        fldsz = math.sqrt(field.imagew * field.imageh) * float(wcsinfo['pixscale']) / 3600.0
 
         url = (gmaps_config.tileurl + '?layers=tycho,grid,userboundary' +
                '&arcsinh&wcsfn=%s' % job.get_relative_filename('wcs.fits'))
@@ -652,12 +654,20 @@ def newlong(request):
 
     if form.is_valid():
         print 'Yay'
+
+        uploaded = form.getclean('upload_id')
+        form.getclean('url')
+        if form.getclean('filetype') == 'url':
+            uploaded = None
+        elif form.getclean('filetype') == 'file':
+            url = None
+
         field = AstroField(
             user = request.user,
             datasrc = form.getclean('datasrc'),
             filetype = form.getclean('filetype'),
-            url = form.getclean('url'),
-            uploaded = form.getclean('upload_id'),
+            uploaded = uploaded,
+            url = url,
             xcol = form.getclean('xcol'),
             ycol = form.getclean('ycol'),
             )
