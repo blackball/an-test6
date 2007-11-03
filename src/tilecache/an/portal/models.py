@@ -119,7 +119,7 @@ class AstroField(models.Model):
         self.filehash = h.hexdigest()
 
     def filename(self):
-        return os.path.join(config.fielddir, self.id)
+        return os.path.join(config.fielddir, str(self.id))
         #return self.get_filename('original')
 
     #def retrieve_file(self):
@@ -169,9 +169,9 @@ class Job(models.Model):
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
 
-    field = AstroField()
-
     user = models.ForeignKey(User, editable=False)
+
+    field = models.ForeignKey(AstroField, editable=False)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
                                               default=2, radio_admin=True,
@@ -213,7 +213,7 @@ class Job(models.Model):
         s = '<Job %s, user %s' % (self.jobid, self.user.username)
         if self.status:
             s += ', %s' % self.status
-        s += str(field) + ' '
+        s += str(self.field) + ' '
         pstrs = [ 'pos', 'neg', 'both' ]
         s += ', parity ' + pstrs[int(self.parity)]
         if self.scaletype == 'ul':

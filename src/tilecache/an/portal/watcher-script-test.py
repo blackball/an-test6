@@ -76,17 +76,17 @@ if __name__ == '__main__':
 
     field = job.field
 
-    field.retrieve_file()
     origfile = field.filename()
 
+    #field.retrieve_file()
     if not os.path.exists(origfile):
-        if self.datasrc == 'url':
+        if field.datasrc == 'url':
             # download the URL.
             userlog('Retrieving URL...')
             f = urllib.urlretrieve(field.url, origfile)
         elif field.datasrc == 'file':
             # move the uploaded file.
-            temp = job.uploaded.get_filename()
+            temp = field.uploaded.get_filename()
             log('uploaded tempfile is ' + temp)
             log('rename(%s, %s)' % (temp, origfile))
             os.rename(temp, origfile)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     uncomp = convert(job, 'uncomp')
 
     # Compute hash of uncompressed file.
-    job.compute_filehash(uncomp)
+    field.compute_filehash(uncomp)
 
     axy = 'job.axy'
     axypath = job.get_filename(axy)
