@@ -29,7 +29,7 @@ class crawler(object):
                      r'\s*(?P<month>\w*)' + # space, month
                      r'\s*(?P<day>\w*)' + # space, day
                      r'\s*(?P<time>[\w:]*)' + # space, time
-                     r'\s*(?P<name>[\w.~_-]*)' + # space, name
+                     r'\s*(?P<name>[\w.~_+-]*)' + # space, name
                      r'$')
 
     def close(self):
