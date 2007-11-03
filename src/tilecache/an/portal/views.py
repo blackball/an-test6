@@ -42,9 +42,29 @@ class LoginForm(forms.Form):
     username = forms.EmailField()
     password = forms.CharField(max_length=100, widget=forms.PasswordInput)
 
-class ForgivingURLField(forms.URLField):
+ftpurl_re = re.compile(
+    r'^ftp://'
+    r'(?:(?:[A-Z0-9-]+\.)+[A-Z]{2,6}|' #domain...
+    r'localhost|' #localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+    r'(?::\d+)?' # optional port
+    r'(?:/?|/\S+)$', re.IGNORECASE)
+
+class FtpOrHttpURLField(forms.URLField):
     def clean(self, value):
-        print 'cleaning value', value
+        #log('FtpOrHttpURLField.clean(', value, ')')
+        try:
+            val = super(FtpOrHttpURLField, self).clean(value)
+            return val
+        except ValidationError:
+            pass
+        if ftpurl_re.match(value):
+            return value
+        raise ValidationError(self.error_message)
+
+class ForgivingURLField(FtpOrHttpURLField):
+    def clean(self, value):
+        #log('ForgivingURLField.clean(', value, ')')
         if value is not None and \
                (value.startswith('http://http://') or
                 value.startswith('http://ftp://')):
@@ -177,7 +197,7 @@ class FullForm(forms.Form):
             if not self.geterror('url'):
                 if not (url and len(url)):
                     self._errors['url'] = ['URL is required']
-                elif not url.startswith('http://') or url.startswith('ftp://'):
+                elif not (url.startswith('http://') or url.startswith('ftp://')):
                     self._errors['url'] = ['Only http and ftp URLs are supported']
 
         elif src == 'file':

@@ -131,9 +131,11 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'xyls':
         infn = convert(job, 'fitsimg', store_imgtype, store_imgsize)
-        sxylog = job.get_filename('simplexy.out')
-        sxyerr = job.get_filename('simplexy.err')
-        cmd = 'image2xy -o %s %s > %s 2> %s' % (fullfn, infn, sxylog, sxyerr)
+        #sxylog = job.get_filename('simplexy.out')
+        #sxyerr = job.get_filename('simplexy.err')
+        sxylog = 'blind.log'
+        #cmd = 'image2xy -o %s %s > %s 2> %s' % (fullfn, infn, sxylog, sxyerr)
+        cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
         return fullfn
 

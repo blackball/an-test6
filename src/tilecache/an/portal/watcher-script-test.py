@@ -25,7 +25,7 @@ import an.gmaps_config as config
 from an.portal.models import Job
 from an.upload.models import UploadedFile
 from an.portal.log import log
-from an.portal.convert import convert
+from an.portal.convert import convert, FileConversionError
 from an.portal.run_command import run_command
 
 def bailout(job, reason):
@@ -33,6 +33,13 @@ def bailout(job, reason):
     job.failurereason = reason
     job.save()
     sys.exit(-1)
+
+blindlog = 'blind.log'
+
+def userlog(*msg):
+    f = open(blindlog, 'a')
+    f.write(' '.join(map(str, msg)) + '\n')
+    f.close()
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -53,7 +60,8 @@ if __name__ == '__main__':
 
     jobset = Job.objects.all().filter(jobid=jobid)
     if len(jobset) != 1:
-        bailout('Found %i jobs, not 1' % len(jobset))
+        log('Found %i jobs, not 1' % len(jobset))
+        sys.exit(-1)
 
     job = jobset[0]
     log('Running job: ' + str(job))
@@ -64,7 +72,7 @@ if __name__ == '__main__':
 
     if job.datasrc == 'url':
         # download the URL.
-        log('Retrieving URL...')
+        userlog('Retrieving URL...')
         f = urllib.urlretrieve(job.url, origfile)
 
     elif job.datasrc == 'file':
@@ -75,7 +83,7 @@ if __name__ == '__main__':
         os.rename(temp, origfile)
 
     else:
-        bailout('no datasrc')
+        bailout(job, 'no datasrc')
 
     # Handle compressed files.
     uncomp = convert(job, 'uncomp')
@@ -89,7 +97,12 @@ if __name__ == '__main__':
     #log('PATH is ' + ', '.join(sys.path))
 
     if job.filetype == 'image':
-        xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
+        userlog('Doing source extraction...')
+        try:
+            xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
+        except FileConversionError,e:
+            userlog('Source extraction failed.')
+            bailout(job, 'Source extraction failed.')
         log('created xylist %s' % xylist)
         (lower, upper) = job.get_scale_bounds()
 
@@ -109,18 +122,17 @@ if __name__ == '__main__':
         if rtn:
             log('out: ' + out)
             log('err: ' + err)
-            bailout('Creating axy file failed: ' + err)
+            bailout(job, 'Creating axy file failed: ' + err)
 
         log('created file ' + axypath)
 
     elif job.filetype == 'fits':
-        bailout('fits tables not implemented')
+        bailout(job, 'fits tables not implemented')
     elif job.filetype == 'text':
-        bailout('text files not implemented')
+        bailout(job, 'text files not implemented')
     else:
-        bailout('no filetype')
+        bailout(job, 'no filetype')
 
-    blindlog = 'blind.log'
     # shell into compute server...
     cmd = ('(echo %(jobid)s; '
            ' tar cf - --ignore-failed-read %(axyfile)s) | '
@@ -141,12 +153,12 @@ if __name__ == '__main__':
     job.save()
 
     if not os.WIFEXITED(w):
-        bailout('Solver didn\'t exit normally.')
+        bailout(job, 'Solver didn\'t exit normally.')
 
     rtn = os.WEXITSTATUS(w)
     if rtn:
         log('Solver failed with return value %i' % rtn)
-        bailout('Solver failed.')
+        bailout(job, 'Solver failed.')
 
     log('Command completed successfully.')
 
