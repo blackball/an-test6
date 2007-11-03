@@ -74,22 +74,24 @@ if __name__ == '__main__':
     if not job:
         sys.exit(-1)
 
-    origfile = job.get_orig_file()
+    field = job.field
 
-    if job.datasrc == 'url':
-        # download the URL.
-        userlog('Retrieving URL...')
-        f = urllib.urlretrieve(job.url, origfile)
+    field.retrieve_file()
+    origfile = field.filename()
 
-    elif job.datasrc == 'file':
-        # move the uploaded file.
-        temp = job.uploaded.get_filename()
-        log('uploaded tempfile is ' + temp)
-        log('rename(%s, %s)' % (temp, origfile))
-        os.rename(temp, origfile)
-
-    else:
-        bailout(job, 'no datasrc')
+    if not os.path.exists(origfile):
+        if self.datasrc == 'url':
+            # download the URL.
+            userlog('Retrieving URL...')
+            f = urllib.urlretrieve(field.url, origfile)
+        elif field.datasrc == 'file':
+            # move the uploaded file.
+            temp = job.uploaded.get_filename()
+            log('uploaded tempfile is ' + temp)
+            log('rename(%s, %s)' % (temp, origfile))
+            os.rename(temp, origfile)
+        else:
+            bailout(job, 'no datasrc')
 
     # Handle compressed files.
     uncomp = convert(job, 'uncomp')
@@ -102,7 +104,7 @@ if __name__ == '__main__':
 
     #log('PATH is ' + ', '.join(sys.path))
 
-    if job.filetype == 'image':
+    if field.filetype == 'image':
         userlog('Doing source extraction...')
         try:
             xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
@@ -136,12 +138,14 @@ if __name__ == '__main__':
 
         log('created file ' + axypath)
 
-    elif job.filetype == 'fits':
+    elif field.filetype == 'fits':
         bailout(job, 'fits tables not implemented')
-    elif job.filetype == 'text':
+    elif field.filetype == 'text':
         bailout(job, 'text files not implemented')
     else:
         bailout(job, 'no filetype')
+
+    field.save()
 
     # shell into compute server...
     cmd = ('(echo %(jobid)s; '

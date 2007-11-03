@@ -21,7 +21,7 @@ import quads.fits2fits as fits2fits
 import quads.image2pnm as image2pnm
 import an.portal.mercator as merc
 
-from an.portal.models import Job
+from an.portal.models import Job, AstroField
 from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
 from an.portal.convert import convert
@@ -80,13 +80,13 @@ class SimpleFancyFileForm(forms.Form):
 
 class FullForm(forms.Form):
 
-    datasrc = forms.ChoiceField(choices=Job.datasrc_CHOICES,
+    datasrc = forms.ChoiceField(choices=AstroField.datasrc_CHOICES,
                                 initial='url',
                                 widget=forms.RadioSelect(
         attrs={'id':'datasrc',
                'onclick':'datasourceChanged()'}))
 
-    filetype = forms.ChoiceField(choices=Job.filetype_CHOICES,
+    filetype = forms.ChoiceField(choices=AstroField.filetype_CHOICES,
                                  initial='image',
                                  widget=forms.Select(
         attrs={'onchange':'filetypeChanged()',
@@ -314,11 +314,13 @@ def newurl(request):
         form = SimpleURLForm(request.POST)
         if form.is_valid():
             url = form.cleaned_data['url']
+            field = AstroField(user = request.user,
+                               filetype = 'image',
+                               datasrc = 'url',
+                               url = url)
+            field.save()
             job = Job(user = request.user,
-                      filetype = 'image',
-                      datasrc = 'url',
-                      url = url,
-                      )
+                      field = field)
             submit_job(request, job)
             return HttpResponseRedirect(get_status_url(job))
         else:
@@ -348,10 +350,14 @@ def newfile(request):
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
+            field = AstroField(user = request.user,
+                               filetype = 'image',
+                               datasrc = 'file',
+                               uploaded = form.cleaned_data['upload_id'],
+                               )
+            field.save()
             job = Job(user = request.user,
-                      filetype = 'image',
-                      datasrc = 'file',
-                      uploaded = form.cleaned_data['upload_id'],
+                      field = field,
                       )
             log('newfile: submitting job ' + str(job))
             submit_job(request, job)
@@ -439,8 +445,8 @@ def jobstatus(request):
         'jobfinishtime' : job.format_finishtime(),
         'logurl' : get_url(job, 'blind.log'),
         'job' : job,
-        'joburl' : (job.datasrc == 'url') and job.url or None,
-        'jobfile' : (job.datasrc == 'file') and job.uploaded.userfilename or None,
+        'joburl' : (job.datasrc() == 'url') and job.field.url or None,
+        'jobfile' : (job.datasrc() == 'file') and job.field.uploaded.userfilename or None,
         'jobscale' : job.friendly_scale(),
         'jobparity' : job.friendly_parity(),
         'sources' : get_url(job, 'sources'),
@@ -646,13 +652,19 @@ def newlong(request):
 
     if form.is_valid():
         print 'Yay'
-        job = Job(datasrc = form.getclean('datasrc'),
-                  filetype = form.getclean('filetype'),
-                  user = request.user,
-                  url = form.getclean('url'),
-                  uploaded = form.getclean('upload_id'),
-                  xcol = form.getclean('xcol'),
-                  ycol = form.getclean('ycol'),
+        field = AstroField(
+            user = request.user,
+            datasrc = form.getclean('datasrc'),
+            filetype = form.getclean('filetype'),
+            url = form.getclean('url'),
+            uploaded = form.getclean('upload_id'),
+            xcol = form.getclean('xcol'),
+            ycol = form.getclean('ycol'),
+            )
+        field.save()
+
+        job = Job(user = request.user,
+                  field = field,
                   parity = form.getclean('parity'),
                   scaleunits = form.getclean('scaleunits'),
                   scaletype = form.getclean('scaletype'),

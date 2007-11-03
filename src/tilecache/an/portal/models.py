@@ -15,8 +15,8 @@ import an.gmaps_config as config
 from an.portal.log import log
 
 from an.upload.models import UploadedFile
-
-
+#from an_common import sip
+import sip
 
 # To install a new database table:
 # > python manage.py sql portal
@@ -24,8 +24,31 @@ from an.upload.models import UploadedFile
 # sqlite> drop table portal_job;
 # sqlite>   (paste CREATE TABLE statement)
 
-class Job(models.Model):
+class TanWCS(models.Model):
+    crval1 = models.FloatField()
+    crval2 = models.FloatField()
+    crpix1 = models.FloatField()
+    crpix2 = models.FloatField()
+    cd11 = models.FloatField()
+    cd12 = models.FloatField()
+    cd21 = models.FloatField()
+    cd22 = models.FloatField()
+    imagew = models.FloatField()
+    imageh = models.FloatField()
 
+class  SipWCS(TanWCS):
+    order = models.PositiveSmallIntegerField(default=2)
+    terms = models.TextField(default='')
+    #def to_python(self, value):
+    #vals = []
+    #for i in range(self.order+1):
+    #    for j in range(self.order+1):
+    #        if i + j <= 1:
+    #            continue
+    #return map(float, vals.split(','))
+
+# Represents one field to be solved: either an image or xylist.
+class AstroField(models.Model):
     datasrc_CHOICES = (
         ('url', 'URL'),
         ('file', 'File'),
@@ -36,6 +59,76 @@ class Job(models.Model):
         ('fits', 'FITS table of source locations'),
         ('text', 'Text list of source locations'),
         )
+
+    user = models.ForeignKey(User, editable=False)
+
+    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+
+    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
+
+    url = models.URLField(blank=True)
+
+    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
+
+    # type of the uploaded file, after decompression
+    # ("jpg", "png", "gif", "fits", etc)
+    imgtype = models.CharField(max_length=16, editable=False)
+
+    # sha-1 hash of the uncompressed file.
+    filehash = models.CharField(max_length=40, editable=False)
+
+    # for FITS tables, the names of the X and Y columns.
+    xcol = models.CharField(max_length=16, blank=True)
+    ycol = models.CharField(max_length=16, blank=True)
+
+    # size of the image
+    imagew = models.PositiveIntegerField(editable=False, null=True)
+    imageh = models.PositiveIntegerField(editable=False, null=True)
+
+    # shrink factor (= 1 / (scale factor)) for rendering images; >=1.
+    displayscale = models.FloatField(editable=False, null=True)
+    # size to render images.
+    displayw = models.PositiveIntegerField(editable=False, null=True)
+    displayh = models.PositiveIntegerField(editable=False, null=True)
+
+    def __str__(self):
+        s = '<Field'
+        #, datasrc %s' , self.datasrc)
+        if self.datasrc == 'url':
+            s += ', url ' + self.url
+        elif self.datasrc == 'file':
+            #s += ', file ' + str(self.uploaded)
+            #s += ' (originally "%s")' % self.uploaded.userfilename
+            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
+        s += ', ' + self.filetype
+        if self.filetype == 'image' and self.imgtype:
+            s += ', ' + self.imgtype
+        s += '>'
+        return s
+
+    def compute_filehash(self, fn):
+        if self.filehash:
+            return
+        h = sha.new()
+        f = open(fn, 'rb')
+        while True:
+            d = f.read(4096)
+            if len(d) == 0:
+                break
+            h.update(d)
+        self.filehash = h.hexdigest()
+
+    def filename(self):
+        return os.path.join(config.fielddir, self.id)
+        #return self.get_filename('original')
+
+    #def retrieve_file(self):
+    #    fn = self.filename()
+    #    if os.path.exists(fn):
+    #        return
+
+
+class Job(models.Model):
 
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
@@ -65,7 +158,7 @@ class Job(models.Model):
         )
 
     def __init__(self, *args, **kwargs):
-        log('__init__')
+        #log('__init__')
         for k,v in kwargs.items():
             if v is None:
                 del kwargs[k]
@@ -76,36 +169,9 @@ class Job(models.Model):
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
 
-    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
-
-    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+    field = AstroField()
 
     user = models.ForeignKey(User, editable=False)
-
-    url = models.URLField(blank=True)
-
-    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
-
-    # type of the uploaded file, after decompression
-    # ("jpg", "png", "gif", "fits", etc)
-    imgtype = models.CharField(max_length=16, editable=False)
-
-    # sha-1 hash of the uncompressed file.
-    filehash = models.CharField(max_length=40, editable=False)
-
-    # for FITS tables, the names of the X and Y columns.
-    xcol = models.CharField(max_length=16, blank=True)
-    ycol = models.CharField(max_length=16, blank=True)
-
-    # size of the image
-    imagew = models.PositiveIntegerField(editable=False, null=True)
-    imageh = models.PositiveIntegerField(editable=False, null=True)
-
-    # shrink factor (= 1 / (scale factor)) for rendering images; >=1.
-    displayscale = models.DecimalField(max_digits=10, decimal_places=10, editable=False, null=True)
-    # size to render images.
-    displayw = models.PositiveIntegerField(editable=False, null=True)
-    displayh = models.PositiveIntegerField(editable=False, null=True)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
                                               default=2, radio_admin=True,
@@ -116,12 +182,10 @@ class Job(models.Model):
                                   default=scaleunits_default)
     scaletype  = models.CharField(max_length=3, choices=scaletype_CHOICES,
                                   default='ul')
-    scalelower = models.DecimalField(max_digits=20, decimal_places=10,
-                                     default=0.1, blank=True, null=True)
-    scaleupper = models.DecimalField(max_digits=20, decimal_places=10,
-                                     default=180, blank=True, null=True)
-    scaleest   = models.DecimalField(max_digits=20, decimal_places=10, blank=True, null=True)
-    scaleerr   = models.DecimalField(max_digits=20, decimal_places=10, blank=True, null=True)
+    scalelower = models.FloatField(default=0.1, blank=True, null=True)
+    scaleupper = models.FloatField(default=180, blank=True, null=True)
+    scaleest   = models.FloatField(blank=True, null=True)
+    scaleerr   = models.FloatField(blank=True, null=True)
 
     # tweak.
     tweak = models.BooleanField(default=True)
@@ -136,6 +200,9 @@ class Job(models.Model):
     starttime  = models.DateTimeField(editable=False, null=True)
     finishtime = models.DateTimeField(editable=False, null=True)
 
+    # solution
+    tanwcs = models.ForeignKey(TanWCS, null=True, editable=False)
+
     solved = models.BooleanField(default=False)
 
     ## These fields don't go in the database.
@@ -144,20 +211,9 @@ class Job(models.Model):
 
     def __str__(self):
         s = '<Job %s, user %s' % (self.jobid, self.user.username)
-        #, datasrc %s' , self.datasrc)
         if self.status:
             s += ', %s' % self.status
-        if self.solved:
-            s += ', solved'
-        if self.datasrc == 'url':
-            s += ', url ' + self.url
-        elif self.datasrc == 'file':
-            #s += ', file ' + str(self.uploaded)
-            #s += ' (originally "%s")' % self.uploaded.userfilename
-            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
-        s += ', ' + self.filetype
-        if self.filetype == 'image' and self.imgtype:
-            s += ', ' + self.imgtype
+        s += str(field) + ' '
         pstrs = [ 'pos', 'neg', 'both' ]
         s += ', parity ' + pstrs[int(self.parity)]
         if self.scaletype == 'ul':
@@ -170,6 +226,11 @@ class Job(models.Model):
             s += ', no tweak'
         s += '>'
         return s
+
+    def datasrc(self):
+        if self.field:
+            return self.field.datasrc
+        return None
 
     def set_submittime_now(self):
         self.submittime = Job.timenow()
@@ -217,31 +278,21 @@ class Job(models.Model):
             txt = 'focal length of ' + val + ' mm'
         return txt
 
-    def compute_filehash(self, fn):
-        h = sha.new()
-        f = open(fn, 'rb')
-        while True:
-            d = f.read(4096)
-            if len(d) == 0:
-                break
-            h.update(d)
-        self.filehash = h.hexdigest()
-
     def get_filename(self, fn):
         return os.path.join(self.get_job_dir(), fn)
 
     def get_relative_filename(self, fn):
         return os.path.join(self.get_relative_job_dir(), fn)
 
-    def get_orig_file(self):
-        return self.get_filename('original')
-
     def get_job_dir(self):
         return os.path.join(config.jobdir, self.get_relative_job_dir())
 
     def get_relative_job_dir(self):
         return os.path.join(*self.jobid.split('-'))
-    
+
+    def get_orig_file(self):
+        return self.field.filename()
+
     def create_job_dir(self):
         d = self.get_job_dir()
         # HACK - more careful here...

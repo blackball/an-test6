@@ -55,6 +55,8 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
     if os.path.exists(fullfn):
         return fullfn
 
+    field = job.field
+
     if fn == 'uncomp':
         orig = job.get_orig_file()
         comp = image2pnm.uncompress_file(orig, fullfn)
@@ -74,7 +76,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
             log(err)
             raise FileConversionError(errstr)
         if store_imgtype:
-            job.imgtype = imgtype
+            field.imgtype = imgtype
         return fullfn
 
     elif fn == 'pgm':
@@ -86,8 +88,8 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         (w, h, pnmtype) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
         if store_imgsize:
-            job.imagew = w
-            job.imageh = h
+            field.imagew = w
+            field.imageh = h
         if pnmtype == 'G':
             return infn
         cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
@@ -110,13 +112,13 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         if store_imgtype:
             # check the uncompressed input image type...
             infn = convert(job, 'uncomp', store_imgtype, store_imgsize)
-            (job.imgtype, errmsg) = image2pnm.get_image_type(infn)
+            (field.imgtype, errmsg) = image2pnm.get_image_type(infn)
             if errmsg:
                 log(errmsg)
                 raise FileConversionError(errmsg)
 
         # fits image: fits2fits it.
-        if job.imgtype == image2pnm.fitstype:
+        if field.imgtype == image2pnm.fitstype:
             errmsg = fits2fits.fits2fits(infn, fullfn, False)
             if errmsg:
                 log(errmsg)
@@ -179,17 +181,17 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'pnm-small':
         imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
-        if not job.displayscale:
-            w = job.imagew
-            h = job.imageh
-            job.displayscale = max(1.0, math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2))))
-            job.displayw = int(round(w / float(job.displayscale)))
-            job.displayh = int(round(h / float(job.displayscale)))
-            job.save()
+        if not field.displayscale:
+            w = field.imagew
+            h = field.imageh
+            field.displayscale = max(1.0, math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2))))
+            field.displayw = int(round(w / float(field.displayscale)))
+            field.displayh = int(round(h / float(field.displayscale)))
+            field.save()
         # (don't make this an elif)
-        if job.displayscale == 1:
+        if field.displayscale == 1:
             return imgfn
-        cmd = 'pnmscale -reduce %g %s > %s' % (float(job.displayscale), imgfn, fullfn)
+        cmd = 'pnmscale -reduce %g %s > %s' % (float(field.displayscale), imgfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
@@ -209,7 +211,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         imgfn = convert(job, 'ppm-small', store_imgtype, store_imgsize)
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
-               (wcsfn, fullfn, 1.0/job.displayscale, imgfn))
+               (wcsfn, fullfn, 1.0/field.displayscale, imgfn))
         run_convert_command(cmd)
         return fullfn
 
@@ -224,7 +226,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'sources':
         imgfn = convert(job, 'ppm-small', store_imgtype, store_imgsize)
         xyls = job.get_filename('job.axy')
-        scale = 1.0 / float(job.displayscale)
+        scale = 1.0 / float(field.displayscale)
         commonargs = ('-i %s -x %g -y %g -w 2 -S %g -C red' %
                       (xyls, scale, scale, scale))
         cmd = (('plotxy %s -I %s -N 100 -r 6 -P' %
