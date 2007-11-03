@@ -139,6 +139,13 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         run_convert_command(cmd)
         return fullfn
 
+    elif fn == 'xyls-half':
+        infn = convert(job, 'fitsimg-half', store_imgtype, store_imgsize)
+        sxylog = 'blind.log'
+        cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
+        run_convert_command(cmd)
+        return fullfn
+
     elif fn == 'wcsinfo':
         infn = job.get_filename('wcs.fits')
         cmd = 'wcsinfo %s > %s' % (infn, fullfn)

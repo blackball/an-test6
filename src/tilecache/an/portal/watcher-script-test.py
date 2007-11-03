@@ -36,6 +36,12 @@ def bailout(job, reason):
 
 blindlog = 'blind.log'
 
+def file_get_contents(fn):
+    f = open(fn, 'r')
+    txt = f.read()
+    f.close()
+    return txt
+
 def userlog(*msg):
     f = open(blindlog, 'a')
     f.write(' '.join(map(str, msg)) + '\n')
@@ -102,6 +108,10 @@ if __name__ == '__main__':
             xylist = convert(job, 'xyls', store_imgtype=True, store_imgsize=True)
         except FileConversionError,e:
             userlog('Source extraction failed.')
+            errlog = file_get_contents('blind.log')
+            #if errlog.find('Shrink your image'):
+            #userlog('Downsampling your image and trying again...')
+            #xylist = convert(job, 'xyls-half')
             bailout(job, 'Source extraction failed.')
         log('created xylist %s' % xylist)
         (lower, upper) = job.get_scale_bounds()
