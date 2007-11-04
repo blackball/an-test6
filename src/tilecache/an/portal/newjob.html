@@ -5,13 +5,11 @@ Astrometry.net Job
 {% endblock title %}
 
 {% block inlinecss %}
-#logout { float:right; padding:5px; margin-top:0; margin-bottom:auto;}
 #logo { width:300px; margin-left:auto; margin-right:auto; text-align:center; padding:5px;}
 #banner { text-align:center; padding:5px;}
 .err { font-size:110%; color:red; text-align:center;}
 #switch_views { font-size:75%; text-align:center; color:#999; }
 #switch_views a { color:#999; }
-.bigbutton { font-size:110%; padding:2px; padding-left:10px; padding-right:10px; margin:10px; }
 {% block moreinlinecss %}
 {% endblock moreinlinecss %}
 
@@ -19,10 +17,6 @@ Astrometry.net Job
 
 {% block logo %}
 {% endblock logo %}
-
-{% block loggedin %}
-{% include "portal/logout.html" %}
-{% endblock loggedin %}
 
 {% block content %}
 <div style="clear:both;">

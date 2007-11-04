@@ -1,0 +1,23 @@
+{% extends "portal/base.html" %}
+
+{% block content %}
+{% if msg %}
+<h3 style="text-align:center;">{{ msg }}</h3>
+{% endif %}
+
+<form method="post">
+<table style="margin-left:auto; margin-right:auto;">
+<tr><td> {{ form.autoredistributable }} </td>
+<td> Automatically grant permission to redistribute all the data
+I submit.</td></tr>
+<tr><td> {{ form.anonjobstatus }} </td>
+<td> Allow anyone to see my job status pages.</td>
+</tr>
+<tr><td colspan="2" style="text-align:center;">
+<input name="submit" value="Submit" type="submit" class="bigbutton" />
+</td></tr>
+</table>
+</form>
+
+{% endblock content %}
+

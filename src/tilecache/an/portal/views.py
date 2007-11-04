@@ -13,7 +13,7 @@ import django.contrib.auth as auth
 from django import newforms as forms
 from django.db import models
 from django.http import HttpResponse, HttpResponseRedirect
-from django.newforms import widgets, ValidationError
+from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 
 import an.upload as upload
@@ -21,7 +21,7 @@ import quads.fits2fits as fits2fits
 import quads.image2pnm as image2pnm
 import an.portal.mercator as merc
 
-from an.portal.models import Job, AstroField
+from an.portal.models import Job, AstroField, UserPreferences
 from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
 from an.portal.convert import convert
@@ -408,16 +408,6 @@ def getsessionjob(request):
     jobid = request.session['jobid']
     return get_job(jobid)
 
-#def getgetjob(request):
-#    if not request.GET:
-#        return HttpResponse('no GET')
-#    if not 'jobid' in request.GET:
-#        return HttpResponse('no jobid')
-#    jobid = request.GET['jobid']
-#    job = getjobbyid(jobid)
-#    if not job:
-#        return HttpResponse('no such job')
-
 def jobstatus(request):
     #if not request.user.is_authenticated():
     #    return HttpResponseRedirect('/login')
@@ -564,14 +554,6 @@ def file_size(fn):
     return st.st_size
 
 def getfile(request):
-    #if not request.user.is_authenticated():
-    #    return HttpResponseRedirect('/login')
-    #job = getsessionjob(request)
-    #if not job:
-    #    return HttpResponse('no job in session')
-    #if not request.GET:
-    #    return HttpResponse('no GET')
-
     if not request.GET:
         return HttpResponse('no GET')
     if not 'jobid' in request.GET:
@@ -769,5 +751,41 @@ def newlong(request):
             print 'no file uploaded'
 
     t = loader.get_template('portal/newjoblong.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
+
+def userprefs(request):
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+
+    prefset = UserPreferences.objects.all().filter(user = request.user)
+    if not prefset or not len(prefset):
+        # no existing user prefs.
+        prefs = UserPreferences(user = request.user)
+    else:
+        prefs = prefset[0]
+
+    PrefsForm = form_for_model(UserPreferences)
+    if request.POST:
+        form = PrefsForm(request.POST)
+    else:
+        form = PrefsForm()
+
+    if form.is_valid():
+        prefs.autoredistributable = form.cleaned_data['autoredistributable']
+        prefs.anonjobstatus = form.cleaned_data['anonjobstatus']
+        prefs.save()
+        msg = 'Preferences Saved'
+    else:
+        msg = None
+        
+    ctxt = {
+        'msg' : msg,
+        'form' : form,
+        #'redist' : form.autoredistributable,
+        #'redist' : form.autoredistributable,
+        }
+    t = loader.get_template('portal/userprefs.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))

@@ -24,6 +24,16 @@ import sip
 # sqlite> drop table portal_job;
 # sqlite>   (paste CREATE TABLE statement)
 
+class UserPreferences(models.Model):
+    user = models.ForeignKey(User, editable=False)
+
+    # Automatically grant permission to redistribute my images?
+    autoredistributable = models.BooleanField(default=False)
+
+    # Automatically allow anonymous access to my job status pages?
+    anonjobstatus = models.BooleanField(default=False)
+
+
 class TanWCS(models.Model):
     crval1 = models.FloatField()
     crval2 = models.FloatField()
@@ -61,6 +71,9 @@ class AstroField(models.Model):
         )
 
     user = models.ForeignKey(User, editable=False)
+
+    # Has the user granted us permission to redistribute this image?
+    redistributable = models.BooleanField(default=False)
 
     datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
 
@@ -120,12 +133,6 @@ class AstroField(models.Model):
 
     def filename(self):
         return os.path.join(config.fielddir, str(self.id))
-        #return self.get_filename('original')
-
-    #def retrieve_file(self):
-    #    fn = self.filename()
-    #    if os.path.exists(fn):
-    #        return
 
 
 class Job(models.Model):
@@ -168,6 +175,10 @@ class Job(models.Model):
 
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
+
+    # has the user explicitly granted anonymous access to this job
+    # status page?
+    allowanon = models.BooleanField(default=False)
 
     user = models.ForeignKey(User, editable=False)
 
@@ -226,11 +237,6 @@ class Job(models.Model):
             s += ', no tweak'
         s += '>'
         return s
-
-    #def datasrc(self):
-    #    if self.field:
-    #        return self.field.datasrc
-    #    return None
 
     def set_submittime_now(self):
         self.submittime = Job.timenow()
