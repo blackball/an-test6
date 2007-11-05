@@ -87,6 +87,7 @@ INSTALLED_APPS = (
 	'an.tile',
 	'an.upload',
 	'an.portal',
+	'an.vo',
 )
 
 

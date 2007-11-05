@@ -8,6 +8,7 @@ urlpatterns = patterns('',
 					   (r'^logout/', 'an.portal.views.logout'),
 					   (r'^job/', include('an.portal.urls')),
 					   (r'^userprefs/', 'an.portal.views.userprefs'),
+					   (r'^vo/', include('an.vo.urls')),
                        # DEBUG
 					   (r'^upload-demo/', 'an.uploaddemo.view'),
 #					   (r'^admin/', include('django.contrib.admin.urls')),

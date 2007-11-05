@@ -418,9 +418,6 @@ def jobstatus(request):
     if not job:
         return HttpResponse('no such job')
 
-    anonymous = False
-    jobowner = False
-
     jobowner = (job.user == request.user)
     anonymous = job.allowanonymous()
 
@@ -570,6 +567,11 @@ def getfile(request):
 
     if not 'f' in request.GET:
         return HttpResponse('no f=')
+
+    jobowner = (job.user == request.user)
+    anonymous = job.allowanonymous()
+    if not (jobowner or anonymous):
+        return HttpResponse('The owner of this job (' + job.user.username + ') has not granted public access.')
 
     f = request.GET['f']
 
