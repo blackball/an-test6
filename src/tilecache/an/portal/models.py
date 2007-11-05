@@ -41,6 +41,7 @@ class UserPreferences(models.Model):
             prefs = UserPreferences(user = user)
         else:
             prefs = prefset[0]
+        return prefs
     for_user = staticmethod(for_user)
 
 class TanWCS(models.Model):

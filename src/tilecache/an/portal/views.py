@@ -761,9 +761,12 @@ def userprefs(request):
     if request.POST:
         form = PrefsForm(request.POST)
     else:
-        form = PrefsForm()
+        form = PrefsForm({
+            'autoredistributable': prefs.autoredistributable,
+            'anonjobstatus': prefs.anonjobstatus,
+            })
 
-    if form.is_valid():
+    if request.POST and form.is_valid():
         prefs.autoredistributable = form.cleaned_data['autoredistributable']
         prefs.anonjobstatus = form.cleaned_data['anonjobstatus']
         prefs.save()
