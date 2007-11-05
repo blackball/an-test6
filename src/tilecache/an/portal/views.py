@@ -791,6 +791,13 @@ def summary(request):
     jobs = Job.objects.all().filter(user = request.user)
     #fields = AstroField.objects.all().filter(user = request.user)
 
+    for job in jobs:
+        log('Job ', job, 'allow anon?', job.allowanonymous(prefs))
+        log('Job.allowanon:', job.allowanon, ' forbidanon:', job.forbidanon)
+        log('prefs:', prefs)
+        log('Redist:', job.field.redistributable())
+        log('Field:', job.field)
+
     ctxt = {
         'jobs' : jobs,
         'prefs' : prefs,
@@ -803,3 +810,46 @@ def summary(request):
     return HttpResponse(t.render(c))
     
 
+def changeperms(request):
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+    if not request.POST:
+        return HttpResponse('no POST')
+
+    if 'fieldid' in request.POST:
+        fid = int(request.POST['fieldid'])
+        fields = AstroField.objects.all().filter(id = fid)
+        if not fields or len(fields) != 1:
+            return HttpResponse('no field')
+        field = fields[0]
+        if field.user != request.user:
+            return HttpResponse('not your field!')
+        if 'redist' in request.POST:
+            redist = int(request.POST['redist'])
+            field.allowredist = redist
+            field.forbidredist = not redist
+            field.save()
+            if 'HTTP_REFERER' in request.META:
+                return HttpResponseRedirect(request.META['HTTP_REFERER'])
+            return HttpResponseRedirect('/job/summary')
+            
+        return HttpResponse('no action.')
+
+    if 'jobid' in request.POST:
+        jobid = request.POST['jobid']
+        jobs = Job.objects.all().filter(jobid = jobid)
+        if not jobs or len(jobs) != 1:
+            return HttpResponse('no job')
+        job = jobs[0]
+        if job.user != request.user:
+            return HttpResponse('not your job!')
+        if 'allowanon' in request.POST:
+            allow = int(request.POST['allowanon'])
+            job.allowanon = allow
+            job.forbidanon = not allow
+            job.save()
+            if 'HTTP_REFERER' in request.META:
+                return HttpResponseRedirect(request.META['HTTP_REFERER'])
+            return HttpResponseRedirect('/job/summary')
+
+        return HttpResponse('no action.')

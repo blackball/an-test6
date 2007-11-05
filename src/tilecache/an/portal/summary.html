@@ -7,6 +7,7 @@
 td.c { text-align:center; }
 tr.even td { background-color:#EEE; }
 tr.odd td {}
+.smalllink { font-size:80%; } {#font-variant:small-caps; }#}
 {% endblock inlinecss %}
 
 {% block content %}
@@ -34,7 +35,7 @@ tr.odd td {}
 {% endif %}
 </td>
 
-<td class="c">
+<td>
 {% if job.url %}
 <a href="{{ job.url }}">{{ job.url }}</a>
 {% endif %}
@@ -45,19 +46,37 @@ File: {{job.userfilename}}
 </td>
 
 <td class="c">
-{% if field.redistributable %}
+<form action="/job/changeperms/" method="post" name="fieldpermsform_{{ forloop.counter }}">
+<input type="hidden" name="fieldid" value="{{ job.field.id }}" />
+{% if job.field.redistributable %}
+<input type="hidden" name="redist" value="0" />
 Yes
+&nbsp;
+<a href="javascript:document.forms.fieldpermsform_{{ forloop.counter }}.submit();" class="smalllink">Revoke</a>
 {% else %}
+<input type="hidden" name="redist" value="1" />
 No
+&nbsp;
+<a href="javascript:document.forms.fieldpermsform_{{ forloop.counter }}.submit();" class="smalllink">Grant</a>
 {% endif %}
+</form>
 </td>
 
 <td class="c">
+<form action="/job/changeperms/" method="post" name="jobpermsform_{{ forloop.counter }}">
+<input type="hidden" name="jobid" value="{{ job.jobid }}" />
 {% if job.allowanonymous %}
+<input type="hidden" name="allowanon" value="0" />
 Yes
+&nbsp;
+<a href="javascript:document.forms.jobpermsform_{{ forloop.counter }}.submit();" class="smalllink">Revoke</a>
 {% else %}
+<input type="hidden" name="allowanon" value="1" />
 No
+&nbsp;
+<a href="javascript:document.forms.jobpermsform_{{ forloop.counter }}.submit();" class="smalllink">Grant</a>
 {% endif %}
+</form>
 </td>
 
 </tr>

@@ -8,4 +8,5 @@ urlpatterns = patterns('an.portal.views',
 					   (r'^status/$', 'jobstatus'),
 					   (r'^getfile/$', 'getfile'),
 					   (r'^summary/$', 'summary'),
+					   (r'^changeperms/$', 'changeperms'),
 					   )

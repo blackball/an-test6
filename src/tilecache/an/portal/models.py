@@ -33,6 +33,11 @@ class UserPreferences(models.Model):
     # Automatically allow anonymous access to my job status pages?
     anonjobstatus = models.BooleanField(default=False)
 
+    def __str__(self):
+        s = ('<UserPreferences: ' + self.user.username +
+             ', redistributable: ' + (self.autoredistributable and 'T' or 'F')+
+             ', allow anonymous: ' + (self.anonjobstatus and 'T' or 'F') + '>')
+        return s
 
     def for_user(user):
         prefset = UserPreferences.objects.all().filter(user = user)
@@ -131,12 +136,13 @@ class AstroField(models.Model):
         s += '>'
         return s
 
-    def redistributable(self):
+    def redistributable(self, prefs=None):
         if self.allowredist:
             return True
         if self.forbidredist:
             return False
-        prefs = UserPreferences.for_user(self.user)
+        if not prefs:
+            prefs = UserPreferences.for_user(self.user)
         return prefs.autoredistributable
 
     def compute_filehash(self, fn):
@@ -248,7 +254,7 @@ class Job(models.Model):
         s = '<Job %s, user %s' % (self.jobid, self.user.username)
         if self.status:
             s += ', %s' % self.status
-        s += str(self.field) + ' '
+        s += ' ' + str(self.field)
         pstrs = [ 'pos', 'neg', 'both' ]
         s += ', parity ' + pstrs[int(self.parity)]
         if self.scaletype == 'ul':
@@ -272,12 +278,13 @@ class Job(models.Model):
             return self.field.uploaded.userfilename
         return None
 
-    def allowanonymous(self):
+    def allowanonymous(self, prefs=None):
         if self.allowanon:
             return True
         if self.forbidanon:
             return False
-        prefs = UserPreferences.for_user(self.user)
+        if not prefs:
+            prefs = UserPreferences.for_user(self.user)
         return prefs.anonjobstatus
 
     def set_submittime_now(self):
