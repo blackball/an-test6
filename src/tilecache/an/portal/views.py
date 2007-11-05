@@ -409,12 +409,6 @@ def getsessionjob(request):
     return get_job(jobid)
 
 def jobstatus(request):
-    #if not request.user.is_authenticated():
-    #    return HttpResponseRedirect('/login')
-    #job = getsessionjob(request)
-    #if not job:
-    #    return HttpResponse('no job in session')
-
     if not request.GET:
         return HttpResponse('no GET')
     if not 'jobid' in request.GET:
@@ -423,6 +417,15 @@ def jobstatus(request):
     job = get_job(jobid)
     if not job:
         return HttpResponse('no such job')
+
+    anonymous = False
+    jobowner = False
+
+    jobowner = (job.user == request.user)
+    anonymous = job.allowanonymous()
+
+    if not (jobowner or anonymous):
+        return HttpResponse('The owner of this job (' + job.user.username + ') has not granted public access.')
 
     field = job.field
 
@@ -443,6 +446,8 @@ def jobstatus(request):
         'jobparity' : job.friendly_parity(),
         'sources' : get_url(job, 'sources'),
         'sources_big' : get_url(job, 'sources-big'),
+        'jobowner' : jobowner,
+        'allowanon' : anonymous,
         }
 
 
@@ -816,6 +821,8 @@ def changeperms(request):
     if not request.POST:
         return HttpResponse('no POST')
 
+    prefs = UserPreferences.for_user(request.user)
+
     if 'fieldid' in request.POST:
         fid = int(request.POST['fieldid'])
         fields = AstroField.objects.all().filter(id = fid)
@@ -826,8 +833,18 @@ def changeperms(request):
             return HttpResponse('not your field!')
         if 'redist' in request.POST:
             redist = int(request.POST['redist'])
-            field.allowredist = redist
-            field.forbidredist = not redist
+            if redist:
+                field.forbidredist = False
+                if not prefs.autoredistributable:
+                    # need to explicitly allow this one.
+                    field.allowredist = True
+            else:
+                field.allowredist = False
+                if prefs.autoredistributable:
+                    # need to explicitly forbid.
+                    field.forbidredist = True
+            #field.allowredist = redist
+            #field.forbidredist = not redist
             field.save()
             if 'HTTP_REFERER' in request.META:
                 return HttpResponseRedirect(request.META['HTTP_REFERER'])
@@ -845,8 +862,18 @@ def changeperms(request):
             return HttpResponse('not your job!')
         if 'allowanon' in request.POST:
             allow = int(request.POST['allowanon'])
-            job.allowanon = allow
-            job.forbidanon = not allow
+            if allow:
+                job.forbidanon = False
+                if not prefs.anonjobstatus:
+                    # need to explicitly allow this one.
+                    job.allowanon = True
+            else:
+                job.allowanon = False
+                if prefs.anonjobstatus:
+                    # need to explicitly forbid.
+                    job.forbidanon = True
+            #job.allowanon = allow
+            #job.forbidanon = not allow
             job.save()
             if 'HTTP_REFERER' in request.META:
                 return HttpResponseRedirect(request.META['HTTP_REFERER'])
