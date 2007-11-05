@@ -627,9 +627,6 @@ def newlong(request):
         return HttpResponseRedirect('/login')
 
     if request.POST:
-        log('POST values:')
-        for k,v in request.POST.items():
-            log('  %s = %s' % (str(k), str(v)))
         form = FullForm(request.POST, request.FILES)
     else:
         form = FullForm()
@@ -638,7 +635,7 @@ def newlong(request):
         print 'Yay'
 
         uploaded = form.getclean('upload_id')
-        form.getclean('url')
+        url = form.getclean('url')
         if form.getclean('filetype') == 'url':
             uploaded = None
         elif form.getclean('filetype') == 'file':
@@ -754,17 +751,11 @@ def newlong(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
-
 def userprefs(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
 
-    prefset = UserPreferences.objects.all().filter(user = request.user)
-    if not prefset or not len(prefset):
-        # no existing user prefs.
-        prefs = UserPreferences(user = request.user)
-    else:
-        prefs = prefset[0]
+    prefs = UserPreferences.for_user(request.user)
 
     PrefsForm = form_for_model(UserPreferences)
     if request.POST:
@@ -783,9 +774,29 @@ def userprefs(request):
     ctxt = {
         'msg' : msg,
         'form' : form,
-        #'redist' : form.autoredistributable,
-        #'redist' : form.autoredistributable,
         }
     t = loader.get_template('portal/userprefs.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
+
+
+def summary(request):
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+
+    prefs = UserPreferences.for_user(request.user)
+    jobs = Job.objects.all().filter(user = request.user)
+    #fields = AstroField.objects.all().filter(user = request.user)
+
+    ctxt = {
+        'jobs' : jobs,
+        'prefs' : prefs,
+        'statusurl' : '/job/status/?jobid=',
+        'getfileurl' : '/job/getfile/?jobid=',
+        #'fields' : fields,
+        }
+    t = loader.get_template('portal/summary.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+    
+

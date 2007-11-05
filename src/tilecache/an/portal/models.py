@@ -34,6 +34,15 @@ class UserPreferences(models.Model):
     anonjobstatus = models.BooleanField(default=False)
 
 
+    def for_user(user):
+        prefset = UserPreferences.objects.all().filter(user = user)
+        if not prefset or not len(prefset):
+            # no existing user prefs.
+            prefs = UserPreferences(user = user)
+        else:
+            prefs = prefset[0]
+    for_user = staticmethod(for_user)
+
 class TanWCS(models.Model):
     crval1 = models.FloatField()
     crval2 = models.FloatField()
@@ -72,14 +81,16 @@ class AstroField(models.Model):
 
     user = models.ForeignKey(User, editable=False)
 
-    # Has the user granted us permission to redistribute this image?
-    redistributable = models.BooleanField(default=False)
+    # Has the user explicitly granted us permission to redistribute this image?
+    allowredist = models.BooleanField(default=False)
+    # Has the user explicitly forbidden us permission to redistribute this image?
+    forbidredist = models.BooleanField(default=False)
 
     datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
 
     filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
-    url = models.URLField(blank=True)
+    url = models.URLField(blank=True, null=True)
 
     uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
 
@@ -118,6 +129,14 @@ class AstroField(models.Model):
             s += ', ' + self.imgtype
         s += '>'
         return s
+
+    def redistributable(self):
+        if self.allowredist:
+            return True
+        if self.forbidredist:
+            return False
+        prefs = UserPreferences.for_user(self.user)
+        return prefs.autoredistributable
 
     def compute_filehash(self, fn):
         if self.filehash:
@@ -180,6 +199,10 @@ class Job(models.Model):
     # status page?
     allowanon = models.BooleanField(default=False)
 
+    # has the user explicitly forbidden anonymous access to this job
+    # status page?
+    forbidanon = models.BooleanField(default=False)
+
     user = models.ForeignKey(User, editable=False)
 
     field = models.ForeignKey(AstroField, editable=False)
@@ -238,6 +261,24 @@ class Job(models.Model):
         s += '>'
         return s
 
+    def url(self):
+        if self.field.datasrc == 'url':
+            return self.field.url
+        return None
+
+    def userfilename(self):
+        if self.field.datasrc == 'file':
+            return self.field.uploaded.userfilename
+        return None
+
+    def allowanonymous(self):
+        if self.allowanon:
+            return True
+        if self.forbidanon:
+            return False
+        prefs = UserPreferences.for_user(self.user)
+        return prefs.anonjobstatus
+
     def set_submittime_now(self):
         self.submittime = Job.timenow()
     def set_starttime_now(self):
@@ -251,6 +292,9 @@ class Job(models.Model):
         return Job.format_time(self.starttime)
     def format_finishtime(self):
         return Job.format_time(self.finishtime)
+
+    def format_submittime_brief(self):
+        return Job.format_time_brief(self.submittime)
 
     def get_scale_bounds(self):
         if self.scaletype == 'ul':
@@ -326,3 +370,8 @@ class Job(models.Model):
         return t.strftime('%Y-%m-%d %H:%M:%S+Z')
     format_time = staticmethod(format_time)
     
+    def format_time_brief(t):
+        if not t:
+            return None
+        return t.strftime('%Y-%m-%d %H:%M')
+    format_time_brief = staticmethod(format_time_brief)

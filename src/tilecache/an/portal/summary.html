@@ -1,0 +1,69 @@
+{% extends "portal/base.html" %}
+
+{% block inlinecss %}
+#summarytable { margin-left:auto; margin-right:auto; border-collapse:collapse; border-style:solid; border-width:medium; border-color:black; }
+#summarytable td { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:none solid; border-width:thin; border-color:gray; }
+#summarytable th { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:solid; border-width:thin; border-color:gray; }
+td.c { text-align:center; }
+tr.even td { background-color:#EEE; }
+tr.odd td {}
+{% endblock inlinecss %}
+
+{% block content %}
+
+<table id="summarytable">
+<tr>
+<th>Job Id</th>
+<th>Submitted</th>
+<th>Status</th>
+<th>Field</th>
+<th>Field<br />Redistributable?</th>
+<th>Job open to<br />anyone?</th>
+</tr>
+{% for job in jobs %}
+
+<tr class="{% cycle even,odd %}">
+
+<td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
+
+<td> {{ job.format_submittime_brief }} </td>
+
+<td class="c">{{ job.status }}
+{% if job.failurereason %}
+: {{ job.failurereason }}
+{% endif %}
+</td>
+
+<td class="c">
+{% if job.url %}
+<a href="{{ job.url }}">{{ job.url }}</a>
+{% endif %}
+{% if job.userfilename %}
+{# <a href="{{ getfileurl }}{{ job.jobid }}&f=original"></a> #}
+File: {{job.userfilename}}
+{% endif %}
+</td>
+
+<td class="c">
+{% if field.redistributable %}
+Yes
+{% else %}
+No
+{% endif %}
+</td>
+
+<td class="c">
+{% if job.allowanonymous %}
+Yes
+{% else %}
+No
+{% endif %}
+</td>
+
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock content %}
+
