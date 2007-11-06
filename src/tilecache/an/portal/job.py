@@ -41,15 +41,6 @@ class Job(models.Model):
         ('failed', 'Failed')
         )
 
-    def __init__(self, *args, **kwargs):
-        #log('__init__')
-        for k,v in kwargs.items():
-            if v is None:
-                del kwargs[k]
-        kwargs['jobid'] = Job.generate_jobid()
-        super(Job, self).__init__(*args, **kwargs)
-        self.jobdir = self.get_job_dir()
-
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
 
@@ -63,6 +54,7 @@ class Job(models.Model):
 
     user = models.ForeignKey(User, editable=False)
 
+    fields = models.ManyToManyField(AstroField, related_name='jobs')
     #field = models.ForeignKey(AstroField, editable=False)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
@@ -100,6 +92,15 @@ class Job(models.Model):
     ## These fields don't go in the database.
 
     jobdir = None
+
+    def __init__(self, *args, **kwargs):
+        #log('__init__')
+        for k,v in kwargs.items():
+            if v is None:
+                del kwargs[k]
+        kwargs['jobid'] = Job.generate_jobid()
+        super(Job, self).__init__(*args, **kwargs)
+        self.jobdir = self.get_job_dir()
 
     def __str__(self):
         s = '<Job %s, user %s' % (self.jobid, self.user.username)
