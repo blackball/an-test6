@@ -639,8 +639,6 @@ def newlong(request):
         form = FullForm()
 
     if form.is_valid():
-        print 'Yay'
-
         uploaded = form.getclean('upload_id')
         url = form.getclean('url')
         if form.getclean('filetype') == 'url':

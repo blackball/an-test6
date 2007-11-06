@@ -21,7 +21,3 @@ class Image(models.Model):
 	def __str__(self):
 		return self.origfilename
 
-	# Include it in the Django admin page?
-	#class Admin:
-	#	pass
-
