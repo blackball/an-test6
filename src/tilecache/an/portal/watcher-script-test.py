@@ -2,6 +2,7 @@
 
 import os
 import sys
+import tempfile
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'an.settings'
 sys.path.extend(['/home/gmaps/test/tilecache',
@@ -25,7 +26,7 @@ import an.gmaps_config as config
 from an.portal.models import Job
 from an.upload.models import UploadedFile
 from an.portal.log import log
-from an.portal.convert import convert, FileConversionError
+from an.portal.convert import convert, is_tarball, FileConversionError
 from an.portal.run_command import run_command
 
 def bailout(job, reason):
@@ -95,6 +96,44 @@ if __name__ == '__main__':
 
     # Handle compressed files.
     uncomp = convert(job, 'uncomp')
+
+    # Handle tar files: add a JobSet, create new Jobs.
+    if is_tarball(uncomp):
+        log('file is tarball.')
+        # create temp dir to extract tarfile.
+        tempdir = tempfile.mkdtemp()
+        cmd = 'tar xvf %s -C %s' % (uncomp, tempdir)
+        userlog('Extracting tarball...')
+        (rtn, out, err) = run_command(cmd)
+        if rtn:
+            userlog('Failed to un-tar file:\n' + err)
+            bailout(job, 'failed to extract tar file')
+        fns = out.strip('\n').split('\n')
+        validpaths = []
+        for fn in fns:
+            path = os.path.join(tempdir, fn)
+            log('Path "%s"' % path)
+            if not os.path.exists(path):
+                log('Path "%s" does not exist.' % path)
+                continue
+            if os.path.islink(path):
+                log('Path "%s" is a symlink.' % path)
+                continue
+            if os.path.isfile(path):
+                validpaths.append(path)
+            else:
+                log('Path "%s" is not a file.' % path)
+
+        if len(validpaths) == 0:
+            userlog('Tar file contains no regular files.')
+            bailout(job, "tar file contains no regular files.")
+
+        log('Got %i paths.' % len(validpaths))
+
+        for p in validpaths:
+            pass
+
+        return
 
     # Compute hash of uncompressed file.
     field.compute_filehash(uncomp)

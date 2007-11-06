@@ -9,6 +9,11 @@ from django.core import validators
 import an.gmaps_config as config
 from an.portal.log import log
 
+#class UserPreferences(models.Model):
+#    pass
+
+
+
 # To install a new database table:
 # > python manage.py sql portal
 # > sqlite3 /data2/test-django/tile.db
@@ -39,8 +44,6 @@ class UserPreferences(models.Model):
             prefs = prefset[0]
         return prefs
     for_user = staticmethod(for_user)
-
-
 
 from an.portal.job import *
 from an.portal.wcs import *

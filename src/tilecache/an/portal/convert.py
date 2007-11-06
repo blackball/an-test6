@@ -47,6 +47,11 @@ def run_pnmfile(fn):
     log('Type %s, w %i, h %i' % (pnmtype, w, h))
     return (w, h, pnmtype)
 
+def is_tarball(fn):
+    typeinfo = image2pnm.run_file(fn)
+    log('file type: "%s"' % typeinfo)
+    return typeinfo == 'POSIX tar archive'
+    
 def convert(job, fn, store_imgtype=False, store_imgsize=False):
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir

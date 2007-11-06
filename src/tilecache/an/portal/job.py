@@ -9,7 +9,9 @@ from django.contrib.auth.models import User
 
 from an.upload.models import UploadedFile
 
+#import an
 import an.gmaps_config as config
+#import an.portal.job
 from an.portal.log import log
 from an.portal.wcs import *
 
@@ -107,6 +109,9 @@ class AstroField(models.Model):
         return os.path.join(config.fielddir, str(self.id))
 
 
+class JobSet(models.Model):
+    pass
+
 class Job(models.Model):
 
     scaleunits_CHOICES = (
@@ -138,6 +143,8 @@ class Job(models.Model):
 
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
+
+    jobset = models.ForeignKey(JobSet, null=True)
 
     # has the user explicitly granted anonymous access to this job
     # status page?

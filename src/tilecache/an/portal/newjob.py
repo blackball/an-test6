@@ -17,7 +17,6 @@ from an import gmaps_config
 
 from an.portal.job import Job, AstroField
 from an.portal.log import log
-from an.portal.models import UserPreferences
 
 from an.portal.views import printvals, get_status_url
 

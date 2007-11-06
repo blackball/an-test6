@@ -1,6 +1,7 @@
 import datetime
 import logging
 import math
+import os
 import os.path
 import random
 import sha
@@ -83,20 +84,6 @@ def logout(request):
 
 def get_status_url(job):
     return '/job/status/?jobid=' + job.jobid
-
-def submit_job(request, job):
-    log('submit(): Job is: ' + str(job))
-    os.umask(07)
-    job.create_job_dir()
-    job.set_submittime_now()
-    job.status = 'Queued'
-    job.save()
-    request.session['jobid'] = job.jobid
-
-    # enqueue the axy file.
-    jobdir = job.get_job_dir()
-    link = gmaps_config.jobqueuedir + job.jobid
-    os.symlink(jobdir, link)
 
 def get_job(jobid):
     jobset = Job.objects.all().filter(jobid=jobid)
