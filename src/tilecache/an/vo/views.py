@@ -16,6 +16,158 @@ from an.vo.votable import *
 
 #intersects = [ 'COVERS', 'ENCLOSED', 'CENTER', 'OVERLAPS' ]
 
+class PointedTable(VOTable):
+    def __init__(self):
+        super(PointedTable, self).__init__()
+
+        flds = [
+            # MUST
+            VOField('image_title', 'char', '*', 'VOX:Image_Title'),
+            VOField('image_format', 'char', '*', 'VOX:Image_Format'),
+            VOField('image_url', 'char', '*', 'VOX:Image_AccessReference'),
+            VOField('RA_center', 'double', None, 'POS_EQ_RA_MAIN'),
+            VOField('DEC_center', 'double', None, 'POS_EQ_DEC_MAIN'),
+            VOField('naxis', 'int', '*', 'VOX:Image_Naxis'),
+            VOField('scale', 'double', '*', 'VOX:Image_Scale'),
+
+            # SHOULD
+            VOField('instrument', 'char', '*', 'INST_ID'),
+            VOField('jdate', 'double', None, 'VOX:Image_MJDateObs'),
+            VOField('crpix', 'double', '*', 'VOX:WCS_CoordRefPixel'),
+            VOField('crval', 'double', '*', 'VOX:WCS_CoordRefValue'),
+            VOField('cd', 'double', '*', 'VOX:WCS_CDMatrix'),
+            VOField('filesize', 'int', None, 'VOX:Image_FileSize'),
+
+            # VOField('bandpass', 'char', '*', 'VOX:BandPass_ID'),
+            # VOField('bandpass_unit', 'char', '*', 'VOX:BandPass_Unit'),
+            # VOField('bandpass_ref', 'double', None, 'VOX:BandPass_RefValue'),
+            # VOField('bandpass_hi', 'double', None, 'VOX:BandPass_HiLimit'),
+            # VOField('bandpass_lo', 'double', None, 'VOX:BandPass_LoLimit'),
+
+            VOField('pixflags', 'char', '*', 'VOX:Image_PixFlags'),
+
+            # MAY
+            # the Equinox (not required for ICRS) of the coordinate system used for the image world coordinate system (WCS).
+            # This should match whatever is in the image WCS and may differ from the default ICRS coordinates used elsewhere.
+            # VOField('equinox', 'double', None, 'VOX:STC_CoordEquinox')
+
+            # the minimum time to live in seconds of the access reference.
+            # VOField('ttl', 'int', None, 'VOX:Image_AccessRefTTL')
+            ]
+        for f in flds:
+            self.add_field(f)
+
+        params = [
+            # MUST
+            VOParam('naxes', 'int', None, 'VOX:Image_Naxes', 2),
+
+            # SHOULD
+            VOParam('proj', 'char', '3', 'VOX:STC_CoordProjection', 'TAN'),
+            VOParam('refframe', 'char', '*', 'VOX:STC_CoordRefFrame', 'ICRS'),
+        ]
+        for p in params:
+            self.add_param(p)
+
+
+class PointedRow(VORow):
+    # --------
+    #   MUST
+    # --------
+    # a short (usually one line) description of the image
+    # identifying the image source (e.g., survey name), object name or field coordinates,
+    # bandpass/filter, and so forth.
+    image_title = None
+
+    # the MIME-type of the object associated with the image acref, e.g., "image/fits", "text/html", and so forth.
+    image_format = None
+
+    # specifying the URL to be used to access or retrieve the image.
+    # Since the URL will often contain metacharacters the URL is normally enclosed in an XML CDATA section
+    # (<![CDATA[...]]>) or otherwise encoded to escape any embedded metacharacters.
+    image_url = None
+
+    # the ICRS right-ascension of the center of the image.
+    ra_center = None
+
+    # the ICRS declination of the center of the image.
+    dec_center = None
+
+    # the length in pixels of each image axis.
+    naxis = [ 0, 0 ]
+
+    # the scale in degrees per pixel of each image axis.
+    scale = [ 0, 0 ]
+    
+    # --------
+    #  SHOULD
+    # --------
+
+    # the instrument or instruments used to make the observation, e.g., STScI.HST.WFPC2.
+    instrument = ''
+
+    # the mean modified Julian date of the observation.
+    # By "mean" we mean the midpoint of the observation in terms of normalized exposure times:
+    # this is the "characteristic observation time" and is independent of observation duration.
+    jdate = 0
+
+    # the image pixel coordinates of the WCS reference pixel. This is identical to "CRPIX" in FITS WCS.
+    crpix = [ 0, 0 ]
+
+    # the world coordinates of the WCS reference pixel. This is identical to "CRVAL" in FITS WCS.
+    crval = [ 0, 0 ]
+
+    # the WCS CD matrix. This is identical to the "CD" term in FITS WCS, and defines the scale and rotation
+    # (among other things) of the image.
+    # Matrix elements should be ordered as CD[i,j] = [1,1], [1,2], [2,1], [2,2].
+    cd = [ 0, 0, 0, 0 ]
+
+    # the actual or estimated size of the encoded image in bytes (not pixels!). This is useful for image selection
+    # and for optimizing distributed computations.
+    image_filesize = 0
+
+    # the bandpass by name (e.g., "V", "SDSS_U", "K", "K-Band", etc.).
+    # bandpass = None
+
+    # the units used to represent spectral values, selected from "meters", "hertz", and "keV".
+    # No other units are permitted here; the client application may of course present a wider
+    # range of units in the user interface.
+    # bandpass_units = None
+
+    # the characteristic (reference) frequency, wavelength, or energy for the bandpass model.
+    # bandpass_ref = None
+
+    # the upper limit of the bandpass.
+    # bandpass_hi = None
+
+    # the upper limit of the bandpass.
+    # bandpass_lo = None
+
+    # the type of processing done by the image service to produce an output image pixel.
+    # The string value should be formed from some combination of the following character codes:
+    # - C -- The image pixels were copied from a source image without change, as when an atlas image or cutout is returned.
+    # - F -- The image pixels were computed by resampling an existing image, e.g., to rescale or reproject the data, and were filtered by an interpolator.
+    # - X -- The image pixels were computed by the service directly from a primary data set hence were not filtered by an interpolator.
+    # - Z -- The image pixels contain valid flux (intensity) values, e.g., if the pixels were resampled a flux-preserving interpolator was used.
+    # - V -- The image pixels contain some unspecified visualization of the data, hence are suitable for display but not for numerical analysis.
+    #
+    # For example, a typical image cutout service would have PixFlags="C", whereas a mosaicing service operating on precomputed images
+    # might have PixFlags="FZ". A preview page, graphics image, or a pixel mask might have PixFlags="V".
+    # An image produced by sampling and reprojecting a high energy event list might have PixFlags="X".
+    # If not specified, PixFlags="C" is assumed. 
+    pixflags = 'V'
+
+    def get_children(self):
+        # This array must be in the same order as the "flds" array in
+        # PointedTable.
+        coldata = [ self.image_title, self.image_format, self.image_url,
+                    self.ra_center, self.dec_center, self.naxis,
+                    self.scale, self.instrument, self.jdate, self.crpix,
+                    self.crval, self.cd, self.image_filesize, self.pixflags ]
+        children = []
+        for c in coldata:
+            children.append(VOColumn(c))
+        return children
+
 def siap_pointed(request):
 
     res = HttpResponse()
@@ -80,112 +232,12 @@ def siap_pointed(request):
 
         qstatus.args['value'] = 'OK'
 
-        table = VOTable('results')
+        table = PointedTable()
+        table.args['name'] = 'results'
         resource.add_child(table)
 
-        # a short (usually one line) description of the image
-        # identifying the image source (e.g., survey name), object name or field coordinates,
-        # bandpass/filter, and so forth.
-        image_title = VOField('image_title', 'char', '*', 'VOX:Image_Title')
-        table.add_child(image_title)
-        # MUST
-
-        # the instrument or instruments used to make the observation, e.g., STScI.HST.WFPC2.
-        instrument = VOField('instrument', 'char', '*', 'INST_ID')
-        table.add_child(instrument)
-        # SHOULD
-
-        # the mean modified Julian date of the observation.
-        # By "mean" we mean the midpoint of the observation in terms of normalized exposure times:
-        # this is the "characteristic observation time" and is independent of observation duration.
-        date = VOField('jdate', 'double', None, 'VOX:Image_MJDateObs')
-        table.add_child(date)
-        # SHOULD
-
-        # the ICRS right-ascension of the center of the image.
-        ra = VOField('RA_center', 'double', None, 'POS_EQ_RA_MAIN')
-        table.add_child(ra)
-        # MUST
-
-        # the ICRS declination of the center of the image.
-        dec = VOField('DEC_center', 'double', None, 'POS_EQ_DEC_MAIN')
-        table.add_child(dec)
-        # MUST
-
-        # the number of image axes.
-        naxes = VOField('naxes', 'int', None, 'VOX:Image_Naxes')
-        table.add_child(naxes)
-        # MUST
-
-        # the length in pixels of each image axis.
-        naxis = VOField('naxis', 'int', '*', 'VOX:Image_Naxis')
-        table.add_child(naxis)
-        # MUST
-
-        # the scale in degrees per pixel of each image axis.
-        scale = VOField('scale', 'double', '*', 'VOX:Image_Scale')
-        table.add_child(scale)
-        # MUST
-
-        # the MIME-type of the object associated with the image acref, e.g., "image/fits", "text/html", and so forth.
-        format = VOField('format', 'char', '*', 'VOX:Image_Format')
-        table.add_child(format)
-        # MUST
-
-        # the coordinate system reference frame, selected from "ICRS", "FK5", "FK4", "ECL", "GAL", and "SGAL".
-        refframe = VOField('refframe', 'char', '*', 'VOX:STC_CoordRefFrame')
-        table.add_child(refframe)
-        # SHOULD
-        
-        # the Equinox (not required for ICRS) of the coordinate system used for the image world coordinate system (WCS).
-        # This should match whatever is in the image WCS and may differ from the default ICRS coordinates used elsewhere.
-        equinox = VOField('equinox', 'double', None, 'VOX:STC_CoordEquinox')
-        table.add_child(equinox)
-        # MAY
-
-        # the three-character code ("TAN", "ARC", "SIN", and so forth) specifying the celestial projection, as for FITS WCS.
-        proj = VOField('proj', 'char', '3', 'VOX:STC_CoordProjection')
-        table.add_child(proj)
-        # SHOULD
-
-        # the image pixel coordinates of the WCS reference pixel. This is identical to "CRPIX" in FITS WCS.
-        crpix = VOField('crpix', 'double', '*', 'VOX:WCS_CoordRefPixel')
-        table.add_child(crpix)
-        # SHOULD
-
-        # the world coordinates of the WCS reference pixel. This is identical to "CRVAL" in FITS WCS.
-        crval = VOField('crval', 'double', '*', 'VOX:WCS_CoordRefValue')
-        table.add_child(crval)
-        # SHOULD
-
-        # the WCS CD matrix. This is identical to the "CD" term in FITS WCS, and defines the scale and rotation
-        # (among other things) of the image.
-        # Matrix elements should be ordered as CD[i,j] = [1,1], [1,2], [2,1], [2,2].
-        cd = VOField('cd', 'double', '*', 'VOX:WCS_CDMatrix')
-        table.add_child(cd)
-        # SHOULD
-
-        # specifying the URL to be used to access or retrieve the image.
-        # Since the URL will often contain metacharacters the URL is normally enclosed in an XML CDATA section
-        # (<![CDATA[...]]>) or otherwise encoded to escape any embedded metacharacters.
-        image_url = VOField('url', 'char', '*', 'VOX:Image_AccessReference')
-        table.add_child(image_url)
-        # MUST
-
-        # the minimum time to live in seconds of the access reference.
-        image_ttl = VOField('ttl', 'int', None, 'VOX:Image_AccessRefTTL')
-        table.add_child(image_ttl)
-        # MAY
-
-        # the actual or estimated size of the encoded image in bytes (not pixels!). This is useful for image selection
-        # and for optimizing distributed computations.
-        image_filesize = VOField('filesize', 'int', None, 'VOX:Image_FileSize')
-        table.add_child(image_filesize)
-        # SHOULD
-
-        '''
-   5. Constant Valued FIELDs. If a FIELD of the table will have the same value for every row of the table it is permissible to represent the field as a PARAM of the resource rather than a table FIELD. Both FIELDs and PARAMs can be used to define image metadata: a FIELD allows a different value to be specified for every image, whereas PARAM allows metadata to be defined globally for all images. The same attribute tags (UCD, datatype, arraysize, type="trigger", etc.) must be defined in either case.
-'''
+        row = PointedRow()
+        table.add_row(row)
         
     except (KeyError, ValueError),e:
         qstatus.args['value'] = 'ERROR'
