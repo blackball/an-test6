@@ -1,4 +1,5 @@
 import re
+import os
 
 from django import newforms as forms
 from django.db import models
@@ -12,11 +13,13 @@ from an.upload.views  import UploadIdField
 #import quads.fits2fits as fits2fits
 #import quads.image2pnm as image2pnm
 
+from an import gmaps_config
+
 from an.portal.job import Job, AstroField
 from an.portal.log import log
+from an.portal.models import UserPreferences
 
-from an.portal.views import printvals
-
+from an.portal.views import printvals, get_status_url
 
 ftpurl_re = re.compile(
     r'^ftp://'
@@ -236,6 +239,20 @@ class FullForm(forms.Form):
                 self.cleaned_data['tweakorder'] = 0
 
         return self.cleaned_data
+
+def submit_job(request, job):
+    log('submit(): Job is: ' + str(job))
+    os.umask(07)
+    job.create_job_dir()
+    job.set_submittime_now()
+    job.status = 'Queued'
+    job.save()
+    request.session['jobid'] = job.jobid
+
+    # enqueue the axy file.
+    jobdir = job.get_job_dir()
+    link = gmaps_config.jobqueuedir + job.jobid
+    os.symlink(jobdir, link)
 
 def newurl(request):
     if not request.user.is_authenticated():

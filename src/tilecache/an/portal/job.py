@@ -2,6 +2,7 @@ import datetime
 import logging
 import os.path
 import random
+import sha
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -11,6 +12,100 @@ from an.upload.models import UploadedFile
 import an.gmaps_config as config
 from an.portal.log import log
 from an.portal.wcs import *
+
+from an.portal.models import UserPreferences
+
+
+# Represents one field to be solved: either an image or xylist.
+class AstroField(models.Model):
+    datasrc_CHOICES = (
+        ('url', 'URL'),
+        ('file', 'File'),
+        )
+
+    filetype_CHOICES = (
+        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
+        ('fits', 'FITS table of source locations'),
+        ('text', 'Text list of source locations'),
+        )
+
+    user = models.ForeignKey(User, editable=False)
+
+    #job = models.ForeignKey(Job, editable=False)
+
+    # Has the user explicitly granted us permission to redistribute this image?
+    allowredist = models.BooleanField(default=False)
+    # Has the user explicitly forbidden us permission to redistribute this image?
+    forbidredist = models.BooleanField(default=False)
+
+    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+
+    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
+
+    url = models.URLField(blank=True, null=True)
+
+    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
+
+    # type of the uploaded file, after decompression
+    # ("jpg", "png", "gif", "fits", etc)
+    imgtype = models.CharField(max_length=16, editable=False)
+
+    # sha-1 hash of the uncompressed file.
+    filehash = models.CharField(max_length=40, editable=False)
+
+    # for FITS tables, the names of the X and Y columns.
+    xcol = models.CharField(max_length=16, blank=True)
+    ycol = models.CharField(max_length=16, blank=True)
+
+    # size of the image
+    imagew = models.PositiveIntegerField(editable=False, null=True)
+    imageh = models.PositiveIntegerField(editable=False, null=True)
+
+    # shrink factor (= 1 / (scale factor)) for rendering images; >=1.
+    displayscale = models.FloatField(editable=False, null=True)
+    # size to render images.
+    displayw = models.PositiveIntegerField(editable=False, null=True)
+    displayh = models.PositiveIntegerField(editable=False, null=True)
+
+    def __str__(self):
+        s = '<Field'
+        #, datasrc %s' , self.datasrc)
+        if self.datasrc == 'url':
+            s += ', url ' + self.url
+        elif self.datasrc == 'file':
+            #s += ', file ' + str(self.uploaded)
+            #s += ' (originally "%s")' % self.uploaded.userfilename
+            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
+        s += ', ' + self.filetype
+        if self.filetype == 'image' and self.imgtype:
+            s += ', ' + self.imgtype
+        s += '>'
+        return s
+
+    def redistributable(self, prefs=None):
+        if self.allowredist:
+            return True
+        if self.forbidredist:
+            return False
+        if not prefs:
+            prefs = UserPreferences.for_user(self.user)
+        return prefs.autoredistributable
+
+    def compute_filehash(self, fn):
+        if self.filehash:
+            return
+        h = sha.new()
+        f = open(fn, 'rb')
+        while True:
+            d = f.read(4096)
+            if len(d) == 0:
+                break
+            h.update(d)
+        self.filehash = h.hexdigest()
+
+    def filename(self):
+        return os.path.join(config.fielddir, str(self.id))
+
 
 class Job(models.Model):
 
@@ -54,8 +149,8 @@ class Job(models.Model):
 
     user = models.ForeignKey(User, editable=False)
 
-    fields = models.ManyToManyField(AstroField, related_name='jobs')
-    #field = models.ForeignKey(AstroField, editable=False)
+    #fields = models.ManyToManyField(AstroField, related_name='jobs')
+    field = models.ForeignKey(AstroField, editable=False)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
                                               default=2, radio_admin=True,
@@ -236,96 +331,4 @@ class Job(models.Model):
         return t.strftime('%Y-%m-%d %H:%M')
     format_time_brief = staticmethod(format_time_brief)
 
-
-
-
-# Represents one field to be solved: either an image or xylist.
-class AstroField(models.Model):
-    datasrc_CHOICES = (
-        ('url', 'URL'),
-        ('file', 'File'),
-        )
-
-    filetype_CHOICES = (
-        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
-        ('fits', 'FITS table of source locations'),
-        ('text', 'Text list of source locations'),
-        )
-
-    user = models.ForeignKey(User, editable=False)
-
-    job = models.ForeignKey(Job, editable=False)
-
-    # Has the user explicitly granted us permission to redistribute this image?
-    allowredist = models.BooleanField(default=False)
-    # Has the user explicitly forbidden us permission to redistribute this image?
-    forbidredist = models.BooleanField(default=False)
-
-    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
-
-    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
-
-    url = models.URLField(blank=True, null=True)
-
-    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
-
-    # type of the uploaded file, after decompression
-    # ("jpg", "png", "gif", "fits", etc)
-    imgtype = models.CharField(max_length=16, editable=False)
-
-    # sha-1 hash of the uncompressed file.
-    filehash = models.CharField(max_length=40, editable=False)
-
-    # for FITS tables, the names of the X and Y columns.
-    xcol = models.CharField(max_length=16, blank=True)
-    ycol = models.CharField(max_length=16, blank=True)
-
-    # size of the image
-    imagew = models.PositiveIntegerField(editable=False, null=True)
-    imageh = models.PositiveIntegerField(editable=False, null=True)
-
-    # shrink factor (= 1 / (scale factor)) for rendering images; >=1.
-    displayscale = models.FloatField(editable=False, null=True)
-    # size to render images.
-    displayw = models.PositiveIntegerField(editable=False, null=True)
-    displayh = models.PositiveIntegerField(editable=False, null=True)
-
-    def __str__(self):
-        s = '<Field'
-        #, datasrc %s' , self.datasrc)
-        if self.datasrc == 'url':
-            s += ', url ' + self.url
-        elif self.datasrc == 'file':
-            #s += ', file ' + str(self.uploaded)
-            #s += ' (originally "%s")' % self.uploaded.userfilename
-            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
-        s += ', ' + self.filetype
-        if self.filetype == 'image' and self.imgtype:
-            s += ', ' + self.imgtype
-        s += '>'
-        return s
-
-    def redistributable(self, prefs=None):
-        if self.allowredist:
-            return True
-        if self.forbidredist:
-            return False
-        if not prefs:
-            prefs = UserPreferences.for_user(self.user)
-        return prefs.autoredistributable
-
-    def compute_filehash(self, fn):
-        if self.filehash:
-            return
-        h = sha.new()
-        f = open(fn, 'rb')
-        while True:
-            d = f.read(4096)
-            if len(d) == 0:
-                break
-            h.update(d)
-        self.filehash = h.hexdigest()
-
-    def filename(self):
-        return os.path.join(config.fielddir, str(self.id))
 
