@@ -64,56 +64,53 @@ int dsmooth2(float *image,
 	for (i=0; i<npix; i++)
         kernel1D[i] *= scale;
 
-
-	smooth_temp = malloc(sizeof(float) * nx * ny);
-    memset(smooth_temp, 0, sizeof(float)*nx*ny);
-
-	//smooth_temp = malloc(sizeof(float) * MAX(nx, ny));
-    //memset(smooth_temp, 0, sizeof(float)*nx);
+	smooth_temp = malloc(sizeof(float) * MAX(nx, ny));
 
 	// convolve in x direction, dumping results into smooth_temp
 	for (j = 0; j < ny; j++) {
+        memset(smooth_temp, 0, sizeof(float)*nx);
         for (i = 0; i < nx; i++) {
+            // This convolution is laid out in a funny way:
+            // the outer loop iterates over input pixels, and the
+            // "ip" loop below adds the contribution from each input
+            // pixel into the output pixels.
+
+            // "isto" is the lower limit of the influence of this input pixel
+            // "ist" is "isto" but clamped to the edge of the image.
             isto = ist = i - half;
-            ind = i + half;
             if (ist < 0)
                 ist = 0;
+            // "ind" is the upper limit of the influence of this input pixel,
+            // clamped to the edge of the image.
+            ind = i + half;
             if (ind > nx - 1)
                 ind = nx - 1;
+            
             for (ip = ist; ip <= ind; ip++) {
                 ioff = ip - isto;
-                smooth_temp[ip + j*nx] += image[i + j * nx] * kernel1D[ioff];
-                //smooth_temp[i] += image[i + j * nx] * kernel1D[joff];
+                smooth_temp[ip] += image[i + j * nx] * kernel1D[ioff];
             }
         }
-        //memcpy(smooth + j*nx, smooth_temp, nx * sizeof(float));
+        memcpy(smooth + j*nx, smooth_temp, nx * sizeof(float));
     }
 
-    /*
-     for (i = 0;i < nx*ny; i++){
-     smooth[i] = 0.;
-     }
-     */
-    //memset(smooth_temp, 0, sizeof(float)*ny);
-
-    memset(smooth, 0, sizeof(float)*nx*ny);
-
-	// convolve in the other direction, dumping results into smooth
+	// convolve in the y direction, dumping results into smooth
 	for (i = 0; i < nx; i++) {
+        memset(smooth_temp, 0, sizeof(float)*ny);
         for (j = 0; j < ny; j++) {
             jsto = jst = j - half;
-            jnd = j + half;
             if (jst < 0)
                 jst = 0;
+            jnd = j + half;
             if (jnd > ny - 1)
                 jnd = ny - 1;
             for (jp = jst; jp <= jnd; jp++){
                 joff = jp - jsto;
-                smooth[i + jp*nx] += smooth_temp[i + j * nx] * kernel1D[joff];
-                //smooth[ip + j*nx] += smooth_temp[i + j * nx] * kernel1D[ioff];
-                //smooth_temp[i + jp*nx] += image[i + j * nx] * kernel1D[joff];
+                smooth_temp[jp] += smooth[i + j*nx] * kernel1D[joff];
             }
         }
+        for (j=0; j<ny; j++)
+            smooth[i + j*nx] = smooth_temp[j];
 	}
 
 	FREEVEC(smooth_temp);
