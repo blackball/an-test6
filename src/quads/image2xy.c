@@ -206,6 +206,7 @@ int main(int argc, char *argv[]) {
 		int a;
 		int w, h;
         int bitpix;
+        int fullW, fullH;
 
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
@@ -304,6 +305,11 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+            // save some memory...
+            thedata = realloc(thedata, newW * newH * sizeof(float));
+
+            fullW = W;
+            fullH = H;
             naxisn[0] = newW;
             naxisn[1] = newH;
         }
@@ -328,12 +334,28 @@ int main(int argc, char *argv[]) {
                      (verbose?1:0));
         }
 
-		// The FITS standard specifies that the center of the lower
-		// left pixel is 1,1. Store our xylist according to FITS
-		for (jj=0; jj<npeaks; jj++) {
-			x[jj] += 1.0;
-			y[jj] += 1.0;
-		}
+		free(thedata);
+		free(theu8data);
+
+        if (downsample) {
+            // Put the naxisn[] values back the way they were so that the
+            // FITS headers are written correctly.
+            naxisn[0] = fullW;
+            naxisn[1] = fullH;
+
+            for (jj=0; jj<npeaks; jj++) {
+                x[jj] = x[jj] * 2 + 1.5;
+                y[jj] = y[jj] * 2 + 1.5;
+            }
+
+        } else {
+            // The FITS standard specifies that the center of the lower
+            // left pixel is 1,1. Store our xylist according to FITS
+            for (jj=0; jj<npeaks; jj++) {
+                x[jj] += 1.0;
+                y[jj] += 1.0;
+            }
+        }
 
 		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
 				tunit, "SOURCES", &status);
@@ -425,8 +447,6 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		free(thedata);
-		free(theu8data);
 		free(x);
 		free(y);
 	}
