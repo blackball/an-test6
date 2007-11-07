@@ -27,7 +27,7 @@ tr.odd td {}
 
 <td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
 
-<td> {{ job.format_submittime_brief }} </td>
+<td> {{ job.jobset.format_submittime_brief }} </td>
 
 <td class="c">{{ job.status }}
 {% if job.failurereason %}

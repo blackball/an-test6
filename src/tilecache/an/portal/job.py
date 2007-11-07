@@ -215,7 +215,7 @@ class JobSet(models.Model):
         return Job.s_get_job_dir(self.jobid)
 
     def get_relative_job_dir(self):
-        return Job.get_relative_job_dir(self.jobid)
+        return Job.s_get_relative_job_dir(self.jobid)
 
     def create_job_dir(self):
         Job.create_dir_for_jobid(self.jobid)
@@ -320,7 +320,7 @@ class Job(models.Model):
         return Job.s_get_job_dir(self.jobid)
 
     def get_relative_job_dir(self):
-        return Job.get_relative_job_dir(self.jobid)
+        return Job.s_get_relative_job_dir(self.jobid)
 
     def create_job_dir(self):
         Job.create_dir_for_jobid(self.jobid)
@@ -381,16 +381,16 @@ class Job(models.Model):
     create_dir_for_jobid = staticmethod(create_dir_for_jobid)
 
     def s_get_job_dir(jobid):
-        return os.path.join(config.jobdir, Job.get_relative_job_dir(jobid))
+        return os.path.join(config.jobdir, Job.s_get_relative_job_dir(jobid))
     s_get_job_dir = staticmethod(s_get_job_dir)
     
     def get_job_filename(jobid, fn):
         return os.path.join(Job.s_get_job_dir(jobid), fn)
     get_job_filename = staticmethod(get_job_filename)
 
-    def get_relative_job_dir(jobid):
+    def s_get_relative_job_dir(jobid):
         return os.path.join(*jobid.split('-'))
-    get_relative_job_dir = staticmethod(get_relative_job_dir)
+    s_get_relative_job_dir = staticmethod(s_get_relative_job_dir)
 
     def generate_jobid():
         today = datetime.date.today()

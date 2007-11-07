@@ -21,8 +21,6 @@ import urllib
 
 from django.db import models
 
-import an.gmaps_config as config
-
 from an.portal.models import Job, JobSet, AstroField
 from an.upload.models import UploadedFile
 from an.portal.log import log
@@ -281,13 +279,13 @@ if __name__ == '__main__':
                       )
             os.umask(07)
             job.create_job_dir()
-            job.set_submittime_now()
+            #job.set_submittime_now()
             job.status = 'Queued'
             job.save()
             # HACK - duplicate code from newjob.submit_jobset()
             log('Enqueuing Job: ' + str(job))
             jobdir = job.get_job_dir()
-            link = gmaps_config.jobqueuedir + job.jobid
+            link = config.jobqueuedir + job.jobid
             os.symlink(jobdir, link)
 
     else:

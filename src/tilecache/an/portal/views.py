@@ -16,9 +16,6 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 
-# DEBUG
-from django.db import connection
-
 import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
@@ -109,7 +106,17 @@ def getsessionjob(request):
     return get_job(jobid)
 
 def jobsetstatus(request, jobset):
-    return HttpResponse('<pre>jobsetstatus: ' + str(jobset) + '</pre>')
+    res = HttpResponse()
+    res.write('<html><body>\n')
+    res.write('<pre>jobsetstatus: ' + str(jobset) + '</pre>\n')
+    res.write('<ul>\n')
+    jobs = jobset.jobs.all()
+    for job in jobs:
+        res.write('<li><a href="%s">%s</a></li>\n' %
+                  (get_status_url(job.jobid), job.jobid))
+    res.write('</ul>\n')
+    res.write('</body></html>\n')
+    return res
 
 def jobstatus(request):
     if not request.GET:
@@ -128,15 +135,10 @@ def jobstatus(request):
             if len(jobs) == 1:
                 job = jobs[0]
                 jobid = job.jobid
-                # redirect?
                 return HttpResponseRedirect(get_status_url(jobid))
             else:
                 return jobsetstatus(request, jobset)
         else:
-
-            for q in connection.queries:
-                log('query: ' + q['sql'])
-
             return HttpResponse('no job with jobid ' + jobid)
 
     jobowner = (job.jobset.user == request.user)
@@ -290,7 +292,7 @@ def getfile(request):
     if not 'f' in request.GET:
         return HttpResponse('no f=')
 
-    jobowner = (job.user == request.user)
+    jobowner = (job.jobset.user == request.user)
     anonymous = job.allowanonymous()
     if not (jobowner or anonymous):
         return HttpResponse('The owner of this job (' + job.user.username + ') has not granted public access.')
@@ -385,22 +387,11 @@ def summary(request):
         return HttpResponseRedirect('/login')
 
     prefs = UserPreferences.for_user(request.user)
-    #jobs = Job.objects.all().filter(user = request.user)
-    #fields = AstroField.objects.all().filter(user = request.user)
 
-    jobsets = JobSet.objects.all() #.filter(user=request.user)
+    jobsets = JobSet.objects.all().filter(user=request.user)
     jobs = []
     for js in jobsets:
-        if js.user == request.user:
-            jobs += js.jobs
-
-    # HACK - why the hell doesn't this filter work?
-    #jobsets = JobSet.objects.all().filter(user=request.user)
-    #jobs = []
-    #for js in jobsets:
-    #    jobs += js.jobs
-
-    #jobs = Job.objects.all().filter(jobset.user = request.user)
+        jobs += js.jobs.all()
 
     for job in jobs:
         log('Job ', job, 'allow anon?', job.allowanonymous(prefs))
@@ -414,7 +405,6 @@ def summary(request):
         'prefs' : prefs,
         'statusurl' : '/job/status/?jobid=',
         'getfileurl' : '/job/getfile/?jobid=',
-        #'fields' : fields,
         }
     t = loader.get_template('portal/summary.html')
     c = RequestContext(request, ctxt)
@@ -449,8 +439,6 @@ def changeperms(request):
                 if prefs.autoredistributable:
                     # need to explicitly forbid.
                     field.forbidredist = True
-            #field.allowredist = redist
-            #field.forbidredist = not redist
             field.save()
             if 'HTTP_REFERER' in request.META:
                 return HttpResponseRedirect(request.META['HTTP_REFERER'])
@@ -478,8 +466,6 @@ def changeperms(request):
                 if prefs.anonjobstatus:
                     # need to explicitly forbid.
                     job.forbidanon = True
-            #job.allowanon = allow
-            #job.forbidanon = not allow
             job.save()
             if 'HTTP_REFERER' in request.META:
                 return HttpResponseRedirect(request.META['HTTP_REFERER'])
