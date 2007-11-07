@@ -281,7 +281,6 @@ int main(int argc, char *argv[]) {
             int newH = (H + 1) / 2;
             float sigma = 2.0;
             int i, j, I, J;
-            //float* temp = malloc(MAX(newW, newH) * sizeof(float));
 
             // Gaussian smooth in-place.
             dsmooth2(thedata, naxisn[0], naxisn[1], sigma, thedata);
