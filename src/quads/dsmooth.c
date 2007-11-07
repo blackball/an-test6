@@ -34,7 +34,7 @@
  * 1/2006 */
 
 // Optimize version of dsmooth, with a separated Gaussian convolution.
-int dsmooth2(float *image,
+void dsmooth2(float *image,
             int nx,
             int ny,
             float sigma,
@@ -77,7 +77,7 @@ int dsmooth2(float *image,
         float* imagerow = image + j*nx;
         for (i=0; i<nx; i++) {
             /*
-             The outer loop is over OUTPUT pixels;
+             The outer loops are over OUTPUT pixels;
              the "sample" loop is over INPUT pixels.
 
              We're summing over the input pixels that contribute to the value
@@ -114,8 +114,6 @@ int dsmooth2(float *image,
 
 	FREEVEC(smooth_temp);
 	FREEVEC(kernel1D);
-
-	return (1);
 } /* end dsmooth2 */
 
 

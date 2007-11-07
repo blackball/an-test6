@@ -31,7 +31,7 @@ int dweights(float *image, float *invvar, int nx, int ny, int ntemplates,
 int dfind(int *image, int nx, int ny, int *object);
 int dfind2(int *image, int nx, int ny, int *object);
 int dsmooth(float *image, int nx, int ny, float sigma, float *smooth);
-int dsmooth2(float *image, int nx, int ny, float sigma, float *smooth);
+void dsmooth2(float *image, int nx, int ny, float sigma, float *smooth);
 int dobjects(float *image, float *smooth, int nx, int ny,
              float dpsf, float plim, int *objects);
 int dnonneg(float *xx, float *invcovar, float *bb, float offset,

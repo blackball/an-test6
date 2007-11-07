@@ -24,7 +24,7 @@
 #include "cutest.h"
 
 int dsmooth(float* image, int nx, int ny, float sigma, float* smooth);
-int dsmooth2(float* image, int nx, int ny, float sigma, float* smooth);
+void dsmooth2(float* image, int nx, int ny, float sigma, float* smooth);
 
 int compare_images(float *i1, float* i2, int nx, int ny, float eps) {
     int i, j;
