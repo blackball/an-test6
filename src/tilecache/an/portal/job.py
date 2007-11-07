@@ -400,3 +400,11 @@ class Job(models.Model):
     generate_jobid = staticmethod(generate_jobid)
 
 
+    def submit_job_or_jobset(j):
+        os.umask(07)
+        j.create_job_dir()
+        # enqueue by creating a symlink in the job queue directory.
+        jobdir = j.get_job_dir()
+        link = gmaps_config.jobqueuedir + j.jobid
+        os.symlink(jobdir, link)
+    submit_job_or_jobset = staticmethod(submit_job_or_jobset)

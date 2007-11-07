@@ -56,17 +56,13 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir
     basename = os.path.join(tempdir, job.jobid + '-')
-    #if isinstance(job, JobSet):
-    #    basename += 'js-'
     fullfn = basename + fn
     if os.path.exists(fullfn):
         return fullfn
-    #    field = job.field
 
     if fn == 'uncomp' or fn == 'uncomp-js':
-        #orig = job.get_orig_file()
         orig = field.filename()
-        log('convert uncomp: Field file is', orig)
+        #log('convert uncomp: Field file is', orig)
         comp = image2pnm.uncompress_file(orig, fullfn)
         if comp:
             log('Input file compression: %s' % comp)
@@ -141,10 +137,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'xyls':
         infn = convert(job, field, 'fitsimg', store_imgtype, store_imgsize)
-        #sxylog = job.get_filename('simplexy.out')
-        #sxyerr = job.get_filename('simplexy.err')
         sxylog = 'blind.log'
-        #cmd = 'image2xy -o %s %s > %s 2> %s' % (fullfn, infn, sxylog, sxyerr)
         cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
         return fullfn

@@ -68,8 +68,6 @@ def handle_job(job):
     axy = 'job.axy'
     axypath = job.get_filename(axy)
 
-    #log('PATH is ' + ', '.join(sys.path))
-
     filetype = job.jobset.filetype
 
     if filetype == 'image':
@@ -167,34 +165,38 @@ if __name__ == '__main__':
     sshconfig = sys.argv[1]
     joblink = sys.argv[2]
 
+    if not os.path.islink(joblink):
+        log('Expected second argument to be a symlink; "%s" isn\'t.' % joblink)
+        sys.exit(-1)
+
     # jobfile should be a symlink; get the destination.
     jobdir = os.readlink(joblink)
-
-    # the name of the jobfile is its jobid.
-    jobid = os.path.basename(joblink)
 
     # go to the job directory.
     os.chdir(jobdir)
 
+    # the name of the symlink is the jobid.
+    jobid = os.path.basename(joblink)
+
+    # if it's a Job...
     jobs = Job.objects.all().filter(jobid = jobid)
     if len(jobs):
         handle_job(jobs[0])
         sys.exit(0)
 
+    # else it's a JobSet...
     jobsets = JobSet.objects.all().filter(jobid=jobid)
     if len(jobsets) != 1:
         log('Found %i jobsets, not 1' % len(jobsets))
         sys.exit(-1)
     jobset = jobsets[0]
     log('Running jobset: ' + str(jobset))
-    if not jobset:
-        sys.exit(-1)
 
     field = AstroField(user = jobset.user,
                        xcol = jobset.xcol,
                        ycol = jobset.ycol,
                        )
-    # save to get "id" field set to a value
+    # save() so the "id" field gets a unique value
     field.save()
     origfile = field.filename()
 
@@ -261,43 +263,39 @@ if __name__ == '__main__':
 
             if len(validpaths) == 1:
                 job = Job(
-                    #jobid = Job.generate_jobid(),
                     jobid = jobset.jobid,
                     jobset = jobset,
                     field = field,
                     )
-                #job.create_job_dir()
                 job.save()
                 # One file in tarball: convert straight to a Job.
                 log('Single-file tarball.')
                 handle_job(job)
-                sys.exit(0)
+                break
 
             job = Job(jobset = jobset,
                       field = field,
                       jobid = Job.generate_jobid(),
                       )
-            os.umask(07)
-            job.create_job_dir()
             job.status = 'Queued'
             job.save()
-            # HACK - duplicate code from newjob.submit_jobset()
             log('Enqueuing Job: ' + str(job))
-            jobdir = job.get_job_dir()
-            link = config.jobqueuedir + job.jobid
-            os.symlink(jobdir, link)
+            Job.submit_job_or_jobset(job)
 
     else:
         # Not a tarball.
         job = Job(
             jobid = jobset.jobid,
-            #jobid = Job.generate_jobid(),
             jobset = jobset,
             field = field,
             )
-        #job.create_job_dir()
         job.save()
         handle_job(job)
+
+    # remove the symlink to indicate that we've successfully finished this
+    # job.
+
+    
 
     sys.exit(0)
 

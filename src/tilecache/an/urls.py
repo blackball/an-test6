@@ -11,6 +11,7 @@ urlpatterns = patterns('',
 					   (r'^vo/', include('an.vo.urls')),
                        # DEBUG
 					   (r'^upload-demo/', 'an.uploaddemo.view'),
+					   (r'^upload-demo-main/', 'an.uploaddemo.mainview'),
 #					   (r'^admin/', include('django.contrib.admin.urls')),
 					   (r'^anmedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root' : settings.MEDIA_ROOT}),
 					   )

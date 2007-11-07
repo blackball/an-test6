@@ -7,17 +7,12 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 
-#import an.upload as upload
 from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
-#import quads.fits2fits as fits2fits
-#import quads.image2pnm as image2pnm
 
 from an import gmaps_config
 
-#from an.portal.job import Job, JobSet, AstroField
-from an.portal.job import JobSet
-#, AstroField
+from an.portal.job import JobSet, Job
 from an.portal.log import log
 from an.portal.views import printvals, get_status_url
 
@@ -106,13 +101,6 @@ class FullForm(forms.Form):
                'onkeyup':'scalechanged()',
                'size':'5',
                }), required=False, min_value=0, max_value=100)
-
-    #file = forms.FileField(widget=forms.FileInput(
-    #    attrs={'size':'40',
-    #           'onfocus':'setDatasourceFile()',
-    #           'onclick':'setDatasourceFile()',
-    #           }),
-    #                       required=False)
 
     url = ForgivingURLField(initial='http://',
                             widget=forms.TextInput(
@@ -244,16 +232,13 @@ class FullForm(forms.Form):
 
 def submit_jobset(request, jobset):
     log('submit_jobset(): JobSet is: ' + str(jobset))
-    os.umask(07)
-    jobset.create_job_dir()
+    #os.umask(07)
+    #jobset.create_job_dir()
     jobset.set_submittime_now()
     jobset.status = 'Queued'
     jobset.save()
     request.session['jobid'] = jobset.jobid
-    # enqueue the axy file.
-    jobdir = jobset.get_job_dir()
-    link = gmaps_config.jobqueuedir + jobset.jobid
-    os.symlink(jobdir, link)
+    Job.submit_job_or_jobset(jobset)
 
 def newurl(request):
     if not request.user.is_authenticated():

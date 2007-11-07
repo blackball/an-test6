@@ -19,7 +19,7 @@ function onSubmitUpload() {
 
 function uploadSucceeded() {
   //alert('upload succeeded: submitting main form.');
-  // document.forms.longform.submit();
+  document.forms.mainform.submit();
 }
 
 function uploadFailed() {
@@ -48,6 +48,7 @@ function uploadframeloaded() {
   var doc = getUploadDoc();
   if (doc.getElementById('id_file')) {
     upload_id = form.upload_id.value;
+	document.forms.mainform.upload_id.value = upload_id;
     form.addEventListener('submit', onSubmitUpload, true);
   }
 }
@@ -57,6 +58,12 @@ function submitUploadForm() {
   if (uploadform) {
     uploadform.submit();
   }
+}
+
+function onSubmitMainForm() {
+  onSubmitUpload();
+  submitUploadForm();
+  return false;
 }
 
 function getUploadDoc() {
@@ -98,8 +105,10 @@ function onLoad() {
 
 </head>
 
-<body onload="onLoad()">
+<body onload="onLoad()" style="text-align:center;">
 
+{% comment %}
+<p>
 {% if inline_progress %}
 This is the <b>inline</b> version.
 Go to the <a href="/upload-demo/">non-inline</a> (iframe) version.
@@ -107,28 +116,48 @@ Go to the <a href="/upload-demo/">non-inline</a> (iframe) version.
 This is the <b>non-inline</b> (iframe) version.
 Go to the <a href="/upload-demo/?inline">inline</a> version.
 {% endif %}
-<br />
+</p>
+{% endcomment %}
 
-<iframe onload="uploadframeloaded()" src="{{ uploadform }}" scrolling="no" frameborder="0" id="uploadframe" style="width:25em; height:2em;">
+<p>
+The IFRAME below is shown with a coloured background.
+</p>
+
+<iframe onload="uploadframeloaded()" src="{{ uploadform }}" scrolling="no" frameborder="0"
+id="uploadframe" style="width:25em; height:2em; background-color:#AAF;">
   [Your user agent does not support iframes]
 </iframe>
 
 <div id="progressholder">
-
-{% comment %}
- style="visibility:hidden; height:0px;">
-{% endcomment %}
+<p>
+There's an initially hidden progress meter below here... you can also dynamically change its size so it
+doesn't take up space when it's hidden.
+</p>
 
 {% if inline_progress %}
   <div id="progressframe" style="width:25em; height:3em;">
   {{ progress_meter_html }}
   </div>
 {% else %}
-  <iframe src="" scrolling="no" frameborder="0" id="progressframe" style="width:25em; height:3em;" >
+  <iframe src="" scrolling="no" frameborder="0" id="progressframe" style="width:25em; height:3em; background-color:#FAA" >
   [no iframes for you!]
   </iframe>
 {% endif %}
 </div>
+
+<p>
+Here are some elements of the main form.
+</p>
+
+<form action="/upload-demo-main/" method="post" name="mainform" onsubmit="return onSubmitMainForm();">
+<p>What is your favourite colour:
+<input type="text" name="colour" value="Red... no, blue" />
+<input type="hidden" name="upload_id" value="" />
+</p>
+<p>
+<input type="submit" name="sub" value="Submit" />
+</form>
+
 
 </body>
 </html>
