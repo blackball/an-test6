@@ -86,8 +86,6 @@ class AstroField(models.Model):
 
 
 class JobCommon(models.Model):
-    jobid = models.CharField(max_length=32, unique=True, editable=False,
-                             primary_key=True)
     #status_CHOICES = (
     #    ('not-submitted', 'Submission failed'),
     #    ('queued', 'Queued'),
@@ -95,6 +93,9 @@ class JobCommon(models.Model):
     #    ('solved', 'Solved'),
     #    ('failed', 'Failed')
     #    )
+
+    jobid = models.CharField(max_length=32, unique=True, editable=False,
+                             primary_key=True)
 
     #
     status = models.CharField(max_length=16,

@@ -16,10 +16,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 
+# DEBUG
+from django.db import connection
+
 import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
+
 from an.portal.job import Job, JobSet, AstroField
+
 from an.portal.convert import convert
 from an.portal.log import log
 
@@ -125,6 +130,10 @@ def jobstatus(request):
             else:
                 return jobsetstatus(request, jobset)
         else:
+
+            for q in connection.queries:
+                log('query: ' + q['sql'])
+
             return HttpResponse('no job with jobid ' + jobid)
 
     jobowner = (job.user == request.user)
