@@ -40,22 +40,20 @@ int dsmooth2(float *image,
             float sigma,
             float *smooth)
 {
-	int i, j, npix, half, jp, jst, jsto, jnd, joff;
-	float neghalfinvvar, total, scale, dx;
+	int i, j, npix, half, start, end, sample;
+	float neghalfinvvar, total, scale, dx, sum;
 	float* kernel1D;
-
     float* kernel_shifted;
-
-	float *smooth_temp;
+	float* smooth_temp;
 
 	// make the kernel
 	npix = 2 * ((int) ceilf(3. * sigma)) + 1;
 	half = npix / 2;
 	kernel1D =  malloc(npix * sizeof(float));
 	neghalfinvvar = -1.0 / (2.0 * sigma * sigma);
-	for (i = 0;i < npix;i++) {
-	  dx = ((float) i - 0.5 * ((float)npix - 1.));
-	  kernel1D[i] = exp((dx * dx) * neghalfinvvar);
+	for (i=0; i<npix; i++) {
+        dx = ((float) i - 0.5 * ((float)npix - 1.));
+        kernel1D[i] = exp((dx * dx) * neghalfinvvar);
 	}
 
 	// normalize the kernel
@@ -75,39 +73,40 @@ int dsmooth2(float *image,
 	kernel_shifted = kernel1D + half;
 
 	// convolve in x direction, dumping results into smooth_temp
-	for (j = 0; j < ny; j++) {
-        memset(smooth_temp, 0, sizeof(float)*nx);
-        for (i = 0; i < nx; i++) {
+	for (j=0; j<ny; j++) {
+        float* imagerow = image + j*nx;
+        for (i=0; i<nx; i++) {
             /*
-             The outer loop is over OUTPUT pixels; the "sample" loop is over
-             INPUT pixels.
+             The outer loop is over OUTPUT pixels;
+             the "sample" loop is over INPUT pixels.
+
+             We're summing over the input pixels that contribute to the value
+             of the output pixel.
              */
-            int start, end, sample;
             start = i - half;
             start = MAX(start, 0);
             end = i + half;
             end = MIN(end, nx-1);
-
-            for (sample=start; sample<=end; sample++)
-                smooth_temp[i] += image[sample + j*nx] * kernel_shifted[sample - i];
+            sum = 0.0;
+            for (sample=start; sample <= end; sample++)
+                sum += imagerow[sample] * kernel_shifted[sample - i];
+            smooth_temp[i] = sum;
         }
         memcpy(smooth + j*nx, smooth_temp, nx * sizeof(float));
     }
 
 	// convolve in the y direction, dumping results into smooth
-	for (i = 0; i < nx; i++) {
-        memset(smooth_temp, 0, sizeof(float)*ny);
-        for (j = 0; j < ny; j++) {
-            jsto = jst = j - half;
-            if (jst < 0)
-                jst = 0;
-            jnd = j + half;
-            if (jnd > ny - 1)
-                jnd = ny - 1;
-            for (jp = jst; jp <= jnd; jp++){
-                joff = jp - jsto;
-                smooth_temp[jp] += smooth[i + j*nx] * kernel1D[joff];
-            }
+	for (i=0; i<nx; i++) {
+        float* imagecol = smooth + i;
+        for (j=0; j<ny; j++) {
+            start = j - half;
+            start = MAX(start, 0);
+            end = j + half;
+            end = MIN(end, ny-1);
+            sum = 0.0;
+            for (sample=start; sample<=end; sample++)
+                sum += imagecol[sample*nx] * kernel_shifted[sample - j];
+            smooth_temp[j] = sum;
         }
         for (j=0; j<ny; j++)
             smooth[i + j*nx] = smooth_temp[j];
