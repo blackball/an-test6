@@ -1,5 +1,6 @@
 from django.db import models
-import orderby
+
+from an.util import orderby
 import logging
 
 class Image(models.Model):
