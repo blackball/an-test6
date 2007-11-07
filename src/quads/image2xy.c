@@ -39,7 +39,7 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
-static const char* OPTIONS = "hpOo:q8H";
+static const char* OPTIONS = "hOo:q8H";
 
 void printHelp() {
 	fprintf(stderr,
@@ -49,7 +49,6 @@ void printHelp() {
 			"X, Y, FLUX to   fitsname.xy.fits .\n"
 			"\n"
 			"   [-O]  overwrite existing output file.\n"
-			"   [-p]  compute image percentiles.\n"
             "   [-8]  don't use optimization for byte (u8) images.\n"
             "   [-H]  downsample by a factor of 2 before running simplexy.\n"
 			"   [-o <output-filename>]  write XYlist to given filename.\n"
@@ -58,16 +57,6 @@ void printHelp() {
 			"   image2xy 'file.fits[2]'   - process second extension \n"
 			"   image2xy file.fits+2      - same as above \n"
 			"\n");
-}
-
-static int compare_floats(const void* v1, const void* v2) {
-	float f1 = *(float*)v1;
-	float f2 = *(float*)v2;
-	if (f1 < f2)
-		return -1;
-	if (f1 > f2)
-		return 1;
-	return 0;
 }
 
 extern char *optarg;
@@ -87,7 +76,6 @@ int main(int argc, char *argv[]) {
 	float *thedata = NULL;
     unsigned char* theu8data = NULL;
 	float sigma;
-	int percentiles = 0;
 	char* infn;
 	int nhdus,maxper,maxsize,halfbox,hdutype,nimgs;
 	float dpsf,plim,dlim,saddle;
@@ -108,9 +96,6 @@ int main(int argc, char *argv[]) {
         case 'q':
             verbose = FALSE;
             break;
-		case 'p':
-			percentiles = 1;
-			break;
 		case 'O':
 			overwrite = 1;
 			break;
@@ -438,47 +423,6 @@ int main(int argc, char *argv[]) {
 			fits_report_error(stderr, status);
 			assert(!status);
 			exit(-1);
-		}
-
-		if (percentiles) {
-			// the number of pixels around the margin of the image to avoid.
-			int margin = 5;
-			// the maximum number of pixels to sample
-			int NPIX = 10000;
-			int nx, ny, n, np;
-			float* pix;
-			int x, y;
-			int i;
-			int pctls[] = { 0, 25, 50, 75, 95, 100 };
-			nx = naxisn[0];
-			ny = naxisn[1];
-			n = (nx - 2*margin) * (ny - 2*margin);
-			np = MIN(n, NPIX);
-			pix = malloc(np * sizeof(float));
-			if (n < NPIX) {
-				i=0;
-				for (y=margin; y<(ny-margin); y++)
-					for (x=margin; x<(nx-margin); x++) {
-						pix[i] = thedata[y*nx + x];
-						i++;
-					}
-			} else {
-				for (i=0; i<NPIX; i++) {
-					x = margin + (nx - 2*margin) * ( (double)random() / (((double)RAND_MAX)+1.0) );
-					y = margin + (ny - 2*margin) * ( (double)random() / (((double)RAND_MAX)+1.0) );
-					pix[i] = thedata[y*nx + x];
-				}
-			}
-			// just sort it, because I'm lazy.
-			qsort(pix, np, sizeof(float), compare_floats);
-
-			for (i=0; i<(sizeof(pctls)/sizeof(int)); i++) {
-				int j = (int)((pctls[i] * 0.01) * np) - 1;
-				if (j < 0) j = 0;
-				if (j >= np) j = np-1;
-				fprintf(stderr, "percentile%i %g\n", pctls[i], pix[j]);
-			}
- 
 		}
 
 		free(thedata);
