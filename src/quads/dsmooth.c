@@ -31,7 +31,8 @@
  * Smooth an image
  *
  * Mike Blanton
- * 1/2006 */
+ * 1/2006 
+ */
 
 // Optimize version of dsmooth, with a separated Gaussian convolution.
 void dsmooth2(float *image,

@@ -31,6 +31,7 @@
 #include "ioutils.h"
 #include "simplexy.h"
 #include "svn.h"
+#include "dimage.h"
 
 #define MAXNPEAKS 10000
 
@@ -288,11 +289,38 @@ int main(int argc, char *argv[]) {
 		}
 
         if (downsample) {
-            int newW = (naxisn[0] + 1) / 2;
-            int newH = (naxisn[1] + 1) / 2;
+            int W = naxisn[0];
+            int H = naxisn[1];
+            int newW = (W + 1) / 2;
+            int newH = (H + 1) / 2;
+            float sigma = 2.0;
+            int i, j, I, J;
+            //float* temp = malloc(MAX(newW, newH) * sizeof(float));
 
+            // Gaussian smooth in-place.
+            dsmooth2(thedata, naxisn[0], naxisn[1], sigma, thedata);
 
+            // Average in-place.
+            for (j=0; j<newH; j++) {
+                for (i=0; i<newW; i++) {
+                    float sum = 0.0;
+                    int N = 0;
+                    for (J=0; J<2; J++) {
+                        if (j*2 + J >= H)
+                            break;
+                        for (I=0; I<2; I++) {
+                            if (i*2 + I >= W)
+                                break;
+                            sum += thedata[(j*2 + J)*W + (i*2 + I)];
+                            N++;
+                        }
+                    }
+                    thedata[j * newW + i] = sum / (float)N;
+                }
+            }
 
+            naxisn[0] = newW;
+            naxisn[1] = newH;
         }
 
 		x = malloc(maxnpeaks * sizeof(float));
