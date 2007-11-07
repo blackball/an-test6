@@ -83,6 +83,18 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
             field.imgtype = imgtype
         return fullfn
 
+    elif fn == 'getimagesize':
+        infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
+        x = run_pnmfile(infn)
+        if x is None:
+            return HttpResponse('couldn\'t find file size')
+        (w, h, pnmtype) = x
+        log('Type %s, w %i, h %i' % (pnmtype, w, h))
+        if store_imgsize:
+            field.imagew = w
+            field.imageh = h
+        return None
+
     elif fn == 'pgm':
         # run 'pnmfile' on the pnm.
         infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)

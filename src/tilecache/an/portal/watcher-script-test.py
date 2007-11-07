@@ -31,7 +31,6 @@ def bailout(job, reason):
     job.status = 'Failed'
     job.failurereason = reason
     job.save()
-    #sys.exit(-1)
 
 blindlog = 'blind.log'
 
@@ -53,6 +52,7 @@ def handle_job(job):
     log('field file is %s' % field.filename())
 
     jobset = job.jobset
+    jobid = job.jobid
 
     # go to the job directory.
     jobdir = job.get_job_dir()
@@ -73,24 +73,22 @@ def handle_job(job):
     if filetype == 'image':
         log('source extraction...')
         userlog('Doing source extraction...')
+
+        convert(job, field, 'getimagesize', store_imgtype=True, store_imgsize=True)
+        if (field.imagew * field.imageh) > 5000000:  # 5 MPixels
+            userlog('Downsampling your image...')
+            target = 'xyls-half'
+        else:
+            target = 'xyls'
+
         try:
-            log('getting xylist...')
-            xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
+            log('image2xy...')
+            xylist = convert(job, field, target, store_imgtype=True, store_imgsize=True)
             log('xylist is', xylist)
         except FileConversionError,e:
             userlog('Source extraction failed.')
-            errlog = file_get_contents('blind.log')
-            if not errlog.find('Shrink your image'):
-                bailout(job, 'Source extraction failed.')
-                return -1
-
-            userlog('Downsampling your image and trying again...')
-            try:
-                xylist = convert(job, field, 'xyls-half')
-            except FileConversionError,e:
-                userlog('Source extraction failed again.')
-                bailout('Downsampled source extraction failed.')
-                return -1
+            bailout(job, 'Source extraction failed.')
+            return -1
 
         log('created xylist %s' % xylist)
         (lower, upper) = jobset.get_scale_bounds()
