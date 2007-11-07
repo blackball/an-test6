@@ -344,6 +344,11 @@ class Job(models.Model):
     def format_finishtime(self):
         return Job.format_time(self.finishtime)
 
+    def format_starttime_brief(self):
+        return Job.format_time_brief(self.starttime)
+    def format_finishtime_brief(self):
+        return Job.format_time_brief(self.finishtime)
+
     def get_orig_file(self):
         return self.field.filename()
 

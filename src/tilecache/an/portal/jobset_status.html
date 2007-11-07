@@ -1,0 +1,44 @@
+{% extends "portal/base.html" %}
+
+{% block inlinecss %}
+#summarytable { margin-left:auto; margin-right:auto; border-collapse:collapse; border-style:solid; border-width:medium; border-color:black; }
+#summarytable td { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:none solid; border-width:thin; border-color:gray; }
+#summarytable th { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:solid; border-width:thin; border-color:gray; }
+td.c { text-align:center; }
+tr.even td { background-color:#EEE; }
+tr.odd td {}
+.smalllink { font-size:80%; } {#font-variant:small-caps; }#}
+{% endblock inlinecss %}
+
+{% block content %}
+
+<table id="summarytable">
+<tr>
+<th>Job Id</th>
+<th>Status</th>
+<th>Start Time</th>
+<th>Finish Time</th>
+</tr>
+
+{% for job in jobs %}
+<tr class="{% cycle even,odd %}">
+
+<td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
+
+<td class="c">{{ job.status }}
+{% if job.failurereason %}
+: {{ job.failurereason }}
+{% endif %}
+</td>
+
+<td> {{ job.format_starttime_brief }} </td>
+
+<td> {{ job.format_finishtime_brief }} </td>
+
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock content %}
+

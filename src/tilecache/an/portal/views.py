@@ -106,17 +106,17 @@ def getsessionjob(request):
     return get_job(jobid)
 
 def jobsetstatus(request, jobset):
-    res = HttpResponse()
-    res.write('<html><body>\n')
-    res.write('<pre>jobsetstatus: ' + str(jobset) + '</pre>\n')
-    res.write('<ul>\n')
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+
     jobs = jobset.jobs.all()
-    for job in jobs:
-        res.write('<li><a href="%s">%s</a></li>\n' %
-                  (get_status_url(job.jobid), job.jobid))
-    res.write('</ul>\n')
-    res.write('</body></html>\n')
-    return res
+    ctxt = {
+        'jobs' : jobs,
+        'statusurl' : '/job/status/?jobid=',
+        }
+    t = loader.get_template('portal/jobset_status.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
 
 def jobstatus(request):
     if not request.GET:
