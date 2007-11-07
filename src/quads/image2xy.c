@@ -38,7 +38,7 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
-static const char* OPTIONS = "hpOo:q8";
+static const char* OPTIONS = "hpOo:q8H";
 
 void printHelp() {
 	fprintf(stderr,
@@ -50,6 +50,7 @@ void printHelp() {
 			"   [-O]  overwrite existing output file.\n"
 			"   [-p]  compute image percentiles.\n"
             "   [-8]  don't use optimization for byte (u8) images.\n"
+            "   [-H]  downsample by a factor of 2 before running simplexy.\n"
 			"   [-o <output-filename>]  write XYlist to given filename.\n"
 			"\n"
 			"   image2xy 'file.fits[1]'   - process first extension.\n"
@@ -93,9 +94,13 @@ int main(int argc, char *argv[]) {
     bool verbose = TRUE;
     char* str;
     bool do_u8 = TRUE;
+    bool downsample = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'H':
+            downsample = TRUE;
+            break;
         case '8':
             do_u8 = FALSE;
             break;
@@ -255,7 +260,7 @@ int main(int argc, char *argv[]) {
 		for (a=0; a<naxis; a++)
 			fpixel[a] = 1;
 
-        if (bitpix == 8 && do_u8) {
+        if (bitpix == 8 && do_u8 && !downsample) {
             // u8 image.
             theu8data = malloc(naxisn[0] * naxisn[1]);
             if (!theu8data) {
@@ -275,11 +280,20 @@ int main(int argc, char *argv[]) {
         }
 
 		free(fpixel);
+
 		if (status) {
 			fits_report_error(stderr, status);
 			assert(!status);
 			exit(-1);
 		}
+
+        if (downsample) {
+            int newW = (naxisn[0] + 1) / 2;
+            int newH = (naxisn[1] + 1) / 2;
+
+
+
+        }
 
 		x = malloc(maxnpeaks * sizeof(float));
 		y = malloc(maxnpeaks * sizeof(float));
@@ -289,12 +303,12 @@ int main(int argc, char *argv[]) {
 		}
 		flux = malloc(maxnpeaks * sizeof(float));
 
-        if (bitpix == 8 && do_u8) {
+        if (theu8data) {
             simplexy_u8(theu8data, naxisn[0], naxisn[1],
                         dpsf, plim, dlim, saddle, maxper, maxnpeaks,
                         maxsize, halfbox, &sigma, x, y, flux, &npeaks,
                         (verbose?1:0));
-        } else {
+        } else if (thedata) {
             simplexy(thedata, naxisn[0], naxisn[1],
                      dpsf, plim, dlim, saddle, maxper, maxnpeaks,
                      maxsize, halfbox, &sigma, x, y, flux, &npeaks,

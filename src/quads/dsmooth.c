@@ -71,7 +71,6 @@ int dsmooth2(float *image,
 	
 	for (i = 0;i < nx*ny; i++){
 	  smooth_temp[i] = 0.;
-	  smooth[i] = 0.;
 	}
 
 	// convolve in one direction, dumping results into smooth_temp
@@ -88,6 +87,10 @@ int dsmooth2(float *image,
 	      smooth_temp[i + jp*nx] += image[i + j * nx] * kernel1D[joff];
 	    }
 	  }
+	}
+
+	for (i = 0;i < nx*ny; i++){
+	  smooth[i] = 0.;
 	}
 
 	// convolve in the other direction, dumping results into smooth
@@ -110,7 +113,7 @@ int dsmooth2(float *image,
 	FREEVEC(kernel1D);
 
 	return (1);
-} /* end photfrac */
+} /* end dsmooth2 */
 
 
 // Original version of dsmooth, non-separated kernel.
