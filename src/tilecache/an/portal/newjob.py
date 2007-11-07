@@ -232,8 +232,6 @@ class FullForm(forms.Form):
 
 def submit_jobset(request, jobset):
     log('submit_jobset(): JobSet is: ' + str(jobset))
-    #os.umask(07)
-    #jobset.create_job_dir()
     jobset.set_submittime_now()
     jobset.status = 'Queued'
     jobset.save()
@@ -248,13 +246,6 @@ def newurl(request):
         form = SimpleURLForm(request.POST)
         if form.is_valid():
             url = form.cleaned_data['url']
-            #field = AstroField(user = request.user,
-            #                   filetype = 'image',
-            #                   datasrc = 'url',
-            #                   url = url)
-            #field.save()
-            #job = Job(user = request.user,
-            #          field = field)
             jobset = JobSet(user = request.user,
                             filetype = 'image',
                             datasrc = 'url',
@@ -280,22 +271,9 @@ def newfile(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
 
-    #log('newfile()')
-    #printvals(request)
-
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
-            #field = AstroField(user = request.user,
-            #filetype = 'image',
-            #                   datasrc = 'file',
-            #                   uploaded = form.cleaned_data['upload_id'],
-            #                   )
-            #field.save()
-            #job = Job(user = request.user,
-            #          field = field,
-            #          )
-            #log('newfile: submitting job ' + str(job))
             jobset = JobSet(user = request.user,
                             filetype = 'image',
                             datasrc = 'file',
@@ -338,36 +316,6 @@ def newlong(request):
             uploaded = None
         elif form.getclean('filetype') == 'file':
             url = None
-
-        #field = AstroField(
-        #    user = request.user,
-        #    datasrc = form.getclean('datasrc'),
-        #    filetype = form.getclean('filetype'),
-        #    uploaded = uploaded,
-        #    url = url,
-        #    xcol = form.getclean('xcol'),
-        #    ycol = form.getclean('ycol'),
-        #    )
-        #field.save()
-
-        #job = Job(user = request.user,
-        #          field = field,
-        #          parity = form.getclean('parity'),
-        #          scaleunits = form.getclean('scaleunits'),
-        #          scaletype = form.getclean('scaletype'),
-        #          scalelower = form.getclean('scalelower'),
-        #          scaleupper = form.getclean('scaleupper'),
-        #          scaleest = form.getclean('scaleest'),
-        #          scaleerr = form.getclean('scaleerr'),
-        #          tweak = form.getclean('tweak'),
-        #          tweakorder = form.getclean('tweakorder'),
-        #          )
-
-        #log('Form is valid.')
-        #for k,v in form.cleaned_data.items():
-        #    log('  %s = %s' % (str(k), str(v)))
-
-        # log('Job: ' + str(job))
 
         jobset = JobSet(
             user = request.user,
