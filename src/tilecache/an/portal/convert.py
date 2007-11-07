@@ -143,9 +143,10 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'xyls-half':
-        infn = convert(job, field, 'fitsimg-half', store_imgtype, store_imgsize)
+        #infn = convert(job, field, 'fitsimg-half', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'fitsimg', store_imgtype, store_imgsize)
         sxylog = 'blind.log'
-        cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
+        cmd = 'image2xy -H -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
         return fullfn
 

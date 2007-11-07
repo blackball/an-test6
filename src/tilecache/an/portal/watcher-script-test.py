@@ -31,7 +31,7 @@ def bailout(job, reason):
     job.status = 'Failed'
     job.failurereason = reason
     job.save()
-    sys.exit(-1)
+    #sys.exit(-1)
 
 blindlog = 'blind.log'
 
@@ -80,10 +80,18 @@ def handle_job(job):
         except FileConversionError,e:
             userlog('Source extraction failed.')
             errlog = file_get_contents('blind.log')
-            #if errlog.find('Shrink your image'):
-            #userlog('Downsampling your image and trying again...')
-            #xylist = convert(job, 'xyls-half')
-            bailout(job, 'Source extraction failed.')
+            if not errlog.find('Shrink your image'):
+                bailout(job, 'Source extraction failed.')
+                return -1
+
+            userlog('Downsampling your image and trying again...')
+            try:
+                xylist = convert(job, field, 'xyls-half')
+            except FileConversionError,e:
+                userlog('Source extraction failed again.')
+                bailout('Downsampled source extraction failed.')
+                return -1
+
         log('created xylist %s' % xylist)
         (lower, upper) = jobset.get_scale_bounds()
 
@@ -104,15 +112,19 @@ def handle_job(job):
             log('out: ' + out)
             log('err: ' + err)
             bailout(job, 'Creating axy file failed: ' + err)
+            return -1
 
         log('created file ' + axypath)
 
     elif filetype == 'fits':
         bailout(job, 'fits tables not implemented')
+        return -1
     elif filetype == 'text':
         bailout(job, 'text files not implemented')
+        return -1
     else:
         bailout(job, 'no filetype')
+        return -1
 
     field.save()
 
@@ -137,11 +149,13 @@ def handle_job(job):
 
     if not os.WIFEXITED(w):
         bailout(job, 'Solver didn\'t exit normally.')
+        return -1
 
     rtn = os.WEXITSTATUS(w)
     if rtn:
         log('Solver failed with return value %i' % rtn)
         bailout(job, 'Solver failed.')
+        return -1
 
     log('Command completed successfully.')
 
@@ -153,21 +167,13 @@ def handle_job(job):
     else:
         job.status = 'Failed'
         job.failurereason = 'Did not solve.'
-
     job.save()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print 'Usage: %s <ssh-config> <input-file>' % sys.argv[0]
-        sys.exit(-1)
-
-    sshconfig = sys.argv[1]
-    joblink = sys.argv[2]
-
+def main(sshconfig, joblink):
     if not os.path.islink(joblink):
         log('Expected second argument to be a symlink; "%s" isn\'t.' % joblink)
-        sys.exit(-1)
+        return -1
 
     # jobfile should be a symlink; get the destination.
     jobdir = os.readlink(joblink)
@@ -181,8 +187,7 @@ if __name__ == '__main__':
     # if it's a Job...
     jobs = Job.objects.all().filter(jobid = jobid)
     if len(jobs):
-        handle_job(jobs[0])
-        sys.exit(0)
+        return handle_job(jobs[0])
 
     # else it's a JobSet...
     jobsets = JobSet.objects.all().filter(jobid=jobid)
@@ -212,6 +217,7 @@ if __name__ == '__main__':
         os.rename(temp, origfile)
     else:
         bailout(job, 'no datasrc')
+        return -1
 
     # Handle compressed files.
     uncomp = convert(jobset, field, 'uncomp-js')
@@ -228,6 +234,7 @@ if __name__ == '__main__':
         if rtn:
             userlog('Failed to un-tar file:\n' + err)
             bailout(jobset, 'failed to extract tar file')
+            return -1
         fns = out.strip('\n').split('\n')
         validpaths = []
         for fn in fns:
@@ -247,6 +254,7 @@ if __name__ == '__main__':
         if len(validpaths) == 0:
             userlog('Tar file contains no regular files.')
             bailout(jobset, "tar file contains no regular files.")
+            return -1
 
         log('Got %i paths.' % len(validpaths))
 
@@ -267,10 +275,13 @@ if __name__ == '__main__':
                     jobset = jobset,
                     field = field,
                     )
+                job.status = 'Queued'
                 job.save()
                 # One file in tarball: convert straight to a Job.
                 log('Single-file tarball.')
-                handle_job(job)
+                rtn = handle_job(job)
+                if rtn:
+                    return rtn
                 break
 
             job = Job(jobset = jobset,
@@ -289,14 +300,23 @@ if __name__ == '__main__':
             jobset = jobset,
             field = field,
             )
+        job.status = 'Queued'
         job.save()
-        handle_job(job)
+        rtn = handle_job(job)
+        if rtn:
+            return rtn
 
     # remove the symlink to indicate that we've successfully finished this
     # job.
+    os.unlink(joblink)
+    return 0
 
-    
 
-    sys.exit(0)
-
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print 'Usage: %s <ssh-config> <input-file>' % sys.argv[0]
+        sys.exit(-1)
+    sshconfig = sys.argv[1]
+    joblink = sys.argv[2]
+    sys.exit(main(sshconfig, joblink))
 
