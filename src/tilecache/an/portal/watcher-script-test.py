@@ -194,7 +194,7 @@ if __name__ == '__main__':
                        xcol = jobset.xcol,
                        ycol = jobset.ycol,
                        )
-    # ??
+    # save to get "id" field set to a value
     field.save()
     origfile = field.filename()
 
@@ -212,7 +212,7 @@ if __name__ == '__main__':
         bailout(job, 'no datasrc')
 
     # Handle compressed files.
-    uncomp = convert(jobset, field, 'uncomp')
+    uncomp = convert(jobset, field, 'uncomp-js')
 
     # Handle tar files: add a JobSet, create new Jobs.
     job = None
@@ -261,12 +261,12 @@ if __name__ == '__main__':
 
             if len(validpaths) == 1:
                 job = Job(
-                    jobid = Job.generate_jobid(),
-                    #jobid = jobset.jobid,
+                    #jobid = Job.generate_jobid(),
+                    jobid = jobset.jobid,
                     jobset = jobset,
                     field = field,
                     )
-                job.create_job_dir()
+                #job.create_job_dir()
                 job.save()
                 # One file in tarball: convert straight to a Job.
                 log('Single-file tarball.')
@@ -279,7 +279,6 @@ if __name__ == '__main__':
                       )
             os.umask(07)
             job.create_job_dir()
-            #job.set_submittime_now()
             job.status = 'Queued'
             job.save()
             # HACK - duplicate code from newjob.submit_jobset()
@@ -291,12 +290,12 @@ if __name__ == '__main__':
     else:
         # Not a tarball.
         job = Job(
-            #jobid = jobset.jobid,
-            jobid = Job.generate_jobid(),
+            jobid = jobset.jobid,
+            #jobid = Job.generate_jobid(),
             jobset = jobset,
             field = field,
             )
-        job.create_job_dir()
+        #job.create_job_dir()
         job.save()
         handle_job(job)
 

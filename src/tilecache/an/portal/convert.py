@@ -63,7 +63,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
     #    field = job.field
 
-    if fn == 'uncomp':
+    if fn == 'uncomp' or fn == 'uncomp-js':
         #orig = job.get_orig_file()
         orig = field.filename()
         log('convert uncomp: Field file is', orig)
