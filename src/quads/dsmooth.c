@@ -40,9 +40,11 @@ int dsmooth2(float *image,
             float sigma,
             float *smooth)
 {
-	int i, j, npix, half, ip, jp, ist, jst, isto, jsto, ind, jnd, ioff, joff;
+	int i, j, npix, half, jp, jst, jsto, jnd, joff;
 	float neghalfinvvar, total, scale, dx;
 	float* kernel1D;
+
+    float* kernel_shifted;
 
 	float *smooth_temp;
 
@@ -66,30 +68,28 @@ int dsmooth2(float *image,
 
 	smooth_temp = malloc(sizeof(float) * MAX(nx, ny));
 
+    // Here's some trickery: we set "kernel_shifted" to be an array where:
+    //   kernel_shifted[0] is the middle of the array,
+    //   kernel_shifted[-half] is the left edge (ie the first sample),
+    //   kernel_shifted[half] is the right edge (last sample)
+	kernel_shifted = kernel1D + half;
+
 	// convolve in x direction, dumping results into smooth_temp
 	for (j = 0; j < ny; j++) {
         memset(smooth_temp, 0, sizeof(float)*nx);
         for (i = 0; i < nx; i++) {
-            // This convolution is laid out in a funny way:
-            // the outer loop iterates over input pixels, and the
-            // "ip" loop below adds the contribution from each input
-            // pixel into the output pixels.
+            /*
+             The outer loop is over OUTPUT pixels; the "sample" loop is over
+             INPUT pixels.
+             */
+            int start, end, sample;
+            start = i - half;
+            start = MAX(start, 0);
+            end = i + half;
+            end = MIN(end, nx-1);
 
-            // "isto" is the lower limit of the influence of this input pixel
-            // "ist" is "isto" but clamped to the edge of the image.
-            isto = ist = i - half;
-            if (ist < 0)
-                ist = 0;
-            // "ind" is the upper limit of the influence of this input pixel,
-            // clamped to the edge of the image.
-            ind = i + half;
-            if (ind > nx - 1)
-                ind = nx - 1;
-            
-            for (ip = ist; ip <= ind; ip++) {
-                ioff = ip - isto;
-                smooth_temp[ip] += image[i + j * nx] * kernel1D[ioff];
-            }
+            for (sample=start; sample<=end; sample++)
+                smooth_temp[i] += image[sample + j*nx] * kernel_shifted[sample - i];
         }
         memcpy(smooth + j*nx, smooth_temp, nx * sizeof(float));
     }
