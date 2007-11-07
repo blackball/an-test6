@@ -109,7 +109,7 @@ def getsessionjob(request):
     return get_job(jobid)
 
 def jobsetstatus(request, jobset):
-    return HttpResponse('jobsetstatus: ' + str(jobset))
+    return HttpResponse('<pre>jobsetstatus: ' + str(jobset) + '</pre>')
 
 def jobstatus(request):
     if not request.GET:
@@ -124,9 +124,12 @@ def jobstatus(request):
         log('found %i jobsets.' % len(jobsets))
         if len(jobsets):
             jobset = jobsets[0]
-            jobs = jobset.jobs()
+            jobs = jobset.jobs.all()
             if len(jobs) == 1:
                 job = jobs[0]
+                jobid = job.jobid
+                # redirect?
+                return HttpResponseRedirect(get_status_url(jobid))
             else:
                 return jobsetstatus(request, jobset)
         else:
@@ -136,13 +139,14 @@ def jobstatus(request):
 
             return HttpResponse('no job with jobid ' + jobid)
 
-    jobowner = (job.user == request.user)
+    jobowner = (job.jobset.user == request.user)
     anonymous = job.allowanonymous()
 
     if not (jobowner or anonymous):
         return HttpResponse('The owner of this job (' + job.user.username + ') has not granted public access.')
 
     field = job.field
+    jobset = job.jobset
 
     log('jobstatus: Job is: ' + str(job))
 
@@ -150,15 +154,15 @@ def jobstatus(request):
         'jobid' : job.jobid,
         'jobstatus' : job.status,
         'jobsolved' : job.solved,
-        'jobsubmittime' : job.format_submittime(),
+        'jobsubmittime' : jobset.format_submittime(),
         'jobstarttime' : job.format_starttime(),
         'jobfinishtime' : job.format_finishtime(),
         'logurl' : get_url(job, 'blind.log'),
         'job' : job,
-        'joburl' : (field.datasrc == 'url') and field.url or None,
-        'jobfile' : (field.datasrc == 'file') and field.uploaded.userfilename or None,
-        'jobscale' : job.friendly_scale(),
-        'jobparity' : job.friendly_parity(),
+        'joburl' : (jobset.datasrc == 'url') and jobset.url or None,
+        'jobfile' : (jobset.datasrc == 'file') and jobset.uploaded.userfilename or None,
+        'jobscale' : jobset.friendly_scale(),
+        'jobparity' : jobset.friendly_parity(),
         'sources' : get_url(job, 'sources'),
         'sources_big' : get_url(job, 'sources-big'),
         'jobowner' : jobowner,
@@ -168,7 +172,7 @@ def jobstatus(request):
 
 
     if job.solved:
-        wcsinfofn = convert(job, 'wcsinfo', store_imgtype=True, store_imgsize=True)
+        wcsinfofn = convert(job, job.field, 'wcsinfo', store_imgtype=True, store_imgsize=True)
         f = open(wcsinfofn)
         wcsinfotxt = f.read()
         f.close()
@@ -193,7 +197,7 @@ def jobstatus(request):
 
 
 
-        objsfn = convert(job, 'objsinfield', store_imgtype=True, store_imgsize=True)
+        objsfn = convert(job, job.field, 'objsinfield', store_imgtype=True, store_imgsize=True)
         f = open(objsfn)
         objtxt = f.read()
         f.close()
@@ -238,7 +242,7 @@ def jobstatus(request):
                           url + largestyle + urlargs])
 
         # HACK
-        fn = convert(job, 'fullsizepng')
+        fn = convert(job, job.field, 'fullsizepng')
         url = (gmaps_config.gmaps_url +
                ('?zoom=%i&ra=%.3f&dec=%.3f&userimage=%s' %
                 (int(wcsinfo['merczoom']), float(wcsinfo['ra_center']),
@@ -298,7 +302,7 @@ def getfile(request):
 
     res = HttpResponse()
     if f in pngimages:
-        fn = convert(job, f)
+        fn = convert(job, job.field, f)
         res['Content-Type'] = 'image/png'
         res['Content-Length'] = file_size(fn)
         f = open(fn)

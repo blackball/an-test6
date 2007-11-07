@@ -51,7 +51,7 @@ class AstroField(models.Model):
     displayh = models.PositiveIntegerField(editable=False, null=True)
 
     def __str__(self):
-        s = '<Field ' + self.id
+        s = '<Field ' + str(self.id)
         #, datasrc %s' , self.datasrc)
         #if self.filetype == 'image' and self.imgtype:
         if self.imgtype:
@@ -85,64 +85,9 @@ class AstroField(models.Model):
 
 
 
-class JobCommon(models.Model):
-    #status_CHOICES = (
-    #    ('not-submitted', 'Submission failed'),
-    #    ('queued', 'Queued'),
-    #    ('started', 'Started'),
-    #    ('solved', 'Solved'),
-    #    ('failed', 'Failed')
-    #    )
 
-    jobid = models.CharField(max_length=32, unique=True, editable=False,
-                             primary_key=True)
-
-    #
-    status = models.CharField(max_length=16,
-                              #choices=status_CHOICES,
-                              editable=False)
-    failurereason = models.CharField(max_length=256, editable=False)
-
-    jobdir = None
-
-    def __init__(self, *args, **kwargs):
-        super(JobCommon, self).__init__(*args, **kwargs)
-        self.jobdir = self.get_job_dir()
-
-    def get_filename(self, fn):
-        return os.path.join(self.get_job_dir(), fn)
-
-    def get_relative_filename(self, fn):
-        return os.path.join(self.get_relative_job_dir(), fn)
-
-    def get_job_dir(self):
-        return os.path.join(config.jobdir, self.get_relative_job_dir())
-
-    def get_relative_job_dir(self):
-        return os.path.join(*self.jobid.split('-'))
-
-    def create_job_dir(self):
-        d = self.get_job_dir()
-        # HACK - more careful here...
-        if os.path.exists(d):
-            return
-        mode = 0770
-        os.makedirs(d, mode)
-        #os.chmod(d, 0770)
-        #os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
-
-    def generate_jobid():
-        today = datetime.date.today()
-        jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
-                                    today.month, random.randint(0, 99999999))
-        return jobid
-    generate_jobid = staticmethod(generate_jobid)
-
-
-
-
-#class JobSet(models.Model):
-class JobSet(JobCommon):
+class JobSet(models.Model):
+#class JobSet(JobCommon):
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
         ('arcminwidth' , 'width of the field (in arcminutes)'), 
@@ -172,6 +117,23 @@ class JobSet(JobCommon):
         ('fits', 'FITS table of source locations'),
         ('text', 'Text list of source locations'),
         )
+
+    jobid = models.CharField(max_length=32, unique=True, editable=False,
+                             primary_key=True)
+
+    #status_CHOICES = (
+    #    ('not-submitted', 'Submission failed'),
+    #    ('queued', 'Queued'),
+    #    ('started', 'Started'),
+    #    ('solved', 'Solved'),
+    #    ('failed', 'Failed')
+    #    )
+
+    #
+    status = models.CharField(max_length=16,
+                              #choices=status_CHOICES,
+                              editable=False)
+    failurereason = models.CharField(max_length=256, editable=False)
 
     user = models.ForeignKey(User, editable=False)
 
@@ -220,7 +182,7 @@ class JobSet(JobCommon):
             if v is None:
                 del kwargs[k]
         if not 'jobid' in kwargs:
-            kwargs['jobid'] = JobCommon.generate_jobid()
+            kwargs['jobid'] = Job.generate_jobid()
         #myargs = [ 'url' ]
         #for a in myargs:
         #    if a in kwargs:
@@ -248,6 +210,18 @@ class JobSet(JobCommon):
             s += ', no tweak'
         s += '>'
         return s
+
+    def get_job_dir(self):
+        return Job.s_get_job_dir(self.jobid)
+
+    def get_relative_job_dir(self):
+        return Job.get_relative_job_dir(self.jobid)
+
+    def create_job_dir(self):
+        Job.create_dir_for_jobid(self.jobid)
+
+    def get_filename(self, fn):
+        return Job.get_job_filename(self.jobid, fn)
 
     def get_url(self):
         if self.datasrc == 'url':
@@ -299,7 +273,17 @@ class JobSet(JobCommon):
         return Job.format_time_brief(self.submittime)
 
 
-class Job(JobCommon):
+#class Job(JobCommon):
+class Job(models.Model):
+    jobid = models.CharField(max_length=32, unique=True, editable=False,
+                             primary_key=True)
+
+    #
+    status = models.CharField(max_length=16,
+                              #choices=status_CHOICES,
+                              editable=False)
+    failurereason = models.CharField(max_length=256, editable=False)
+
     jobset = models.ForeignKey(JobSet, related_name='jobs',
                                null=True)
 
@@ -325,12 +309,21 @@ class Job(JobCommon):
 
     def __str__(self):
         s = '<Job %s, ' % self.jobid
-        s += self.jobset
+        s += str(self.jobset)
         if self.status:
             s += ', %s' % self.status
         s += ' ' + str(self.field)
         s += '>'
         return s
+
+    def get_job_dir(self):
+        return Job.s_get_job_dir(self.jobid)
+
+    def get_relative_job_dir(self):
+        return Job.get_relative_job_dir(self.jobid)
+
+    def create_job_dir(self):
+        Job.create_dir_for_jobid(self.jobid)
 
     def allowanonymous(self, prefs=None):
         if self.allowanon:
@@ -354,6 +347,12 @@ class Job(JobCommon):
     def get_orig_file(self):
         return self.field.filename()
 
+    def get_filename(self, fn):
+        return Job.get_job_filename(self.jobid, fn)
+
+    def get_relative_filename(self, fn):
+        return os.path.join(self.get_relative_job_dir(), fn)
+
     def timenow():
         return datetime.datetime.utcnow()
     timenow = staticmethod(timenow)
@@ -369,4 +368,35 @@ class Job(JobCommon):
             return None
         return t.strftime('%Y-%m-%d %H:%M')
     format_time_brief = staticmethod(format_time_brief)
+
+    def create_dir_for_jobid(jobid):
+        d = Job.s_get_job_dir(jobid)
+        # HACK - more careful here...
+        if os.path.exists(d):
+            return
+        mode = 0770
+        os.makedirs(d, mode)
+        #os.chmod(d, 0770)
+        #os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
+    create_dir_for_jobid = staticmethod(create_dir_for_jobid)
+
+    def s_get_job_dir(jobid):
+        return os.path.join(config.jobdir, Job.get_relative_job_dir(jobid))
+    s_get_job_dir = staticmethod(s_get_job_dir)
+    
+    def get_job_filename(jobid, fn):
+        return os.path.join(Job.s_get_job_dir(jobid), fn)
+    get_job_filename = staticmethod(get_job_filename)
+
+    def get_relative_job_dir(jobid):
+        return os.path.join(*jobid.split('-'))
+    get_relative_job_dir = staticmethod(get_relative_job_dir)
+
+    def generate_jobid():
+        today = datetime.date.today()
+        jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
+                                    today.month, random.randint(0, 99999999))
+        return jobid
+    generate_jobid = staticmethod(generate_jobid)
+
 

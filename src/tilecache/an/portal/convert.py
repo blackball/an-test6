@@ -52,18 +52,21 @@ def is_tarball(fn):
     log('file type: "%s"' % typeinfo)
     return typeinfo == 'POSIX tar archive'
     
-def convert(job, fn, store_imgtype=False, store_imgsize=False):
+def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir
     basename = os.path.join(tempdir, job.jobid + '-')
+    #if isinstance(job, JobSet):
+    #    basename += 'js-'
     fullfn = basename + fn
     if os.path.exists(fullfn):
         return fullfn
-
-    field = job.field
+    #    field = job.field
 
     if fn == 'uncomp':
-        orig = job.get_orig_file()
+        #orig = job.get_orig_file()
+        orig = field.filename()
+        log('convert uncomp: Field file is', orig)
         comp = image2pnm.uncompress_file(orig, fullfn)
         if comp:
             log('Input file compression: %s' % comp)
@@ -72,7 +75,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'pnm':
-        infn = convert(job, 'uncomp', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
         #andir = gmaps_config.basedir + 'quads/'
         log('Converting %s to %s...\n' % (infn, fullfn))
         (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, None, False)
@@ -86,7 +89,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'pgm':
         # run 'pnmfile' on the pnm.
-        infn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         x = run_pnmfile(infn)
         if x is None:
             return HttpResponse('couldn\'t find file size')
@@ -102,7 +105,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'ppm':
-        imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         x = run_pnmfile(imgfn)
         if x is None:
             return HttpResponse('pnmfile failed')
@@ -116,7 +119,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'fitsimg':
         if store_imgtype:
             # check the uncompressed input image type...
-            infn = convert(job, 'uncomp', store_imgtype, store_imgsize)
+            infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
             (field.imgtype, errmsg) = image2pnm.get_image_type(infn)
             if errmsg:
                 log(errmsg)
@@ -131,13 +134,13 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
             return fullfn
 
         # else, convert to pgm and run pnm2fits.
-        infn = convert(job, 'pgm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pgm', store_imgtype, store_imgsize)
         cmd = 'pnmtofits %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'xyls':
-        infn = convert(job, 'fitsimg', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'fitsimg', store_imgtype, store_imgsize)
         #sxylog = job.get_filename('simplexy.out')
         #sxyerr = job.get_filename('simplexy.err')
         sxylog = 'blind.log'
@@ -147,7 +150,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'xyls-half':
-        infn = convert(job, 'fitsimg-half', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'fitsimg-half', store_imgtype, store_imgsize)
         sxylog = 'blind.log'
         cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
@@ -169,7 +172,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         fullfn = job.get_filename('fullsize.png')
         if os.path.exists(fullfn):
             return fullfn
-        infn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         cmd = 'pnmtopng %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
@@ -185,7 +188,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'pnm-small':
-        imgfn = convert(job, 'pnm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         if not field.displayscale:
             w = field.imagew
             h = field.imageh
@@ -201,7 +204,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'ppm-small':
-        imgfn = convert(job, 'pnm-small', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'pnm-small', store_imgtype, store_imgsize)
         x = run_pnmfile(imgfn)
         if x is None:
             return HttpResponse('pnmfile failed')
@@ -213,7 +216,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'annotation':
-        imgfn = convert(job, 'ppm-small', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/field.displayscale, imgfn))
@@ -221,7 +224,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'annotation-big':
-        imgfn = convert(job, 'ppm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s' %
                (wcsfn, fullfn, imgfn))
@@ -229,7 +232,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'sources':
-        imgfn = convert(job, 'ppm-small', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
         xyls = job.get_filename('job.axy')
         scale = 1.0 / float(field.displayscale)
         commonargs = ('-i %s -x %g -y %g -w 2 -S %g -C red' %
@@ -242,7 +245,7 @@ def convert(job, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'sources-big':
-        imgfn = convert(job, 'ppm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
         xyls = job.get_filename('job.axy')
         commonargs = ('-i %s -x %g -y %g -w 2 -C red' %
                       (xyls, 1, 1))
