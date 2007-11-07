@@ -19,7 +19,7 @@ from django.template import Context, RequestContext, loader
 import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
-from an.portal.job import Job, AstroField
+from an.portal.job import Job, JobSet, AstroField
 from an.portal.convert import convert
 from an.portal.log import log
 
@@ -82,14 +82,15 @@ def logout(request):
     auth.logout(request)
     return HttpResponseRedirect('/login')
 
-def get_status_url(job):
-    return '/job/status/?jobid=' + job.jobid
+def get_status_url(jobid):
+    return '/job/status/?jobid=' + jobid
 
 def get_job(jobid):
-    jobset = Job.objects.all().filter(jobid=jobid)
-    if len(jobset) != 1:
-        log('Found %i jobs, not 1' % len(jobset))
-    job = jobset[0]
+    jobs = Job.objects.all().filter(jobid=jobid)
+    if len(jobs) != 1:
+        log('Found %i jobs, not 1' % len(jobs))
+        return None
+    job = jobs[0]
     return job
 
 def get_url(job, fn):
@@ -102,15 +103,29 @@ def getsessionjob(request):
     jobid = request.session['jobid']
     return get_job(jobid)
 
+def jobsetstatus(request, jobset):
+    return HttpResponse('jobsetstatus: ' + str(jobset))
+
 def jobstatus(request):
     if not request.GET:
         return HttpResponse('no GET')
     if not 'jobid' in request.GET:
         return HttpResponse('no jobid')
     jobid = request.GET['jobid']
+
     job = get_job(jobid)
     if not job:
-        return HttpResponse('no such job')
+        jobsets = JobSet.objects.all().filter(jobid=jobid)
+        log('found %i jobsets.' % len(jobsets))
+        if len(jobsets):
+            jobset = jobsets[0]
+            jobs = jobset.jobs()
+            if len(jobs) == 1:
+                job = jobs[0]
+            else:
+                return jobsetstatus(request, jobset)
+        else:
+            return HttpResponse('no job with jobid ' + jobid)
 
     jobowner = (job.user == request.user)
     anonymous = job.allowanonymous()
@@ -357,8 +372,22 @@ def summary(request):
         return HttpResponseRedirect('/login')
 
     prefs = UserPreferences.for_user(request.user)
-    jobs = Job.objects.all().filter(user = request.user)
+    #jobs = Job.objects.all().filter(user = request.user)
     #fields = AstroField.objects.all().filter(user = request.user)
+
+    jobsets = JobSet.objects.all() #.filter(user=request.user)
+    jobs = []
+    for js in jobsets:
+        if js.user == request.user:
+            jobs += js.jobs
+
+    # HACK - why the hell doesn't this filter work?
+    #jobsets = JobSet.objects.all().filter(user=request.user)
+    #jobs = []
+    #for js in jobsets:
+    #    jobs += js.jobs
+
+    #jobs = Job.objects.all().filter(jobset.user = request.user)
 
     for job in jobs:
         log('Job ', job, 'allow anon?', job.allowanonymous(prefs))

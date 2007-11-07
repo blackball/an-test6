@@ -15,9 +15,10 @@ from an.upload.views  import UploadIdField
 
 from an import gmaps_config
 
-from an.portal.job import Job, AstroField
+#from an.portal.job import Job, JobSet, AstroField
+from an.portal.job import JobSet
+#, AstroField
 from an.portal.log import log
-
 from an.portal.views import printvals, get_status_url
 
 ftpurl_re = re.compile(
@@ -57,14 +58,14 @@ class SimpleFancyFileForm(forms.Form):
     upload_id = UploadIdField(widget=forms.HiddenInput())
 
 class FullForm(forms.Form):
-
-    datasrc = forms.ChoiceField(choices=AstroField.datasrc_CHOICES,
+    
+    datasrc = forms.ChoiceField(choices=JobSet.datasrc_CHOICES,
                                 initial='url',
                                 widget=forms.RadioSelect(
         attrs={'id':'datasrc',
                'onclick':'datasourceChanged()'}))
 
-    filetype = forms.ChoiceField(choices=AstroField.filetype_CHOICES,
+    filetype = forms.ChoiceField(choices=JobSet.filetype_CHOICES,
                                  initial='image',
                                  widget=forms.Select(
         attrs={'onchange':'filetypeChanged()',
@@ -73,17 +74,17 @@ class FullForm(forms.Form):
     upload_id = UploadIdField(widget=forms.HiddenInput(),
                               required=False)
 
-    scaleunits = forms.ChoiceField(choices=Job.scaleunits_CHOICES,
-                                   initial=Job.scaleunits_default,
+    scaleunits = forms.ChoiceField(choices=JobSet.scaleunits_CHOICES,
+                                   initial=JobSet.scaleunits_default,
                                    widget=forms.Select(
         attrs={'onchange':'unitsChanged()',
                'onkeyup':'unitsChanged()'}))
-    scaletype = forms.ChoiceField(choices=Job.scaletype_CHOICES,
+    scaletype = forms.ChoiceField(choices=JobSet.scaletype_CHOICES,
                                   widget=forms.RadioSelect(
         attrs={'id':'scaletype',
                'onclick':'scalechanged()'}),
                                   initial='ul')
-    parity = forms.ChoiceField(choices=Job.parity_CHOICES,
+    parity = forms.ChoiceField(choices=JobSet.parity_CHOICES,
                                initial=2)
     scalelower = forms.DecimalField(widget=forms.TextInput(
         attrs={'onfocus':'setFsUl()',
@@ -105,12 +106,14 @@ class FullForm(forms.Form):
                'onkeyup':'scalechanged()',
                'size':'5',
                }), required=False, min_value=0, max_value=100)
-    file = forms.FileField(widget=forms.FileInput(
-        attrs={'size':'40',
-               'onfocus':'setDatasourceFile()',
-               'onclick':'setDatasourceFile()',
-               }),
-                           required=False)
+
+    #file = forms.FileField(widget=forms.FileInput(
+    #    attrs={'size':'40',
+    #           'onfocus':'setDatasourceFile()',
+    #           'onclick':'setDatasourceFile()',
+    #           }),
+    #                       required=False)
+
     url = ForgivingURLField(initial='http://',
                             widget=forms.TextInput(
         attrs={'size':'50',
@@ -239,18 +242,17 @@ class FullForm(forms.Form):
 
         return self.cleaned_data
 
-def submit_job(request, job):
-    log('submit(): Job is: ' + str(job))
+def submit_jobset(request, jobset):
+    log('submit_jobset(): JobSet is: ' + str(jobset))
     os.umask(07)
-    job.create_job_dir()
-    job.set_submittime_now()
-    job.status = 'Queued'
-    job.save()
-    request.session['jobid'] = job.jobid
-
+    jobset.create_job_dir()
+    jobset.set_submittime_now()
+    jobset.status = 'Queued'
+    jobset.save()
+    request.session['jobid'] = jobset.jobid
     # enqueue the axy file.
-    jobdir = job.get_job_dir()
-    link = gmaps_config.jobqueuedir + job.jobid
+    jobdir = jobset.get_job_dir()
+    link = gmaps_config.jobqueuedir + jobset.jobid
     os.symlink(jobdir, link)
 
 def newurl(request):
@@ -261,15 +263,20 @@ def newurl(request):
         form = SimpleURLForm(request.POST)
         if form.is_valid():
             url = form.cleaned_data['url']
-            field = AstroField(user = request.user,
-                               filetype = 'image',
-                               datasrc = 'url',
-                               url = url)
-            field.save()
-            job = Job(user = request.user,
-                      field = field)
-            submit_job(request, job)
-            return HttpResponseRedirect(get_status_url(job))
+            #field = AstroField(user = request.user,
+            #                   filetype = 'image',
+            #                   datasrc = 'url',
+            #                   url = url)
+            #field.save()
+            #job = Job(user = request.user,
+            #          field = field)
+            jobset = JobSet(user = request.user,
+                            filetype = 'image',
+                            datasrc = 'url',
+                            url = url)
+            jobset.save()
+            submit_jobset(request, jobset)
+            return HttpResponseRedirect(get_status_url(jobset.jobid))
         else:
             urlerr = form['url'].errors[0]
     else:
@@ -288,24 +295,30 @@ def newfile(request):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
 
-    log('newfile()')
-    printvals(request)
+    #log('newfile()')
+    #printvals(request)
 
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
-            field = AstroField(user = request.user,
-                               filetype = 'image',
-                               datasrc = 'file',
-                               uploaded = form.cleaned_data['upload_id'],
-                               )
-            field.save()
-            job = Job(user = request.user,
-                      field = field,
-                      )
-            log('newfile: submitting job ' + str(job))
-            submit_job(request, job)
-            return HttpResponseRedirect(get_status_url(job))
+            #field = AstroField(user = request.user,
+            #filetype = 'image',
+            #                   datasrc = 'file',
+            #                   uploaded = form.cleaned_data['upload_id'],
+            #                   )
+            #field.save()
+            #job = Job(user = request.user,
+            #          field = field,
+            #          )
+            #log('newfile: submitting job ' + str(job))
+            jobset = JobSet(user = request.user,
+                            filetype = 'image',
+                            datasrc = 'file',
+                            uploaded = form.cleaned_data['upload_id'],
+                            )
+            jobset.save()
+            submit_jobset(request, jobset)
+            return HttpResponseRedirect(get_status_url(jobset.jobid))
         else:
             log('form not valid.')
     else:
@@ -341,7 +354,37 @@ def newlong(request):
         elif form.getclean('filetype') == 'file':
             url = None
 
-        field = AstroField(
+        #field = AstroField(
+        #    user = request.user,
+        #    datasrc = form.getclean('datasrc'),
+        #    filetype = form.getclean('filetype'),
+        #    uploaded = uploaded,
+        #    url = url,
+        #    xcol = form.getclean('xcol'),
+        #    ycol = form.getclean('ycol'),
+        #    )
+        #field.save()
+
+        #job = Job(user = request.user,
+        #          field = field,
+        #          parity = form.getclean('parity'),
+        #          scaleunits = form.getclean('scaleunits'),
+        #          scaletype = form.getclean('scaletype'),
+        #          scalelower = form.getclean('scalelower'),
+        #          scaleupper = form.getclean('scaleupper'),
+        #          scaleest = form.getclean('scaleest'),
+        #          scaleerr = form.getclean('scaleerr'),
+        #          tweak = form.getclean('tweak'),
+        #          tweakorder = form.getclean('tweakorder'),
+        #          )
+
+        #log('Form is valid.')
+        #for k,v in form.cleaned_data.items():
+        #    log('  %s = %s' % (str(k), str(v)))
+
+        # log('Job: ' + str(job))
+
+        jobset = JobSet(
             user = request.user,
             datasrc = form.getclean('datasrc'),
             filetype = form.getclean('filetype'),
@@ -349,30 +392,19 @@ def newlong(request):
             url = url,
             xcol = form.getclean('xcol'),
             ycol = form.getclean('ycol'),
+            parity = form.getclean('parity'),
+            scaleunits = form.getclean('scaleunits'),
+            scaletype = form.getclean('scaletype'),
+            scalelower = form.getclean('scalelower'),
+            scaleupper = form.getclean('scaleupper'),
+            scaleest = form.getclean('scaleest'),
+            scaleerr = form.getclean('scaleerr'),
+            tweak = form.getclean('tweak'),
+            tweakorder = form.getclean('tweakorder'),
             )
-        field.save()
-
-        job = Job(user = request.user,
-                  field = field,
-                  parity = form.getclean('parity'),
-                  scaleunits = form.getclean('scaleunits'),
-                  scaletype = form.getclean('scaletype'),
-                  scalelower = form.getclean('scalelower'),
-                  scaleupper = form.getclean('scaleupper'),
-                  scaleest = form.getclean('scaleest'),
-                  scaleerr = form.getclean('scaleerr'),
-                  tweak = form.getclean('tweak'),
-                  tweakorder = form.getclean('tweakorder'),
-                  )
-
-        log('Form is valid.')
-        for k,v in form.cleaned_data.items():
-            log('  %s = %s' % (str(k), str(v)))
-
-        log('Job: ' + str(job))
-
-        submit_job(request, job)
-        return HttpResponseRedirect(get_status_url(job))
+        jobset.save()
+        submit_jobset(request, jobset)
+        return HttpResponseRedirect(get_status_url(jobset.jobid))
 
     if 'jobid' in request.session:
         del request.session['jobid']
@@ -391,10 +423,8 @@ def newlong(request):
     else:
         val = form.getclean('scaletype') or scaletype.initial
     render = widg.get_renderer('scaletype', val, attrs)
-    r0 = render[0]
-    r1 = render[1]
-    r0txt = r0.tag()
-    r1txt = r1.tag()
+    r0txt = render[0].tag()
+    r1txt = render[1].tag()
 
     datasrc = form['datasrc'].field
     widg = datasrc.widget

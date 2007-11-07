@@ -45,5 +45,8 @@ class UserPreferences(models.Model):
         return prefs
     for_user = staticmethod(for_user)
 
+#from an.portal.job import Job, JobSet, AstroField
+#from an.portal.wcs import TanWCS, SipWCS
+
 from an.portal.job import *
 from an.portal.wcs import *

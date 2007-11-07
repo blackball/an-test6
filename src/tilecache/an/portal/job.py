@@ -20,17 +20,6 @@ from an.portal.models import UserPreferences
 
 # Represents one field to be solved: either an image or xylist.
 class AstroField(models.Model):
-    datasrc_CHOICES = (
-        ('url', 'URL'),
-        ('file', 'File'),
-        )
-
-    filetype_CHOICES = (
-        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
-        ('fits', 'FITS table of source locations'),
-        ('text', 'Text list of source locations'),
-        )
-
     user = models.ForeignKey(User, editable=False)
 
     #job = models.ForeignKey(Job, editable=False)
@@ -39,14 +28,6 @@ class AstroField(models.Model):
     allowredist = models.BooleanField(default=False)
     # Has the user explicitly forbidden us permission to redistribute this image?
     forbidredist = models.BooleanField(default=False)
-
-    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
-
-    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
-
-    url = models.URLField(blank=True, null=True)
-
-    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
 
     # type of the uploaded file, after decompression
     # ("jpg", "png", "gif", "fits", etc)
@@ -70,16 +51,10 @@ class AstroField(models.Model):
     displayh = models.PositiveIntegerField(editable=False, null=True)
 
     def __str__(self):
-        s = '<Field'
+        s = '<Field ' + self.id
         #, datasrc %s' , self.datasrc)
-        if self.datasrc == 'url':
-            s += ', url ' + self.url
-        elif self.datasrc == 'file':
-            #s += ', file ' + str(self.uploaded)
-            #s += ' (originally "%s")' % self.uploaded.userfilename
-            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
-        s += ', ' + self.filetype
-        if self.filetype == 'image' and self.imgtype:
+        #if self.filetype == 'image' and self.imgtype:
+        if self.imgtype:
             s += ', ' + self.imgtype
         s += '>'
         return s
@@ -109,11 +84,64 @@ class AstroField(models.Model):
         return os.path.join(config.fielddir, str(self.id))
 
 
-class JobSet(models.Model):
-    pass
 
-class Job(models.Model):
+class JobCommon(models.Model):
+    jobid = models.CharField(max_length=32, unique=True, editable=False,
+                             primary_key=True)
+    #status_CHOICES = (
+    #    ('not-submitted', 'Submission failed'),
+    #    ('queued', 'Queued'),
+    #    ('started', 'Started'),
+    #    ('solved', 'Solved'),
+    #    ('failed', 'Failed')
+    #    )
 
+    #
+    status = models.CharField(max_length=16,
+                              #choices=status_CHOICES,
+                              editable=False)
+    failurereason = models.CharField(max_length=256, editable=False)
+
+    jobdir = None
+
+    def __init__(self, *args, **kwargs):
+        super(JobCommon, self).__init__(*args, **kwargs)
+        self.jobdir = self.get_job_dir()
+
+    def get_filename(self, fn):
+        return os.path.join(self.get_job_dir(), fn)
+
+    def get_relative_filename(self, fn):
+        return os.path.join(self.get_relative_job_dir(), fn)
+
+    def get_job_dir(self):
+        return os.path.join(config.jobdir, self.get_relative_job_dir())
+
+    def get_relative_job_dir(self):
+        return os.path.join(*self.jobid.split('-'))
+
+    def create_job_dir(self):
+        d = self.get_job_dir()
+        # HACK - more careful here...
+        if os.path.exists(d):
+            return
+        mode = 0770
+        os.makedirs(d, mode)
+        #os.chmod(d, 0770)
+        #os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
+
+    def generate_jobid():
+        today = datetime.date.today()
+        jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
+                                    today.month, random.randint(0, 99999999))
+        return jobid
+    generate_jobid = staticmethod(generate_jobid)
+
+
+
+
+#class JobSet(models.Model):
+class JobSet(JobCommon):
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
         ('arcminwidth' , 'width of the field (in arcminutes)'), 
@@ -133,35 +161,39 @@ class Job(models.Model):
         (1, 'Negative'),
         )
 
-    status_CHOICES = (
-        ('not-submitted', 'Submission failed'),
-        ('queued', 'Queued'),
-        ('started', 'Started'),
-        ('solved', 'Solved'),
-        ('failed', 'Failed')
+    datasrc_CHOICES = (
+        ('url', 'URL'),
+        ('file', 'File'),
         )
 
-    jobid = models.CharField(max_length=32, unique=True, editable=False,
-                             primary_key=True)
-
-    jobset = models.ForeignKey(JobSet, null=True)
-
-    # has the user explicitly granted anonymous access to this job
-    # status page?
-    allowanon = models.BooleanField(default=False)
-
-    # has the user explicitly forbidden anonymous access to this job
-    # status page?
-    forbidanon = models.BooleanField(default=False)
+    filetype_CHOICES = (
+        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
+        ('fits', 'FITS table of source locations'),
+        ('text', 'Text list of source locations'),
+        )
 
     user = models.ForeignKey(User, editable=False)
 
-    #fields = models.ManyToManyField(AstroField, related_name='jobs')
-    field = models.ForeignKey(AstroField, editable=False)
+    # this doesn't REALLY belong here - we're using it to
+    # represent a reference to input data - either a URL
+    # or an uploaded id.
+    #field = models.ForeignKey(AstroField, editable=False)
+
+    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
+
+    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+
+    url = models.URLField(blank=True, null=True)
+
+    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
                                               default=2, radio_admin=True,
                                               core=True)
+
+    # for FITS tables, the names of the X and Y columns.
+    xcol = models.CharField(max_length=16, blank=True)
+    ycol = models.CharField(max_length=16, blank=True)
 
     # image scale.
     scaleunits = models.CharField(max_length=16, choices=scaleunits_CHOICES,
@@ -177,38 +209,32 @@ class Job(models.Model):
     tweak = models.BooleanField(default=True)
     tweakorder = models.PositiveSmallIntegerField(default=2)
 
-    #
-    status = models.CharField(max_length=16, choices=status_CHOICES, editable=False)
+    submittime = models.DateTimeField(editable=False, null=True)
+
+    status = models.CharField(max_length=16, editable=False)
     failurereason = models.CharField(max_length=256, editable=False)
 
-    # times
-    submittime = models.DateTimeField(editable=False, null=True)
-    starttime  = models.DateTimeField(editable=False, null=True)
-    finishtime = models.DateTimeField(editable=False, null=True)
-
-    # solution
-    tanwcs = models.ForeignKey(TanWCS, null=True, editable=False)
-
-    solved = models.BooleanField(default=False)
-
-    ## These fields don't go in the database.
-
-    jobdir = None
-
     def __init__(self, *args, **kwargs):
-        #log('__init__')
         for k,v in kwargs.items():
             if v is None:
                 del kwargs[k]
-        kwargs['jobid'] = Job.generate_jobid()
-        super(Job, self).__init__(*args, **kwargs)
-        self.jobdir = self.get_job_dir()
+        if not 'jobid' in kwargs:
+            kwargs['jobid'] = JobCommon.generate_jobid()
+        #myargs = [ 'url' ]
+        #for a in myargs:
+        #    if a in kwargs:
+        #        del kwargs[a]
+        super(JobSet, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        s = '<Job %s, user %s' % (self.jobid, self.user.username)
-        if self.status:
-            s += ', %s' % self.status
-        s += ' ' + str(self.field)
+        s = '<JobSet %s, user %s' % (self.jobid, self.user.username)
+        if self.datasrc == 'url':
+            s += ', url ' + str(self.url)
+        elif self.datasrc == 'file':
+            #s += ', file ' + str(self.uploaded)
+            #s += ' (originally "%s")' % self.uploaded.userfilename
+            s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
+        s += ', ' + self.filetype
         pstrs = [ 'pos', 'neg', 'both' ]
         s += ', parity ' + pstrs[int(self.parity)]
         if self.scaletype == 'ul':
@@ -222,41 +248,15 @@ class Job(models.Model):
         s += '>'
         return s
 
-    def url(self):
-        if self.field.datasrc == 'url':
-            return self.field.url
+    def get_url(self):
+        if self.datasrc == 'url':
+            return self.url
         return None
 
-    def userfilename(self):
-        if self.field.datasrc == 'file':
-            return self.field.uploaded.userfilename
+    def get_userfilename(self):
+        if self.datasrc == 'file':
+            return self.uploaded.userfilename
         return None
-
-    def allowanonymous(self, prefs=None):
-        if self.allowanon:
-            return True
-        if self.forbidanon:
-            return False
-        if not prefs:
-            prefs = UserPreferences.for_user(self.user)
-        return prefs.anonjobstatus
-
-    def set_submittime_now(self):
-        self.submittime = Job.timenow()
-    def set_starttime_now(self):
-        self.starttime = Job.timenow()
-    def set_finishtime_now(self):
-        self.finishtime = Job.timenow()
-
-    def format_submittime(self):
-        return Job.format_time(self.submittime)
-    def format_starttime(self):
-        return Job.format_time(self.starttime)
-    def format_finishtime(self):
-        return Job.format_time(self.finishtime)
-
-    def format_submittime_brief(self):
-        return Job.format_time_brief(self.submittime)
 
     def get_scale_bounds(self):
         if self.scaletype == 'ul':
@@ -290,37 +290,68 @@ class Job(models.Model):
             txt = 'focal length of ' + val + ' mm'
         return txt
 
-    def get_filename(self, fn):
-        return os.path.join(self.get_job_dir(), fn)
+    def set_submittime_now(self):
+        self.submittime = Job.timenow()
+    def format_submittime(self):
+        return Job.format_time(self.submittime)
+    def format_submittime_brief(self):
+        return Job.format_time_brief(self.submittime)
 
-    def get_relative_filename(self, fn):
-        return os.path.join(self.get_relative_job_dir(), fn)
 
-    def get_job_dir(self):
-        return os.path.join(config.jobdir, self.get_relative_job_dir())
+class Job(JobCommon):
+    jobset = models.ForeignKey(JobSet, related_name='jobs',
+                               null=True)
 
-    def get_relative_job_dir(self):
-        return os.path.join(*self.jobid.split('-'))
+    # has the user explicitly granted anonymous access to this job
+    # status page?
+    allowanon = models.BooleanField(default=False)
+
+    # has the user explicitly forbidden anonymous access to this job
+    # status page?
+    forbidanon = models.BooleanField(default=False)
+
+    #fields = models.ManyToManyField(AstroField, related_name='jobs')
+    field = models.ForeignKey(AstroField, editable=False)
+
+    # times
+    starttime  = models.DateTimeField(editable=False, null=True)
+    finishtime = models.DateTimeField(editable=False, null=True)
+
+    # solution
+    tanwcs = models.ForeignKey(TanWCS, null=True, editable=False)
+
+    solved = models.BooleanField(default=False)
+
+    def __str__(self):
+        s = '<Job %s, ' % self.jobid
+        s += self.jobset
+        if self.status:
+            s += ', %s' % self.status
+        s += ' ' + str(self.field)
+        s += '>'
+        return s
+
+    def allowanonymous(self, prefs=None):
+        if self.allowanon:
+            return True
+        if self.forbidanon:
+            return False
+        if not prefs:
+            prefs = UserPreferences.for_user(self.jobset.user)
+        return prefs.anonjobstatus
+
+    def set_starttime_now(self):
+        self.starttime = Job.timenow()
+    def set_finishtime_now(self):
+        self.finishtime = Job.timenow()
+
+    def format_starttime(self):
+        return Job.format_time(self.starttime)
+    def format_finishtime(self):
+        return Job.format_time(self.finishtime)
 
     def get_orig_file(self):
         return self.field.filename()
-
-    def create_job_dir(self):
-        d = self.get_job_dir()
-        # HACK - more careful here...
-        if os.path.exists(d):
-            return
-        mode = 0770
-        os.makedirs(d, mode)
-        #os.chmod(d, 0770)
-        #os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
-
-    def generate_jobid():
-        today = datetime.date.today()
-        jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
-                                    today.month, random.randint(0, 99999999))
-        return jobid
-    generate_jobid = staticmethod(generate_jobid)
 
     def timenow():
         return datetime.datetime.utcnow()
@@ -337,5 +368,4 @@ class Job(models.Model):
             return None
         return t.strftime('%Y-%m-%d %H:%M')
     format_time_brief = staticmethod(format_time_brief)
-
 
