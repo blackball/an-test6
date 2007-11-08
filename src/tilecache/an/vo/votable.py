@@ -6,6 +6,11 @@ class xmlelement(object):
     args = {}
     children = []
 
+    def __init__(self, etype=None):
+        self.children = []
+        self.args = {}
+        self.etype = etype
+
     def __str__(self):
         #log('str(): %s' % self.etype)
         s = ('<%s' % str(self.etype))
@@ -32,17 +37,17 @@ class xmlelement(object):
     def get_child_tag(self, child):
         return str(child) + self.child_child_separator()
 
-    def __init__(self, etype=None):
-        self.children = []
-        self.args = {}
-        self.etype = etype
-
     def get_children(self):
         return self.children
 
     def add_child(self, x):
         #log('adding child to %s' % self.etype)
         self.children.append(x)
+
+    def add_children(self, x):
+        for c in x:
+            self.add_child(c)
+        #self.children += x
 
 class VOTableDocument(xmlelement):
     xml_header = r'<?xml version="1.0"?>'
@@ -176,3 +181,19 @@ class VOColumn(xmlelement):
                 
     def self_child_separator(self):
         return ''
+
+
+class VODescription(VOColumn):
+    def __init__(self, data=None):
+        super(VODescription, self).__init__(data)
+        self.etype = 'DESCRIPTION'
+
+class VOValues(xmlelement):
+    def __init__(self, vals=None):
+        super(VOValues, self).__init__('VALUES')
+        if vals:
+            self.add_children(vals)
+
+    def get_child_tag(self, child):
+        return '<OPTION>' + child + '</OPTION>'
+    

@@ -258,29 +258,64 @@ def siap_pointed(request):
         else:
             formats.append('ALL')
 
-
         log('POS:', pos, 'SIZE:', size)
         log('FORMATS:', formats)
-
-        qstatus.args['value'] = 'OK'
-
-        table = PointedTable()
-        table.args['name'] = 'results'
-        resource.add_child(table)
-
-        #row = PointedRow()
-        #table.add_row(row)
-
-        # query...
-        imgs = voImage.objects.all()
-        for voimg in imgs:
-            row = PointedRow(voimg)
-            table.add_row(row)
 
     except (KeyError, ValueError),e:
         qstatus.args['value'] = 'ERROR'
         qstatus.add_child(str(e))
         log('error:', e)
+
+    qstatus.args['value'] = 'OK'
+
+    # METADATA queries require this to be present:
+    posparam = VOParam('INPUT:POS', None, None, None, '0,0')
+    posparam.add_child(VODescription(
+        'Center of the query region in the form "RA,Dec" in decimal degrees ICRS'))
+    resource.add_child(posparam)
+
+    sizeparam = VOParam('INPUT:SIZE', None, None, None, '0')
+    sizeparam.add_child(VODescription(
+        'Size of the query region: "size" or "rasize,decsize" in decimal degrees.'))
+    resource.add_child(sizeparam)
+
+    formatparam = VOParam('INPUT:FORMAT', None, None, None, 'ALL')
+    formatparam.add_child(VODescription(
+        'Requested format of images.'))
+    formatparam.add_child(VOValues(['image/fits', 'image/jpeg', 'image/png',
+                                    'image/gif', 'text/html', 'ALL', 'GRAPHIC', 'METADATA']))
+    resource.add_child(formatparam)
+
+    intparam = VOParam('INPUT:INTERSECT', None, None, None, 'OVERLAPS')
+    intparam.add_child(VODescription(
+        'How the resulting images should overlap the requested region.'))
+    intparam.add_child(VOValues(['COVERS', 'ENCLOSED', 'CENTER', 'OVERLAPS']))
+    resource.add_child(intparam)
+
+    verbparam = VOParam('INPUT:VERB', None, None, None, '1')
+    verbparam.add_child(VODescription(
+        'Verbosity: controls the number of columns returned.'))
+    resource.add_child(verbparam)
+
+
+    # Now the results....
+
+    table = PointedTable()
+    table.args['name'] = 'results'
+    resource.add_child(table)
+
+    imgs = []
+    if len(formats) == 1 and formats[0] == 'METADATA':
+        pass
+    else:
+        # query...
+        imgs = voImage.objects.all()
+
+    for voimg in imgs:
+        row = PointedRow(voimg)
+        table.add_row(row)
+
+
 
     res.write(str(doc))
     return res
