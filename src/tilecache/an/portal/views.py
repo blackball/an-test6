@@ -241,7 +241,7 @@ def jobstatus(request):
             s = steps[last_s]
             if 'limit' in s and fldsz > s['limit']:
                 break
-        for ind in range(last_s + 1):
+        for ind in range(last_s):
             s = steps[ind]
             if s['center']:
                 xmerc = float(wcsinfo['ra_center_merc'])
