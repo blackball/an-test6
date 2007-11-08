@@ -53,6 +53,9 @@ def userlog(*msg):
 def handle_job(job, sshconfig):
     log('handle_job: ' + str(job))
 
+    job.status = 'Running'
+    job.save()
+
     field = job.field
     log('field file is %s' % field.filename())
 
@@ -295,8 +298,9 @@ def main(sshconfig, joblink):
                     jobset = jobset,
                     field = field,
                     )
-                job.status = 'Queued'
+                #job.status = 'Queued'
                 job.save()
+                jobset.save()
                 # One file in tarball: convert straight to a Job.
                 log('Single-file tarball.')
                 rtn = handle_job(job, sshconfig)
@@ -310,6 +314,7 @@ def main(sshconfig, joblink):
                       )
             job.status = 'Queued'
             job.save()
+            jobset.save()
             log('Enqueuing Job: ' + str(job))
             Job.submit_job_or_jobset(job)
 
@@ -320,8 +325,9 @@ def main(sshconfig, joblink):
             jobset = jobset,
             field = field,
             )
-        job.status = 'Queued'
+        #job.status = 'Queued'
         job.save()
+        jobset.save()
         rtn = handle_job(job, sshconfig)
         if rtn:
             return rtn

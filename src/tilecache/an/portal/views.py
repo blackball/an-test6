@@ -130,22 +130,28 @@ def jobstatus(request):
     if not 'jobid' in request.GET:
         return HttpResponse('no jobid')
     jobid = request.GET['jobid']
-
+    log('jobstatus: jobid=', jobid)
     job = get_job(jobid)
     if not job:
+        log('job not found.')
         jobsets = JobSet.objects.all().filter(jobid=jobid)
         log('found %i jobsets.' % len(jobsets))
         if len(jobsets):
             jobset = jobsets[0]
+            log('jobset: ', jobset)
             jobs = jobset.jobs.all()
+            log('jobset has %i jobs.' % len(jobs))
             if len(jobs) == 1:
                 job = jobs[0]
                 jobid = job.jobid
+                log('jobset has one job:', jobid)
                 return HttpResponseRedirect(get_status_url(jobid))
             else:
                 return jobsetstatus(request, jobset)
         else:
             return HttpResponse('no job with jobid ' + jobid)
+
+    log('job found.')
 
     jobowner = (job.jobset.user == request.user)
     anonymous = job.allowanonymous()
