@@ -25,8 +25,14 @@ from an.portal.job import Job, JobSet, AstroField
 from an.portal.convert import convert
 from an.portal.log import log
 
+from an.util.file import file_size
+
+from an.vo.models import Image as voImage
+
 from an import gmaps_config
 from an import settings
+
+import sip
 
 # Adding a user:
 # > python manage.py shell
@@ -275,10 +281,6 @@ def jobstatus(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
-def file_size(fn):
-    st = os.stat(fn)
-    return st.st_size
-
 def getfile(request):
     if not request.GET:
         return HttpResponse('no GET')
@@ -472,3 +474,41 @@ def changeperms(request):
             return HttpResponseRedirect('/job/summary')
 
         return HttpResponse('no action.')
+
+
+def publishtovo(request):
+    if not request.user.is_authenticated():
+        return HttpResponseRedirect('/login')
+    if not 'jobid' in request.POST:
+        return HttpResponse('no jobid')
+    job = get_job(request.POST['jobid'])
+    if not job:
+        return HttpResponse('no job')
+    if job.jobset.user != request.user:
+        return HttpResponse('not your job')
+    if not job.solved:
+        return HttpResponse('job is not solved')
+    wcs = job.tanwcs
+    if not wcs:
+        return HttpResponse('no wcs')
+
+
+    # BIG HACK! - look through LD_LIBRARY_PATH if this is still needed...
+    if not sip.libraryloaded():
+        sip.loadlibrary('/home/gmaps/test/an-common/_sip.so')
+    
+
+    img = voImage()
+    img.field = job.field
+    img.image_title = 'Field_%i' % (job.field.id)
+    img.instrument = ''
+    img.jdate = 0
+    img.wcs = wcs
+    tanwcs = wcs.to_tanwcs()
+    (ra, dec) = tanwcs.pixelxy2radec(wcs.imagew/2, wcs.imageh/2)
+    (img.ra_center, img.dec_center) = (ra, dec)
+    (ramin, ramax, decmin, decmax) = tanwcs.radec_bounds(10)
+    (img.ra_min, img.ra_max, img.dec_min, img.dec_max) = (ramin, ramax, decmin, decmax)
+    img.save()
+
+    return HttpResponse('Done.')

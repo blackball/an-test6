@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 
 from django import newforms as forms
@@ -13,6 +14,8 @@ from an import gmaps_config
 from an import settings
 from an.vo.log import log
 from an.vo.votable import *
+
+from an.vo.models import Image as voImage
 
 #intersects = [ 'COVERS', 'ENCLOSED', 'CENTER', 'OVERLAPS' ]
 
@@ -156,6 +159,29 @@ class PointedRow(VORow):
     # If not specified, PixFlags="C" is assumed. 
     pixflags = 'V'
 
+    def __init__(self, voimage=None):
+        if voimage:
+            field = voimage.field
+            #self.image_title = 'Field_%i' % field.id
+            self.image_title = voimage.image_title
+            self.image_format = field.get_mime_type()
+            self.image_url = get_image_url(voimage.id)
+            self.ra_center  = voimage.ra_center
+            self.dec_center = voimage.dec_center
+            self.instrument = voimage.instrument
+            self.jdate = voimage.jdate
+            wcs = voimage.wcs
+            self.naxis = [wcs.imagew, wcs.imageh]
+            self.crval = [wcs.crval1, wcs.crval2]
+            self.crpix = [wcs.crpix1, wcs.crpix2]
+            self.cd = [wcs.cd11, wcs.cd12, wcs.cd21, wcs.cd22]
+            self.image_filesize = file_size(field.filename())
+            # ???
+            self.scale = [math.hypot(wcs.cd11, wcs.cd12),
+                          math.hypot(wcs.cd21, wcs.cd22)]
+            self.pixflags = 'V'
+
+
     def get_children(self):
         # This array must be in the same order as the "flds" array in
         # PointedTable.
@@ -167,6 +193,10 @@ class PointedRow(VORow):
         for c in coldata:
             children.append(VOColumn(c))
         return children
+
+def get_image_url(imageid):
+    # HACKEROO!!!
+    return 'http://oven.cosmo.fas.nyu.edu:8888/vo/getimage?voimageid=' % imageid
 
 def siap_pointed(request):
 
@@ -222,7 +252,6 @@ def siap_pointed(request):
                 if len(fmt) and fmt[0] == ',':
                     fmt = fmt[1:]
 
-
         else:
             formats.append('ALL')
 
@@ -236,9 +265,15 @@ def siap_pointed(request):
         table.args['name'] = 'results'
         resource.add_child(table)
 
-        row = PointedRow()
-        table.add_row(row)
-        
+        #row = PointedRow()
+        #table.add_row(row)
+
+        # query...
+        imgs = voImage.objects.all()
+        for voimg in imgs:
+            row = PointedRow(voimg)
+            table.add_row(row)
+
     except (KeyError, ValueError),e:
         qstatus.args['value'] = 'ERROR'
         qstatus.add_child(str(e))
@@ -248,5 +283,28 @@ def siap_pointed(request):
     return res
 
 def getimage(request):
-    return HttpResponse('not implemented')
+    if 'voimageid' in request.GET:
+        imgid = request.GET['voimageid']
+        voimages = voImage.objects.all().filter(id=imgid)
+        if not len(voimages):
+            return HttpResponse('no such image')
+        img = voimages[0]
+        field = img.field
+        fn = field.filename()
+        if not os.path.exists(fn):
+            return HttpResponse('no such file')
+        #owner = field.user
+        #prefs = UserPreferences.for_user(owner)
+        if not field.redistributable():
+            return HttpResponse('not redistributable')
+        
+        res = HttpResponse()
+        res['Content-Type'] = field.content_type()
+        res['Content-Length'] = file_size(fn)
+        f = open(fn)
+        res.write(f.read())
+        f.close()
+        return res
+    
+    return HttpResponse('no voimageid')
 

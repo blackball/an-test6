@@ -9,9 +9,7 @@ from django.contrib.auth.models import User
 
 from an.upload.models import UploadedFile
 
-#import an
 import an.gmaps_config as config
-#import an.portal.job
 from an.portal.log import log
 from an.portal.wcs import *
 
@@ -21,8 +19,6 @@ from an.portal.models import UserPreferences
 # Represents one field to be solved: either an image or xylist.
 class AstroField(models.Model):
     user = models.ForeignKey(User, editable=False)
-
-    #job = models.ForeignKey(Job, editable=False)
 
     # Has the user explicitly granted us permission to redistribute this image?
     allowredist = models.BooleanField(default=False)
@@ -52,12 +48,21 @@ class AstroField(models.Model):
 
     def __str__(self):
         s = '<Field ' + str(self.id)
-        #, datasrc %s' , self.datasrc)
-        #if self.filetype == 'image' and self.imgtype:
         if self.imgtype:
             s += ', ' + self.imgtype
         s += '>'
         return s
+
+    def content_type(self):
+        typemap = {
+            'jpg' : 'image/jpeg',
+            'gif' : 'image/gif',
+            'png' : 'image/png',
+            'fits' : 'image/fits'
+            }
+        if not self.imgtype in typemap:
+            return None
+        return typemap[self.imgtype]
 
     def redistributable(self, prefs=None):
         if self.allowredist:
@@ -87,7 +92,6 @@ class AstroField(models.Model):
 
 
 class JobSet(models.Model):
-#class JobSet(JobCommon):
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
         ('arcminwidth' , 'width of the field (in arcminutes)'), 
@@ -183,10 +187,6 @@ class JobSet(models.Model):
                 del kwargs[k]
         if not 'jobid' in kwargs:
             kwargs['jobid'] = Job.generate_jobid()
-        #myargs = [ 'url' ]
-        #for a in myargs:
-        #    if a in kwargs:
-        #        del kwargs[a]
         super(JobSet, self).__init__(*args, **kwargs)
 
     def __str__(self):
@@ -194,8 +194,6 @@ class JobSet(models.Model):
         if self.datasrc == 'url':
             s += ', url ' + str(self.url)
         elif self.datasrc == 'file':
-            #s += ', file ' + str(self.uploaded)
-            #s += ' (originally "%s")' % self.uploaded.userfilename
             s += ', file "%s" (upload id %s)' % (self.uploaded.userfilename, str(self.uploaded))
         s += ', ' + self.filetype
         pstrs = [ 'pos', 'neg', 'both' ]
@@ -249,7 +247,6 @@ class JobSet(models.Model):
     def friendly_scale(self):
         val = None
         if self.scaletype == 'ul':
-            #val = 'between %.2f and %.2f' % (self.scalelower, self.scaleupper)
             val = '%.2f to %.2f' % (self.scalelower, self.scaleupper)
         elif self.scaletype == 'ev':
             val = '%.2f plus or minus %.2f%%' % (self.scaleest, self.scaleerr)
@@ -273,14 +270,11 @@ class JobSet(models.Model):
         return Job.format_time_brief(self.submittime)
 
 
-#class Job(JobCommon):
 class Job(models.Model):
     jobid = models.CharField(max_length=32, unique=True, editable=False,
                              primary_key=True)
 
-    #
     status = models.CharField(max_length=16,
-                              #choices=status_CHOICES,
                               editable=False)
     failurereason = models.CharField(max_length=256, editable=False)
 
@@ -381,8 +375,6 @@ class Job(models.Model):
             return
         mode = 0770
         os.makedirs(d, mode)
-        #os.chmod(d, 0770)
-        #os.chmod(d, stat.S_IRWXU | stat.S_IRWXG)
     create_dir_for_jobid = staticmethod(create_dir_for_jobid)
 
     def s_get_job_dir(jobid):

@@ -25,7 +25,11 @@ from an.portal.models import Job, JobSet, AstroField
 from an.upload.models import UploadedFile
 from an.portal.log import log
 from an.portal.convert import convert, is_tarball, FileConversionError
+from an.portal.wcs import TanWCS
 from an.portal.run_command import run_command
+
+# HACK
+import sip
 
 def bailout(job, reason):
     job.status = 'Failed'
@@ -162,6 +166,20 @@ def handle_job(job):
     if os.path.exists(job.get_filename('solved')):
         job.solved = True
         job.status = 'Solved'
+
+        #log('os.environ:')
+        #for k,v in os.environ.items():
+        #    log('  ', k, '=', v)
+
+        # BIG HACK! - look through LD_LIBRARY_PATH if this is still needed...
+        if not sip.libraryloaded():
+            sip.loadlibrary('/home/gmaps/test/an-common/_sip.so')
+
+        # Add WCS to database.
+        wcs = TanWCS(job.get_filename('wcs.fits'))
+        wcs.save()
+        job.tanwcs = wcs
+        
     else:
         job.status = 'Failed'
         job.failurereason = 'Did not solve.'

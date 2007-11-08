@@ -18,4 +18,5 @@ urlpatterns = patterns('',
 					   (r'^getfile/$', 'an.portal.views.getfile'),
 					   (r'^summary/$', 'an.portal.views.summary'),
 					   (r'^changeperms/$', 'an.portal.views.changeperms'),
+					   (r'^publishtovo/$', 'an.portal.views.publishtovo'),
 					   )
