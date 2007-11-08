@@ -112,7 +112,8 @@ class VOParam(xmlelement):
     def __init__(self, name, datatype, arraysize=None, ucd=None, value=None):
         super(VOParam, self).__init__('PARAM')
         self.args['name'] = name
-        self.args['datatype'] = datatype
+        if datatype:
+            self.args['datatype'] = datatype
         if arraysize:
             self.args['arraysize'] = arraysize
         if ucd:

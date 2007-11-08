@@ -4,6 +4,7 @@ import os
 import re
 
 from django import newforms as forms
+from django.newforms.util import ErrorList
 from django.db import models
 from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
@@ -201,6 +202,80 @@ def get_image_url(imageid):
     # HACKEROO!!!
     return 'http://oven.cosmo.fas.nyu.edu:8888/vo/getimage/?voimageid=' + str(imageid)
 
+
+floatre = r'[+-]?[0-9]*(\.[0-9]*)?([eE][+-]?[0-9]+)?'
+csf_re = re.compile(r'^' + floatre + r'(,' + floatre + r')*' + r'$')
+
+class CommaSeparatedFloatField(forms.RegexField):
+    def __init__(self, max_length=None, min_length=None, *args, **kwargs):
+        super(CommaSeparatedFloatField, self).__init__(
+            csf_re, max_length, min_length,
+            'Must be comma-separated floating-point values',
+            *args, **kwargs)
+
+    def clean(self, value):
+        val = super(CommaSeparatedFloatField, self).clean(value)
+        strvals = val.split(',')
+        vals = map(float, strvals)
+        return vals
+
+#class FormatField(forms.CharField):
+
+class SiapForm(forms.Form):
+    POS = CommaSeparatedFloatField()
+    SIZE = CommaSeparatedFloatField()
+    FORMAT = forms.CharField(required=False, initial='ALL')
+
+    def getclean(self, name):
+        if not hasattr(self, 'cleaned_data'):
+            return None
+        if name in self.cleaned_data:
+            return self.cleaned_data[name]
+        return None
+
+    def clean_FORMAT(self):
+        val = self.cleaned_data['FORMAT']
+        if not val:
+            return [ 'ALL' ]
+        formats = []
+        terms = val.split(',')
+        ct_re = re.compile(r'^(image/(png|fits|jpeg|gif))|(text/html)$')
+        for i in range(len(terms)):
+            t = terms[i]
+            if t in ['ALL', 'GRAPHIC', 'METADATA']:
+                formats.append(t)
+            elif ct_re.match(t):
+                formats.append(t)
+            elif (i == len(terms)-1) and t.startswith('GRAPHIC-'):
+                rest = t[8:]
+                if rest == 'ALL':
+                    formats.append(t)
+                    continue
+                subterms = rest.split(',')
+                if (len(subterms) == 0) or (len(subterms) > 3):
+                    raise ValidationError('GRAPHIC-x can contain only 1 to 3 terms, not %i' % len(subterms))
+                for st in subterms:
+                    if not st in ['jpeg', 'png', 'gif']:
+                        raise ValidationError('GRAPHIC-x: x must be jpeg, png or gif, not "%s"' % st)
+                formats.append(t)
+            else:
+                raise ValidationError('Term "%s" not understood.' % t)
+        return formats
+
+    def clean(self):
+        pos = self.getclean('POS')
+        if pos and len(pos) != 2:
+            self._errors['POS'] = (
+                'POS must be two floating-point values separated by a '
+                'comma (got %i values)' % len(pos))
+        sz = self.getclean('SIZE')
+        if sz and not len(sz) in [1, 2]:
+            self._errors['POS'] = (
+                'SIZE must be one or two floating-point values separated by '
+                'a comma (got %i values)' % len(sz))
+        return self.cleaned_data
+
+
 def siap_pointed(request):
 
     res = HttpResponse()
@@ -213,17 +288,32 @@ def siap_pointed(request):
     qstatus = VOInfo('QUERY_STATUS')
     resource.add_child(qstatus)
 
+    form = SiapForm(request.GET)
+    if form.is_valid():
+        log('Form is valid:')
+        for k,v in form.cleaned_data.items():
+            log('  ', k, ' = ', v)
+    else:
+        log('Form is invalid:')
+        for k,v in form._errors.items():
+            if isinstance(v, ErrorList):
+                v = v.as_text()
+            log('  ', k, ' = ', v)
+
+        qstatus.args['value'] = 'ERROR'
+        errstr = ''
+        for k,v in form._errors.items():
+            if isinstance(v, ErrorList):
+                v = '; '.join(v)
+            errstr += k + ': ' + str(v)
+        qstatus.add_child(errstr)
+        res.write(str(doc))
+        return res
+
+    pos = form.cleaned_data['POS']
+    size = form.cleaned_data['SIZE']
+
     try:
-        pos_str = request.GET['POS']
-        pos = map(float, pos_str.split(','))
-        if len(pos) != 2:
-            raise ValueError('POS must contain two values (RA and Dec); got %i' % len(pos))
-
-        size_str = request.GET['SIZE']
-        size = map(float, size_str.split(','))
-        if not (len(size) in [1, 2]):
-            raise ValueError('SIZE must contain one or two values; got %i' % len(size))
-
         #intr = None
         #if 'INTERSECT' in request.GET:
         #    intr = request.GET['INTERSECT']
@@ -259,12 +349,14 @@ def siap_pointed(request):
             formats.append('ALL')
 
         log('POS:', pos, 'SIZE:', size)
-        log('FORMATS:', formats)
+        log('FORMAT:', formats)
 
     except (KeyError, ValueError),e:
         qstatus.args['value'] = 'ERROR'
         qstatus.add_child(str(e))
         log('error:', e)
+        res.write(str(doc))
+        return res
 
     qstatus.args['value'] = 'OK'
 
@@ -314,8 +406,6 @@ def siap_pointed(request):
     for voimg in imgs:
         row = PointedRow(voimg)
         table.add_row(row)
-
-
 
     res.write(str(doc))
     return res
