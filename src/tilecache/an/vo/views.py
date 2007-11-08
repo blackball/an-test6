@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import re
 
 from django import newforms as forms
@@ -14,6 +15,7 @@ from an import gmaps_config
 from an import settings
 from an.vo.log import log
 from an.vo.votable import *
+from an.util.file import file_size
 
 from an.vo.models import Image as voImage
 
@@ -160,11 +162,12 @@ class PointedRow(VORow):
     pixflags = 'V'
 
     def __init__(self, voimage=None):
+        super(PointedRow, self).__init__()
         if voimage:
             field = voimage.field
             #self.image_title = 'Field_%i' % field.id
             self.image_title = voimage.image_title
-            self.image_format = field.get_mime_type()
+            self.image_format = field.content_type()
             self.image_url = get_image_url(voimage.id)
             self.ra_center  = voimage.ra_center
             self.dec_center = voimage.dec_center
@@ -196,7 +199,7 @@ class PointedRow(VORow):
 
 def get_image_url(imageid):
     # HACKEROO!!!
-    return 'http://oven.cosmo.fas.nyu.edu:8888/vo/getimage?voimageid=' % imageid
+    return 'http://oven.cosmo.fas.nyu.edu:8888/vo/getimage/?voimageid=' + str(imageid)
 
 def siap_pointed(request):
 

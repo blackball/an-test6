@@ -49,5 +49,12 @@ class Image(models.Model):
     dec_max = models.FloatField()
 
     def __str__(self):
-        return self.image_title
-
+        return ('<vo.Image: ' + str(self.field) +
+                ' title: "%s"' % self.image_title +
+                ' instrument: "%s"' % self.instrument +
+                ' jdate: "%i"' % self.jdate +
+                ' WCS: ' + str(self.wcs) +
+                ' Center (%f, %f)' % (self.ra_center, self.dec_center) +
+                ' Range ([%f, %f], [%f, %f])' %
+                (self.ra_min, self.ra_max, self.dec_min, self.dec_max) +
+                '>')

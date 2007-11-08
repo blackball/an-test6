@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+#import grp
 import os
 import sys
 import tempfile
@@ -49,7 +50,7 @@ def userlog(*msg):
     f.write(' '.join(map(str, msg)) + '\n')
     f.close()
 
-def handle_job(job):
+def handle_job(job, sshconfig):
     log('handle_job: ' + str(job))
 
     field = job.field
@@ -137,7 +138,9 @@ def handle_job(job):
            'tar xf - --atime-preserve -m --exclude=%(axyfile)s '
            '>>%(logfile)s 2>&1' %
            dict(jobid=jobid, axyfile=axy,
-                sshconfig=sshconfig, logfile=blindlog))
+                sshconfig=sshconfig, logfile=blindlog)
+           + '; chmod 664 *; chgrp www-data *')
+    # --group G --mode M --owner O ?
 
     job.status = 'Running'
     job.set_starttime_now()
@@ -148,6 +151,7 @@ def handle_job(job):
 
     job.set_finishtime_now()
     job.save()
+
 
     if not os.WIFEXITED(w):
         bailout(job, 'Solver didn\'t exit normally.')
@@ -176,7 +180,7 @@ def handle_job(job):
             sip.loadlibrary('/home/gmaps/test/an-common/_sip.so')
 
         # Add WCS to database.
-        wcs = TanWCS(job.get_filename('wcs.fits'))
+        wcs = TanWCS(file=job.get_filename('wcs.fits'))
         wcs.save()
         job.tanwcs = wcs
         
@@ -203,7 +207,7 @@ def main(sshconfig, joblink):
     # if it's a Job...
     jobs = Job.objects.all().filter(jobid = jobid)
     if len(jobs):
-        return handle_job(jobs[0])
+        return handle_job(jobs[0], sshconfig)
 
     # else it's a JobSet...
     jobsets = JobSet.objects.all().filter(jobid=jobid)
@@ -295,7 +299,7 @@ def main(sshconfig, joblink):
                 job.save()
                 # One file in tarball: convert straight to a Job.
                 log('Single-file tarball.')
-                rtn = handle_job(job)
+                rtn = handle_job(job, sshconfig)
                 if rtn:
                     return rtn
                 break
@@ -318,7 +322,7 @@ def main(sshconfig, joblink):
             )
         job.status = 'Queued'
         job.save()
-        rtn = handle_job(job)
+        rtn = handle_job(job, sshconfig)
         if rtn:
             return rtn
 
@@ -334,5 +338,17 @@ if __name__ == '__main__':
         sys.exit(-1)
     sshconfig = sys.argv[1]
     joblink = sys.argv[2]
+
+    os.umask(07)
+
+    #grps = os.getgroups()
+    #log('Groups:', ', '.join(map(str, grps)))
+    #log('Groups:')
+    #for g in grps:
+    #    grpdata = grp.getgrgid(g)
+    #    log('  %s (%s)' % (g, grpdata.gr_name))
+    #os.setgid()
+
+
     sys.exit(main(sshconfig, joblink))
 

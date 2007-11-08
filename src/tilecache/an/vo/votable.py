@@ -170,6 +170,8 @@ class VOColumn(xmlelement):
     def get_child_tag_raw(self, child):
         if isinstance(child, list):
             return ' '.join(map(str, child))
+        if child is None:
+            return ''
         return str(child)
                 
     def self_child_separator(self):

@@ -21,7 +21,7 @@ class TanWCS(models.Model):
             del kwargs['file']
         super(TanWCS, self).__init__(*args, **kwargs)
         if filename:
-            wcs = sip.Tan(kwargs['file'])
+            wcs = sip.Tan(filename)
             self.crval1 = wcs.crval[0]
             self.crval2 = wcs.crval[1]
             self.crpix1 = wcs.crpix[0]
@@ -33,11 +33,15 @@ class TanWCS(models.Model):
             self.imagew = wcs.imagew
             self.imageh = wcs.imageh
 
+    def __str__(self):
+        return ('<TanWCS: CRVAL (%f, %f)' % (self.crval1, self.crval2) +
+                ' CRPIX (%f, %f)' % (self.crpix1, self.crpix2) +
+                ' CD (%f, %f; %f %f)' % (self.cd11, self.cd12, self.cd21, self.cd22) +
+                ' Image size (%f, %f)>' % (self.imagew, self.imageh)
+                )
+
     def to_tanwcs(self):
         tan = sip.Tan()
-        #tan.crval = [ self.crval1, self.crval2 ]
-        #tan.crpix = [ self.crpix1, self.crpix2 ]
-        #tan.cd = [ self.cd11, self.cd12, self.cd21, self.cd22 ]
         tan.crval[0] = self.crval1
         tan.crval[1] = self.crval2
         tan.crpix[0] = self.crpix1

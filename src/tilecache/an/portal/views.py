@@ -229,9 +229,13 @@ def jobstatus(request):
                   ]
 
         zlist = []
-        for s in steps:
+
+        for last_s in range(len(steps)):
+            s = steps[last_s]
             if 'limit' in s and fldsz > s['limit']:
                 break
+        for ind in range(last_s + 1):
+            s = steps[ind]
             if s['center']:
                 xmerc = float(wcsinfo['ra_center_merc'])
                 ymerc = float(wcsinfo['dec_center_merc'])
@@ -243,7 +247,7 @@ def jobstatus(request):
             else:
                 bb = [0, -85, 360, 85]
             urlargs = ('&gain=%g' % s['gain']) + ('&bb=' + ','.join(map(str, bb)))
-            if 'dashbox' in s:
+            if (ind < last_s) and ('dashbox' in s):
                 urlargs += '&dashbox=%g' % s['dashbox']
 
             zlist.append([url + smallstyle + urlargs,
@@ -454,7 +458,7 @@ def changeperms(request):
         if not jobs or len(jobs) != 1:
             return HttpResponse('no job')
         job = jobs[0]
-        if job.user != request.user:
+        if job.jobset.user != request.user:
             return HttpResponse('not your job!')
         if 'allowanon' in request.POST:
             allow = int(request.POST['allowanon'])
@@ -507,8 +511,11 @@ def publishtovo(request):
     tanwcs = wcs.to_tanwcs()
     (ra, dec) = tanwcs.pixelxy2radec(wcs.imagew/2, wcs.imageh/2)
     (img.ra_center, img.dec_center) = (ra, dec)
+    log('tanwcs: ' + str(tanwcs))
+    log('(ra, dec) center: (%f, %f)' % (ra, dec))
     (ramin, ramax, decmin, decmax) = tanwcs.radec_bounds(10)
     (img.ra_min, img.ra_max, img.dec_min, img.dec_max) = (ramin, ramax, decmin, decmax)
+    log('Saving vo.Image: ', img)
     img.save()
 
     return HttpResponse('Done.')

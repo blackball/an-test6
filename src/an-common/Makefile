@@ -92,8 +92,8 @@ $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
 	$(AR) rc $@ $(ANFILES_OBJ)
 	$(RANLIB) $@
 
-_sip.so: sip.o starutil.o mathutil.o sip_qfits.o fitsioutils.o ioutils.o bl.o \
-		$(QFITS_LIB)
+_sip.so: sip-utils.o sip.o starutil.o mathutil.o sip_qfits.o \
+		fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
 	$(CC) -shared -o $@ $^
 
 DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)

@@ -14,8 +14,8 @@
 #include "ioutils.h"
 
 char* wcs_dirs[] = {
-	"/home/gmaps/ontheweb-data/",
-	"/home/gmaps/test/web-data/",
+	"/home/gmaps/ontheweb-data",
+	"/home/gmaps/test/web-data",
 	"/home/gmaps/apod-solves",
 };
 
@@ -88,6 +88,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
         sip_t* res;
 		sip_t wcs;
 		int W, H;
+		sl* triedwcs;
 
         basefn = sl_get(wcsfiles, I);
 		if (!strlen(basefn)) {
@@ -96,20 +97,25 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		}
 		logmsg("Base filename: \"%s\"\n", basefn);
 
+		triedwcs = sl_new(4);
 		for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
-			asprintf_safe(&wcsfn, "%s/%s%s", wcs_dirs[i], basefn, (fullfilename ? "" : ".wcs"));
+			wcsfn = sl_appendf(triedwcs, "%s/%s%s", wcs_dirs[i], basefn, (fullfilename ? "" : ".wcs"));
 			if (file_readable(wcsfn))
 				break;
-			free(wcsfn);
 			wcsfn = NULL;
 		}
 		if (!wcsfn) {
 			logmsg("Failed to find WCS file with basename \"%s\".\n", basefn);
+			logmsg("Tried:\n");
+			for (i=0; i<sl_size(triedwcs); i++) {
+				logmsg("  %s\n", sl_get(triedwcs, i));
+			}
+			sl_free2(triedwcs);
 			goto nextfile;
 		}
 
         res = sip_read_header_file(wcsfn, &wcs);
-        free(wcsfn);
+		sl_free2(triedwcs);
 		wcsfn = NULL;
         if (!res) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
