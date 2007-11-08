@@ -252,7 +252,7 @@ class FormatField(forms.CharField):
 class SiapForm(forms.Form):
     POS = CommaSeparatedFloatField()
     SIZE = CommaSeparatedFloatField()
-    FORMAT = FormatField(required=False)
+    FORMAT = FormatField(required=False, initial='ALL')
 
     def getclean(self, name):
         if not hasattr(self, 'cleaned_data'):
@@ -275,8 +275,47 @@ class SiapForm(forms.Form):
         return self.cleaned_data
 
 
-def siap_pointed(request):
+def siap_pointed_html(request):
+    res = HttpResponse()
+    if len(request.GET):
+        form = SiapForm(request.GET)
+    else:
+        form = SiapForm()
 
+    if len(request.GET) and form.is_valid():
+        log('Form is valid:')
+        for k,v in form.cleaned_data.items():
+            log('  ', k, ' = ', v)
+        res.write('Ok')
+        return res
+
+    elif form._errors:
+        log('Form is invalid:')
+        for k,v in form._errors.items():
+            if isinstance(v, ErrorList):
+                v = v.as_text()
+            log('  ', k, ' = ', v)
+
+    res.write('<html>'
+              '<head><style type="text/css">'
+              '.errorlist { color:red; list-style:none; }'
+              '.cb { margin-left:auto; margin-right:auto; }'
+              'th { text-align:right; }'
+              '</style></head>'
+              '<body><table border="1" cellpadding="5" class="cb">'
+              '<form method="get">')
+    res.write(str(form))
+    res.write('<tr><td colspan="2" style="text-align:center;">'
+              '<input type="submit" name="sub" value="Submit" />'
+              '</td></tr>'
+              '</table>'
+              '</form>'
+              '</body></html>')
+    return res
+
+
+
+def siap_pointed(request):
     res = HttpResponse()
     res['Content-Type'] = 'text/xml'
 
