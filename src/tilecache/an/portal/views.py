@@ -167,6 +167,7 @@ def jobstatus(request):
         'jobfinishtime' : job.format_finishtime(),
         'logurl' : get_url(job, 'blind.log'),
         'job' : job,
+        'jobset' : job.jobset,
         'joburl' : (jobset.datasrc == 'url') and jobset.url or None,
         'jobfile' : (jobset.datasrc == 'file') and jobset.uploaded.userfilename or None,
         'jobscale' : jobset.friendly_scale(),

@@ -190,8 +190,8 @@ Your field contains:
 <tr><td> File: </td><td> {{ jobfile }} </td></tr>
 {% endif %}
 <tr><td> Field scale: </td><td> {{ jobscale }} </td></tr>
-{% if job.tweak %}
-<tr><td> Tweak order: </td><td> {{ job.tweakorder }} </td></tr>
+{% if jobset.tweak %}
+<tr><td> Tweak order: </td><td> {{ jobset.tweakorder }} </td></tr>
 {% else %}
 <tr><td> Tweak: </td><td> No </td></tr>
 {% endif %}
