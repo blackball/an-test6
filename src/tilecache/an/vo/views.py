@@ -219,26 +219,12 @@ class CommaSeparatedFloatField(forms.RegexField):
         vals = map(float, strvals)
         return vals
 
-#class FormatField(forms.CharField):
-
-class SiapForm(forms.Form):
-    POS = CommaSeparatedFloatField()
-    SIZE = CommaSeparatedFloatField()
-    FORMAT = forms.CharField(required=False, initial='ALL')
-
-    def getclean(self, name):
-        if not hasattr(self, 'cleaned_data'):
-            return None
-        if name in self.cleaned_data:
-            return self.cleaned_data[name]
-        return None
-
-    def clean_FORMAT(self):
-        val = self.cleaned_data['FORMAT']
-        if not val:
+class FormatField(forms.CharField):
+    def clean(self, val):
+        if val is None:
             return [ 'ALL' ]
         formats = []
-        terms = val.split(',')
+        terms = str(val).split(',')
         ct_re = re.compile(r'^(image/(png|fits|jpeg|gif))|(text/html)$')
         for i in range(len(terms)):
             t = terms[i]
@@ -246,21 +232,34 @@ class SiapForm(forms.Form):
                 formats.append(t)
             elif ct_re.match(t):
                 formats.append(t)
-            elif (i == len(terms)-1) and t.startswith('GRAPHIC-'):
+            elif t.startswith('GRAPHIC-'):
                 rest = t[8:]
-                if rest == 'ALL':
+                if rest == 'ALL' and (i == len(terms)-1):
                     formats.append(t)
-                    continue
-                subterms = rest.split(',')
+                    break
+                subterms = [rest] + terms[i+1:]
                 if (len(subterms) == 0) or (len(subterms) > 3):
                     raise ValidationError('GRAPHIC-x can contain only 1 to 3 terms, not %i' % len(subterms))
                 for st in subterms:
                     if not st in ['jpeg', 'png', 'gif']:
                         raise ValidationError('GRAPHIC-x: x must be jpeg, png or gif, not "%s"' % st)
-                formats.append(t)
+                formats.append('GRAPHIC-' + ','.join(subterms))
+                break
             else:
                 raise ValidationError('Term "%s" not understood.' % t)
         return formats
+
+class SiapForm(forms.Form):
+    POS = CommaSeparatedFloatField()
+    SIZE = CommaSeparatedFloatField()
+    FORMAT = FormatField(required=False)
+
+    def getclean(self, name):
+        if not hasattr(self, 'cleaned_data'):
+            return None
+        if name in self.cleaned_data:
+            return self.cleaned_data[name]
+        return None
 
     def clean(self):
         pos = self.getclean('POS')
@@ -312,51 +311,21 @@ def siap_pointed(request):
 
     pos = form.cleaned_data['POS']
     size = form.cleaned_data['SIZE']
+    formats = form.cleaned_data['FORMAT']
 
-    try:
-        #intr = None
-        #if 'INTERSECT' in request.GET:
-        #    intr = request.GET['INTERSECT']
-        #    if not (intr in intersects):
-        #        intr = None
-        #if not intr:
-        #    intr = 'OVERLAPS'
+    #intr = None
+    #if 'INTERSECT' in request.GET:
+    #    intr = request.GET['INTERSECT']
+    #    if not (intr in intersects):
+    #        intr = None
+    #if not intr:
+    #    intr = 'OVERLAPS'
+    
+    # For now, ignore INTERSECT, NAXIS, CFRAME, EQUINOX, CRPIX,
+    # CRVAL, CDELT, ROTANG, PROJ, VERB
 
-        # For now, ignore INTERSECT, NAXIS, CFRAME, EQUINOX, CRPIX,
-        # CRVAL, CDELT, ROTANG, PROJ, VERB
-
-        formats = []
-        if 'FORMAT' in request.GET:
-            fre = re.compile(
-                r'(?P<clause>ALL|GRAPHIC|METADATA|'
-                r'image/(png|fits|jpeg|gif)|'
-                r'text/html|'
-                r'GRAPHIC-(ALL|(jpeg|png|gif)(,(jpeg|png|gif)){0,2}$)'
-                r')(,.*|$)')
-            fmt = request.GET['FORMAT']
-
-            while len(fmt):
-                m = fre.match(fmt)
-                if not m:
-                    raise ValueError('Unrecognized FORMAT clause "%s"' % fmt)
-                #log('matched "%s"' % fmt[m.start('clause'):m.end('clause')])
-                formats.append(fmt[m.start('clause'):m.end('clause')])
-                fmt = fmt[m.end('clause'):]
-                if len(fmt) and fmt[0] == ',':
-                    fmt = fmt[1:]
-
-        else:
-            formats.append('ALL')
-
-        log('POS:', pos, 'SIZE:', size)
-        log('FORMAT:', formats)
-
-    except (KeyError, ValueError),e:
-        qstatus.args['value'] = 'ERROR'
-        qstatus.add_child(str(e))
-        log('error:', e)
-        res.write(str(doc))
-        return res
+    #log('POS:', pos, 'SIZE:', size)
+    #log('FORMAT:', formats)
 
     qstatus.args['value'] = 'OK'
 
