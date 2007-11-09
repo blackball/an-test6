@@ -25,6 +25,10 @@ class AstroField(models.Model):
     # Has the user explicitly forbidden us permission to redistribute this image?
     forbidredist = models.BooleanField(default=False)
 
+    # The original filename on the user's machine, or basename of URL, etc.
+    # Needed for, eg, tarball jobsets.
+    origname = models.CharField(max_length=64, null=True)
+
     # type of the uploaded file, after decompression
     # ("jpg", "png", "gif", "fits", etc)
     imgtype = models.CharField(max_length=16, editable=False)
@@ -140,11 +144,6 @@ class JobSet(models.Model):
     failurereason = models.CharField(max_length=256, editable=False)
 
     user = models.ForeignKey(User, editable=False)
-
-    # this doesn't REALLY belong here - we're using it to
-    # represent a reference to input data - either a URL
-    # or an uploaded id.
-    #field = models.ForeignKey(AstroField, editable=False)
 
     filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
@@ -289,7 +288,6 @@ class Job(models.Model):
     # status page?
     forbidanon = models.BooleanField(default=False)
 
-    #fields = models.ManyToManyField(AstroField, related_name='jobs')
     field = models.ForeignKey(AstroField, editable=False)
 
     # times

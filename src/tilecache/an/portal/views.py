@@ -239,8 +239,17 @@ def jobstatus(request):
 
         for last_s in range(len(steps)):
             s = steps[last_s]
+            #log('checking zoom step', last_s)
+            #if 'limit' in s:
+            #    log('limit:', s['limit'], 'field size', fldsz)
+            #else:
+            #    log('no limit')
             if 'limit' in s and fldsz > s['limit']:
+                log('break')
                 break
+        else:
+            last_s = len(steps)
+        #log('last_s:', last_s)
         for ind in range(last_s):
             s = steps[ind]
             if s['center']:

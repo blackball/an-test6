@@ -38,13 +38,31 @@ tr.odd td {}
 </td>
 
 <td>
-{% if job.url %}
-<a href="{{ job.url }}">{{ job.url }}</a>
+{% if job.jobset.url %}
+<a href="{{ job.jobset.url }}">{% if job.field.origname %}{{ job.field.origname }}{% else %}URL{% endif %}</a>
+&nbsp;
 {% endif %}
-{% if job.userfilename %}
+{% if job.jobset.uploaded.userfilename %}
+File: {{ job.jobset.uploaded.userfilename }}
+
+{% if job.field.origname %}
+{% ifequal job.field.origname job.jobset.uploaded.userfilename %}
+{% else %}
+({{ job.field.origname }})
+{% endifequal %}
+{% endif %}
+
+{% comment %}
 {# <a href="{{ getfileurl }}{{ job.jobid }}&f=original"></a> #}
-File: {{job.userfilename}}
+{% ifequal job.jobid job.jobset.jobid %}
+{% else %}
+{# tarfile #}
+({{ job.field.origname }})
+{% endifequal %}
+{% endcomment %}
+
 {% endif %}
+<a href="{{ getfield }}{{ job.field.id }}">Stored Copy</a>
 </td>
 
 <td class="c">

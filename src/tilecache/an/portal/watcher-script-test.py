@@ -5,6 +5,8 @@ import os
 import sys
 import tempfile
 
+from urlparse import urlparse
+
 os.environ['DJANGO_SETTINGS_MODULE'] = 'an.settings'
 sys.path.extend(['/home/gmaps/test/tilecache',
                  '/home/gmaps/test/an-common',
@@ -227,20 +229,30 @@ def main(sshconfig, joblink):
     # save() so the "id" field gets a unique value
     field.save()
     origfile = field.filename()
+    basename = None
 
     if jobset.datasrc == 'url':
         # download the URL.
         userlog('Retrieving URL...')
         f = urllib.urlretrieve(jobset.url, origfile)
+        p = urlparse(jobset.url)
+        p = p[2]
+        if p:
+            s = p.split('/')
+            basename = s[-1]
     elif jobset.datasrc == 'file':
         # move the uploaded file.
         temp = jobset.uploaded.get_filename()
         log('uploaded tempfile is ' + temp)
         log('rename(%s, %s)' % (temp, origfile))
         os.rename(temp, origfile)
+        basename = jobset.uploaded.userfilename
     else:
         bailout(job, 'no datasrc')
         return -1
+
+    field.origname = basename
+    field.save()
 
     # Handle compressed files.
     uncomp = convert(jobset, field, 'uncomp-js')
@@ -285,6 +297,7 @@ def main(sshconfig, joblink):
             field = AstroField(user = jobset.user,
                                xcol = jobset.xcol,
                                ycol = jobset.ycol,
+                               origname = os.path.basename(p),
                                )
             field.save()
             log('New field ' + str(field.id))
