@@ -292,9 +292,37 @@ def jobstatus(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
+def getfield(request):
+    if not 'fieldid' in request.GET:
+        return HttpResponse('no fieldid')
+    fieldid = request.GET['fieldid']
+    fields = AstroField.objects.all().filter(id=fieldid)
+    if not len(fields):
+        return HttpResponse('no such field')
+    field = fields[0]
+
+    owner = (field.user == request.user)
+    anonymous = field.allowredist
+    if not (owner or anonymous):
+        return HttpResponse('The owner of this job (' + field.user.username + ') has not granted public access.')
+
+    res = HttpResponse()
+    ct = field.content_type()
+    res['Content-Type'] = ct or 'application/octet-stream'
+    fn = field.filename()
+    res['Content-Length'] = file_size(fn)
+    #res['Content-Disposition'] = 'attachment; filename="' + f + '"'
+    res['Content-Disposition'] = 'inline'
+    f = open(fn)
+    res.write(f.read())
+    f.close()
+    return res
+
 def getfile(request):
     if not request.GET:
         return HttpResponse('no GET')
+    if 'fieldid' in request.GET:
+        return getfield(request)
     if not 'jobid' in request.GET:
         return HttpResponse('no jobid')
     jobid = request.GET['jobid']
@@ -308,14 +336,14 @@ def getfile(request):
     jobowner = (job.jobset.user == request.user)
     anonymous = job.allowanonymous()
     if not (jobowner or anonymous):
-        return HttpResponse('The owner of this job (' + job.user.username + ') has not granted public access.')
+        return HttpResponse('The owner of this job (' + job.jobset.user.username + ') has not granted public access.')
 
     f = request.GET['f']
 
+    res = HttpResponse()
+
     pngimages = [ 'annotation', 'annotation-big',
                   'sources', 'sources-big' ]
-
-    res = HttpResponse()
     if f in pngimages:
         fn = convert(job, job.field, f)
         res['Content-Type'] = 'image/png'
@@ -421,6 +449,7 @@ def summary(request):
         'prefs' : prefs,
         'statusurl' : '/job/status/?jobid=',
         'getfileurl' : '/job/getfile/?jobid=',
+        'getfield' : '/job/getfile/?fieldid=',
         }
     t = loader.get_template('portal/summary.html')
     c = RequestContext(request, ctxt)
