@@ -2,7 +2,8 @@
 from numpy import *
 from numpy.random import *
 from numpy.linalg import *
-from matplotlib.pylab import figure, plot, xlabel, ylabel
+from matplotlib.pylab import figure, plot, xlabel, ylabel, loglog, clf
+#from pylab import *
 
 class Transform(object):
     scale = None
@@ -68,26 +69,12 @@ def procrustes(X, Y):
     return T
 
 
-if __name__ == '__main__':
+def draw_sample(inoise=1, fnoise=0, iqnoise=-1,
+                dimquads=4, quadscale=100, imgsize=1000,
+                Rsteps=10, Asteps=36):
 
-    inoise = 1
-    fnoise = 0
-    iqnoise = -1
-    dimquads = 4
-    #N = 1000
-    quadscale = 100
-    imgsize = 1000
-
-    #T = Transform()
-    #T.scale = 2
-    #T.rotation = matrix([[0, 1], [1,0]])
-    #T.incenter = array([[3,4]]).transpose()
-    #T.outcenter = array([[8,9]]).transpose()
-    #x = array([[3,5]]).transpose()
-    #T.apply(x)
-    
+    # Stars that compose the field quad.
     fquad = zeros((2,dimquads))
-
     fquad[0,0] = imgsize/2 - quadscale/2
     fquad[1,0] = imgsize/2
     fquad[0,1] = imgsize/2 + quadscale/2
@@ -96,61 +83,89 @@ if __name__ == '__main__':
         fquad[0,i] = imgsize/2 + randn(1) * quadscale
         fquad[1,i] = imgsize/2 + randn(1) * quadscale
 
+    # Index quad is field quad plus jitter.
     iquad = fquad + randn(*fquad.shape)
 
+    # Solve for transformation
     T = procrustes(iquad, fquad)
 
+    # Put the index quad stars through the transformation
     itrans = zeros(fquad.shape)
-
     for i in range(dimquads):
         fq = fquad[:,i].reshape(2,1)
-        #print 'fquad[i] is', fquad[:,i]
-        #print 'T(fquad[i]) is', T.apply(fquad[:,i].transpose())
-        #print 'fq = ', fq
-        #print 'T(fq) = ', T.apply(fq)
         itrans[:,i] = T.apply(fq).transpose()
 
-    #print 'fquad is', fquad
-    #print 'iquad is', iquad
-    #print 'itrans is', itrans
-
-    #figure(1)
-    #I=[0,2,1,3,0];
-    #plot(fquad[0,I], fquad[1,I], 'bo-', itrans[0,I], itrans[1,I], 'ro-')
-
+    # Field quad center...
     qc = mean(fquad, axis=1)
 
-    Rsteps = 10
-    Asteps = 36
+    # Sample stars on a R^2, theta grid.
     #rads = sqrt((array(range(Rsteps))+1) / float(Rsteps)) * imgsize/2
-    rads = sqrt((array(range(Rsteps))+0.1) / float(Rsteps)) * imgsize/2
-    thetas = array(range(Asteps)) / float(Asteps) * 2.0 * pi
-
     N = Rsteps * Asteps
+    rads = sqrt((array(range(Rsteps))+0.5) / float(Rsteps)) * imgsize/2
+    thetas = array(range(Asteps)) / float(Asteps) * 2.0 * pi
     fstars = zeros((2,N))
     for r in range(Rsteps):
         for a in range(Asteps):
             fstars[0, r*Asteps + a] = sin(thetas[a]) * rads[r] + qc[0]
             fstars[1, r*Asteps + a] = cos(thetas[a]) * rads[r] + qc[1]
+    # Put them through the transformation...
     istars = zeros((2,N))
-    #fstars = rand(2,N) * imgsize
-    #istars = zeros((2,N))
     for i in range(N):
         fs = fstars[:,i].reshape(2,1)
         istars[:,i] = T.apply(fs).transpose()
 
+    R = sqrt((fstars[0,:] - qc[0])**2 + (fstars[1,:] - qc[1])**2)
+    E = sqrt(sum((fstars - istars)**2, axis=0))
+
+    # Fit to a linear model...
+    xfit = R**2
+    yfit = E**2
+    A = zeros((2,N))
+    A[0,:] = 1
+    A[1,:] = xfit.transpose()
+    (C,resids,rank,s) = lstsq(A.transpose(), yfit)
+
+    return (fquad, iquad, T, itrans, qc, fstars, istars,
+            R, E, C)
+
+if __name__ == '__main__':
+
+    N = 100
+    C = zeros((2,N))
+    QD = zeros((N))
+    for i in range(N):
+        (fquad, iquad, T, itrans, qc, fstars, istars, R, E, c) = draw_sample()
+        C[:,i] = c
+        QD[i] = sum((iquad - fquad)**2)
+
+    C0 = C[0,:]
+    C1 = C[1,:]
+
+    figure(1)
+    clf()
+    loglog(C0, C1, 'ro')
+    xlabel('C0')
+    ylabel('C1')
+
+    figure(2)
+    clf()
+    plot(QD, C1, 'bo')
+    xlabel('Quad Distance')
+    ylabel('C1')
+    
+    #figure(1)
+    #I=[0,2,1,3,0];
+    #plot(fquad[0,I], fquad[1,I], 'bo-', itrans[0,I], itrans[1,I], 'ro-')
+
     #figure(2)
     #plot(fstars[0,:], fstars[1,:], 'b.', istars[0,:], istars[1,:], 'r.')
 
-    figure(1)
-    I=[0,2,1,3,0];
-    plot(fquad[0,I], fquad[1,I], 'bo-',
-         itrans[0,I], itrans[1,I], 'ro-',
-         fstars[0,:], fstars[1,:], 'b.',
-         istars[0,:], istars[1,:], 'r.')
-
-    R = sqrt((fstars[0,:] - qc[0])**2 + (fstars[1,:] - qc[1])**2)
-    E = sqrt(sum((fstars - istars)**2, axis=0))
+    #figure(1)
+    #I=[0,2,1,3,0];
+    #plot(fquad[0,I], fquad[1,I], 'bo-',
+    #     itrans[0,I], itrans[1,I], 'ro-',
+    #     fstars[0,:], fstars[1,:], 'b.',
+    #     istars[0,:], istars[1,:], 'r.')
 
     #figure(2)
     #plot(R, E, 'r.')
@@ -162,22 +177,14 @@ if __name__ == '__main__':
     #xlabel('R^2')
     #ylabel('E^2')
 
-    xfit = R**2
-    yfit = E**2
+    #print 'Fit coefficients are', C
 
-    A = zeros((2,N))
-    A[0,:] = 1
-    A[1,:] = xfit.transpose()
-    (C,resids,rank,s) = lstsq(A.transpose(), yfit)
-
-    print 'Fit coefficients are', C
-
-    xplot = array(range(101)) / 100.0 * max(xfit)
-
-    figure(2)
-    plot(R**2, E**2, 'r.',
-         xplot, C[0] + C[1]*xplot, 'b-')
-    xlabel('R^2')
-    ylabel('E^2')
+    #figure(2)
+    #xplot = array(range(101)) / 100.0 * max(xfit)
+    #plot(R**2, E**2, 'r.',
+    #     xplot, C[0] + C[1]*xplot, 'b-')
+    #xlabel('R^2')
+    #ylabel('E^2')
 
     #show()
+
