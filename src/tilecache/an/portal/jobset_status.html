@@ -11,7 +11,9 @@ tr.odd td {}
 
 {% block content %}
 
+{% if jobs %}
 <table id="summarytable">
+
 <tr>
 <th>Job Id</th>
 <th>Status</th>
@@ -21,23 +23,28 @@ tr.odd td {}
 
 {% for job in jobs %}
 <tr class="{% cycle even,odd %}">
-
 <td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
-
 <td class="c">{{ job.status }}
 {% if job.failurereason %}
 : {{ job.failurereason }}
 {% endif %}
 </td>
-
 <td> {{ job.format_starttime_brief }} </td>
-
 <td> {{ job.format_finishtime_brief }} </td>
-
 </tr>
 {% endfor %}
 
 </table>
+{% else %}
+<table id="summarytable">
+
+<tr>
+<th>Job Status:</th>
+<td>{{ job.status }}</td>
+</tr>
+
+</table>
+{% endif %}
 
 {% endblock content %}
 
