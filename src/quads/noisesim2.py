@@ -3,6 +3,7 @@ from numpy import *
 from numpy.random import *
 from numpy.linalg import *
 from matplotlib.pylab import figure, plot, xlabel, ylabel, loglog, clf
+from matplotlib.pylab import semilogy
 #from pylab import *
 
 class Transform(object):
@@ -130,29 +131,34 @@ def draw_sample(inoise=1, fnoise=0, iqnoise=-1,
 
 if __name__ == '__main__':
 
-    N = 100
+    N = 1000
     C = zeros((2,N))
     QD = zeros((N))
     for i in range(N):
         (fquad, iquad, T, itrans, qc, fstars, istars, R, E, c) = draw_sample()
         C[:,i] = c
-        QD[i] = sum((iquad - fquad)**2)
+        QD[i] = sqrt(sum((iquad - fquad)**2) / 4.0)
 
     C0 = C[0,:]
     C1 = C[1,:]
 
     figure(1)
     clf()
-    loglog(C0, C1, 'ro')
-    xlabel('C0')
-    ylabel('C1')
+    loglog(C0, C1, 'b.')
+    xlabel('E^2 vs R^2 - Fit coefficient 0')
+    ylabel('E^2 vs R^2 - Fit coefficient 1')
 
     figure(2)
     clf()
-    plot(QD, C1, 'bo')
-    xlabel('Quad Distance')
-    ylabel('C1')
-    
+    semilogy(QD, C1, 'b.')
+    xlabel('Field-to-Index Quad Mean Distance')
+    ylabel('E^2-vs-R^2 fit linear coefficient')
+
+    #semilogy(QD, C1, 'bo')
+    #xlabel('Quad Distance')
+    #ylabel('C1')
+
+
     #figure(1)
     #I=[0,2,1,3,0];
     #plot(fquad[0,I], fquad[1,I], 'bo-', itrans[0,I], itrans[1,I], 'ro-')
