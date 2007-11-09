@@ -2,7 +2,7 @@
 from numpy import *
 from numpy.random import *
 from numpy.linalg import *
-from matplotlib.pylab import figure, plot
+from matplotlib.pylab import figure, plot, xlabel, ylabel
 
 class Transform(object):
     scale = None
@@ -35,8 +35,8 @@ def procrustes(X, Y):
 
     mx = X.mean(axis=1).reshape(2,1)
     my = Y.mean(axis=1).reshape(2,1)
-    print 'mean(X) is\n', mx
-    print 'mean(Y) is\n', my
+    #print 'mean(X) is\n', mx
+    #print 'mean(Y) is\n', my
     T.incenter = mx
     T.outcenter = my
 
@@ -47,7 +47,7 @@ def procrustes(X, Y):
     #print 'var(X) is', varx
     #print 'var(Y) is', vary
     T.scale = sqrt(vary / varx)
-    print 'scale is', T.scale
+    #print 'scale is', T.scale
 
     C = zeros((2,2))
     for i in [0,1]:
@@ -63,7 +63,7 @@ def procrustes(X, Y):
     #print 'U\' is\n', U.transpose()
     #print 'V is\n', V
     R = V * U.transpose()
-    print 'R is\n', R
+    #print 'R is\n', R
     T.rotation = R
     return T
 
@@ -110,14 +110,61 @@ if __name__ == '__main__':
         #print 'T(fq) = ', T.apply(fq)
         itrans[:,i] = T.apply(fq).transpose()
 
-    print 'fquad is', fquad
-    print 'iquad is', iquad
-    print 'itrans is', itrans
+    #print 'fquad is', fquad
+    #print 'iquad is', iquad
+    #print 'itrans is', itrans
 
-    figure()
+    #figure(1)
+    #I=[0,2,1,3,0];
+    #plot(fquad[0,I], fquad[1,I], 'bo-', itrans[0,I], itrans[1,I], 'ro-')
+
+    fstars = rand(2,N) * imgsize
+    istars = zeros((2,N))
+    for i in range(N):
+        fs = fstars[:,i].reshape(2,1)
+        istars[:,i] = T.apply(fs).transpose()
+
+    #figure(2)
+    #plot(fstars[0,:], fstars[1,:], 'b.', istars[0,:], istars[1,:], 'r.')
+
+    figure(1)
     I=[0,2,1,3,0];
-    plot(fquad[0,I], fquad[1,I], 'bo-', itrans[0,I], itrans[1,I], 'ro-')
+    plot(fquad[0,I], fquad[1,I], 'bo-',
+         itrans[0,I], itrans[1,I], 'ro-',
+         fstars[0,:], fstars[1,:], 'b.',
+         istars[0,:], istars[1,:], 'r.')
 
-    fstars = rand((2,N)) * imgsize
-    for i in range(dimquads):
-    istars = 
+
+    qc = mean(fquad, axis=1)
+    R = sqrt((fstars[0,:] - qc[0])**2 + (fstars[1,:] - qc[1])**2)
+    E = sqrt(sum((fstars - istars)**2, axis=0))
+
+    #figure(2)
+    #plot(R, E, 'r.')
+    #xlabel('R')
+    #ylabel('E')
+
+    #figure(3)
+    #plot(R**2, E**2, 'r.')
+    #xlabel('R^2')
+    #ylabel('E^2')
+
+    xfit = R**2
+    yfit = E**2
+
+    A = zeros((2,N))
+    A[0,:] = 1
+    A[1,:] = xfit.transpose()
+    (C,resids,rank,s) = lstsq(A.transpose(), yfit)
+
+    print 'Fit coefficients are', C
+
+    xplot = array(range(101)) / 100.0 * max(xfit)
+
+    figure(3)
+    plot(R**2, E**2, 'r.',
+         xplot, C[0] + C[1]*xplot, 'b-')
+    xlabel('R^2')
+    ylabel('E^2')
+
+    #show()
