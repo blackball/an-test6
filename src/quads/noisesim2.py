@@ -74,7 +74,7 @@ if __name__ == '__main__':
     fnoise = 0
     iqnoise = -1
     dimquads = 4
-    N = 1000
+    #N = 1000
     quadscale = 100
     imgsize = 1000
 
@@ -118,8 +118,23 @@ if __name__ == '__main__':
     #I=[0,2,1,3,0];
     #plot(fquad[0,I], fquad[1,I], 'bo-', itrans[0,I], itrans[1,I], 'ro-')
 
-    fstars = rand(2,N) * imgsize
+    qc = mean(fquad, axis=1)
+
+    Rsteps = 10
+    Asteps = 36
+    #rads = sqrt((array(range(Rsteps))+1) / float(Rsteps)) * imgsize/2
+    rads = sqrt((array(range(Rsteps))+0.1) / float(Rsteps)) * imgsize/2
+    thetas = array(range(Asteps)) / float(Asteps) * 2.0 * pi
+
+    N = Rsteps * Asteps
+    fstars = zeros((2,N))
+    for r in range(Rsteps):
+        for a in range(Asteps):
+            fstars[0, r*Asteps + a] = sin(thetas[a]) * rads[r] + qc[0]
+            fstars[1, r*Asteps + a] = cos(thetas[a]) * rads[r] + qc[1]
     istars = zeros((2,N))
+    #fstars = rand(2,N) * imgsize
+    #istars = zeros((2,N))
     for i in range(N):
         fs = fstars[:,i].reshape(2,1)
         istars[:,i] = T.apply(fs).transpose()
@@ -134,8 +149,6 @@ if __name__ == '__main__':
          fstars[0,:], fstars[1,:], 'b.',
          istars[0,:], istars[1,:], 'r.')
 
-
-    qc = mean(fquad, axis=1)
     R = sqrt((fstars[0,:] - qc[0])**2 + (fstars[1,:] - qc[1])**2)
     E = sqrt(sum((fstars - istars)**2, axis=0))
 
@@ -161,7 +174,7 @@ if __name__ == '__main__':
 
     xplot = array(range(101)) / 100.0 * max(xfit)
 
-    figure(3)
+    figure(2)
     plot(R**2, E**2, 'r.',
          xplot, C[0] + C[1]*xplot, 'b-')
     xlabel('R^2')
