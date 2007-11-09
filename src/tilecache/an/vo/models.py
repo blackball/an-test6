@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 from an.util import orderby
 from an.portal.wcs import TanWCS
@@ -10,6 +11,8 @@ class Image(models.Model):
     objects = orderby.OrderByManager()
 
     field = models.ForeignKey(AstroField, null=True)
+
+    user = models.ForeignKey(User)
 
     # a short (usually one line) description of the image
     # identifying the image source (e.g., survey name), object name or field coordinates,

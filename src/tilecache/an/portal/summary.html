@@ -12,6 +12,8 @@ tr.odd td {}
 
 {% block content %}
 
+{% if jobs %}
+<h3 style="text-align:center;">Jobs</h3>
 <table id="summarytable">
 <tr>
 <th>Job Id</th>
@@ -83,6 +85,34 @@ No
 {% endfor %}
 
 </table>
+{% else %}
+<h3 style="text-align:center;">No Jobs</h3>
+{% endif %}{# jobs #}
+
+{% if voimgs %}
+<h3 style="text-align:center;">Images Published to the VO</h3>
+<table id="summarytable">
+
+<tr>
+<th>Field Id</th>
+<th>Center (RA,Dec)</th>
+<th>Image Format</th>
+<th>Image Size</th>
+</tr>
+
+{% for img in voimgs %}
+<tr>
+<td class="c">{{ img.field.id }}</td>
+<td class="c">({{ img.ra_center }}, {{ img.dec_center }})</td>
+<td class="c"> {{ img.field.imgtype }} </td>
+<td class="c"> {{ img.field.imagew }} x {{ img.field.imageh }} </td>
+</tr>
+{% endfor %}
+
+</table>
+{% else %}
+<h3 style="text-align:center;">No Images Published to the VO</h3>
+{% endif %}{# voimgs #}
 
 {% endblock content %}
 

@@ -413,8 +413,11 @@ def summary(request):
         log('Redist:', job.field.redistributable())
         log('Field:', job.field)
 
+    voimgs = voImage.objects.all().filter(user=request.user)
+
     ctxt = {
         'jobs' : jobs,
+        'voimgs' : voimgs,
         'prefs' : prefs,
         'statusurl' : '/job/status/?jobid=',
         'getfileurl' : '/job/getfile/?jobid=',
@@ -509,12 +512,13 @@ def publishtovo(request):
         sip.loadlibrary('/home/gmaps/test/an-common/_sip.so')
     
 
-    img = voImage()
-    img.field = job.field
-    img.image_title = 'Field_%i' % (job.field.id)
-    img.instrument = ''
-    img.jdate = 0
-    img.wcs = wcs
+    img = voImage(user = request.user,
+                  field = job.field,
+                  image_title = 'Field_%i' % (job.field.id),
+                  instrument = '',
+                  jdate = 0,
+                  wcs = wcs,
+                  )
     tanwcs = wcs.to_tanwcs()
     (ra, dec) = tanwcs.pixelxy2radec(wcs.imagew/2, wcs.imageh/2)
     (img.ra_center, img.dec_center) = (ra, dec)
