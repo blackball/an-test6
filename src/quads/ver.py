@@ -60,5 +60,35 @@ if __name__ == '__main__':
     #plot(ixy[:,0], ixy[:,1], 'rs',
     #     fxy[:,0], fxy[:,1], 'b+')
 
-    
-    
+    R = sqrt((ix - cx)**2 + (iy - cy)**2)
+    IR = argsort(R)
+
+    mR = []
+    mD = []
+    mI = []
+
+    #for i in IR:
+    for ii in range(len(IR)):
+        i = IR[ii]
+        r = 5
+        x = ix[i]
+        y = iy[i]
+        #I = find( (fabs(fx - x) < r) * (fabs(fy - y) < r) )
+        D = sqrt((fx - x)**2 + (fy - y)**2)
+        I = find( D < r )
+        for j in I:
+            mR.append(R[i])
+            mD.append(D[j])
+            mI.append(i)
+
+    figure(2)
+    clf()
+    plot(mR, mD, 'ro')
+    xlabel('Distance from quad center')
+    ylabel('Match distance')
+
+    figure(3)
+    clf()
+    plot(mI, mD, 'ro')
+    xlabel('Index point number')
+    ylabel('Match distance')

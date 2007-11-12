@@ -1,3 +1,5 @@
+import sys
+
 #from numpy import array, matrix, linalg
 from numpy import *
 from numpy.random import *
@@ -24,6 +26,12 @@ class Transform(object):
         #print dx
         return dx
 
+    def __str__(self):
+        s = ('<Transform: tin (%f,%f) scale (%f) rot (%f, %f; %f, %f) tout (%f, %f)>' %
+             (self.incenter[0], self.incenter[1], self.scale,
+              self.rotation[0,0], self.rotation[0,1], self.rotation[1,0], self.rotation[1,1],
+              self.outcenter[0], self.outcenter[1]))
+        return s
 
 def procrustes(X, Y):
     T = Transform()
@@ -68,6 +76,36 @@ def procrustes(X, Y):
     #print 'R is\n', R
     T.rotation = R
     return T
+
+
+def test_procrustes_1():
+    # Create a Transform, apply it to some points, then run procrustes to see if we
+    # recover the Transform exactly.
+    t1 = Transform()
+    t1.scale = 3.0
+    A = 48.0 * pi/180.0
+    t1.rotation = matrix([[sin(A), cos(A)], [-cos(A), sin(A)]])
+    t1.incenter = array([42, 500]).reshape(2,1)
+    t1.outcenter = array([600, -12]).reshape(2,1)
+
+    N = 4
+    pts = zeros((2,N))
+    tpts = zeros((2,N))
+    for i in range(N):
+        pts[0,i] = t1.incenter[0] + ((i % 2) - 0.5) * 200
+        pts[1,i] = t1.incenter[1] + (((i/2) % 2) - 0.5) * 200
+
+    for i in range(N):
+        pt = pts[:,i].reshape(2,1)
+        tpts[:,i] = t1.apply(pt).reshape(1,2)
+
+    t2 = procrustes(pts, tpts)
+
+    print 'pts:', pts
+    print 'tpts:', tpts
+
+    print 't1 is', t1
+    print 't2 is', t2
 
 
 def draw_sample(inoise=1, fnoise=0, iqnoise=-1,
@@ -131,7 +169,11 @@ def draw_sample(inoise=1, fnoise=0, iqnoise=-1,
 
 if __name__ == '__main__':
 
-    N = 1000
+    test_procrustes_1()
+    sys.exit(0)
+
+    #N = 1000
+    N = 100
     C = zeros((2,N))
     QD = zeros((N))
     for i in range(N):
