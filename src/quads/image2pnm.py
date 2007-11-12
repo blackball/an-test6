@@ -96,7 +96,7 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
     """
     typeinfo = run_file(infile)
     if not typeinfo in imgcmds:
-        return (None, 'Image type not recognized:', typeinfo)
+        return (None, 'Image type not recognized: "%s"' % typeinfo)
 
     tempfiles = []
 
