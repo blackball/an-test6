@@ -3,6 +3,12 @@ import os
 import select
 
 def run_command(cmd):
+    """
+    Run a command and return the text written to stdout and stderr, plus
+    the return value.
+
+    Returns: (int return value, string out, string err)
+    """
     child = popen2.Popen3(cmd, True)
     (fout, fin, ferr) = (child.fromchild, child.tochild, child.childerr)
     fin.close()

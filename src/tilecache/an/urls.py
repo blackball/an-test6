@@ -9,6 +9,7 @@ urlpatterns = patterns('',
 					   (r'^job/', include('an.portal.urls')),
 					   (r'^userprefs/', 'an.portal.views.userprefs'),
 					   (r'^vo/', include('an.vo.urls')),
+                       (r'^testbed/', include('an.testbed.urls')),
                        # DEBUG
 					   (r'^upload-demo/', 'an.uploaddemo.view'),
 					   (r'^upload-demo-main/', 'an.uploaddemo.mainview'),

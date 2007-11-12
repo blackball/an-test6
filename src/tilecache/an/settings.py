@@ -94,6 +94,7 @@ INSTALLED_APPS = (
 	'an.upload',
 	'an.portal',
 	'an.vo',
+    'an.testbed',
 )
 
 
