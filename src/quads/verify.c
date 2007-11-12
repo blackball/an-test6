@@ -24,10 +24,7 @@
 
 #include "verify.h"
 #include "mathutil.h"
-#include "intmap.h"
 #include "keywords.h"
-
-#include "blind_wcs.h"
 
 void verify_init() {}
 void verify_cleanup() {}
@@ -39,6 +36,11 @@ void verify_cleanup() {}
 #define debug(args...)
 #endif
 
+/*
+ This gets called once for each field before verification begins.
+ We build a kdtree out of the field stars (in pixel space) which will be
+ used during verification to find nearest-neighbours.
+ */
 verify_field_t* verify_field_preprocess(double* field, int NF) {
     verify_field_t* vf;
     int Nleaf = 5;
@@ -71,6 +73,11 @@ verify_field_t* verify_field_preprocess(double* field, int NF) {
     return vf;
 }
 
+/*
+ This gets called after all verification calls for a field are finished;
+ we cleanup the data structures we created in the verify_field_preprocess()
+ function.
+ */
 void verify_field_free(verify_field_t* vf) {
     if (!vf)
         return;
@@ -113,8 +120,6 @@ void verify_hit(startree* skdt,
 
 	double bestlogodds;
 	int bestnmatch, bestnnomatch, bestnconflict;
-
-	int Nmin;
 
 	double crvalxyz[3];
 	kdtree_t* startree = skdt->tree;
@@ -173,9 +178,9 @@ void verify_hit(startree* skdt,
 		}
 		//debug(" -> good\n");
 
-		// Here we compact the "res" array(s) so that when we're done,
-		// the NI indices that are inside the field are in the bottom
-		// NI elements of the res->inds array.
+		// Here we compact the "res" arrays so that when we're done,
+		// the NI indices that are inside the field are in the first
+		// NI elements of the res->{results,inds} arrays.
 		res->inds[NI] = res->inds[i];
 		if (DEBUGVERIFY)
 			memmove(res->results.d + NI*3,
@@ -220,6 +225,8 @@ void verify_hit(startree* skdt,
 		return;
 	}
 
+    // Each index star has a "sweep number" assigned during index building;
+    // it roughly represents a local brightness ordering.
 	sweeps = malloc(NI * sizeof(uint8_t));
 	maxsweep = 0;
 	for (i=0; i<NI; i++) {
@@ -227,7 +234,8 @@ void verify_hit(startree* skdt,
 		maxsweep = MAX(maxsweep, sweeps[i]);
 	}
 
-    // Prime the array where we store conflicting-match info.
+    // Prime the array where we store conflicting-match info:
+    // any match is an improvement, except for stars that form the matched quad.
 	bestprob = malloc(vf->NF * sizeof(double));
 	for (i=0; i<vf->NF; i++)
 		bestprob[i] = -HUGE_VAL;
@@ -237,6 +245,8 @@ void verify_hit(startree* skdt,
 		bestprob[mo->field[i]] = HUGE_VAL;
 	}
 
+    // If we're modelling the expected noise as a Gaussian whose variance grows
+    // away from the quad center, compute the required quantities...
 	if (do_gamma) {
         // Find the midpoint of AB of the quad in pixel space.
         qc[0] = 0.5 * (vf->field[2*mo->field[0]  ] + vf->field[2*mo->field[1]  ]);
@@ -254,8 +264,6 @@ void verify_hit(startree* skdt,
 
 	debug("log(p(background)) = %g\n", logprob_background);
 	debug("log(p(distractor)) = %g\n", logprob_distractor);
-
-	Nmin = MIN(NI, vf->NF);
 
 	bestlogodds = -HUGE_VAL;
 	bestnmatch = bestnnomatch = bestnconflict = -1;
