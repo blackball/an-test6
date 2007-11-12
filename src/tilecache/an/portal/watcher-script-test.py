@@ -29,7 +29,7 @@ from an.upload.models import UploadedFile
 from an.portal.log import log
 from an.portal.convert import convert, is_tarball, FileConversionError
 from an.portal.wcs import TanWCS
-from an.portal.run_command import run_command
+from an.util.run_command import run_command
 
 # HACK
 import sip

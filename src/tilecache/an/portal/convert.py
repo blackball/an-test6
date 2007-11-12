@@ -8,7 +8,7 @@ import quads.image2pnm as image2pnm
 import quads.fits2fits as fits2fits
 
 from an.portal.log import log
-from an.portal.run_command import run_command
+from an.util.run_command import run_command
 
 class FileConversionError(Exception):
     errstr = None
