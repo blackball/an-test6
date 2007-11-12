@@ -189,7 +189,7 @@ class JobSet(models.Model):
         super(JobSet, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        s = '<JobSet %s, user %s' % (self.jobid, self.user.username)
+        s = '<JobSet %s, status %s, user %s' % (self.jobid, self.status, self.user.username)
         if self.datasrc == 'url':
             s += ', url ' + str(self.url)
         elif self.datasrc == 'file':

@@ -117,6 +117,7 @@ def jobsetstatus(request, jobset):
 
     jobs = jobset.jobs.all()
     ctxt = {
+        'jobset' : jobset,
         'jobs' : jobs,
         'statusurl' : '/job/status/?jobid=',
         }
