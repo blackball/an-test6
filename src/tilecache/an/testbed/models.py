@@ -18,4 +18,6 @@ class OldJob(models.Model):
     imagefile = models.CharField(max_length=256, null=True)
     email = models.CharField(max_length=64, null=True)
     solved = models.BooleanField()
+    imagew = models.PositiveIntegerField()
+    imageh = models.PositiveIntegerField()
 

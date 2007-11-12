@@ -44,13 +44,21 @@ def load_jobdir(jobdir):
     imgfn = None
     if 'imagefilename' in jobdata:
         imgfn = jobdata['imagefilename']
-
+    W = 0
+    if 'imageW' in jobdata:
+        W = jobdata['imageW']
+    H = 0
+    if 'imageH' in jobdata:
+        H = jobdata['imageH']
+        
     oj = OldJob(
         jobid = jobid,
         jobdir = os.path.abspath(jobdir),
         email = jobdata['email'],
         imagefile = imgfn,
         solved = ('cd11' in jobdata),
+        imagew = W,
+        imageh = H,
         )
     oj.save()
 
