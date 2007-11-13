@@ -177,15 +177,13 @@ def jobstatus(request):
         'jobset' : job.jobset,
         'joburl' : (jobset.datasrc == 'url') and jobset.url or None,
         'jobfile' : (jobset.datasrc == 'file') and jobset.uploaded.userfilename or None,
-        'jobscale' : jobset.friendly_scale(),
-        'jobparity' : jobset.friendly_parity(),
+        'jobscale' : job.friendly_scale(),
+        'jobparity' : job.friendly_parity(),
         'sources' : get_url(job, 'sources'),
         'sources_big' : get_url(job, 'sources-big'),
         'jobowner' : jobowner,
         'allowanon' : anonymous,
         }
-
-
 
     if job.solved:
         wcsinfofn = convert(job, job.field, 'wcsinfo', store_imgtype=True, store_imgsize=True)
@@ -231,26 +229,21 @@ def jobstatus(request):
                '&arcsinh&wcsfn=%s' % job.get_relative_filename('wcs.fits'))
         smallstyle = '&w=300&h=300&lw=3'
         largestyle = '&w=1024&h=1024&lw=5'
-        steps = [ {              'gain':-0.5,  'dashbox':0.1,   'center':False },
-                  {'limit':18,   'gain':-0.25, 'dashbox':0.01,  'center':True, 'dm':0.05 },
-                  {'limit':1.8,  'gain':0.5,                    'center':True, 'dm':0.005 },
+        steps = [ {              'gain':0,    'dashbox':0.1,   'center':False },
+                  {'limit':18,   'gain':-0.5, 'dashbox':0.01,  'center':True, 'dm':0.05 },
+                  {'limit':1.8,  'gain':0.25,                   'center':True, 'dm':0.005 },
                   ]
 
         zlist = []
 
         for last_s in range(len(steps)):
             s = steps[last_s]
-            #log('checking zoom step', last_s)
-            #if 'limit' in s:
-            #    log('limit:', s['limit'], 'field size', fldsz)
-            #else:
-            #    log('no limit')
             if 'limit' in s and fldsz > s['limit']:
                 log('break')
                 break
         else:
             last_s = len(steps)
-        #log('last_s:', last_s)
+
         for ind in range(last_s):
             s = steps[ind]
             if s['center']:

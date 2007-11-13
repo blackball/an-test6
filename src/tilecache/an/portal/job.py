@@ -216,37 +216,6 @@ class JobSet(models.Model):
             return self.uploaded.userfilename
         return None
 
-    def get_scale_bounds(self):
-        if self.scaletype == 'ul':
-            return (self.scalelower, self.scaleupper)
-        elif self.scaletype == 'ev':
-            return (self.scaleest * (1 - self.scaleerr / 100.0),
-                    self.scaleest * (1 + self.scaleerr / 100.0))
-        else:
-            return None
-
-    def friendly_parity(self):
-        pstrs = [ 'Positive', 'Negative', 'Try both' ]
-        return pstrs[int(self.parity)]
-
-    def friendly_scale(self):
-        val = None
-        if self.scaletype == 'ul':
-            val = '%.2f to %.2f' % (self.scalelower, self.scaleupper)
-        elif self.scaletype == 'ev':
-            val = '%.2f plus or minus %.2f%%' % (self.scaleest, self.scaleerr)
-
-        txt = None
-        if self.scaleunits == 'arcsecperpix':
-            txt = val + ' arcseconds per pixel'
-        elif self.scaleunits == 'arcminwidth':
-            txt = val + ' arcminutes wide'
-        elif self.scaleunits == 'degwidth':
-            txt = val + ' degrees wide'
-        elif self.scaleunits == 'focalmm':
-            txt = 'focal length of ' + val + ' mm'
-        return txt
-
     def set_submittime_now(self):
         self.submittime = Job.timenow()
     def format_submittime(self):
@@ -282,8 +251,11 @@ class Job(models.Model):
     ycol = models.CharField(max_length=16, null=True)
     # image scale.
     scaleunits = models.CharField(max_length=16, choices=JobSet.scaleunits_CHOICES, null=True)
+    scaletype  = models.CharField(max_length=3, choices=JobSet.scaletype_CHOICES, null=True)
     scalelower = models.FloatField(null=True)
     scaleupper = models.FloatField(null=True)
+    scaleest   = models.FloatField(null=True)
+    scaleerr   = models.FloatField(null=True)
     # tweak.
     tweak = models.BooleanField(null=True)
     tweakorder = models.PositiveSmallIntegerField(null=True)
@@ -307,15 +279,64 @@ class Job(models.Model):
         s += '>'
         return s
 
-    def get_scale_bounds(self):
-        if self.scalelower and self.scaleupper:
-            return (self.scalelower, self.scaleupper)
-        return self.jobset.get_scale_bounds()
+    def friendly_parity(self):
+        pstrs = [ 'Positive', 'Negative', 'Try both' ]
+        return pstrs[int(self.get_parity())]
 
-    def get_scale_units(self):
-        if self.scaleunits:
-            return self.scaleunits
-        return self.jobset.get_scale_units()
+    def friendly_scale(self):
+        val = None
+        stype = self.get_scaletype()
+        if stype == 'ul':
+            val = '%.2f to %.2f' % (self.get_scalelower(), self.get_scaleupper())
+        elif self.scaletype == 'ev':
+            val = '%.2f plus or minus %.2f%%' % (self.get_scaleest(), self.get_scaleerr())
+
+        txt = None
+        units = self.get_scaleunits()
+        if units == 'arcsecperpix':
+            txt = val + ' arcseconds per pixel'
+        elif units == 'arcminwidth':
+            txt = val + ' arcminutes wide'
+        elif units == 'degwidth':
+            txt = val + ' degrees wide'
+        elif units == 'focalmm':
+            txt = 'focal length of ' + val + ' mm'
+        return txt
+
+    def get_scale_bounds(self):
+        stype = self.get_scaletype()
+        if stype == 'ul':
+            return (self.get_scalelower(), self.get_scaleupper())
+        elif stype == 'ev':
+            est = self.get_scaleest()
+            err = self.get_scaleerr()
+            return (est * (1.0 - err / 100.0),
+                    est * (1.0 + err / 100.0))
+        else:
+            return None
+
+    def get_parity(self):
+        if self.parity is not None:
+            return self.parity
+        return self.jobset.parity
+
+    def get_scalelower(self):
+        return self.scalelower or self.jobset.scalelower
+
+    def get_scaleupper(self):
+        return self.scaleupper or self.jobset.scaleupper
+
+    def get_scaleest(self):
+        return self.scaleest or self.jobset.scaleest
+
+    def get_scaleerr(self):
+        return self.scaleerr or self.jobset.scaleerr
+
+    def get_scaletype(self):
+        return self.scaletype or self.jobset.scaletype
+
+    def get_scaleunits(self):
+        return self.scaleunits or self.jobset.scaleunits
 
     def get_tweak(self):
         if self.tweak is not None:

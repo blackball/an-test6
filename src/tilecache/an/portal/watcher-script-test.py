@@ -55,7 +55,9 @@ def handle_job(job, sshconfig):
     try:
         real_handle_job(job, sshconfig)
     except Exception,e:
-        job.status = 'Failed: "%s"' % str(e)
+        job.status = 'Failed'
+        errstr = str(e)
+        job.failurereason = errstr[:256]
         job.save()
         
 def real_handle_job(job, sshconfig):
@@ -108,7 +110,7 @@ def real_handle_job(job, sshconfig):
 
         log('created xylist %s' % xylist)
         (lower, upper) = job.get_scale_bounds()
-        units = job.get_scale_units()
+        units = job.get_scaleunits()
         (dotweak, tweakorder) = job.get_tweak()
 
         cmd = ('augment-xylist -x %s -o %s --solved solved '

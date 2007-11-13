@@ -1,6 +1,7 @@
 from django.db import models
 
 import sip
+import math
 
 class TanWCS(models.Model):
     crval1 = models.FloatField()
@@ -39,6 +40,10 @@ class TanWCS(models.Model):
                 ' CD (%f, %f; %f %f)' % (self.cd11, self.cd12, self.cd21, self.cd22) +
                 ' Image size (%f, %f)>' % (self.imagew, self.imageh)
                 )
+
+    # returns pixel scale in arcseconds per pixel
+    def get_pixscale(self):
+        return 3600.0 * math.sqrt(abs(self.cd11 * self.cd22 - self.cd12 * self.cd21))
 
     def to_tanwcs(self):
         tan = sip.Tan()

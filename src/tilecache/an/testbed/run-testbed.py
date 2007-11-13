@@ -39,6 +39,12 @@ if __name__ == '__main__':
             field = tbj.field,
             jobset = jobset,
             )
+
+        pixscale = tbj.wcs.get_pixscale()
+        job.scaleunits = 'arcsecperpix'
+        job.scalelower = pixscale * 0.9
+        job.scaleupper = pixscale * 1.1
+
         job.create_job_dir()
         job.save()
         Job.submit_job_or_jobset(job)
