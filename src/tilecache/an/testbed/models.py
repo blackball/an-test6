@@ -7,8 +7,6 @@ from an.portal.wcs import TanWCS
 class TestbedJob(models.Model):
     field = models.ForeignKey(AstroField)
     wcs = models.ForeignKey(TanWCS)
-    #origid = models.CharField(max_length=32, null=True)
-
 
 class OldJob(models.Model):
     jobid = models.CharField(max_length=256, unique=True, primary_key=True)

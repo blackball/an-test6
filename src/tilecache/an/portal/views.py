@@ -115,7 +115,7 @@ def jobsetstatus(request, jobset):
     if not request.user.is_authenticated():
         return HttpResponseRedirect('/login')
 
-    jobs = jobset.jobs.all()
+    jobs = jobset.jobs.all().order_by('starttime', 'jobid')
     ctxt = {
         'jobset' : jobset,
         'jobs' : jobs,

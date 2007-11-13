@@ -42,8 +42,8 @@ if __name__ == '__main__':
 
         pixscale = tbj.wcs.get_pixscale()
         job.scaleunits = 'arcsecperpix'
-        job.scalelower = pixscale * 0.9
-        job.scaleupper = pixscale * 1.1
+        job.scalelower = pixscale * 0.8
+        job.scaleupper = pixscale * 1.2
 
         job.create_job_dir()
         job.save()

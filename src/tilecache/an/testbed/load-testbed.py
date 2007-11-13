@@ -33,7 +33,7 @@ if __name__ == '__main__':
     print 'Solved: %i' % len(ojs)
 
     # DEBUG
-    ojs = ojs[:10]
+    ojs = ojs[:100]
 
     # HACK
     us = User.objects.all().filter(username='testbed@astrometry.net')
