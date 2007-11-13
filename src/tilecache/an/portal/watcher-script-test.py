@@ -10,7 +10,7 @@ from urlparse import urlparse
 os.environ['DJANGO_SETTINGS_MODULE'] = 'an.settings'
 sys.path.extend(['/home/gmaps/test/tilecache',
                  '/home/gmaps/test/an-common',
-                 '/home/gmaps/test/',
+                 '/home/gmaps/test',
                  '/home/gmaps/django/lib/python2.4/site-packages'])
 
 import an.gmaps_config as config
@@ -53,6 +53,13 @@ def userlog(*msg):
     f.close()
 
 def handle_job(job, sshconfig):
+    try:
+        real_handle_job(job, sshconfig)
+    except Exception,e:
+        job.status = 'Failed: "%s"' % str(e)
+        job.save()
+        
+def real_handle_job(job, sshconfig):
     log('handle_job: ' + str(job))
 
     job.status = 'Running'
@@ -125,6 +132,16 @@ def handle_job(job, sshconfig):
         log('created file ' + axypath)
 
     elif filetype == 'fits':
+        try:
+            log('fits2fits...')
+            xylist = convert(job, field, 'xyls-sane', store_imgtype=True, store_imgsize=True)
+            log('xylist is', xylist)
+        except FileConversionError,e:
+            userlog('Sanitizing your FITS file failed.')
+            bailout(job, 'Sanitizing FITS file failed.')
+            return -1
+        log('created xylist %s' % xylist)
+
         bailout(job, 'fits tables not implemented')
         return -1
     elif filetype == 'text':

@@ -32,8 +32,11 @@ if __name__ == '__main__':
     ojs = ojs.filter(solved=True)
     print 'Solved: %i' % len(ojs)
 
+    # DEBUG
+    ojs = ojs[:10]
+
     # HACK
-    us = User.objects.all().filter(username='test@astrometry.net')
+    us = User.objects.all().filter(username='testbed@astrometry.net')
     if len(us) != 1:
         print 'Failed to find user.'
         sys.exit(-1)
@@ -59,8 +62,10 @@ if __name__ == '__main__':
 
         tj = TestbedJob(field = field,
                         wcs = wcs,
-                        origid = oj.jobid,
+                        #origid = oj.jobid,
                         )
         tj.save()
+        print 'added testbed job', tj.id
 
-        print 'save testbed job', tj.id
+
+    

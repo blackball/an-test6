@@ -120,6 +120,10 @@ class JobSet(models.Model):
         ('file', 'File'),
         )
 
+    #datasrc_extra_CHOICES = (
+    #    ('field', 'Existing field'),
+    #    )
+
     filetype_CHOICES = (
         ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
         ('fits', 'FITS table of source locations'),
@@ -147,7 +151,9 @@ class JobSet(models.Model):
 
     filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
-    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+    datasrc = models.CharField(max_length=10,
+                               choices=datasrc_CHOICES #+ datasrc_extra_CHOICES
+                               )
 
     url = models.URLField(blank=True, null=True)
 
@@ -177,8 +183,8 @@ class JobSet(models.Model):
 
     submittime = models.DateTimeField(editable=False, null=True)
 
-    status = models.CharField(max_length=16, editable=False)
-    failurereason = models.CharField(max_length=256, editable=False)
+    #status = models.CharField(max_length=16, editable=False)
+    #failurereason = models.CharField(max_length=256, editable=False)
 
     def __init__(self, *args, **kwargs):
         for k,v in kwargs.items():

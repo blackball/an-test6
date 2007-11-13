@@ -96,7 +96,7 @@ def get_status_url(jobid):
 def get_job(jobid):
     jobs = Job.objects.all().filter(jobid=jobid)
     if len(jobs) != 1:
-        log('Found %i jobs, not 1' % len(jobs))
+        #log('Found %i jobs, not 1' % len(jobs))
         return None
     job = jobs[0]
     return job
@@ -158,7 +158,7 @@ def jobstatus(request):
     anonymous = job.allowanonymous()
 
     if not (jobowner or anonymous):
-        return HttpResponse('The owner of this job (' + job.user.username + ') has not granted public access.')
+        return HttpResponse('The owner of this job (' + job.jobset.user.username + ') has not granted public access.')
 
     field = job.field
     jobset = job.jobset

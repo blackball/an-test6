@@ -312,9 +312,9 @@ def newlong(request):
     if form.is_valid():
         uploaded = form.getclean('upload_id')
         url = form.getclean('url')
-        if form.getclean('filetype') == 'url':
+        if form.getclean('datasrc') == 'url':
             uploaded = None
-        elif form.getclean('filetype') == 'file':
+        elif form.getclean('datasrc') == 'file':
             url = None
 
         jobset = JobSet(

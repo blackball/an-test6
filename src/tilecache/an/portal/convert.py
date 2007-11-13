@@ -51,7 +51,7 @@ def is_tarball(fn):
     typeinfo = image2pnm.run_file(fn)
     log('file type: "%s"' % typeinfo)
     return typeinfo == 'POSIX tar archive'
-    
+
 def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir
@@ -145,6 +145,15 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         infn = convert(job, field, 'pgm', store_imgtype, store_imgsize)
         cmd = 'pnmtofits %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'xyls-sane':
+        # For FITS bintable uploads: put it through fits2fits.
+        infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+        errmsg = fits2fits.fits2fits(infn, fullfn, False)
+        if errmsg:
+            log(errmsg)
+            raise FileConversionError(errmsg)
         return fullfn
 
     elif fn == 'xyls':
