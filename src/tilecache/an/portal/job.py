@@ -120,44 +120,28 @@ class JobSet(models.Model):
         ('file', 'File'),
         )
 
-    #datasrc_extra_CHOICES = (
-    #    ('field', 'Existing field'),
-    #    )
-
     filetype_CHOICES = (
         ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
         ('fits', 'FITS table of source locations'),
         ('text', 'Text list of source locations'),
         )
 
-    jobid = models.CharField(max_length=32, unique=True, editable=False,
-                             primary_key=True)
+    jobid = models.CharField(max_length=32, unique=True, primary_key=True)
+                             
 
-    #status_CHOICES = (
-    #    ('not-submitted', 'Submission failed'),
-    #    ('queued', 'Queued'),
-    #    ('started', 'Started'),
-    #    ('solved', 'Solved'),
-    #    ('failed', 'Failed')
-    #    )
+    status = models.CharField(max_length=16)
 
-    #
-    status = models.CharField(max_length=16,
-                              #choices=status_CHOICES,
-                              editable=False)
-    failurereason = models.CharField(max_length=256, editable=False)
+    failurereason = models.CharField(max_length=256)
 
-    user = models.ForeignKey(User, editable=False)
+    user = models.ForeignKey(User)
 
     filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
-    datasrc = models.CharField(max_length=10,
-                               choices=datasrc_CHOICES #+ datasrc_extra_CHOICES
-                               )
+    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
 
     url = models.URLField(blank=True, null=True)
 
-    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True, editable=False)
+    uploaded = models.ForeignKey(UploadedFile, null=True, blank=True)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
                                               default=2, radio_admin=True,
@@ -181,10 +165,7 @@ class JobSet(models.Model):
     tweak = models.BooleanField(default=True)
     tweakorder = models.PositiveSmallIntegerField(default=2)
 
-    submittime = models.DateTimeField(editable=False, null=True)
-
-    #status = models.CharField(max_length=16, editable=False)
-    #failurereason = models.CharField(max_length=256, editable=False)
+    submittime = models.DateTimeField(null=True)
 
     def __init__(self, *args, **kwargs):
         for k,v in kwargs.items():
@@ -276,15 +257,12 @@ class JobSet(models.Model):
 
 
 class Job(models.Model):
-    jobid = models.CharField(max_length=32, unique=True, editable=False,
-                             primary_key=True)
+    jobid = models.CharField(max_length=32, unique=True, primary_key=True)
 
-    status = models.CharField(max_length=16,
-                              editable=False)
-    failurereason = models.CharField(max_length=256, editable=False)
+    status = models.CharField(max_length=16)
+    failurereason = models.CharField(max_length=256)
 
-    jobset = models.ForeignKey(JobSet, related_name='jobs',
-                               null=True)
+    jobset = models.ForeignKey(JobSet, related_name='jobs', null=True)
 
     # has the user explicitly granted anonymous access to this job
     # status page?
@@ -294,14 +272,14 @@ class Job(models.Model):
     # status page?
     forbidanon = models.BooleanField(default=False)
 
-    field = models.ForeignKey(AstroField, editable=False)
+    field = models.ForeignKey(AstroField)
 
     # times
-    starttime  = models.DateTimeField(editable=False, null=True)
-    finishtime = models.DateTimeField(editable=False, null=True)
+    starttime  = models.DateTimeField(null=True)
+    finishtime = models.DateTimeField(null=True)
 
     # solution
-    tanwcs = models.ForeignKey(TanWCS, null=True, editable=False)
+    tanwcs = models.ForeignKey(TanWCS, null=True)
 
     solved = models.BooleanField(default=False)
 
