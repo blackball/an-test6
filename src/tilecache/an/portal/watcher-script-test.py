@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-#import grp
 import os
 import sys
 import tempfile
@@ -108,16 +107,18 @@ def real_handle_job(job, sshconfig):
             return -1
 
         log('created xylist %s' % xylist)
-        (lower, upper) = jobset.get_scale_bounds()
+        (lower, upper) = job.get_scale_bounds()
+        units = job.get_scale_units()
+        (dotweak, tweakorder) = job.get_tweak()
 
         cmd = ('augment-xylist -x %s -o %s --solved solved '
                '--match match.fits --rdls index.rd.fits '
                '--wcs wcs.fits --sort-column FLUX '
                '--scale-units %s --scale-low %g --scale-high %g '
                '--fields 1' %
-               (xylist, axy, jobset.scaleunits, lower, upper))
-        if jobset.tweak:
-            cmd += ' --tweak-order %i' % jobset.tweakorder
+               (xylist, axy, units, lower, upper))
+        if dotweak:
+            cmd += ' --tweak-order %i' % tweakorder
         else:
             cmd += ' --no-tweak'
 
@@ -192,10 +193,6 @@ def real_handle_job(job, sshconfig):
     if os.path.exists(job.get_filename('solved')):
         job.solved = True
         job.status = 'Solved'
-
-        #log('os.environ:')
-        #for k,v in os.environ.items():
-        #    log('  ', k, '=', v)
 
         # BIG HACK! - look through LD_LIBRARY_PATH if this is still needed...
         if not sip.libraryloaded():
@@ -328,7 +325,6 @@ def main(sshconfig, joblink):
                     jobset = jobset,
                     field = field,
                     )
-                #job.status = 'Queued'
                 job.save()
                 jobset.save()
                 # One file in tarball: convert straight to a Job.
@@ -355,7 +351,6 @@ def main(sshconfig, joblink):
             jobset = jobset,
             field = field,
             )
-        #job.status = 'Queued'
         job.save()
         jobset.save()
         rtn = handle_job(job, sshconfig)
@@ -376,15 +371,6 @@ if __name__ == '__main__':
     joblink = sys.argv[2]
 
     os.umask(07)
-
-    #grps = os.getgroups()
-    #log('Groups:', ', '.join(map(str, grps)))
-    #log('Groups:')
-    #for g in grps:
-    #    grpdata = grp.getgrgid(g)
-    #    log('  %s (%s)' % (g, grpdata.gr_name))
-    #os.setgid()
-
 
     sys.exit(main(sshconfig, joblink))
 

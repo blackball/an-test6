@@ -127,17 +127,16 @@ class JobSet(models.Model):
         )
 
     jobid = models.CharField(max_length=32, unique=True, primary_key=True)
-                             
+
+    user = models.ForeignKey(User)
+
+    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
+
+    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
     status = models.CharField(max_length=16)
 
     failurereason = models.CharField(max_length=256)
-
-    user = models.ForeignKey(User)
-
-    filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
-
-    datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
 
     url = models.URLField(blank=True, null=True)
 
@@ -274,6 +273,22 @@ class Job(models.Model):
 
     field = models.ForeignKey(AstroField)
 
+
+    # If any of these solver parameters are set for a particular Job, they
+    # override the settings for the JobSet.
+    parity = models.PositiveSmallIntegerField(choices=JobSet.parity_CHOICES, null=True)
+    # for FITS tables, the names of the X and Y columns.
+    xcol = models.CharField(max_length=16, null=True)
+    ycol = models.CharField(max_length=16, null=True)
+    # image scale.
+    scaleunits = models.CharField(max_length=16, choices=JobSet.scaleunits_CHOICES, null=True)
+    scalelower = models.FloatField(null=True)
+    scaleupper = models.FloatField(null=True)
+    # tweak.
+    tweak = models.BooleanField(null=True)
+    tweakorder = models.PositiveSmallIntegerField(null=True)
+
+
     # times
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
@@ -291,6 +306,27 @@ class Job(models.Model):
         s += ' ' + str(self.field)
         s += '>'
         return s
+
+    def get_scale_bounds(self):
+        if self.scalelower and self.scaleupper:
+            return (self.scalelower, self.scaleupper)
+        return self.jobset.get_scale_bounds()
+
+    def get_scale_units(self):
+        if self.scaleunits:
+            return self.scaleunits
+        return self.jobset.get_scale_units()
+
+    def get_tweak(self):
+        if self.tweak is not None:
+            tweak = self.tweak
+        else:
+            tweak = self.jobset.tweak
+        if self.tweakorder is not None:
+            order = self.tweakorder
+        else:
+            order = self.jobset.tweak
+        return (tweak, order)
 
     def get_job_dir(self):
         return Job.s_get_job_dir(self.jobid)

@@ -28,7 +28,7 @@ if __name__ == '__main__':
         user = user,
         filetype = 'image',
         )
-    #jobset.create_job_dir()
+    jobset.set_submittime_now()
     jobset.save()
 
     print 'Created jobset', jobset.jobid
