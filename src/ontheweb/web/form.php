@@ -1422,7 +1422,11 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 	// Run fits2xy...
 	$fits2xyout = $mydir . $fits2xyout_fn;
-	$cmd = $fits2xy . " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
+	$cmd = $fits2xy;
+    if ($W * $H >= 5000000) {
+        $cmd .= " -H";
+    }
+    $cmd .= " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
 	if (($res === FALSE) || $retval) {
