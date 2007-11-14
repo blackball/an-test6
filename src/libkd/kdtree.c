@@ -33,6 +33,14 @@ void kdtree_update_funcs(kdtree_t* kd) {
 	KD_DISPATCH(kdtree_update_funcs, kd->treetype,, (kd));
 }
 
+int kdtree_level_start(const kdtree_t* kd, int level) {
+    return (1 << level) - 1;
+}
+
+int kdtree_level_end(const kdtree_t* kd, int level) {
+    return (1 << (level+1)) - 2;
+}
+
 void* kdtree_get_data(const kdtree_t* kd, int i) {
 	switch (kdtree_datatype(kd)) {
 	case KDT_DATA_DOUBLE:

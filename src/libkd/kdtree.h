@@ -232,6 +232,18 @@ struct kdtree_funcs {
 	int   (*nearest_neighbour)(const kdtree_t* kd, const void *pt, double* bestd2);
 	int   (*nearest_neighbour_within)(const kdtree_t* kd, const void *pt, double maxd2, double* bestd2);
 	kdtree_qres_t* (*rangesearch)(const kdtree_t* kd, kdtree_qres_t* res, const void* pt, double maxd2, int options);
+
+    // instrumentation functions - set these to get callbacks about
+    // the progress of the algorithm.
+
+    // a node was pruned during nearest-neighbour.
+    void (*nn_prune)(const kdtree_t* kd, int nodeid, double d2, double bestd2, int place);
+    // a node is being explored during nearest-neighbour.
+    void (*nn_explore)(const kdtree_t* kd, int nodeid, double d2, double bestd2);
+    // a point is being examined during nearest-neighbour.
+    void (*nn_point)(const kdtree_t* kd, int nodeid, int pointindex);
+    // a new best point has been found.
+    void (*nn_new_best)(const kdtree_t* kd, int nodeid, int pointindex, double d2);
 };
 typedef struct kdtree_funcs kdtree_funcs;
 
@@ -300,6 +312,13 @@ int kdtree_npoints(const kdtree_t* kd, int nodeid);
 */
 int kdtree_first_leaf(const kdtree_t* kd, int nodeid);
 int kdtree_last_leaf(const kdtree_t* kd, int nodeid);
+
+/*
+ Return the first and last node id (resp) of a given level in the
+ tree.  The root is level 0.
+ */
+int kdtree_level_start(const kdtree_t* kd, int level);
+int kdtree_level_end(const kdtree_t* kd, int level);
 
 /* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
  * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
