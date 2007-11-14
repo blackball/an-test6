@@ -12,5 +12,7 @@ rm queue
 # We have to tell it to watch the current epoch's directory; new epochs
 # will automatically be watched when their directories appear.
 Epoch=`pwd`/`date +%Y%m`
-/home/gmaps/test/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd" -w $Epoch
+Pattern="/input\$"
+echo pattern is $Pattern
+/home/gmaps/test/ontheweb/execs/watcher -D -p $Pattern -n $Nthreads -c "$Cmd" -w $Epoch
 

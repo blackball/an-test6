@@ -48,7 +48,7 @@
    to handle them.
  */
 
-static const char* OPTIONS = "hDl:c:n:w:p:";
+static const char* OPTIONS = "hDl:c:n:w:p:v";
 
 static char* command = "echo %s";
 static char* newfilepattern = NULL;
@@ -71,6 +71,7 @@ static void printHelp(char* progname) {
 			"      [-n <nthreads>]: number of worker threads to run simultaneously.\n"
 			"           default: 1\n"
 			"      [-w <watch-dir>]: watch an additional directory.\n"
+			"      [-v]: be verbose\n"
 			"\n", progname, command);
 }
 
@@ -95,6 +96,8 @@ static int workers_running = 0;
 static int nworkers = 1;
 
 static pl* watchpaths = NULL;
+
+static int verbose = 0;
 
 static void loggit(const char* format, ...) {
 	va_list va;
@@ -194,7 +197,7 @@ struct childinfo {
 typedef struct childinfo childinfo;
 
 /**
-   A valid input file was created.  Enqueue it!
+   A valid file was created.  Enqueue it!
  */
 static void file_created(childinfo* info, struct inotify_event* evt,
 						 char* path) {
@@ -210,11 +213,13 @@ static void file_created(childinfo* info, struct inotify_event* evt,
 		q_it = 1;
 	}
 
-	loggit("File created: %s.");
+	if (verbose)
+		loggit("File created: %s.\n");
 
 	free(pathcopy);
 	if (!q_it) {
-		loggit("Ignoring file %s.\n", path);
+		if (verbose)
+			loggit("Ignoring file %s.\n", path);
 		return;
 	}
 	loggit("Queuing file %s.\n", path);
@@ -258,10 +263,12 @@ static void handle_event(childinfo* info, struct inotify_event* evt) {
 	snprintf(buf, sizeof(buf), "%s/%s", dir, evt->name);
 	path = buf;
 
-	loggit("Path: %s\n", path);
-	loggit("Events:");
-	print_events(flog, evt->mask);
-	loggit("\n");
+	if (verbose) {
+		loggit("Path changed: %s\n", path);
+		loggit("Events:");
+		print_events(flog, evt->mask);
+		loggit("\n");
+	}
 
 	if ((evt->mask & IN_UNMOUNT) ||
 		((evt->mask & IN_DELETE_SELF) && (evt->wd == il_get(info->wds, 0)))) {
@@ -322,13 +329,15 @@ static void handle_event(childinfo* info, struct inotify_event* evt) {
 		// symlink?
 		struct stat st;
 		if (lstat(path, &st)) {
-			loggit("stat(%s) failed: %s\n", path, strerror(errno));
+			if (verbose)
+				loggit("stat(%s) failed: %s\n", path, strerror(errno));
 			return;
 		}
 		if (S_ISLNK(st.st_mode)) {
 			file_created(info, evt, path);
 		} else {
-			loggit("File created, not a symlink: %s\n", path);
+			if (verbose)
+				loggit("File created, not a symlink: %s\n", path);
 		}
 	}
 }
@@ -638,6 +647,9 @@ int main(int argc, char** args) {
 			break;
 		case 'n':
 			nworkers = atoi(optarg);
+			break;
+		case 'v':
+			verbose = 1;
 			break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
