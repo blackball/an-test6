@@ -104,6 +104,7 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
     # misbehaved FITS files. fits2fits is a sanitizer.
     if (typeinfo == fitstype) and (not no_fits2fits):
         if not sanitized:
+            (outfile_dir, outfile_file) = os.path.split(outfile)
             (f, sanitized) = tempfile.mkstemp('sanitized', outfile_file, outfile_dir)
             os.close(f)
             tempfiles.append(sanitized)
