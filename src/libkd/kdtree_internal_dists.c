@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "keywords.h"
 
 static bool DIST_FUNC_MANGLE(bb_point_mindist2_exceeds, FUNC_SUFFIX)
 	 (const PTYPE* lo, const PTYPE* hi, const PTYPE* point, int dim, DISTTYPE maxd2)
@@ -49,6 +50,7 @@ static bool DIST_FUNC_MANGLE(bb_point_mindist2_exceeds, FUNC_SUFFIX)
 	return FALSE;
 }
 
+Unused // don't warn if unused.
 static void DIST_FUNC_MANGLE(bb_point_mindist2_bailout, FUNC_SUFFIX)
 	 (const PTYPE* lo, const PTYPE* hi, const PTYPE* point, int dim, DISTTYPE maxd2,
 	  bool* bailedout, DISTTYPE* p_d2)
