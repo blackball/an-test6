@@ -541,6 +541,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 	// queue root.
 	nodestack[0] = 0;
 	dist2stack[0] = 0.0;
+    if (kd->fun->nn_enqueue)
+        kd->fun->nn_enqueue(kd, 0, 1);
 
 	while (stackpos >= 0) {
 		int nodeid;
@@ -659,6 +661,11 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 			nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 			dist2stack[stackpos] = dist2;
 
+            if (kd->fun->nn_enqueue)
+                kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 2);
+            if (kd->fun->nn_enqueue)
+                kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 3);
+
 		} else {
 			// use splitting plane.
 			double del;
@@ -677,6 +684,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 						nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 						del = DIST_TE(kd, split - tquery[dim]);
 						dist2stack[stackpos] = del*del;
+                        if (kd->fun->nn_enqueue)
+                            kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 4);
 					} else {
                         if (kd->fun->nn_prune) {
                             del = DIST_TE(kd, split - tquery[dim]);
@@ -686,6 +695,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 					stackpos++;
 					nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
 					dist2stack[stackpos] = 0.0;
+                    if (kd->fun->nn_enqueue)
+                        kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 5);
 
 				} else {
 					// query is on "right" side.
@@ -698,6 +709,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 						nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
 						del = DIST_TE(kd, tquery[dim] - split);
 						dist2stack[stackpos] = del*del;
+                        if (kd->fun->nn_enqueue)
+                            kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 6);
 					} else {
                         if (kd->fun->nn_prune) {
                             del = DIST_TE(kd, tquery[dim] - split);
@@ -707,6 +720,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 					stackpos++;
 					nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 					dist2stack[stackpos] = 0.0;
+                    if (kd->fun->nn_enqueue)
+                        kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 7);
 
 				}
 			} else {
@@ -719,15 +734,19 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 						nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 						del = rsplit - query[dim];
 						dist2stack[stackpos] = del*del;
+                        if (kd->fun->nn_enqueue)
+                            kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 8);
 					} else {
                         if (kd->fun->nn_prune) {
                             del = rsplit - query[dim];
-                            kd->fun->nn_prune(kd, KD_CHILD_LEFT(nodeid), del*del, bestd2, 7);
+                            kd->fun->nn_prune(kd, KD_CHILD_RIGHT(nodeid), del*del, bestd2, 7);
                         }
                     }
 					stackpos++;
 					nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
 					dist2stack[stackpos] = 0.0;
+                    if (kd->fun->nn_enqueue)
+                        kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 9);
 
 				} else {
 					// query is on the "right" side
@@ -737,6 +756,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 						nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
 						del = query[dim] - rsplit;
 						dist2stack[stackpos] = del*del;
+                        if (kd->fun->nn_enqueue)
+                            kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 10);
 					} else {
                         if (kd->fun->nn_prune) {
                             del = query[dim] - rsplit;
@@ -746,6 +767,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 					stackpos++;
 					nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 					dist2stack[stackpos] = 0.0;
+                    if (kd->fun->nn_enqueue)
+                        kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 11);
 				}
 			}
 		}

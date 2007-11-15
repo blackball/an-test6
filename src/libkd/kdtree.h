@@ -236,6 +236,8 @@ struct kdtree_funcs {
     // instrumentation functions - set these to get callbacks about
     // the progress of the algorithm.
 
+    // a node was enqueued to be searched during nearest-neighbour.
+    void (*nn_enqueue)(const kdtree_t* kd, int nodeid, int place);
     // a node was pruned during nearest-neighbour.
     void (*nn_prune)(const kdtree_t* kd, int nodeid, double d2, double bestd2, int place);
     // a node is being explored during nearest-neighbour.
