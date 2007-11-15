@@ -485,7 +485,6 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
 	bool use_bigtmath = FALSE;
 	ttype tquery[D];
 	double bestd2 = *p_bestd2;
-	double bestdist;
 	int ibest = *p_ibest;
 	ttype tl2 = 0;
 	bigttype bigtl2 = 0;
@@ -497,7 +496,6 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
 	D = kd->ndim;
 #endif
 
-	bestdist = sqrt(bestd2);
 	if (TTYPE_INTEGER) {
 		use_tquery = ttype_query(kd, query, tquery);
 	}

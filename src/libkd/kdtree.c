@@ -41,6 +41,20 @@ int kdtree_level_end(const kdtree_t* kd, int level) {
     return (1 << (level+1)) - 2;
 }
 
+static inline u8 node_level(const kdtree_t* kd, int nodeid) {
+	int val = (nodeid + 1) >> 1;
+	u8 level = 0;
+	while (val) {
+		val = val >> 1;
+		level++;
+	}
+	return level;
+}
+
+int kdtree_get_level(const kdtree_t* kd, int nodeid) {
+    return node_level(kd, nodeid);
+}
+
 void* kdtree_get_data(const kdtree_t* kd, int i) {
 	switch (kdtree_datatype(kd)) {
 	case KDT_DATA_DOUBLE:
@@ -209,16 +223,6 @@ int kdtree_compute_levels(int N, int Nleaf) {
 		maxlevel++;
 	}
 	return maxlevel;
-}
-
-static inline u8 node_level(const kdtree_t* kd, int nodeid) {
-	int val = (nodeid + 1) >> 1;
-	u8 level = 0;
-	while (val) {
-		val = val >> 1;
-		level++;
-	}
-	return level;
 }
 
 int kdtree_first_leaf(const kdtree_t* kd, int nodeid) {

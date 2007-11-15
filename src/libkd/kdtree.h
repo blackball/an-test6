@@ -324,6 +324,11 @@ int kdtree_last_leaf(const kdtree_t* kd, int nodeid);
 int kdtree_level_start(const kdtree_t* kd, int level);
 int kdtree_level_end(const kdtree_t* kd, int level);
 
+/*
+ Returns the level of the given nodeid; 0=root.
+ */
+int kdtree_get_level(const kdtree_t* kd, int nodeid);
+
 /* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
  * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
  * (kd->perm[ind]).
