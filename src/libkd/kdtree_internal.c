@@ -1964,12 +1964,12 @@ kdtree_t* MANGLE(kdtree_build)
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
-	kd->perm = malloc(sizeof(unsigned int) * N);
+	kd->perm = malloc(sizeof(u32) * N);
 	for (i = 0;i < N;i++)
 		kd->perm[i] = i;
 	assert(kd->perm);
 
-	kd->lr = malloc(kd->nbottom * sizeof(unsigned int));
+	kd->lr = malloc(kd->nbottom * sizeof(u32));
 	assert(kd->lr);
 
 	if (options & KD_BUILD_BBOX) {
@@ -2186,8 +2186,9 @@ kdtree_t* MANGLE(kdtree_build)
 		assert(kd->lr[xx] <= kd->lr[xx+1]);
 
 	/* do leaf nodes get bounding boxes?
-	   (nope, not at present)
-	*/
+     (nope, not at present).
+     Why is that?
+     */
 
 	return kd;
 }

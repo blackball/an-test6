@@ -146,17 +146,19 @@ struct kdtree {
 	u32 treetype;
 
 	// (compatibility mode)
-	kdtree_node_t *nodes;   /* Flat tree storing nodes and HR's */
+	kdtree_node_t *nodes;   /* Flat tree storing nodes and
+                             bounding boxes. */
 
-	//unsigned int* lr;
 	u32* lr;            /* Points owned by leaf nodes, stored and manipulated
-						   in a way that's too complicated to explain in this comment. */
+                         in a way that's too complicated to explain in this comment.
+                         (nbottom) */
                
-	//unsigned int *perm;    
-	u32* perm;           /* Permutation index / hairstyle from the 80s */
+	u32* perm;           /* Permutation index / hairstyle from the 80s
+                          (ndata) */
 
-	/* Bounding box: (ttype) list of D-dimensional lower hyperrectangle corner followed by
-	   D-dimensional upper corner. */
+	/* Bounding box: list of D-dimensional lower hyperrectangle corner followed by
+     D-dimensional upper corner.
+     (ttype x ndim x ninterior) */
 	union {
 		float* f;
 		double* d;
@@ -165,7 +167,7 @@ struct kdtree {
 		void* any;
 	} bb;
 
-	/* Split position (& dimension for ints) (ttype). */
+	/* Split position (& dimension for ints) (ttype x nnodes). */
 	union {
 		float* f;
 		double* d;
@@ -174,7 +176,7 @@ struct kdtree {
 		void* any;
 	} split;
 
-	/* Split dimension for floating-point types */
+	/* Split dimension for floating-point types (x nnodes) */
 	u8* splitdim;
 
 	/* bitmasks for the split dimension and location. */
