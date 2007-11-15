@@ -94,13 +94,14 @@ if __name__ == '__main__':
         fx, fy, 'b+',
         )
 
+    # RMS quad radius
+    RQ = sqrt(sum((qx - cx)**2 + (qy - cy)**2) / 4)
+
     # Distance from quad center.
     RI = sqrt((ix - cx)**2 + (iy - cy)**2)
     RF = sqrt((fx - cx)**2 + (fy - cy)**2)
 
     # Angle from quad center.
-    #AI = math.atan2(iy - cy, ix - cx)
-    #AF = math.atan2(fy - cy, fx - cx)
     AI = array([math.atan2(y - cy, x - cx) for (x,y) in zip(ix,iy)])
     AF = array([math.atan2(y - cy, x - cx) for (x,y) in zip(fx,fy)])
 
@@ -109,29 +110,35 @@ if __name__ == '__main__':
     allD = array([])
     allDR = array([])
     allDA = array([])
+    allR = array([])
 
     for i in IR:
-        dR = ((RI[i] + 0.5) / (RF + 0.5)) - 1.0
+        #dR = ((RI[i] + 0.5) / (RF + 0.5)) - 1.0
+        # regularizer...
+        reg = RQ
+        dR = ((RI[i] + reg) / (RF + reg)) - 1.0
         dA =  AI[i] - AF
-        #dA =  [AI[i] - af for af in AF]
         D = sqrt(dR**2 + dA**2)
+        #Dist = sqrt((ix[i] - fx)**2 + (iy[i] - fy)**2)
+
         allD = hstack((allD, D))
         allDR = hstack((allDR, dR))
         allDA = hstack((allDA, dA))
+        allR = hstack((allR, repeat(RI[i], NF)))
+
+    iSmall = array(find(allD < 0.05))
 
     figure(2)
-    #smallD = [allD[i] for i in find(allD < 1)]
-    #hist(smallD)
-
-    iSmall = find(allD < 0.05)
-    smallDR = [allDR[i] for i in iSmall]
-    smallDA = [allDA[i] for i in iSmall]
-    smallD  = [allD [i] for i in iSmall]
-    #plot(allDR[iSmall], allDA[iSmall], 'ro')
-    #plot(allDR, allDA, 'ro')
-    plot(smallDR, smallDA, 'ro')
+    clf()
+    plot(allDR[iSmall], allDA[iSmall], 'ro')
     xlabel('DR')
     ylabel('DA')
+
+    figure(3)
+    clf()
+    plot(allR[iSmall]/RQ, allD[iSmall], 'r.')
+    xlabel('R')
+    ylabel('D (R+A)')
 
     #figure(2)
     #clf()
