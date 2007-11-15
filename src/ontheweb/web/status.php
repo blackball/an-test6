@@ -1131,6 +1131,7 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 	global $wcs_fn;
 	global $plot_constellations;
 	global $pnmimg;
+	global $db;
 
 	$overlayfile = $mydir . $const_overlay_fn;
 	$bigoverlayfile = $mydir . $const_bigoverlay_fn;
@@ -1183,7 +1184,16 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 		}
 		if (!($W && $H)) {
 			// BACKWARDS COMPATIBILITY.
-			die("Please email dstn@cs.toronto.edu if you see this message (2).");
+			//die("Please email dstn@cs.toronto.edu if you see this message (2).");
+			$W = $jd['imageW'];
+			$H = $jd['imageH'];
+			$shrink = 1;
+			$userimg = $mydir . "image.pnm";
+			setjobdata($db, array('displayW' => $W,
+								  'displayH' => $H,
+								  'imageshrink' => 1,
+								  'displayImage' => $userimg));
+								  
 		}
 		break;
 	}
