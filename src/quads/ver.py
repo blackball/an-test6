@@ -2,7 +2,7 @@ import math
 import pyfits
 from numpy import *
 from matplotlib.pylab import figure, plot, xlabel, ylabel, loglog, clf
-from matplotlib.pylab import semilogy, show, find, legend, hist
+from matplotlib.pylab import semilogy, show, find, legend, hist, axis
 
 def plotDvsR(ix, iy, fx, fy, R):
     IR = argsort(R)
@@ -111,34 +111,68 @@ if __name__ == '__main__':
     allDR = array([])
     allDA = array([])
     allR = array([])
+    allDist = array([])
 
     for i in IR:
-        #dR = ((RI[i] + 0.5) / (RF + 0.5)) - 1.0
         # regularizer...
         reg = RQ
+        #
+        Distscale = 1
+        DRscale = 1 / RQ
+
         dR = ((RI[i] + reg) / (RF + reg)) - 1.0
         dA =  AI[i] - AF
-        D = sqrt(dR**2 + dA**2)
-        #Dist = sqrt((ix[i] - fx)**2 + (iy[i] - fy)**2)
+        # handle wrap-around
+        absdA = abs(dA)
+        absdA = vstack((absdA, abs(absdA - 2*math.pi))).min(axis=0)
+        #D = sqrt(dR**2 + dA**2)
+        D = sqrt(dR**2 + absdA**2)
+        D = D / DRscale
 
-        allD = hstack((allD, D))
-        allDR = hstack((allDR, dR))
-        allDA = hstack((allDA, dA))
-        allR = hstack((allR, repeat(RI[i], NF)))
+        Dist = sqrt((ix[i] - fx)**2 + (iy[i] - fy)**2)
+        Dist = Dist / Distscale
 
-    iSmall = array(find(allD < 0.05))
+        iSmall = array(find((D < 1) + (Dist < 1)))
+        allD = hstack((allD, D[iSmall]))
+        allDR = hstack((allDR, dR[iSmall]))
+        allDA = hstack((allDA, dA[iSmall]))
+        allR = hstack((allR, repeat(RI[i], len(iSmall))))
+        allDist = hstack((allDist, Dist[iSmall]))
 
     figure(2)
     clf()
-    plot(allDR[iSmall], allDA[iSmall], 'ro')
+    plot(allDR, allDA, 'ro', ms=1)
     xlabel('DR')
     ylabel('DA')
 
     figure(3)
     clf()
-    plot(allR[iSmall]/RQ, allD[iSmall], 'r.')
-    xlabel('R')
-    ylabel('D (R+A)')
+    #plot(allR/RQ, allD, 'r.')
+    #plot(allR/RQ, vstack((allD, allDist)).min(axis=0), 'r.')
+    plot(
+        #allR/RQ, vstack((allD, allDist)).min(axis=0), 'mo',
+        allR/RQ, allD, 'r+',
+        allR/RQ, allDist, 'bx'
+        )
+    xlabel('R (quad radiuses)')
+    #ylabel('min( Dist, D(R+A) )')
+    ylabel('Dist, D(R,A)')
+    a = axis()
+    axis([a[0], a[1], 0, 2.0])
+    legend(('D(R,A)', 'D'))
+
+    #allDist = array([])
+    #allRDist = array([])
+    #for i in IR:
+    #    Dist = sqrt((ix[i] - fx)**2 + (iy[i] - fy)**2)
+    #    iSmall = array(find(Dist < 5))
+    #    allDist = hstack((allDist, Dist[iSmall]))
+    #    allRDist = hstack((allRDist, repeat(RI[i], len(iSmall))))
+    #figure(4)
+    #clf()
+    #plot(allRDist/RQ, allDist, 'r.')
+    #xlabel('R')
+    #ylabel('Dist')
 
     #figure(2)
     #clf()
