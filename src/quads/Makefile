@@ -164,9 +164,9 @@ solver_test.o: solver.c
 # 1. Add your file's test_blah.c and corresponding files needed to compile it
 #    to the all tests executable 'test' by editing the three variables below:
 ALL_TEST_FILES_C := test_dfind.c test_bl.c test_ctmf.c test_simplexy.c \
-		test_dsmooth.c
+		test_dsmooth.c test_libkd.c
 ALL_TEST_FILES_O := test_dfind.o test_bl.o test_ctmf.o test_simplexy.o \
-		test_dsmooth.o
+		test_dsmooth.o test_libkd.o
 TESTED_FILES := dfind.o ctmf.o
 TESTED_FILES += dallpeaks.o dcen3x3.o dmedsmooth.o dobjects.o dpeaks.o \
 	dselip.o dsigma.o dsmooth.o simplexy.o radix.o qsort_reentrant.o
@@ -192,10 +192,15 @@ test_dsmooth: cutest.o dsmooth.o test_dsmooth-main.o test_dsmooth.o
 test_dsmooth-main.c: make-tests.sh test_dsmooth.c
 	bash make-tests.sh test_dsmooth.c > test_dsmooth-main.c
 
+test_libkd: cutest.o test_libkd-main.o test_libkd.o $(LIBKD_LIB) $(QFITS_LIB) $(ANUTILS_LIB)
+test_libkd-main.c: make-tests.sh test_libkd.c
+	bash make-tests.sh test_libkd.c > test_libkd-main.c
+
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
 	bash make-tests.sh $(ALL_TEST_FILES_C) > test.c
-test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(ANUTILS_LIB) $(CAIRO_LIB) $(COMMON)/cairoutils.o 
+test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(LIBKD_LIB) $(QFITS_LIB) \
+		$(ANUTILS_LIB) $(CAIRO_LIB) $(COMMON)/cairoutils.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
 
 # END OF KEIR'S SUPER SIMPLE TESTING FRAMEWORK
