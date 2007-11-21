@@ -45,7 +45,8 @@ int dobjects(float *image,
 {
 	int i, j, ip, jp, ist, ind, jst, jnd;
 	float limit, sigma;
-	u8* mask;
+	//u8* mask;
+	int* mask;
 
 	/* smooth by the point spread function  */
 	dsmooth2(image, nx, ny, dpsf, smooth);
@@ -59,7 +60,8 @@ int dobjects(float *image,
 
 	/* This makes a mask which dfind uses when looking at the pixels; it
 	 * ignores any pixels the mask flagged as uninteresting. */
-	mask = calloc(nx * ny, sizeof(u8));
+	//mask = calloc(nx * ny, sizeof(u8));
+	mask = calloc(nx * ny, sizeof(int));
 	for (j = 0;j < ny;j++) {
 		jst = j - (long) (3 * dpsf);
 		if (jst < 0)
@@ -93,7 +95,8 @@ int dobjects(float *image,
 	 * image that have statistically significant 'events', aka sources. */
 
 	/* now run connected component analysis to find and number each blob */
-	dfind2_u8(mask, nx, ny, objects);
+	//dfind2_u8(mask, nx, ny, objects);
+	dfind2(mask, nx, ny, objects);
 
 	FREEVEC(mask);
 

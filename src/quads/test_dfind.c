@@ -26,19 +26,34 @@ extern int initial_max_groups;
 
 int dfind(int *image, int nx, int ny, int *object);
 int dfind2(int *image, int nx, int ny, int *object);
+int dfind2_u8(unsigned char *image, int nx, int ny, int *object);
+
 int compare_inputs(int *test_data, int nx, int ny) {
 	int *test_outs_keir = calloc(nx*ny, sizeof(int));
 	int *test_outs_blanton = calloc(nx*ny, sizeof(int));
+	int *test_outs_u8 = calloc(nx*ny, sizeof(int));
 	int fail = 0;
-	int ix, iy;
+	int ix, iy, i;
+	unsigned char* u8img;
+
 	dfind2(test_data, nx,ny,test_outs_keir);
 	dfind(test_data, nx,ny,test_outs_blanton);
 
-	for(iy=0; iy<9; iy++) {
-		for (ix=0; ix<11; ix++) {
+	u8img = malloc(nx * ny);
+	for (i=0; i<(nx*ny); i++)
+		u8img[i] = test_data[i];
+	dfind2_u8(u8img, nx, ny, test_outs_u8);
+
+	for(iy=0; iy<ny; iy++) {
+		for (ix=0; ix<nx; ix++) {
 			if (!(test_outs_keir[nx*iy+ix] == test_outs_blanton[nx*iy+ix])) {
 				printf("failure -- k%d != b%d\n",
 						test_outs_keir[nx*iy+ix], test_outs_blanton[nx*iy+ix]);
+				fail++;
+			}
+			if (!(test_outs_keir[nx*iy+ix] == test_outs_u8[nx*iy+ix])) {
+				printf("failure -- k:%d != u8:%d\n",
+						test_outs_keir[nx*iy+ix], test_outs_u8[nx*iy+ix]);
 				fail++;
 			}
 		}
