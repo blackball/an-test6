@@ -517,7 +517,7 @@ if ($img) {
 	echo "<h3>Log file:</h3>\n";
 	echo "<div id=\"fits2xylog\">\n";
 	echo "<pre>";
-	echo file_get_contents($mydir . $fits2xyout_fn);
+	echo file_get_contents($mydir . $image2xyout_fn);
 	echo "</pre>";
 	echo "</div>\n";
 

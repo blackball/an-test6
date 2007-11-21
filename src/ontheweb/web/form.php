@@ -1251,13 +1251,13 @@ function render_form($form, $headers) {
 
 function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 					   &$scaleguess, &$wcsfile) {
-	global $fits2xy;
+	global $image2xy;
 	global $modhead;
 	global $plotxy;
 	global $tabsort;
 	global $objs_fn;
 	global $bigobjs_fn;
-	global $fits2xyout_fn;
+	global $image2xyout_fn;
 	global $an_fitstopnm;
 	global $fits_filter;
 	global $fits_guess_scale;
@@ -1417,21 +1417,21 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	}
 
 	// The xylist filename:
-	// fits2xy computes the output filename by trimming .fits and adding .xy.fits.
+	// image2xy computes the output filename by trimming .fits and adding .xy.fits.
 	$xylist = substr($fitsimg, 0, strlen($fitsimg) - strlen(".fits")) . ".xy.fits";
 
-	// Run fits2xy...
-	$fits2xyout = $mydir . $fits2xyout_fn;
-	$cmd = $fits2xy;
+	// Run image2xy...
+	$image2xyout = $mydir . $image2xyout_fn;
+	$cmd = $image2xy;
     if ($W * $H >= 5000000) {
         $cmd .= " -H";
     }
-    $cmd .= " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
+    $cmd .= " " . $fitsimg . " > " . $image2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
 	if (($res === FALSE) || $retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to perform source extraction: \"" . file_get_contents($fits2xyout) . "\"";
+		$errstr = "Failed to perform source extraction: \"" . file_get_contents($image2xyout) . "\"";
 		return FALSE;
 	}
 

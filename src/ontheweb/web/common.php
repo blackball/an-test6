@@ -58,7 +58,7 @@ $xylsinfo_fn="xylsinfo";
 $rdlsinfo_fn="rdlsinfo";
 $wcsinfo_fn="wcsinfo";
 $jobdata_fn = "jobdata.db";
-$fits2xyout_fn = "fits2xy.out";
+$image2xyout_fn = "image2xy.out";
 
 $unitmap = array('arcsecperpix' => "arcseconds per pixel",
 				 'arcminperpix' => "arcminutes per pixel",
@@ -105,7 +105,7 @@ $indexdir = "/home/gmaps/ontheweb-indexes/";
 
 $sqlite = "sqlite";
 
-$fits2xy = $quads . "fits2xy";
+$image2xy = $quads . "image2xy";
 $plotxy = $quads . "plotxy";
 $plotquad = $quads . "plotquad";
 $plot_constellations = $quads . "plot-constellations";
