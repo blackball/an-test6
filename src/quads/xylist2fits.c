@@ -32,12 +32,11 @@
 #include "boilerplate.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "chdx:y:t:"
+#define OPTIONS "hdx:y:t:"
 
 void print_help(char* progname) {
     printf("usage:\n"
            "  %s [options] <input-file> <output-file>\n"
-           "    [-c]: read simple 'x y\\n' format; the input is a single field.\n"
            "    [-d]: write double format (float format is default).\n"
            "    [-x <name-of-x-column-to-write>] (default: X)\n"
            "    [-y <name-of-y-column-to-write>] (default: Y)\n"
@@ -52,7 +51,6 @@ typedef pl xyarray;
 #define xya_set(l, i, v)      pl_set((l), (i), (v))
 #define xya_size(l)           pl_size(l)
 
-static xyarray *readxy(char* fn);
 static xyarray *readxysimple(char* fn);
 
 extern char *optarg;
@@ -62,7 +60,6 @@ int main(int argc, char** args) {
     char* infn = NULL;
     char* outfn = NULL;
     int c;
-    int simple = 0;
     xyarray* xya;
     xylist* ls;
     int i, N;
@@ -82,9 +79,6 @@ int main(int argc, char** args) {
             break;
         case 'x':
             xname = optarg;
-            break;
-        case 'c':
-            simple = 1;
             break;
         case 'y':
             yname = optarg;
@@ -112,11 +106,7 @@ int main(int argc, char** args) {
 
     printf("reading input...\n");
 
-    if (simple) {
-        xya = readxysimple(infn);
-    } else {
-        xya = readxy(infn);
-    }
+	xya = readxysimple(infn);
     if (!xya)
         exit(-1);
 
