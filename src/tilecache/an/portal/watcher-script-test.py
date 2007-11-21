@@ -119,22 +119,34 @@ def real_handle_job(job, sshconfig):
         axyargs['-x'] = xylist
         axyargs['--sort-column'] = 'FLUX'
 
-    elif filetype == 'fits':
-        try:
-            log('fits2fits...')
-            xylist = convert(job, field, 'xyls-sane', store_imgtype=True, store_imgsize=True)
-            log('xylist is', xylist)
-        except FileConversionError,e:
-            userlog('Sanitizing your FITS file failed.')
-            bailout(job, 'Sanitizing FITS file failed.')
-            return -1
-        log('created xylist %s' % xylist)
+    elif (filetype == 'fits') or (filetype == 'text'):
+        if filetype == 'text':
+            try:
+                userlog('Parsing your text file...')
+                xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
+                log('xylist is', xylist)
+            except FileConversionError,e:
+                userlog('Parsing your text file failed.')
+                bailout(job, 'Parsing text file failed.')
+                return -1
 
-        (xcol, ycol) = job.get_xy_cols(field)
-        if xcol:
-            axyargs['--x-column'] = xcol
-        if ycol:
-            axyargs['--y-column'] = ycol
+        else:
+            try:
+                log('fits2fits...')
+                xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
+                log('xylist is', xylist)
+            except FileConversionError,e:
+                userlog('Sanitizing your FITS file failed.')
+                bailout(job, 'Sanitizing FITS file failed.')
+                return -1
+
+            (xcol, ycol) = job.get_xy_cols()
+            if xcol:
+                axyargs['--x-column'] = xcol
+            if ycol:
+                axyargs['--y-column'] = ycol
+
+        log('created xylist %s' % xylist)
 
         cmd = 'xylsinfo %s' % xylist
         (rtn, out, err) = run_command(cmd)
@@ -169,9 +181,6 @@ def real_handle_job(job, sshconfig):
         field.imagew = width
         field.imageh = height
 
-    elif filetype == 'text':
-        bailout(job, 'text files not implemented')
-        return -1
     else:
         bailout(job, 'no filetype')
         return -1

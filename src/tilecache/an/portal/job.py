@@ -286,8 +286,14 @@ class Job(models.Model):
         s += '>'
         return s
 
-    def get_xy_cols(self, field):
-        return (field.xcol, field.ycol)
+    def is_input_fits(self):
+        return self.jobset.filetype == 'fits'
+
+    def is_input_text(self):
+        return self.jobset.filetype == 'text'
+
+    def get_xy_cols(self):
+        return (self.field.xcol, self.field.ycol)
 
     def friendly_parity(self):
         pstrs = [ 'Positive', 'Negative', 'Try both' ]

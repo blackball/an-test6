@@ -113,7 +113,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'ppm':
-        if job.jobset.filetype == 'fits':
+        if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
@@ -155,16 +155,22 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'xyls-sane':
-        # For FITS bintable uploads: put it through fits2fits.
-        infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
-        errmsg = fits2fits.fits2fits(infn, fullfn, False)
-        if errmsg:
-            log(errmsg)
-            raise FileConversionError(errmsg)
-        return fullfn
-
     elif fn == 'xyls':
+        if job.is_input_text():
+            infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+            cmd = 'xylist2fits %s %s' % (infn, fullfn)
+            run_convert_command(cmd)
+            return fullfn
+
+        if job.is_input_fits():
+            # For FITS bintable uploads: put it through fits2fits.
+            infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+            errmsg = fits2fits.fits2fits(infn, fullfn, False)
+            if errmsg:
+                log(errmsg)
+                raise FileConversionError(errmsg)
+            return fullfn
+
         infn = convert(job, field, 'fitsimg', store_imgtype, store_imgsize)
         sxylog = 'blind.log'
         cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
@@ -195,7 +201,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         fullfn = job.get_filename('fullsize.png')
         if os.path.exists(fullfn):
             return fullfn
-        if job.jobset.filetype == 'fits':
+        if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -x 1 -y 1 -C brightred -w 2 > %s' %
@@ -230,7 +236,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'ppm-small':
-        if job.jobset.filetype == 'fits':
+        if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
             if not field.displayscale:
                 field.set_display_scale()
