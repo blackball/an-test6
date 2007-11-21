@@ -63,7 +63,9 @@ class AstroField(models.Model):
             'jpg' : 'image/jpeg',
             'gif' : 'image/gif',
             'png' : 'image/png',
-            'fits' : 'image/fits'
+            'fits' : 'image/fits',
+            'text' : 'text/plain',
+            'xyls' : 'image/fits', # ??
             }
         if not self.imgtype in typemap:
             return None

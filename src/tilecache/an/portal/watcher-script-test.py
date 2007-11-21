@@ -121,6 +121,7 @@ def real_handle_job(job, sshconfig):
 
     elif (filetype == 'fits') or (filetype == 'text'):
         if filetype == 'text':
+            field.imgtype = 'text'
             try:
                 userlog('Parsing your text file...')
                 xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
@@ -131,6 +132,7 @@ def real_handle_job(job, sshconfig):
                 return -1
 
         else:
+            field.imgtype = 'xyls'
             try:
                 log('fits2fits...')
                 xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
