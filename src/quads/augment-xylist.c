@@ -69,7 +69,6 @@ static struct option long_options[] = {
 	{"depth",		   required_argument, 0, 'd'},
 	{"tweak-order",    required_argument, 0, 't'},
 	{"out",			   required_argument, 0, 'o'},
-	{"no-plot",		   no_argument,	      0, 'p'},
 	{"no-tweak",	   no_argument,	      0, 'T'},
 	{"no-fits2fits",   no_argument,       0, '2'},
 	{"temp-dir",       required_argument, 0, 'm'},
@@ -82,7 +81,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:x:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -115,7 +114,6 @@ static void print_help(const char* progname) {
 	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections  (-t)\n"
            "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane  (-2)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
-           "  [--no-plots]: don't create any PNG plots  (-p)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
