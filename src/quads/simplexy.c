@@ -172,11 +172,10 @@ int simplexy_u8(unsigned char *image,
 		int *npeaks,
 		int verbose) {
 
-	int i, c;
+	int i;
 	float *simage = NULL;
 	unsigned char *simage_u8 = NULL;
 	float *fimage = NULL;
-	unsigned char *simage_cairo = NULL;
 
 	if (verbose) {
 		fprintf(stderr, "simplexy: nx=%d, ny=%d\n", nx, ny);
@@ -197,13 +196,17 @@ int simplexy_u8(unsigned char *image,
 	
 	/* it's so purdy */
 	/*
+	{
+	unsigned char *simage_cairo = NULL;
+	int c;
 	simage_cairo = malloc(sizeof(unsigned char) * nx * ny * 4);
 	for(i=0; i<nx*ny; i++) {
-		for (c=0; c<3; c++)
-			simage_cairo[4*i+c] = simage_u8[i];
-		simage_cairo[4*i+3] = 255;
+	for (c=0; c<3; c++)
+	simage_cairo[4*i+c] = simage_u8[i];
+	simage_cairo[4*i+3] = 255;
 	}
 	cairoutils_write_png("median.png", simage_cairo, nx, ny);
+	}
 	*/
 
 	simage = (float *) malloc(nx * ny * sizeof(float));
