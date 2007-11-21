@@ -184,7 +184,9 @@ test_ctmf: cutest.o ctmf.o test_ctmf-main.o test_ctmf.o
 test_ctmf-main.c: make-tests.sh test_dfind.c
 	bash make-tests.sh test_ctmf.c > test_ctmf-main.c
 
-test_simplexy: cutest.o test_simplexy-main.o test_simplexy.o simplexy.o
+test_simplexy: cutest.o test_simplexy-main.o test_simplexy.o simplexy.o \
+		ctmf.o dsigma.o dobjects.o dselip.o dallpeaks.o qsort_reentrant.o \
+		radix.o dsmooth.o dfind.o dmedsmooth.o dpeaks.o dcen3x3.o
 test_simplexy-main.c: make-tests.sh test_simplexy.c
 	bash make-tests.sh test_simplexy.c > test_simplexy-main.c
 
