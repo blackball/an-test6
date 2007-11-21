@@ -187,20 +187,13 @@ int simplexy_u8(unsigned char *image,
 	}
 
 	/* median smooth */
-	/* NB: over-write simage to save malloc */
-	simage = (float *) malloc(nx * ny * sizeof(float));
-	fimage = (float *) malloc(nx * ny * sizeof(float));
-	simage_u8 = (unsigned char *) malloc(nx * ny * sizeof(unsigned char));
-
-	for (i=0; i<nx*ny; i++){
-		fimage[i] = (float)image[i];
-	}
 
 	if(nx < 2*halfbox+1){
 	  halfbox = floor(((float)ny-1.0)/2.0);
 	}
-	ctmf(image, simage_u8, nx, ny, nx, nx, halfbox, 1, 512*1024);
 
+	simage_u8 = (unsigned char *) malloc(nx * ny * sizeof(unsigned char));
+	ctmf(image, simage_u8, nx, ny, nx, nx, halfbox, 1, 512*1024);
 	
 	/* it's so purdy */
 	/*
@@ -213,10 +206,16 @@ int simplexy_u8(unsigned char *image,
 	cairoutils_write_png("median.png", simage_cairo, nx, ny);
 	*/
 
+	simage = (float *) malloc(nx * ny * sizeof(float));
 	for (i=0; i<nx*ny; i++){
-		simage[i] = fimage[i] - ((float)simage_u8[i]);
+		simage[i] = (float)(image[i] - simage_u8[i]);
 	}
 	free(simage_u8);
+
+	fimage = (float *) malloc(nx * ny * sizeof(float));
+	for (i=0; i<nx*ny; i++){
+		fimage[i] = (float)image[i];
+	}
 
 	if (verbose)
 		fprintf(stderr, "simplexy: finished ctmf() median smoothing.\n");
