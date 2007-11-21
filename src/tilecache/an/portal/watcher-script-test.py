@@ -3,6 +3,7 @@
 import os
 import sys
 import tempfile
+import traceback
 
 from urlparse import urlparse
 
@@ -59,7 +60,11 @@ def handle_job(job, sshconfig):
         errstr = str(e)
         job.failurereason = errstr[:256]
         job.save()
-        
+        log('Failed with exception: ', str(e))
+        log('--------------')
+        log(traceback.format_exc())
+        log('--------------')
+   
 def real_handle_job(job, sshconfig):
     log('handle_job: ' + str(job))
 
@@ -88,6 +93,8 @@ def real_handle_job(job, sshconfig):
 
     filetype = job.jobset.filetype
 
+    axyargs = {}
+
     if filetype == 'image':
         log('source extraction...')
         userlog('Doing source extraction...')
@@ -109,30 +116,8 @@ def real_handle_job(job, sshconfig):
             return -1
 
         log('created xylist %s' % xylist)
-        (lower, upper) = job.get_scale_bounds()
-        units = job.get_scaleunits()
-        (dotweak, tweakorder) = job.get_tweak()
-
-        cmd = ('augment-xylist -x %s -o %s --solved solved '
-               '--match match.fits --rdls index.rd.fits '
-               '--wcs wcs.fits --sort-column FLUX '
-               '--scale-units %s --scale-low %g --scale-high %g '
-               '--fields 1' %
-               (xylist, axy, units, lower, upper))
-        if dotweak:
-            cmd += ' --tweak-order %i' % tweakorder
-        else:
-            cmd += ' --no-tweak'
-
-        log('running: ' + cmd)
-        (rtn, out, err) = run_command(cmd)
-        if rtn:
-            log('out: ' + out)
-            log('err: ' + err)
-            bailout(job, 'Creating axy file failed: ' + err)
-            return -1
-
-        log('created file ' + axypath)
+        axyargs['-x'] = xylist
+        axyargs['--sort-column'] = 'FLUX'
 
     elif filetype == 'fits':
         try:
@@ -145,14 +130,84 @@ def real_handle_job(job, sshconfig):
             return -1
         log('created xylist %s' % xylist)
 
-        bailout(job, 'fits tables not implemented')
-        return -1
+        (xcol, ycol) = job.get_xy_cols(field)
+        if xcol:
+            axyargs['--x-column'] = xcol
+        if ycol:
+            axyargs['--y-column'] = ycol
+
+        cmd = 'xylsinfo %s' % xylist
+        (rtn, out, err) = run_command(cmd)
+        if rtn:
+            log('out: ' + out)
+            log('err: ' + err)
+            bailout(job, 'Getting xylist image size failed: ' + err)
+            return -1
+        lines = out.strip().split('\n')
+        #log('out: ', out)
+        #log('lines: ', str(lines))
+        info = {}
+        for l in lines:
+            t = l.split(' ')
+            info[t[0]] = t[1]
+        #log('info: ', str(info))
+        if 'imagew' in info:
+            width = float(info['imagew'])
+        else:
+            width = float(info['width'])
+        if 'imageh' in info:
+            height = float(info['imageh'])
+        else:
+            height = float(info['height'])
+
+        axyargs.update({
+            '-x': xylist,
+            '--width' : width,
+            '--height' : height,
+            '--no-fits2fits' : None,
+            })
+        field.imagew = width
+        field.imageh = height
+
     elif filetype == 'text':
         bailout(job, 'text files not implemented')
         return -1
     else:
         bailout(job, 'no filetype')
         return -1
+
+
+    (lower, upper) = job.get_scale_bounds()
+    units = job.get_scaleunits()
+    (dotweak, tweakorder) = job.get_tweak()
+
+    axyargs.update({
+        '-o' : axy,
+        '--scale-units' : units,
+        '--scale-low' : lower,
+        '--scale-high' : upper,
+        '--fields' : 1,
+        '--wcs' : 'wcs.fits',
+        '--rdls' : 'index.rd.fits',
+        '--match' : 'match.fits',
+        '--solved' : 'solved',
+        })
+    if dotweak:
+        axyargs['--no-tweak'] = None
+    else:
+        axyargs['--tweak-order'] = tweakorder
+
+    cmd = 'augment-xylist ' + ' '.join(k + ((v and ' ' + str(v)) or '') for (k,v) in axyargs.items())
+
+    log('running: ' + cmd)
+    (rtn, out, err) = run_command(cmd)
+    if rtn:
+        log('out: ' + out)
+        log('err: ' + err)
+        bailout(job, 'Creating axy file failed: ' + err)
+        return -1
+
+    log('created axy file ' + axypath)
 
     field.save()
 

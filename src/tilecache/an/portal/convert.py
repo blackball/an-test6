@@ -87,7 +87,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         x = run_pnmfile(infn)
         if x is None:
-            return HttpResponse('couldn\'t find file size')
+            raise FileConversionError('couldn\'t find file size')
         (w, h, pnmtype) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
         if store_imgsize:
@@ -100,7 +100,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         x = run_pnmfile(infn)
         if x is None:
-            return HttpResponse('couldn\'t find file size')
+            raise FileConversionError('couldn\'t find file size')
         (w, h, pnmtype) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
         if store_imgsize:
@@ -113,10 +113,18 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'ppm':
+        if job.jobset.filetype == 'fits':
+            # just create the red-circle plot.
+            xylist = job.get_filename('job.axy')
+            cmd = ('plotxy -i %s -W %i -H %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
+                   (xylist, field.imagew, field.imageh, fullfn))
+            run_convert_command(cmd)
+            return fullfn
+
         imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         x = run_pnmfile(imgfn)
         if x is None:
-            return HttpResponse('pnmfile failed')
+            raise FileConversionError('pnmfile failed')
         (w, h, pnmtype) = x
         if pnmtype == 'P':
             return imgfn
@@ -187,6 +195,13 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         fullfn = job.get_filename('fullsize.png')
         if os.path.exists(fullfn):
             return fullfn
+        if job.jobset.filetype == 'fits':
+            # just create the red-circle plot.
+            xylist = job.get_filename('job.axy')
+            cmd = ('plotxy -i %s -W %i -H %i -x 1 -y 1 -C brightred -w 2 > %s' %
+                   (xylist, field.imagew, field.imageh, fullfn))
+            run_convert_command(cmd)
+            return fullfn
         infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         cmd = 'pnmtopng %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
@@ -205,11 +220,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'pnm-small':
         imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
         if not field.displayscale:
-            w = field.imagew
-            h = field.imageh
-            field.displayscale = max(1.0, math.pow(2, math.ceil(math.log(max(w, h) / float(800)) / math.log(2))))
-            field.displayw = int(round(w / float(field.displayscale)))
-            field.displayh = int(round(h / float(field.displayscale)))
+            field.set_display_scale()
             field.save()
         # (don't make this an elif)
         if field.displayscale == 1:
@@ -219,10 +230,24 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'ppm-small':
+        if job.jobset.filetype == 'fits':
+            # just create the red-circle plot.
+            if not field.displayscale:
+                field.set_display_scale()
+                field.save()
+            scale = field.displayscale
+            if scale == 1:
+                return convert(job, field, 'ppm', store_imgtype, store_imgsize)
+            xylist = job.get_filename('job.axy')
+            cmd = ('plotxy -i %s -W %i -H %i -s %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
+                   (xylist, field.displayw, field.displayh, scale, fullfn))
+            run_convert_command(cmd)
+            return fullfn
+
         imgfn = convert(job, field, 'pnm-small', store_imgtype, store_imgsize)
         x = run_pnmfile(imgfn)
         if x is None:
-            return HttpResponse('pnmfile failed')
+            raise FileConversionError('pnmfile failed')
         (w, h, pnmtype) = x
         if pnmtype == 'P':
             return imgfn
@@ -231,8 +256,8 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'annotation':
-        imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
         wcsfn = job.get_filename('wcs.fits')
+        imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/field.displayscale, imgfn))
         run_convert_command(cmd)

@@ -37,6 +37,7 @@ class AstroField(models.Model):
     filehash = models.CharField(max_length=40, editable=False)
 
     # for FITS tables, the names of the X and Y columns.
+    # ?????
     xcol = models.CharField(max_length=16, blank=True)
     ycol = models.CharField(max_length=16, blank=True)
 
@@ -92,8 +93,14 @@ class AstroField(models.Model):
     def filename(self):
         return os.path.join(config.fielddir, str(self.id))
 
-
-
+    def set_display_scale(self):
+        w = self.imagew
+        h = self.imageh
+        self.displayscale = max(1.0,
+                                math.pow(2, math.ceil(
+            math.log(max(self.imagew, self.imageh) / float(800)) / math.log(2))))
+        self.displayw = int(round(self.imagew / float(self.displayscale)))
+        self.displayh = int(round(self.imageh / float(self.displayscale)))
 
 class JobSet(models.Model):
     scaleunits_CHOICES = (
@@ -278,6 +285,9 @@ class Job(models.Model):
         s += ' ' + str(self.field)
         s += '>'
         return s
+
+    def get_xy_cols(self, field):
+        return (field.xcol, field.ycol)
 
     def friendly_parity(self):
         pstrs = [ 'Positive', 'Negative', 'Try both' ]
