@@ -167,63 +167,6 @@ int main(int argc, char** args) {
     return 0;
 }
 
-typedef unsigned short int magicval;
-#define MAGIC_VAL 0xFF00
-#define ASCII_VAL 0x754E
-
-xyarray *readxy(char* fn) {
-    uint ii, jj, numxy, numfields;
-    magicval magic;
-    xyarray *thepix = NULL;
-    int tmpchar;
-    FILE* fid;
-
-    fid = fopen(fn, "r");
-    if (!fid) {
-        fprintf(stderr, "Couldn't open file %s to read xylist.\n", fn);
-        return NULL;
-    }
-    if (fread(&magic, sizeof(magic), 1, fid) != 1) {
-        fprintf(stderr, "ERROR (readxy) -- bad magic value in field file.\n");
-        return NULL;
-    }
-    if (magic != ASCII_VAL) {
-        fprintf(stderr, "Error - bad magic value.\n");
-        return NULL;
-    }
-    if (fscanf(fid, "mFields=%u\n", &numfields) != 1) {
-        fprintf(stderr, "ERROR (readxy) -- bad first line in field file.\n");
-        return NULL;
-    }
-    thepix = mk_xyarray(numfields);
-    for (ii = 0;ii < numfields;ii++) {
-        tmpchar = fgetc(fid);
-        while (tmpchar == COMMENT_CHAR) {
-            fscanf(fid, "%*[^\n]");
-            fgetc(fid);
-            tmpchar = fgetc(fid);
-        }
-        ungetc(tmpchar, fid);
-        fscanf(fid, "%u", &numxy); // CHECK THE RETURN VALUE MORON!
-
-        xya_set(thepix, ii, mk_xy(numxy) );
-
-        if (xya_ref(thepix, ii) == NULL) {
-            fprintf(stderr, "ERROR (readxy) - out of memory at field %u\n", ii);
-            free_xyarray(thepix);
-            return NULL;
-        }
-        for (jj = 0;jj < numxy;jj++) {
-            double tmp1, tmp2;
-            fscanf(fid, ",%lf,%lf", &tmp1, &tmp2);
-            xy_setx(xya_ref(thepix, ii), jj, tmp1);
-            xy_sety(xya_ref(thepix, ii), jj, tmp2);
-        }
-        fscanf(fid, "\n");
-    }
-    return thepix;
-}
-
 // Read a simple xy file; column 1 is x column 2 is y;
 // whitespace/comma seperated.
 // Lines starting with "#" are ignored.
