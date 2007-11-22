@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	int fix = 0;
 	int kk;
 	char* infile = NULL;
-	char argchar;
+	int argchar;
 	int nhdus,hdutype;
 	int broken;
 

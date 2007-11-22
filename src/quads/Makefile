@@ -96,6 +96,10 @@ SIMPLEXY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
 	dselip.o dsigma.o dsmooth.o image2xy.o simplexy.o radix.o qsort_reentrant.o \
 	ctmf.o
 
+SIMPLEXY2_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
+	dselip.o dsigma.o dsmooth.o image2xy.o simplexy2.o radix.o qsort_reentrant.o \
+	ctmf.o
+
 SIMPLEXY_SHARED_OBJ := simplexy.o dsigma.o dmedsmooth.o dallpeaks.o dpeaks.o \
 	dobjects.o dselip.o dsmooth.o dcen3x3.o dfind.o radix.o
 
@@ -111,7 +115,7 @@ INSTALL_CAIRO_EXECS := $(CAIROEXECS)
 ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 	$(PIPELINE_MAIN_OBJ) $(PROSPECTUS_MAIN_OBJ) $(FITS_UTILS_MAIN_OBJ) \
 	$(OTHER_OBJS) $(2MASSOBJ) $(SIMPLEXY_OBJ) $(SIMPLEXY_SHARED_OBJ) $(FIXAXIS_OBJ) \
-	$(TEST_DFIND_OBJ)
+	$(TEST_DFIND_OBJ) $(SIMPLEXY2_OBJ)
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) \
@@ -220,7 +224,7 @@ demo_dsmooth: demo_dsmooth.o dsmooth.o \
 
 ctmf.o: ctmf.c
 
-image2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
+image2xy: $(SIMPLEXY2_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
 PNG2XY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
 	dselip.o dsigma.o dsmooth.o png2xy.o simplexy.o radix.o qsort_reentrant.o \
 	ctmf.o $(COMMON)/cairoutils.o

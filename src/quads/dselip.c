@@ -36,21 +36,27 @@ float dselip(unsigned long k, unsigned long n, float *arr) {
 	return kth_item;
 }
 
+void dselip_cleanup() {
+}
+
 #else
 
-int high_water_mark = 0;
-float* past_data = NULL;
+static int high_water_mark = 0;
+static float* past_data = NULL;
 
 float dselip(unsigned long k, unsigned long n, float *arr) {
 	if (n > high_water_mark) {
-		if (past_data)
-			free(past_data);
+        free(past_data);
 		past_data = malloc(sizeof(float) * n);
 		high_water_mark = n;
 		//printf("dselip watermark=%lu\n",n);
 	}
 	RadixSort11(arr, past_data, n);
 	return past_data[k];
+}
+
+void dselip_cleanup() {
+    free(past_data);
 }
 
 #endif

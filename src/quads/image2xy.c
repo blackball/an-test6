@@ -29,15 +29,11 @@
 #include "an-bool.h"
 #include "fitsio.h"
 #include "ioutils.h"
-#include "simplexy.h"
+#include "simplexy2.h"
 #include "svn.h"
 #include "dimage.h"
 
 #define MAXNPEAKS 10000
-
-static float *x = NULL;
-static float *y = NULL;
-static float *flux = NULL;
 
 static const char* OPTIONS = "hOo:q8H";
 
@@ -73,8 +69,6 @@ int main(int argc, char *argv[]) {
 	int maxnpeaks = MAXNPEAKS, npeaks;
 	long naxisn[2];
 	int kk, jj;
-	float *thedata = NULL;
-    unsigned char* theu8data = NULL;
 	float sigma;
 	char* infn;
 	int nhdus,maxper,maxsize,halfbox,hdutype,nimgs;
@@ -207,6 +201,14 @@ int main(int argc, char *argv[]) {
 		int w, h;
         int bitpix;
         int fullW, fullH;
+        float *thedata = NULL;
+        unsigned char* theu8data = NULL;
+        float *x;
+        float *y;
+        float *flux;
+        float* background;
+
+        simplexy_t s;
 
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
@@ -313,25 +315,31 @@ int main(int argc, char *argv[]) {
             naxisn[1] = newH;
         }
 
-		x = malloc(maxnpeaks * sizeof(float));
-		y = malloc(maxnpeaks * sizeof(float));
-		if (x == NULL || y == NULL) {
-			fprintf(stderr, "Failed allocating output arrays.\n");
-			exit( -1);
-		}
-		flux = malloc(maxnpeaks * sizeof(float));
 
-        if (theu8data) {
-            simplexy_u8(theu8data, naxisn[0], naxisn[1],
-                        dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-                        maxsize, halfbox, &sigma, x, y, flux, &npeaks,
-                        (verbose?1:0));
-        } else if (thedata) {
-            simplexy(thedata, naxisn[0], naxisn[1],
-                     dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-                     maxsize, halfbox, &sigma, x, y, flux, &npeaks,
-                     (verbose?1:0));
-        }
+        memset(&s, 0, sizeof(simplexy_t));
+        s.image = thedata;
+        s.image_u8 = theu8data;
+        s.nx = naxisn[0];
+        s.ny = naxisn[1];
+        s.dpsf = dpsf;
+        s.plim = plim;
+        s.dlim = dlim;
+        s.saddle = saddle;
+        s.maxper = maxper;
+        s.maxnpeaks = maxnpeaks;
+        s.maxsize = maxsize;
+        s.halfbox = halfbox;
+        s.verbose = verbose;
+        
+        simplexy2(&s);
+
+        x = s.x;
+        y = s.y;
+        flux = s.flux;
+        background = s.background;
+
+        npeaks = s.npeaks;
+        sigma = s.sigma;
 
 		free(thedata);
 		free(theu8data);
@@ -448,6 +456,8 @@ int main(int argc, char *argv[]) {
 
 		free(x);
 		free(y);
+        free(flux);
+        free(background);
 	}
 
 	// Put in the optional NEXTEND keywoard
@@ -474,6 +484,9 @@ int main(int argc, char *argv[]) {
 		assert(!status);
 		exit(-1);
 	}
+
+    // for valgrind
+    dselip_cleanup();
 
 	return 0;
 }

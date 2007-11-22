@@ -151,7 +151,7 @@ int simplexy2(simplexy_t* s) {
 	FREEVEC(s->simage);
 
     if (s->image_u8)
-        FREEVEC(s->image_u8);
+        FREEVEC(s->image);
 
 	return 1;
 }
