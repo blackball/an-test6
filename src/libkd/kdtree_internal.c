@@ -536,7 +536,6 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
 	while (stackpos >= 0) {
 		int nodeid;
 		int i;
-		int dim = -1;
 		int L, R;
 		ttype *tlo=NULL, *thi=NULL;
         int child;
@@ -585,9 +584,6 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
             int childid = (child ? KD_CHILD_RIGHT(nodeid) : KD_CHILD_LEFT(nodeid));
 
             bboxes(kd, childid, &tlo, &thi, D);
-
-            if (kd->splitdim)
-                dim = kd->splitdim[nodeid];
 
             bailed = FALSE;
             if (TTYPE_INTEGER && use_tmath) {
