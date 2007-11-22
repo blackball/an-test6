@@ -376,6 +376,10 @@ void kdtree_nodes_contained(const kdtree_t* kd,
  */
 bool kdtree_get_bboxes(const kdtree_t* kd, int node, void* bblo, void* bbhi);
 
+double kdtree_get_splitval(const kdtree_t* kd, int nodeid);
+
+int kdtree_get_splitdim(const kdtree_t* kd, int nodeid);
+
 bool kdtree_node_node_mindist2_exceeds(const kdtree_t* kd1, int node1,
 									   const kdtree_t* kd2, int node2,
 									   double dist2);

@@ -474,6 +474,23 @@ static bool ttype_query(const kdtree_t* kd, const etype* query, ttype* tquery) {
 	return TRUE;
 }
 
+double MANGLE(kdtree_get_splitval)(const kdtree_t* kd, int nodeid) {
+    int dim;
+    ttype split = *KD_SPLIT(kd, nodeid);
+    if (EQUAL_ET) {
+        return split;
+    }
+    if (!kd->splitdim && TTYPE_INTEGER) {
+        bigint tmpsplit = split;
+        dim = tmpsplit & kd->dimmask;
+        return POINT_TE(kd, dim, tmpsplit & kd->splitmask);
+    } else {
+        dim = kd->splitdim[nodeid];
+    }
+    return POINT_TE(kd, dim, split);
+}
+
+
 void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
                           double* p_bestd2, int* p_ibest) {
 	int nodestack[100];

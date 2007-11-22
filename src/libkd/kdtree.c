@@ -28,6 +28,7 @@
 #include "kdtree_internal_common.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
+KD_DECLARE(kdtree_get_splitval, double, (const kdtree_t*, int));
 
 void kdtree_update_funcs(kdtree_t* kd) {
 	KD_DISPATCH(kdtree_update_funcs, kd->treetype,, (kd));
@@ -53,6 +54,30 @@ static inline u8 node_level(const kdtree_t* kd, int nodeid) {
 
 int kdtree_get_level(const kdtree_t* kd, int nodeid) {
     return node_level(kd, nodeid);
+}
+
+int kdtree_get_splitdim(const kdtree_t* kd, int nodeid) {
+    u32 tmpsplit;
+    if (kd->splitdim)
+        return kd->splitdim[nodeid];
+
+    switch (kdtree_treetype(kd)) {
+    case KDT_TREE_U32:
+        tmpsplit = kd->split.u[nodeid];
+        break;
+    case KDT_TREE_U16:
+        tmpsplit = kd->split.s[nodeid];
+        break;
+    default:
+        return -1;
+    }
+    return tmpsplit & kd->dimmask;
+}
+
+double kdtree_get_splitval(const kdtree_t* kd, int nodeid) {
+    double res;
+	KD_DISPATCH(kdtree_get_splitval, kd->treetype, res=, (kd, nodeid));
+    return res;
 }
 
 void* kdtree_get_data(const kdtree_t* kd, int i) {
