@@ -206,7 +206,7 @@ int main(int argc, char** args) {
 		permuted_sort(perm1, table->nr);
 
         // Sort by non-background-subtracted flux...
-		permuted_sort_set_params(flux, sizeof(double), compare);
+		permuted_sort_set_params(back, sizeof(double), compare);
 		permuted_sort(perm2, table->nr);
 
         // Copy the header as-is.
@@ -230,7 +230,7 @@ int main(int argc, char** args) {
                 if (used[index])
                     continue;
                 used[index] = TRUE;
-                if (pipe_file_offset(fin, datsize + index * table->tab_w, table->tab_w, fout)) {
+                if (pipe_file_offset(fin, datstart + index * table->tab_w, table->tab_w, fout)) {
                     fprintf(stderr, "Failed to copy row %i.\n", index);
                     exit(-1);
                 }
