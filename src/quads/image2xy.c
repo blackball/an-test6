@@ -193,9 +193,9 @@ int main(int argc, char *argv[]) {
 
 	// Run simplexy on each HDU
 	for (kk=1; kk <= nhdus; kk++) {
-		char* ttype[] = {"X","Y","FLUX"};
-		char* tform[] = {"E","E","E"};
-		char* tunit[] = {"pix","pix","unknown"};
+		char* ttype[] = {"X","Y","FLUX","BACKGROUND"};
+		char* tform[] = {"E","E","E","E"};
+		char* tunit[] = {"pix","pix","unknown","unknown"};
 		long* fpixel;
 		int a;
 		int w, h;
@@ -364,8 +364,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
-				tunit, "SOURCES", &status);
+		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 4, ttype, tform,
+                        tunit, "SOURCES", &status);
 		if (status) {
 			fits_report_error(stderr, status);
 			assert(!status);
@@ -393,6 +393,13 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
+		fits_write_col(ofptr, TFLOAT, 4, 1, 1, npeaks, background, &status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_modify_comment(ofptr, "TTYPE1", "X coordinate", &status);
 		if (status) {
 			fits_report_error(stderr, status);
@@ -408,6 +415,13 @@ int main(int argc, char *argv[]) {
 		}
 
 		fits_modify_comment(ofptr, "TTYPE3", "Flux of source", &status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
+		fits_modify_comment(ofptr, "TTYPE4", "Sky background of source", &status);
 		if (status) {
 			fits_report_error(stderr, status);
 			assert(!status);
