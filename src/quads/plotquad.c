@@ -31,7 +31,7 @@
 #include "bl.h"
 #include "permutedsort.h"
 
-#define OPTIONS "hW:H:w:I:C:PRo:d:"
+#define OPTIONS "hW:H:w:I:C:PRo:d:c"
 
 static void printHelp(char* progname) {
     int i;
@@ -46,7 +46,8 @@ static void printHelp(char* progname) {
         if (!color) break;
         printf("                       %s\n", color);
     }
-    printf("  [-W <width> ]       Width of output image.\n"
+    printf("  [-c]:            Also plot a circle at each vertex.\n"
+           "  [-W <width> ]       Width of output image.\n"
 		   "  [-H <height>]       Height of output image.\n"
 		   "  [-w <width>]      Width of lines to draw (default: 5).\n"
 		   "  [-R]:  Read quads from stdin.\n"
@@ -72,6 +73,7 @@ int main(int argc, char *args[]) {
 	bool fromstdin = FALSE;
 	bool randomcolor = FALSE;
 	float a = 1.0;
+    bool plotmarker = FALSE;
 
     unsigned char* img;
 	cairo_t* cairo;
@@ -83,6 +85,9 @@ int main(int argc, char *args[]) {
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'c':
+            plotmarker = TRUE;
+            break;
 		case 'd':
 			dimquads = atoi(optarg);
 			break;
@@ -222,6 +227,16 @@ int main(int argc, char *args[]) {
 		cairo_close_path(cairo);
 		cairo_stroke(cairo);
 	}
+
+    if (plotmarker) {
+        for (i=0; i<dl_size(coords)/2; i++) {
+            double x = dl_get(coords, i*2 + 0);
+            double y = dl_get(coords, i*2 + 1);
+            double rad = 5;
+            cairo_arc(cairo, x, y, rad, 0.0, 2.0*M_PI);
+            cairo_stroke(cairo);
+        }
+    }
 
     // Convert image for output...
     cairoutils_argb32_to_rgba(img, W, H);
