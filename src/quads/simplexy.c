@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <sys/param.h>
+#include <assert.h>
 
 #include "ctmf.h"
 #include "dimage.h"
@@ -186,10 +188,10 @@ int simplexy_u8(unsigned char *image,
 	}
 
 	/* median smooth */
-
-	if(nx < 2*halfbox+1){
-	  halfbox = floor(((float)ny-1.0)/2.0);
+	if (MIN(nx,ny) < 2*halfbox+1) {
+		halfbox = floor(((float)MIN(nx,ny) - 1.0) / 2.0);
 	}
+	assert(MIN(nx,ny) >= 2*halfbox+1);
 
 	simage_u8 = (unsigned char *) malloc(nx * ny * sizeof(unsigned char));
 	ctmf(image, simage_u8, nx, ny, nx, nx, halfbox, 1, 512*1024);
