@@ -102,9 +102,9 @@ def real_handle_job(job, sshconfig):
         convert(job, field, 'getimagesize', store_imgtype=True, store_imgsize=True)
         if (field.imagew * field.imageh) > 5000000:  # 5 MPixels
             userlog('Downsampling your image...')
-            target = 'xyls-half'
+            target = 'xyls-half-sorted'
         else:
-            target = 'xyls'
+            target = 'xyls-sorted'
 
         try:
             log('image2xy...')
@@ -114,10 +114,9 @@ def real_handle_job(job, sshconfig):
             userlog('Source extraction failed.')
             bailout(job, 'Source extraction failed.')
             return -1
-
         log('created xylist %s' % xylist)
+
         axyargs['-x'] = xylist
-        axyargs['--sort-column'] = 'FLUX'
 
     elif (filetype == 'fits') or (filetype == 'text'):
         if filetype == 'text':

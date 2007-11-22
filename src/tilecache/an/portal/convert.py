@@ -185,6 +185,16 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         run_convert_command(cmd)
         return fullfn
 
+    elif fn == 'xyls-sorted' or fn == 'xyls-half-sorted':
+        if fn == 'xyls-sorted':
+            infn = convert(job, field, 'xyls', store_imgtype, store_imgsize)
+        else:
+            infn = convert(job, field, 'xyls-half', store_imgtype, store_imgsize)
+        logfn = 'blind.log'
+        cmd = 'resort-xylist -d %s %s 2>> %s' % (infn, fullfn, logfn)
+        run_convert_command(cmd)
+        return fullfn
+
     elif fn == 'wcsinfo':
         infn = job.get_filename('wcs.fits')
         cmd = 'wcsinfo %s > %s' % (infn, fullfn)
