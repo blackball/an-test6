@@ -48,7 +48,8 @@ CFLAGS += -fPIC
 
 SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
 
-QFITS_UTILS := fitsgetext subtable tabsort column-merge add-healpix-column
+QFITS_UTILS := fitsgetext subtable tabsort column-merge add-healpix-column \
+		resort-xylist
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc \
 		listhead imcopy imarith
@@ -449,6 +450,8 @@ tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LIB)
 column-merge: column-merge.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 add-healpix-column: add-healpix-column.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+
+resort-xylist: resort-xylist.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LIB)
 
 tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) \
 		$(QFITS_LIB)
