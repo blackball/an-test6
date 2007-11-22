@@ -27,6 +27,11 @@
 
 extern uint32_t ENDIAN_DETECTOR;
 
+/*
+ Copy data from "fin" to "fout", starting at offset "offset"
+ (from the beginning of "fin"), and length "length".
+ Returns 0 on success.
+ */
 int pipe_file_offset(FILE* fin, int offset, int length, FILE* fout);
 
 /*

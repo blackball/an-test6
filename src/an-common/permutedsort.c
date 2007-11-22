@@ -65,4 +65,11 @@ int compare_floats(const void* v1, const void* v2) {
 	return 0;
 }
 
+int compare_doubles_desc(const void* v1, const void* v2) {
+    return compare_doubles(v2, v1);
+}
+
+int compare_floats_desc(const void* v1, const void* v2) {
+    return compare_floats(v2, v1);
+}
 

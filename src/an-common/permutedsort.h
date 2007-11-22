@@ -39,4 +39,8 @@ int compare_doubles(const void* v1, const void* v2);
 
 int compare_floats(const void* v1, const void* v2);
 
+int compare_doubles_desc(const void* v1, const void* v2);
+
+int compare_floats_desc(const void* v1, const void* v2);
+
 #endif
