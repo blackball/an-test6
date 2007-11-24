@@ -68,6 +68,7 @@ function allow_email($email) {
 		       'roweis@cs.toronto.edu',
 		       'simon.krughoff@gmail.com',
 		       'somak@star.sr.bham.ac.uk',
+			   'sridhar@nivarty.com',
 		       'strader@ucolick.org',
 		       'stubbs@physics.harvard.edu',
 		       'tim@chaos.org.uk');
