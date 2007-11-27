@@ -130,7 +130,8 @@ int main(void) {
 	halfbox = 100;
 	maxnpeaks = 10000;
 
-	N = scandir("demo_simplexy_images", &namelist, is_input_image, alphasort);
+//	N = scandir("demo_simplexy_images", &namelist, is_input_image, alphasort);
+	N = scandir("m44_images", &namelist, is_input_image, alphasort);
 	if (N < 0) {
 		perror("scandir");
 		return 1;
