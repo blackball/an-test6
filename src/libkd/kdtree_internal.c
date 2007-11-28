@@ -587,7 +587,7 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
 
             bailed = FALSE;
             if (TTYPE_INTEGER && use_tmath) {
-                ttype newd2;
+                ttype newd2 = 0;
                 bb_point_mindist2_bailout_ttype(tlo, thi, tquery, D, tl2, &bailed, &newd2);
                 if (bailed) {
                     if (kd->fun->nn_prune)
@@ -596,7 +596,7 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
                 }
                 dist2 = DIST2_TE(kd, newd2);
             } else if (TTYPE_INTEGER && use_bigtmath) {
-                bigttype newd2;
+                bigttype newd2 = 0;
                 bb_point_mindist2_bailout_bigttype(tlo, thi, tquery, D, bigtl2, &bailed, &newd2);
                 if (bailed) {
                     if (kd->fun->nn_prune)
@@ -1961,11 +1961,15 @@ kdtree_t* MANGLE(kdtree_build)
 #endif
 
 	/* Parameters checking */
-	if (!data || !N || !D)
+	if (!data || !N || !D) {
+        fprintf(stderr, "Data, N, or D is zero.\n");
 		return NULL;
+    }
 	/* Make sure we have enough data */
-	if ((1 << maxlevel) - 1 > N)
+	if ((1 << maxlevel) - 1 > N) {
+        fprintf(stderr, "Too few data points for number of tree levels (%i < %i)!\n", N, (1 << maxlevel) - 1);
 		return NULL;
+    }
 
 	if (!kd)
 		kd = kdtree_new(N, D, Nleaf);

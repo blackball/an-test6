@@ -36,7 +36,6 @@ KD_FITS := kdtree_fits_io.o
 INTERNAL_SOURCES := kdtree_internal.c kdtree_internal_fits.c
 
 CFLAGS := $(CFLAGS_DEF)
-# CFLAGS += -DKDTREE_NO_FITS
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(ANUTILS_INC)
 
@@ -45,9 +44,26 @@ LDFLAGS += -lm
 
 LIBKD := libkd.a
 
-all: $(REMAKE_ANUTILS) $(LIBKD) checktree
+LIBKD_NOIO := libkd-noio.a
+
+INTERNALS_NOIO := \
+	kdint_ddd_noio.o \
+	kdint_fff_noio.o \
+	kdint_ddu_noio.o \
+	kdint_duu_noio.o \
+	kdint_dds_noio.o \
+	kdint_dss_noio.o
+
+%_noio.o: %.c
+	$(CC) -o $@ -c $< $(CFLAGS) -DKDTREE_NO_FITS
+
+all: $(REMAKE_ANUTILS) $(LIBKD) $(LIBKD_NOIO) checktree
 
 $(LIBKD): $(KD) $(KD_FITS)
+	$(AR) rc $@ $^
+	$(RANLIB) $@
+
+$(LIBKD_NOIO): kdtree.o kdtree_dim.o $(INTERNALS_NOIO)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
@@ -56,7 +72,8 @@ checktree: checktree.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 
 .PHONY: clean
 clean:
-	-rm $(LIBKD) checktree $(KD) $(KD_FITS) deps $(DEPS) checktree.o
+	-rm $(LIBKD) checktree $(KD) $(KD_FITS) deps $(DEPS) checktree.o \
+		$(INTERNALS) $(INTERNALS_NOIO) $(LIBKD_NOIO)
 
 realclean: clean
 	-rm *~ *.dep
