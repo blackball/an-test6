@@ -66,7 +66,7 @@ $(LIBKD): $(KD) $(KD_FITS)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
-$(LIBKD_NOIO): kdtree.o kdtree_dim.o $(INTERNALS_NOIO)
+$(LIBKD_NOIO): kdtree.o kdtree_dim.o kdtree_mem.o $(INTERNALS_NOIO)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 

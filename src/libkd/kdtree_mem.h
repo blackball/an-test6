@@ -38,6 +38,9 @@ void  FREE(void* ptr);
 
 #endif
 
+// Is memory-tracking enabled?
+int kdtree_mem_enabled();
+
 // Reset the memory usage counter
 void kdtree_mem_reset();
 

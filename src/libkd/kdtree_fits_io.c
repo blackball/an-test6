@@ -25,8 +25,9 @@
 #include <sys/mman.h>
 
 #include "kdtree_fits_io.h"
-#include "fitsioutils.h"
 #include "kdtree_internal.h"
+#include "kdtree_mem.h"
+#include "fitsioutils.h"
 #include "qfits.h"
 
 static int imax(int a, int b) {

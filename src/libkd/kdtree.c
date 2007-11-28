@@ -76,7 +76,7 @@ int kdtree_get_splitdim(const kdtree_t* kd, int nodeid) {
 }
 
 double kdtree_get_splitval(const kdtree_t* kd, int nodeid) {
-    double res;
+    double res = 0.0;
 	KD_DISPATCH(kdtree_get_splitval, kd->treetype, res=, (kd, nodeid));
     return res;
 }
