@@ -23,6 +23,7 @@
 
 #include "kdtree.h"
 #include "kdtree_internal.h"
+#include "kdtree_mem.h"
 
 #define KDTREE_MAX_RESULTS 1000
 #define KDTREE_MAX_DIM 100
@@ -428,10 +429,10 @@ static
 bool resize_results(kdtree_qres_t* res, int newsize, int D,
 					bool do_dists, bool do_points) {
 	if (do_dists)
-		res->sdists  = realloc(res->sdists , newsize * sizeof(double));
+		res->sdists  = REALLOC(res->sdists , newsize * sizeof(double));
 	if (do_points)
-		res->results.any = realloc(res->results.any, newsize * D * sizeof(etype));
-	res->inds = realloc(res->inds, newsize * sizeof(u32));
+		res->results.any = REALLOC(res->results.any, newsize * D * sizeof(etype));
+	res->inds = REALLOC(res->inds, newsize * sizeof(u32));
 	if (newsize && (!res->results.any || (do_dists && !res->sdists) || !res->inds))
 		fprintf(stderr, "Failed to resize kdtree results arrays.\n");
 	res->capacity = newsize;
@@ -1035,7 +1036,7 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 		}
 		res->nres = 0;
 	} else {
-		res = calloc(1, sizeof(kdtree_qres_t));
+		res = CALLOC(1, sizeof(kdtree_qres_t));
 		if (!res) {
 			fprintf(stderr, "Failed to allocate kdtree_qres_t struct.\n");
 			return NULL;
@@ -1344,7 +1345,7 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 	int* tmpparr;
 
 	N = r - l + 1;
-	permute = malloc(N * sizeof(int));
+	permute = MALLOC(N * sizeof(int));
 	if (!permute) {
 		fprintf(stderr, "Failed to allocate extra permutation array.\n");
 		return -1;
@@ -1357,7 +1358,7 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 	qsort(permute, N, sizeof(int), kdqsort_compare);
 
 	// permute the data one dimension at a time...
-	tmparr = malloc(N * sizeof(dtype));
+	tmparr = MALLOC(N * sizeof(dtype));
 	if (!tmparr) {
 		fprintf(stderr, "Failed to allocate temp permutation array.\n");
 		return -1;
@@ -1370,8 +1371,8 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 		for (i = 0; i < N; i++)
 			arr[(l + i) * D + j] = tmparr[i];
 	}
-	free(tmparr);
-	tmpparr = malloc(N * sizeof(int));
+	FREE(tmparr);
+	tmpparr = MALLOC(N * sizeof(int));
 	if (!tmpparr) {
 		fprintf(stderr, "Failed to allocate temp permutation array.\n");
 		return -1;
@@ -1381,8 +1382,8 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 		tmpparr[i] = parr[l + pi];
 	}
 	memcpy(parr + l, tmpparr, N*sizeof(int));
-	free(tmpparr);
-	free(permute);
+	FREE(tmpparr);
+	FREE(permute);
 	return 0;
 }
 
@@ -1658,7 +1659,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 	// if it's the root node, make sure that each value in the permutation
 	// array is present exactly once.
 	if (!nodeid && kd->perm) {
-		unsigned char* counts = calloc(kd->ndata, 1);
+		unsigned char* counts = CALLOC(kd->ndata, 1);
 		for (i=0; i<kd->ndata; i++)
 			counts[kd->perm[i]]++;
 		for (i=0; i<kd->ndata; i++)
@@ -1668,7 +1669,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				fprintf(stderr, "kdtree_check: permutation vector failure.\n");
 				return -1;
 			}
-		free(counts);
+		FREE(counts);
 	}
 
 	sum = 0;
@@ -1889,8 +1890,8 @@ kdtree_t* MANGLE(kdtree_convert_data)
 		kd = kdtree_new(N, D, Nleaf);
 
 	if (!kd->minval && !kd->maxval) {
-		kd->minval = malloc(D * sizeof(double));
-		kd->maxval = malloc(D * sizeof(double));
+		kd->minval = MALLOC(D * sizeof(double));
+		kd->maxval = MALLOC(D * sizeof(double));
 		kd->scale = compute_scale_ext(edata, N, D, kd->minval, kd->maxval);
 	} else {
 		// limits were pre-set by the user.  just compute scale.
@@ -1900,7 +1901,7 @@ kdtree_t* MANGLE(kdtree_convert_data)
 	}
 	kd->invscale = 1.0 / kd->scale;
 
-	ddata = kd->data.any = malloc(N * D * sizeof(dtype));
+	ddata = kd->data.any = MALLOC(N * D * sizeof(dtype));
 	for (i=0; i<N; i++) {
 		for (d=0; d<D; d++) {
 			//*ddata = POINT_ED(kd, d, *edata, KD_ROUND);
@@ -1979,25 +1980,25 @@ kdtree_t* MANGLE(kdtree_build)
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
-	kd->perm = malloc(sizeof(u32) * N);
+	kd->perm = MALLOC(sizeof(u32) * N);
 	for (i = 0;i < N;i++)
 		kd->perm[i] = i;
 	assert(kd->perm);
 
-	kd->lr = malloc(kd->nbottom * sizeof(u32));
+	kd->lr = MALLOC(kd->nbottom * sizeof(u32));
 	assert(kd->lr);
 
 	if (options & KD_BUILD_BBOX) {
-		kd->bb.any = malloc(kd->ninterior * 2 * D * sizeof(ttype));
+		kd->bb.any = MALLOC(kd->ninterior * 2 * D * sizeof(ttype));
 		assert(kd->bb.any);
 	}
 	if (options & KD_BUILD_SPLIT) {
-		kd->split.any = malloc(kd->nnodes * sizeof(ttype));
+		kd->split.any = MALLOC(kd->nnodes * sizeof(ttype));
 		assert(kd->split.any);
 	}
 	if (((options & KD_BUILD_SPLIT) && !TTYPE_INTEGER) ||
 		(options & KD_BUILD_SPLITDIM)) {
-		kd->splitdim = malloc(kd->nnodes * sizeof(u8));
+		kd->splitdim = MALLOC(kd->nnodes * sizeof(u8));
 		kd->splitmask = UINT32_MAX;
 	} else if (options & KD_BUILD_SPLIT)
 		compute_splitbits(kd);
@@ -2005,8 +2006,8 @@ kdtree_t* MANGLE(kdtree_build)
 	if (TTYPE_INTEGER && !DTYPE_INTEGER) {
 		// compute scaling params
 		if (!kd->minval || !kd->maxval) {
-			kd->minval = malloc(D * sizeof(double));
-			kd->maxval = malloc(D * sizeof(double));
+			kd->minval = MALLOC(D * sizeof(double));
+			kd->maxval = MALLOC(D * sizeof(double));
 			kd->scale = compute_scale(kd->data.any, N, D, kd->minval, kd->maxval);
 		} else {
 			// limits were pre-set by the user.  just compute scale.

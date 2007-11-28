@@ -26,6 +26,7 @@
 #include "kdtree.h"
 #include "kdtree_internal.h"
 #include "kdtree_internal_common.h"
+#include "kdtree_mem.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
 KD_DECLARE(kdtree_get_splitval, double, (const kdtree_t*, int));
@@ -204,7 +205,7 @@ kdtree_t* kdtree_new(int N, int D, int Nleaf) {
 	kdtree_t* kd;
 	int maxlevel, nnodes;
 	maxlevel = kdtree_compute_levels(N, Nleaf);
-	kd = calloc(1, sizeof(kdtree_t));
+	kd = CALLOC(1, sizeof(kdtree_t));
 	nnodes = (1 << maxlevel) - 1;
 	kd->nlevels = maxlevel;
 	kd->ndata = N;
@@ -213,17 +214,17 @@ kdtree_t* kdtree_new(int N, int D, int Nleaf) {
 	kd->nbottom = 1 << (maxlevel - 1);
 	kd->ninterior = kd->nbottom - 1;
 	assert(kd->nbottom + kd->ninterior == kd->nnodes);
-	kd->fun = calloc(1, sizeof(kdtree_funcs));
+	kd->fun = CALLOC(1, sizeof(kdtree_funcs));
 	return kd;
 }
 
 void kdtree_set_limits(kdtree_t* kd, double* low, double* high) {
 	int D = kd->ndim;
 	if (!kd->minval) {
-		kd->minval = malloc(D * sizeof(double));
+		kd->minval = MALLOC(D * sizeof(double));
 	}
 	if (!kd->maxval) {
-		kd->maxval = malloc(D * sizeof(double));
+		kd->maxval = MALLOC(D * sizeof(double));
 	}
 	memcpy(kd->minval, low,  D * sizeof(double));
 	memcpy(kd->maxval, high, D * sizeof(double));
@@ -311,27 +312,27 @@ int kdtree_npoints(const kdtree_t* kd, int nodeid) {
 void kdtree_free_query(kdtree_qres_t *kq)
 {
 	if (!kq) return;
-	free(kq->results.any);
-	free(kq->sdists);
-	free(kq->inds);
-	free(kq);
+	FREE(kq->results.any);
+	FREE(kq->sdists);
+	FREE(kq->inds);
+	FREE(kq);
 }
 
 void kdtree_free(kdtree_t *kd)
 {
 	if (!kd) return;
-	free(kd->nodes);
-	free(kd->lr);
-	free(kd->perm);
-	free(kd->bb.any);
-	free(kd->split.any);
-	free(kd->splitdim);
+	FREE(kd->nodes);
+	FREE(kd->lr);
+	FREE(kd->perm);
+	FREE(kd->bb.any);
+	FREE(kd->split.any);
+	FREE(kd->splitdim);
 	if (kd->converted_data)
-		free(kd->data.any);
-	free(kd->minval);
-	free(kd->maxval);
-	free(kd->fun);
-	free(kd);
+		FREE(kd->data.any);
+	FREE(kd->minval);
+	FREE(kd->maxval);
+	FREE(kd->fun);
+	FREE(kd);
 }
 
 int kdtree_nearest_neighbour(const kdtree_t* kd, const void* pt, double* p_mindist2) {

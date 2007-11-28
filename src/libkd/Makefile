@@ -31,13 +31,16 @@ INTERNALS := \
 	kdint_dds.o \
 	kdint_dss.o
 
-KD := kdtree.o kdtree_dim.o $(INTERNALS)
+KD := kdtree.o kdtree_dim.o kdtree_mem.o $(INTERNALS)
 KD_FITS := kdtree_fits_io.o
 INTERNAL_SOURCES := kdtree_internal.c kdtree_internal_fits.c
 
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(ANUTILS_INC)
+
+# Track memory usage?
+CFLAGS += -DKDTREE_MEM_TRACK
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm

@@ -190,7 +190,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 			tab->found = 1;
 	}
 
-    kdtree = calloc(1, sizeof(kdtree_t));
+    kdtree = CALLOC(1, sizeof(kdtree_t));
     if (!kdtree) {
 		fprintf(stderr, "Couldn't allocate kdtree.\n");
 		return NULL;
@@ -221,7 +221,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 			if (tab->nitems != table->nr) {
 				fprintf(stderr, "Table %s in file %s: expected %i data items, found %i.\n",
 						tab->name, fn, tab->nitems, table->nr);
-				free(kdtree);
+				FREE(kdtree);
 				qfits_table_close(table);
 				return NULL;
 			}
@@ -233,7 +233,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 			if (tab->datasize != ds) {
 				fprintf(stderr, "Table %s in file %s: expected data size %i, found %i.\n",
 						tab->name, fn, tab->datasize, ds);
-				free(kdtree);
+				FREE(kdtree);
 				qfits_table_close(table);
 				return NULL;
 			}
@@ -246,7 +246,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 		if (fits_bytes_needed(tablesize) != tab->size) {
 			fprintf(stderr, "The size of table %s in file %s doesn't jive with what's expected: %i vs %i.\n",
 					tab->name, fn, fits_bytes_needed(tablesize), tab->size);
-			free(kdtree);
+			FREE(kdtree);
 			return NULL;
 		}
 
@@ -258,7 +258,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 	fclose(fid);
 	if (map == MAP_FAILED) {
 		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
-		free(kdtree);
+		FREE(kdtree);
 		return NULL;
 	}
 
@@ -349,5 +349,5 @@ int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extr
 void kdtree_fits_close(kdtree_t* kd) {
 	if (!kd) return;
 	munmap(kd->mmapped, kd->mmapped_size);
-	free(kd);
+	FREE(kd);
 }
