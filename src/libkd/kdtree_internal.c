@@ -378,7 +378,7 @@ static int kdtree_qsort_results(kdtree_qres_t *kq, int D) {
 	int beg[KDTREE_MAX_RESULTS], end[KDTREE_MAX_RESULTS], i = 0, j, L, R;
 	static dtype piv_vec[KDTREE_MAX_DIM];
 	unsigned int piv_perm;
-	dtype piv;
+	etype piv;
 
 	beg[0] = 0;
 	end[0] = kq->nres - 1;
