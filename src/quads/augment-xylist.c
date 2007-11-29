@@ -78,10 +78,12 @@ static struct option long_options[] = {
     {"sort-ascending", no_argument,       0, 'a'},
     {"keep-xylist",    required_argument, 0, 'k'},
     {"verify",         required_argument, 0, 'V'},
+    {"code-tolerance", required_argument, 0, 'c'},
+    {"pixel-error",    required_argument, 0, 'E'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:x:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:x:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:c:E:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -118,6 +120,8 @@ static void print_help(const char* progname) {
            "  [--verbose]: be more chatty!\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
            "  [--verify <wcs-file>]: try to verify an existing WCS file  (-V)\n"
+           "  [--code-tolerance <tol>]: matching distance for quads, default 0.01  (-c)\n"
+           "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
 		   "\n", progname);
 }
 
@@ -185,6 +189,8 @@ int main(int argc, char** args) {
     char* solvedin = NULL;
     bool addwh = TRUE;
     sl* verifywcs;
+    double codetol = 0.0;
+    double pixerr = 0.0;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -208,6 +214,12 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 'E':
+            pixerr = atof(optarg);
+            break;
+        case 'c':
+            codetol = atof(optarg);
+            break;
         case 'v':
             verbose = TRUE;
             break;
@@ -746,6 +758,11 @@ int main(int argc, char** args) {
 		qfits_header_add(hdr, "ANRDLS", rdlsfile, "output filename", NULL);
 	if (wcsfile)
 		qfits_header_add(hdr, "ANWCS", wcsfile, "output filename", NULL);
+    if (codetol > 0.0)
+		fits_header_add_double(hdr, "ANCTOL", codetol, "code tolerance");
+    if (pixerr > 0.0)
+		fits_header_add_double(hdr, "ANPOSERR", pixerr, "star pos'n error (pixels)");
+        
 
     for (i=0; i<il_size(depths)/2; i++) {
         int depthlo, depthhi;

@@ -91,10 +91,12 @@ static struct option long_options[] = {
     {"keep-xylist",    required_argument, 0, 'k'},
 	{"solved-in",      required_argument, 0, 'I'},
     {"verify",         required_argument, 0, 'V'},
+    {"code-tolerance", required_argument, 0, 'C'},
+    {"pixel-error",    required_argument, 0, 'E'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:C:E:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -128,6 +130,8 @@ static void print_help(const char* progname) {
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
            "  [--solved-in <filename>]: input filename for solved file  (-I)\n"
            "  [--verify <wcs-file>]: try to verify an existing WCS file  (-V)\n"
+           "  [--code-tolerance <tol>]: matching distance for quads (default 0.01) (-c)\n"
+           "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
            "\n"
@@ -217,6 +221,14 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'C':
+            sl_append(augmentxyargs, "--code-tolerance");
+            sl_append(augmentxyargs, optarg);
+            break;
+        case 'E':
+            sl_append(augmentxyargs, "--pixel-error");
+            sl_append(augmentxyargs, optarg);
+            break;
         case 'v':
             sl_append(augmentxyargs, "--verbose");
             sl_append(backendargs, "--verbose");
