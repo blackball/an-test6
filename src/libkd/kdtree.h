@@ -159,6 +159,7 @@ struct kdtree {
 	/* Bounding box: list of D-dimensional lower hyperrectangle corner followed by
      D-dimensional upper corner.
      (ttype x ndim x ninterior) */
+    /* HACKHACKHACK should be x nnodes! */
 	union {
 		float* f;
 		double* d;
@@ -168,6 +169,7 @@ struct kdtree {
 	} bb;
 
 	/* Split position (& dimension for ints) (ttype x nnodes). */
+    /* HACKHACKHACK should be x ninterior! */
 	union {
 		float* f;
 		double* d;
@@ -177,6 +179,7 @@ struct kdtree {
 	} split;
 
 	/* Split dimension for floating-point types (x nnodes) */
+    /* HACKHACKHACK should be x ninterior! */
 	u8* splitdim;
 
 	/* bitmasks for the split dimension and location. */
