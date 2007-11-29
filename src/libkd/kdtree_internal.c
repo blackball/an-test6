@@ -232,10 +232,6 @@ static bool bboxes(const kdtree_t* kd, int node,
 				   ttype** p_tlo, ttype** p_thi, int D) {
 	if (kd->bb.any) {
 		// bb trees
-		if (node >= kd->ninterior) {
-			// leaf nodes don't have bboxes!
-			return FALSE;
-		}
 		*p_tlo =  LOW_HR(kd, D, node);
 		*p_thi = HIGH_HR(kd, D, node);
 		return TRUE;
@@ -440,7 +436,8 @@ bool resize_results(kdtree_qres_t* res, int newsize, int D,
 }
 
 static
-bool add_result(const kdtree_t* kd, kdtree_qres_t* res, double sdist, unsigned int ind, const dtype* pt,
+bool add_result(const kdtree_t* kd, kdtree_qres_t* res, double sdist,
+                unsigned int ind, const dtype* pt,
 				int D, bool do_dists, bool do_points) {
 	if (do_dists)
 		res->sdists[res->nres] = sdist;
@@ -556,7 +553,9 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
         if (kd->fun->nn_explore)
             kd->fun->nn_explore(kd, nodeid, dist2stack[stackpos+1], bestd2);
 
-		if (KD_IS_LEAF(kd, nodeid) || KD_IS_LEAF(kd, KD_CHILD_LEFT(nodeid))) {
+		if (KD_IS_LEAF(kd, nodeid)) {
+            // Back when leaf nodes didn't have BBoxes:
+            //|| KD_IS_LEAF(kd, KD_CHILD_LEFT(nodeid)))
 			dtype* data;
 			L = kdtree_left(kd, nodeid);
 			R = kdtree_right(kd, nodeid);
@@ -1044,7 +1043,6 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 		resize_results(res, KDTREE_MAX_RESULTS, D, do_dists, do_points);
 	}
 
-
 	// queue root.
 	nodestack[0] = 0;
 
@@ -1075,7 +1073,8 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 					dist2_bailout(kd, query, data, D, maxd2, &bailedout, &dsqd);
 					if (bailedout)
 						continue;
-					if (!add_result(kd, res, dsqd, KD_PERM(kd, i), data, D, do_dists, do_points))
+					if (!add_result(kd, res, dsqd, KD_PERM(kd, i), data,
+                                    D, do_dists, do_points))
 						return NULL;
 				}
 			} else {
@@ -1084,7 +1083,8 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 					// HACK - should do "use_dtype", just like "use_ttype".
 					if (dist2_exceeds(kd, query, data, D, maxd2))
 						continue;
-					if (!add_result(kd, res, 0.0, KD_PERM(kd, i), data, D, do_dists, do_points))
+					if (!add_result(kd, res, HUGE_VAL, KD_PERM(kd, i), data,
+                                    D, do_dists, do_points))
 						return NULL;
 				}
 			}
@@ -1180,12 +1180,16 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 				if (do_dists) {
 					for (i=L; i<=R; i++) {
 						double dsqd = dist2(kd, query, KD_DATA(kd, D, i), D);
-						if (!add_result(kd, res, dsqd, KD_PERM(kd, i), KD_DATA(kd, D, i), D, do_dists, do_points))
+						if (!add_result(kd, res, dsqd, KD_PERM(kd, i),
+                                        KD_DATA(kd, D, i), D,
+                                        do_dists, do_points))
 							return NULL;
 					}
 				} else {
 					for (i=L; i<=R; i++)
-						if (!add_result(kd, res, 0.0, KD_PERM(kd, i), KD_DATA(kd, D, i), D, do_dists, do_points))
+						if (!add_result(kd, res, HUGE_VAL, KD_PERM(kd, i),
+                                        KD_DATA(kd, D, i), D,
+                                        do_dists, do_points))
 							return NULL;
 				}
 				continue;
@@ -1197,10 +1201,10 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 			nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 
 		} else {
+            assert(kd->split.any);
 
 			if (TTYPE_INTEGER && use_tsplit) {
 
-				// stolen from inttree.c
 				if (tquery[dim] < split) {
 					// query is on the "left" side of the split.
 					assert(query[dim] < POINT_TE(kd, dim, split));
@@ -1685,10 +1689,9 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 		}
 	}
 
-	if (KD_IS_LEAF(kd, nodeid)) {
+	if (KD_IS_LEAF(kd, nodeid))
 		return 0;
 
-	}
 	if (kd->bb.any) {
 		ttype* bb;
 		ttype *plo, *phi;
@@ -1942,14 +1945,41 @@ kdtree_t* MANGLE(kdtree_convert_data)
 	return kd;
 }
 
+static void compute_bb(const dtype* data, int D, int N, dtype* lo, dtype* hi) {
+    int d, i;
+
+    for (d=0; d<D; d++) {
+        hi[d] = DTYPE_MIN;
+        lo[d] = DTYPE_MAX;
+    }
+
+    /* (since data is stored lexicographically we can just iterate through it) */
+    /* (avoid doing kd->data[NODE(i)*D + d] many times; just ++ the pointer) */
+    for (i=0; i<N; i++) {
+        for (d=0; d<D; d++) {
+            if (*data > hi[d]) hi[d] = *data;
+            if (*data < lo[d]) lo[d] = *data;
+            data++;
+        }
+    }
+}
+
+static void save_bb(kdtree_t* kd, int i, const dtype* lo, const dtype* hi) {
+    int D = kd->ndim;
+    int d;
+    for (d=0; d<D; d++) {
+        (LOW_HR (kd, D, i))[d] = POINT_DT(kd, d, lo[d], floor);
+        (HIGH_HR(kd, D, i))[d] = POINT_DT(kd, d, hi[d], ceil);
+    }
+}
 
 kdtree_t* MANGLE(kdtree_build)
 	 (kdtree_t* kd, dtype* data, int N, int D, int Nleaf, unsigned int options) {
-	dtype* rdata;
 	int i;
 	int xx;
 	int lnext, level;
 	int maxlevel;
+    dtype hi[D], lo[D];
 
 	maxlevel = kdtree_compute_levels(N, Nleaf);
 
@@ -1989,7 +2019,7 @@ kdtree_t* MANGLE(kdtree_build)
 	assert(kd->lr);
 
 	if (options & KD_BUILD_BBOX) {
-		kd->bb.any = MALLOC(kd->ninterior * 2 * D * sizeof(ttype));
+		kd->bb.any = MALLOC(kd->nnodes * 2 * D * sizeof(ttype));
 		assert(kd->bb.any);
 	}
 	if (options & KD_BUILD_SPLIT) {
@@ -2029,7 +2059,6 @@ kdtree_t* MANGLE(kdtree_build)
 	 * The l pointer is simply +1 of the previous right pointer, or 0 if we
 	 * are at the first element of the lr array. */
 	for (i = 0; i < kd->ninterior; i++) {
-		unsigned int j;
 		unsigned int d;
 		unsigned int left, right;
 		dtype maxrange;
@@ -2037,9 +2066,7 @@ kdtree_t* MANGLE(kdtree_build)
 		unsigned int c;
 		int dim = 0;
 		int m;
-		dtype hi[D], lo[D];
 		dtype qsplit = 0;
-		unsigned int xx = 0;
 
 		/* Have we reached the next level in the tree? */
 		if (i == lnext) {
@@ -2063,26 +2090,10 @@ kdtree_t* MANGLE(kdtree_build)
 		assert(right < N);
 
 		/* Find the bounding-box for this node. */
-		for (d=0; d<D; d++) {
-			hi[d] = DTYPE_MIN;
-			lo[d] = DTYPE_MAX;
-		}
-		/* (since data is stored lexicographically we can just iterate through it) */
-		/* (avoid doing kd->data[NODE(i)*D + d] many times; just ++ the pointer) */
-		rdata = kd->data.DTYPE + left * D;
-		for (j=left; j<=right; j++) {
-			for (d=0; d<D; d++) {
-				if (*rdata > hi[d]) hi[d] = *rdata;
-				if (*rdata < lo[d]) lo[d] = *rdata;
-				rdata++;
-			}
-		}
-		if (options & KD_BUILD_BBOX) {
-			for (d=0; d<D; d++) {
-				(LOW_HR (kd, D, i))[d] = POINT_DT(kd, d, lo[d], floor);
-				(HIGH_HR(kd, D, i))[d] = POINT_DT(kd, d, hi[d], ceil);
-			}
-		}
+        compute_bb(kd->data.DTYPE + left * D, D, right - left + 1, lo, hi);
+
+		if (options & KD_BUILD_BBOX)
+            save_bb(kd, i, lo, hi);
 
 		/* Split along dimension with largest range */
 		maxrange = DTYPE_MIN;
@@ -2121,7 +2132,6 @@ kdtree_t* MANGLE(kdtree_build)
 				// FIXME: memleak mania!
 				return NULL;
 			}
-			//m = 1 + (left+right)/2;
 			m = (1+left+right)/2;
 
 			/* Make sure sort works */
@@ -2200,13 +2210,19 @@ kdtree_t* MANGLE(kdtree_build)
         assert(c+2 < kd->nbottom);
 	}
 
-	for (xx=0; xx<kd->nbottom-1; xx++)
-		assert(kd->lr[xx] <= kd->lr[xx+1]);
+	for (i=0; i<kd->nbottom-1; i++)
+		assert(kd->lr[i] <= kd->lr[i+1]);
 
-	/* do leaf nodes get bounding boxes?
-     (nope, not at present).
-     Why is that?
-     */
+    if (options & KD_BUILD_BBOX) {
+        // Compute bounding boxes for leaf nodes.
+        int L, R = 0;
+        for (i=0; i<kd->nbottom; i++) {
+            L = R;
+            R = kd->lr[i];
+            compute_bb(kd->data.DTYPE + L * D, D, R - L + 1, lo, hi);
+            save_bb(kd, i + kd->ninterior, lo, hi);
+        }
+    }
 
 	return kd;
 }

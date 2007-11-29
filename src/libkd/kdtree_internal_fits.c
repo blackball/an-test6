@@ -42,7 +42,7 @@ static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 		ext->nitems = kd->ndata;
 	} else if (!strcmp(ext->name, KD_STR_BB)) {
 		ext->datasize = sizeof(ttype) * kd->ndim * 2;
-		ext->nitems = kd->ninterior;
+		ext->nitems = kd->nnodes;
 	} else if (!strcmp(ext->name, KD_STR_SPLIT)) {
 		ext->nitems = kd->ninterior;
 	} else if (!strcmp(ext->name, KD_STR_SPLITDIM)) {
@@ -184,7 +184,7 @@ kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int 
 
 	kdt->data.any = extras[idata].ptr;
 	
-	if (!bbtree) {
+    if (isplit && !isplitdim) {
 		compute_splitbits(kdt);
 	}
 
@@ -277,11 +277,11 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->ptr = kd->bb.any;
 		ext->name = KD_STR_BB;
 		ext->datasize = sizeof(ttype) * kd->ndim * 2;
-		ext->nitems = kd->ninterior;
+		ext->nitems = kd->nnodes;
 		fits_add_long_comment
 			(hdr, "The \"%s\" table contains the kdtree bounding-box array. "
 			 "This array contains two %u-dimensional points, stored as %u-byte, "
-			 "native-endian %ss, for each interior node in the tree. Each data "
+			 "native-endian %ss, for each node in the tree. Each data "
 			 "point owned by a node is contained within its bounding box.",
 			 KD_STR_BB, (unsigned int)kd->ndim, (unsigned int)sizeof(ttype),
 			 kdtree_kdtype_to_string(kdtree_treetype(kd)));

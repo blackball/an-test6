@@ -73,7 +73,6 @@ typedef uint64_t u64;
 typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t  u8;
-//typedef unsigned int uint;
 
 // Legacy kdtree node.
 struct kdtree_node {
@@ -158,8 +157,7 @@ struct kdtree {
 
 	/* Bounding box: list of D-dimensional lower hyperrectangle corner followed by
      D-dimensional upper corner.
-     (ttype x ndim x ninterior) */
-    /* HACKHACKHACK should be x nnodes! */
+     (ttype x ndim x nnodes) */
 	union {
 		float* f;
 		double* d;
