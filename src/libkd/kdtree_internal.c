@@ -1993,12 +1993,12 @@ kdtree_t* MANGLE(kdtree_build)
 		assert(kd->bb.any);
 	}
 	if (options & KD_BUILD_SPLIT) {
-		kd->split.any = MALLOC(kd->nnodes * sizeof(ttype));
+		kd->split.any = MALLOC(kd->ninterior * sizeof(ttype));
 		assert(kd->split.any);
 	}
 	if (((options & KD_BUILD_SPLIT) && !TTYPE_INTEGER) ||
 		(options & KD_BUILD_SPLITDIM)) {
-		kd->splitdim = MALLOC(kd->nnodes * sizeof(u8));
+		kd->splitdim = MALLOC(kd->ninterior * sizeof(u8));
 		kd->splitmask = UINT32_MAX;
 	} else if (options & KD_BUILD_SPLIT)
 		compute_splitbits(kd);
@@ -2196,6 +2196,8 @@ kdtree_t* MANGLE(kdtree_build)
 
 		kd->lr[c+1] = m-1;
 		kd->lr[c+2] = right;
+
+        assert(c+2 < kd->nbottom);
 	}
 
 	for (xx=0; xx<kd->nbottom-1; xx++)

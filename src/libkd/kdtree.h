@@ -168,8 +168,7 @@ struct kdtree {
 		void* any;
 	} bb;
 
-	/* Split position (& dimension for ints) (ttype x nnodes). */
-    /* HACKHACKHACK should be x ninterior! */
+	/* Split position (& dimension for ints) (ttype x ninterior). */
 	union {
 		float* f;
 		double* d;
@@ -178,8 +177,7 @@ struct kdtree {
 		void* any;
 	} split;
 
-	/* Split dimension for floating-point types (x nnodes) */
-    /* HACKHACKHACK should be x ninterior! */
+	/* Split dimension for floating-point types (x ninterior) */
 	u8* splitdim;
 
 	/* bitmasks for the split dimension and location. */
