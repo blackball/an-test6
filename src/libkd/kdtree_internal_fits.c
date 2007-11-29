@@ -184,8 +184,12 @@ kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int 
 
 	kdt->data.any = extras[idata].ptr;
 	
-    if (isplit && !isplitdim) {
-		compute_splitbits(kdt);
+	if (extras[isplit].found) {
+        if (extras[isplitdim].found) {
+            kdt->splitmask = UINT32_MAX;
+        } else {
+            compute_splitbits(kdt);
+        }
 	}
 
 	if (extras[isplitdim].found) {

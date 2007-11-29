@@ -1827,6 +1827,12 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 
 int MANGLE(kdtree_check)(const kdtree_t* kd) {
 	int i;
+    if (kd->split.any) {
+        assert(kd->splitmask);
+        if (!kd->splitdim) {
+            assert(kd->dimmask);
+        }
+    }
 	for (i=0; i<kd->nnodes; i++) {
 		if (kdtree_check_node(kd, i))
 			return -1;
