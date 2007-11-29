@@ -61,7 +61,7 @@ void* REALLOC(void* ptr, size_t sz) {
     memory_total += (sz - mb->nbytes);
     mb->nbytes = sz;
     mb = realloc(mb, sz + sizeof(memblock));
-    return mb;
+    return mb + 1;
 }
 
 void  FREE(void* ptr) {
