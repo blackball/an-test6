@@ -18,6 +18,9 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <cairo.h>
 #include <png.h>
