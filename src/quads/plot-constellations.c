@@ -47,7 +47,7 @@
 #include "constellations.h"
 #include "brightstars.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvL";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:M";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -66,6 +66,9 @@ void print_help(char* progname) {
 		   "   [-c]: only plot bright stars that have common names.\n"
 		   "   [-j]: if a bright star has a common name, only print that\n"
            "   [-v]: be verbose\n"
+           "   [-n <width>]: NGC circle width (default 2)\n"
+           "   [-f <size>]: font size.\n"
+           "   [-M]: show only NGC/IC and Messier numbers (no common names)\n"
            "\n", progname);
 }
 
@@ -97,6 +100,9 @@ int main(int argc, char** args) {
     // circle linewidth.
     double cw = 2.0;
 
+    // NGC linewidth
+    double nw = 2.0;
+
     // leave a gap short of connecting the points.
     double endgap = 5.0;
     // circle radius.
@@ -118,12 +124,22 @@ int main(int argc, char** args) {
 	double ra, dec, px, py;
 	int i, N;
 	bool justlist = FALSE;
+    bool only_messier = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
         case 'h':
             print_help(args[0]);
             exit(0);
+        case 'M':
+            only_messier = TRUE;
+            break;
+        case 'n':
+            nw = atof(optarg);
+            break;
+        case 'f':
+            fontsize = atof(optarg);
+            break;
 		case 'L':
 			justlist = TRUE;
 			outfn = NULL;
@@ -200,6 +216,7 @@ int main(int argc, char** args) {
     // adjust for scaling...
     lw /= scale;
     cw /= scale;
+    nw /= scale;
     crad /= scale;
     endgap /= scale;
     fontsize /= scale;
@@ -407,6 +424,7 @@ int main(int argc, char** args) {
 
 		if (!justlist) {
 			cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+			cairo_set_line_width(cairo, nw);
 			cairo_font_extents(cairo, &extents);
 			dy = extents.ascent * 0.5;
 		}
@@ -450,6 +468,9 @@ int main(int argc, char** args) {
             if (names) {
                 int n;
                 for (n=0; n<sl_size(names); n++) {
+                    //printf("  >>%s<<\n", sl_get(names, n));
+                    if (only_messier && strncmp(sl_get(names, n), "M ", 2))
+                        continue;
 					sl_appendf(str, " / %s", sl_get(names, n));
                 }
             }

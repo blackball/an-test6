@@ -30,8 +30,9 @@
 #include "boilerplate.h"
 #include "bl.h"
 #include "permutedsort.h"
+#include "matchfile.h"
 
-#define OPTIONS "hW:H:w:I:C:PRo:d:c"
+#define OPTIONS "hW:H:w:I:C:PRo:d:cm:s:"
 
 static void printHelp(char* progname) {
     int i;
@@ -53,7 +54,10 @@ static void printHelp(char* progname) {
 		   "  [-R]:  Read quads from stdin.\n"
 		   "  [-o <opacity>]\n"
            "  [-d <dimension of \"quad\">]\n"
-		   "  <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4> [...]\n"
+           "  [-s <scale>]: scale quad coordinates before plotting.\n"
+           "\n"
+           " ( [-m <match.fits>]: Get quad from match file.\n"
+		   " OR  <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4> [...])\n"
 		   "\n");
 }
 
@@ -80,11 +84,19 @@ int main(int argc, char *args[]) {
 	cairo_surface_t* target;
     float r=1.0, g=1.0, b=1.0;
 	int dimquads = 4;
+    double scale = 1.0;
+    char* matchfn = NULL;
 
 	coords = dl_new(16);
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 's':
+            scale = atof(optarg);
+            break;
+        case 'm':
+            matchfn = optarg;
+            break;
         case 'c':
             plotmarker = TRUE;
             break;
@@ -141,10 +153,26 @@ int main(int argc, char *args[]) {
         exit(-1);
     }
 
-	for (i=optind; i<argc; i++) {
-		double pos = atof(args[i]);
-		dl_append(coords, pos);
-	}
+    if (matchfn) {
+        matchfile* mf = matchfile_open(matchfn);
+        MatchObj* mo;
+        if (!mf) {
+            fprintf(stderr, "Failed to open matchfile \"%s\".\n", matchfn);
+            exit(-1);
+        }
+        while (1) {
+            mo = matchfile_buffered_read_match(mf);
+            if (!mo)
+                break;
+            for (i=0; i<2*dimquads; i++) {
+                dl_append(coords, mo->quadpix[i]);
+            }
+        }
+    }
+    for (i=optind; i<argc; i++) {
+        double pos = atof(args[i]);
+        dl_append(coords, pos);
+    }
 	if (fromstdin) {
 		for (;;) {
 			int j;
@@ -160,6 +188,13 @@ int main(int argc, char *args[]) {
 			}
 		}
 	}
+
+    if (scale != 1.0) {
+        for (i=0; i<dl_size(coords); i++) {
+            dl_set(coords, i, scale * dl_get(coords, i));
+        }
+    }
+
 	nquads = dl_size(coords) / (2*dimquads);
 
     if (infn) {

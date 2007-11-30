@@ -407,7 +407,7 @@ $(COMMON)/cairoutils.o:
 onepixel: onepixel.o $(COMMON)/cairoutils.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
 
-plotquad: plotquad.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
+plotquad: plotquad.o matchfile.o $(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
 
 plot-constellations.o: plot-constellations.c
