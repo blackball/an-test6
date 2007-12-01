@@ -65,6 +65,9 @@ int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
 unsigned char* cairoutils_read_jpeg(const char* fn, int* pW, int* pH) {
     FILE* fid;
     unsigned char* img;
+    if (!strcmp(fn, "-")) {
+        return cairoutils_read_jpeg_stream(stdin, pW, pH);
+    }
     fid = fopen(fn, "rb");
     if (!fid) {
         fprintf(stderr, "Failed to open file %s\n", fn);
