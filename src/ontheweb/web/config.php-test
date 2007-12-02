@@ -3,6 +3,7 @@
 // Which set of indices do we use?
 //require_once 'config-index100.php';
 require_once 'config-index200.php';
+//require_once 'config-index500.php';
 
 // Site id.
 $siteid = "test";
