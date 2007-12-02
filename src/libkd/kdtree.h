@@ -66,7 +66,8 @@ enum kd_build_options {
 	/* Only applicable to integer trees: use a separate array to hold the
 	   splitting dimension, rather than packing it into the bottom bits
 	   of the splitting plane location. */
-	KD_BUILD_SPLITDIM  = 0x4
+	KD_BUILD_SPLITDIM  = 0x4,
+    KD_BUILD_NO_LR     = 0x8
 };
 
 typedef uint64_t u64;
@@ -282,6 +283,8 @@ void* kdtree_get_data(const kdtree_t* kd, int i);
 void kdtree_copy_data_double(const kdtree_t* kd, int i, int N, double* dest);
 
 const char* kdtree_kdtype_to_string(int kdtype);
+
+const char* kdtree_build_options_to_string(int opts);
 
 int kdtree_kdtype_parse_data_string(const char* str);
 int kdtree_kdtype_parse_tree_string(const char* str);

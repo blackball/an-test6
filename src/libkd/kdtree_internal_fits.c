@@ -158,13 +158,6 @@ kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int 
 		return NULL;
 	}
 
-	// you need either compatibility nodes or lr.
-	if (!(extras[inodes].found || extras[ilr].found)) {
-		fprintf(stderr, "tree contains neither tradational nodes nor LR array.\n");
-		kdtree_fits_close(kdt);
-		return NULL;
-	}
-
 	if ((TTYPE_INTEGER && !ETYPE_INTEGER) &&
 		!(extras[irange].found)) {
 		fprintf(stderr, "treee does not contain required range information.\n");

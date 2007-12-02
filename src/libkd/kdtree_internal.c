@@ -2008,6 +2008,15 @@ kdtree_t* MANGLE(kdtree_build)
 		return NULL;
     }
 
+    if ((options & KD_BUILD_SPLIT) &&
+        (options & KD_BUILD_NO_LR) &&
+        !(options & KD_BUILD_SPLITDIM) &&
+        TTYPE_INTEGER) {
+        fprintf(stderr, "Currently you can't set KD_BUILD_NO_LR for int trees "
+                "unless you also set KD_BUILD_SPLITDIM.\n");
+        return NULL;
+    }
+
 	if (!kd)
 		kd = kdtree_new(N, D, Nleaf);
 
@@ -2228,6 +2237,11 @@ kdtree_t* MANGLE(kdtree_build)
             compute_bb(kd->data.DTYPE + L * D, D, R - L + 1, lo, hi);
             save_bb(kd, i + kd->ninterior, lo, hi);
         }
+    }
+
+    if (options & KD_BUILD_NO_LR) {
+        free(kd->lr);
+        kd->lr = NULL;
     }
 
 	return kd;

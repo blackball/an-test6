@@ -137,6 +137,16 @@ void kdtree_inverse_permutation(const kdtree_t* tree, int* invperm) {
 	}
 }
 
+const char* kdtree_build_options_to_string(int opts) {
+    static char buf[256];
+    sprintf(buf, "%s%s%s%s",
+            (opts & KD_BUILD_BBOX) ? "BBOX ":"",
+            (opts & KD_BUILD_SPLIT) ? "SPLIT ":"",
+            (opts & KD_BUILD_SPLITDIM) ? "SPLITDIM ":"",
+            (opts & KD_BUILD_NO_LR) ? "NOLR ":"");
+    return buf;
+}
+
 const char* kdtree_kdtype_to_string(int kdtype) {
 	switch (kdtype) {
 	case KDT_DATA_DOUBLE:
@@ -267,6 +277,28 @@ int kdtree_last_leaf(const kdtree_t* kd, int nodeid) {
 	return (nodeid_twodl + (twodl - 1)*2) - kd->ninterior;
 }
 
+static int calculate_R(const kdtree_t* kd, int leafid) {
+    int l;
+    unsigned int mask = (1 << (kd->nlevels-1));
+    unsigned int N = kd->ndata;
+    unsigned int L = 0;
+    // Compute the L index of the node one to the right of this node.
+    int nextguy = leafid + 1;
+    if (nextguy == kd->nbottom)
+        return kd->ndata-1;
+    for (l=0; l<(kd->nlevels-1); l++) {
+        mask /= 2;
+        if (nextguy & mask) {
+            L += N/2;
+            N = (N+1)/2;
+        } else {
+            N = N/2;
+        }
+    }
+    L--;
+    return L;
+}
+
 int kdtree_left(const kdtree_t* kd, int nodeid) {
 	if (kd->nodes) {
 		// assume old "real" = "double".
@@ -277,13 +309,19 @@ int kdtree_left(const kdtree_t* kd, int nodeid) {
 	}
 	if (KD_IS_LEAF(kd, nodeid)) {
 		int ind = nodeid - kd->ninterior;
-		if (!ind) return 0;
-		return kd->lr[ind-1] + 1;
+		if (!ind)
+            return 0;
+		if (kd->lr)
+            return kd->lr[ind-1] + 1;
+        return calculate_R(kd, ind-1) + 1;
 	} else {
 		// leftmost child's L.
 		int leftmost = kdtree_first_leaf(kd, nodeid);
-		if (!leftmost) return 0;
-		return kd->lr[leftmost-1] + 1;
+		if (!leftmost)
+            return 0;
+        if (kd->lr)
+            return kd->lr[leftmost-1] + 1;
+        return calculate_R(kd, leftmost-1) + 1;
 	}
 }
 
@@ -297,11 +335,15 @@ int kdtree_right(const kdtree_t* kd, int nodeid) {
 	}
 	if (KD_IS_LEAF(kd, nodeid)) {
 		int ind = nodeid - kd->ninterior;
-		return kd->lr[ind];
+        if (kd->lr)
+            return kd->lr[ind];
+        return calculate_R(kd, ind);
 	} else {
 		// rightmost child's R.
 		int rightmost = kdtree_last_leaf(kd, nodeid);
-		return kd->lr[rightmost];
+        if (kd->lr)
+            return kd->lr[rightmost];
+        return calculate_R(kd, rightmost);
 	}
 }
 
