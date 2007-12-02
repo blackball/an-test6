@@ -10,6 +10,12 @@
 
 #include "cutest.h"
 
+static int CUTEST_DIE_ON_FAIL = 0;
+
+void CuDieOnFail() {
+    CUTEST_DIE_ON_FAIL = 1;
+}
+
 /*-------------------------------------------------------------------------*
  * CuStr
  *-------------------------------------------------------------------------*/
@@ -140,6 +146,11 @@ static void CuFailInternal(CuTest* tc, const char* file, int line, CuString* str
 
 	sprintf(buf, "%s:%d: ", file, line);
 	CuStringInsert(string, buf, 0);
+
+    if (CUTEST_DIE_ON_FAIL) {
+        printf("Dying from TEST_DIE.\n");
+        assert(0);
+    }
 
 	tc->failed = 1;
 	tc->message = string->buffer;

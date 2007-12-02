@@ -34,23 +34,12 @@ double* random_points_d(int N, int D) {
     return data;
 }
 
-static void run_test_nn(CuTest* tc, int treetype, int treeopts,
-                        double eps) {
-    double* data;
-    int N = 1000;
-    int Nleaf = 10;
-    int D = 3;
-    int Q = 10;
+static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
+                            int Nleaf,
+                            int treetype, int treeopts) {
     kdtree_t* kd;
     int datatype;
     int convert = 0;
-    double* datacopy;
-    double query[D];
-    int i, q, d;
-
-    data = random_points_d(N, D);
-    datacopy = malloc(N * D * sizeof(double));
-    memcpy(datacopy, data, N*D*sizeof(double));
 
     datatype = treetype & KDT_DATA_MASK;
 	if (datatype != KDT_DATA_DOUBLE)
@@ -58,14 +47,44 @@ static void run_test_nn(CuTest* tc, int treetype, int treeopts,
 
     if (convert) {
         kd = kdtree_new(N, D, Nleaf);
-        kd = kdtree_convert_data(kd, datacopy, N, D, Nleaf, treetype);
+        kd = kdtree_convert_data(kd, data, N, D, Nleaf, treetype);
         kd = kdtree_build(kd, kd->data.any, N, D, Nleaf, treetype, treeopts);
     } else {
-        kd = kdtree_build(NULL, datacopy, N, D, Nleaf, treetype, treeopts);
+        kd = kdtree_build(NULL, data, N, D, Nleaf, treetype, treeopts);
     }
 
-    CuAssert(tc, "kd", kd != NULL);
+    if (!kd)
+        return NULL;
+
     CuAssertIntEquals(tc, kdtree_check(kd), 0);
+
+    return kd;
+}
+
+static void run_test_nn(CuTest* tc, int treetype, int treeopts,
+                        double eps) {
+    int N = 1000;
+    int Nleaf = 10;
+    int D = 3;
+    int Q = 10;
+    kdtree_t* kd;
+    double* origdata;
+    double* treedata;
+    double query[D];
+    int i, q, d;
+
+    srand(0);
+
+    origdata = random_points_d(N, D);
+    treedata = malloc(N * D * sizeof(double));
+    memcpy(treedata, origdata, N*D*sizeof(double));
+
+    kd = build_tree(tc, treedata, N, D, Nleaf, treetype, treeopts);
+
+    CuAssert(tc, "kd", kd != NULL);
+
+    if (treeopts & KD_BUILD_NO_LR)
+        CuAssert(tc, "no lr", kd->lr == NULL);
 
     for (q=0; q<Q; q++) {
         int ind;
@@ -80,7 +99,7 @@ static void run_test_nn(CuTest* tc, int treetype, int treeopts,
         trued2 = HUGE_VAL;
         trueind = -1;
         for (i=0; i<N; i++) {
-            double d2 = distsq(query, data + i*D, D);
+            double d2 = distsq(query, origdata + i*D, D);
             if (d2 < trued2) {
                 trueind = i;
                 trued2 = d2;
@@ -102,45 +121,31 @@ static void run_test_nn(CuTest* tc, int treetype, int treeopts,
     }
 
     kdtree_free(kd);
-    free(datacopy);
-    free(data);
+    free(treedata);
+    free(origdata);
 }
 
 static void run_test_rs(CuTest* tc, int treetype, int treeopts,
                         double eps) {
-    double* data;
     int N = 1000;
     int Nleaf = 10;
     int D = 3;
     int Q = 10;
     double rad2 = 0.01;
+    double* origdata;
+    double* treedata;
     kdtree_t* kd;
-    int datatype;
-    int convert = 0;
-    double* datacopy;
     double query[D];
     int i, q, d;
 
     srand(0);
 
-    data = random_points_d(N, D);
-    datacopy = malloc(N * D * sizeof(double));
-    memcpy(datacopy, data, N*D*sizeof(double));
+    origdata = random_points_d(N, D);
+    treedata = malloc(N * D * sizeof(double));
+    memcpy(treedata, origdata, N*D*sizeof(double));
 
-    datatype = treetype & KDT_DATA_MASK;
-	if (datatype != KDT_DATA_DOUBLE)
-		convert = 1;
-
-    if (convert) {
-        kd = kdtree_new(N, D, Nleaf);
-        kd = kdtree_convert_data(kd, datacopy, N, D, Nleaf, treetype);
-        kd = kdtree_build(kd, kd->data.any, N, D, Nleaf, treetype, treeopts);
-    } else {
-        kd = kdtree_build(NULL, datacopy, N, D, Nleaf, treetype, treeopts);
-    }
-
+    kd = build_tree(tc, treedata, N, D, Nleaf, treetype, treeopts);
     CuAssert(tc, "kd", kd != NULL);
-    CuAssertIntEquals(tc, kdtree_check(kd), 0);
 
     for (q=0; q<Q; q++) {
         int ind;
@@ -155,33 +160,26 @@ static void run_test_rs(CuTest* tc, int treetype, int treeopts,
         res = kdtree_rangesearch(kd, query, rad2);
 
         ntrue = 0;
-        printf("In range: ");
         for (i=0; i<N; i++) {
-            double d2 = distsq(query, data + i*D, D);
+            double d2 = distsq(query, origdata + i*D, D);
             if (d2 <= rad2) {
-                printf("%i ", i);
                 ntrue++;
             }
         }
-        printf("\n");
 
         CuAssertIntEquals(tc, res->nres, ntrue);
 
         for (i=0; i<res->nres; i++) {
             ind = res->inds[i];
             d2 = res->sdists[i];
-            trued2 = distsq(query, data + ind*D, D);
-            printf("ind %i\n", ind);
-            printf("reported dist2 %g, trued2 %g\n", d2, trued2);
+            trued2 = distsq(query, origdata + ind*D, D);
         }
 
         CuAssert(tc, "res", res != NULL);
         for (i=0; i<res->nres; i++) {
             ind = res->inds[i];
             d2 = res->sdists[i];
-            trued2 = distsq(query, data + ind*D, D);
-
-            //printf("ind %i (perm %i)\n", ind, kd->perm[ind]);
+            trued2 = distsq(query, origdata + ind*D, D);
 
             CuAssert(tc, "ind pos", ind >= 0);
             CuAssert(tc, "ind pos", ind < N);
@@ -198,18 +196,12 @@ static void run_test_rs(CuTest* tc, int treetype, int treeopts,
     }
 
     kdtree_free(kd);
-    free(datacopy);
-    free(data);
+    free(treedata);
+    free(origdata);
 }
 
 void test_rs_bb_duu(CuTest* tc) {
-    printf("\n\n\n====================================\n");
     run_test_rs(tc, KDTT_DUU, KD_BUILD_BBOX, 1e-9);
-    printf("====================================\n\n");
-}
-
-void test_drawsplit(CuTest* tc) {
-    printf("------------------------------------\n\n");
 }
 
 void test_rs_bb_ddd(CuTest* tc) {
@@ -260,8 +252,57 @@ void test_nn_split_dss(CuTest* tc) {
     run_test_nn(tc, KDTT_DSS, KD_BUILD_SPLIT, 1e-5);
 }
 
+void test_nn_split_dssB(CuTest* tc) {
+    run_test_nn(tc, KDTT_DSS, KD_BUILD_SPLIT | KD_BUILD_NO_LR | KD_BUILD_SPLITDIM, 1e-5);
+}
+
 void test_nn_bb_dss(CuTest* tc) {
     run_test_nn(tc, KDTT_DSS, KD_BUILD_BBOX, 1e-5);
 }
 
+void test_nn_bb_dssB(CuTest* tc) {
+    run_test_nn(tc, KDTT_DSS, KD_BUILD_BBOX | KD_BUILD_NO_LR, 1e-5);
+}
+
+
+void run_test_lr(CuTest* tc, int D, int Nleaf, int treetype, int treeopts) {
+    int i;
+    kdtree_t* kd;
+    double* treedata;
+    unsigned int* lr;
+    int N;
+    for (N=100; N<=1000; N+=9) {
+        treedata = random_points_d(N, D);
+        kd = build_tree(tc, treedata, N, D, Nleaf, treetype, treeopts);
+        CuAssert(tc, "kd", kd != NULL);
+
+        lr = kd->lr;
+        kd->lr = NULL;
+
+        for (i=0; i<kd->nbottom; i++) {
+            if (i)
+                CuAssertIntEquals(tc, lr[i-1]+1, kdtree_left(kd, i + kd->ninterior));
+            CuAssertIntEquals(tc, lr[i], kdtree_right(kd, i + kd->ninterior));
+        }
+
+        kd->lr = lr;
+        kdtree_free(kd);
+        free(treedata);
+    }
+}
+
+void test_lr_ddd(CuTest* tc) {
+    run_test_lr(tc, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
+}
+
+void test_no_lr_with_ints(CuTest* tc) {
+    double* data;
+    kdtree_t* kd;
+    int N = 1000;
+    int D = 3;
+    int Nleaf = 10;
+    data = random_points_d(N, D);
+    kd = build_tree(tc, data, N, D, Nleaf, KDTT_DSS, KD_BUILD_SPLIT | KD_BUILD_NO_LR);
+    CuAssert(tc, "no kd", kd == NULL);
+}
 

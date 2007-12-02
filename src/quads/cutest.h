@@ -31,6 +31,8 @@ void CuStringAppendFormat(CuString* str, const char* format, ...);
 void CuStringInsert(CuString* str, const char* text, int pos);
 void CuStringResize(CuString* str, int newSize);
 
+void CuDieOnFail();
+
 /* CuTest */
 
 typedef struct CuTest CuTest;

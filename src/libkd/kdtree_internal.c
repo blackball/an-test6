@@ -669,6 +669,133 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
 	*p_ibest = ibest;
 }
 
+
+
+
+void MANGLE(kdtree_nn_int_split)(const kdtree_t* kd, const etype* query,
+                                 const ttype* tquery,
+                                 double* p_bestd2, int* p_ibest) {
+	int nodestack[100];
+    ttype mindists[100];
+
+	int stackpos = 0;
+	int D = kd->ndim;
+
+    ttype closest_so_far;
+
+	double bestd2 = *p_bestd2;
+	int ibest = *p_ibest;
+    
+    {
+        double closest;
+        closest = DIST_ET(kd, sqrt(bestd2), );
+        if (closest > TTYPE_MAX) {
+            closest_so_far = TTYPE_MAX;
+        } else {
+            closest_so_far = ceil(closest);
+        }
+    }
+
+	// queue root.
+	nodestack[0] = 0;
+    mindists[0] = 0;
+
+	while (stackpos >= 0) {
+		int nodeid;
+		int i;
+		int dim = -1;
+		int L, R;
+		ttype split = 0;
+
+		if (mindists[stackpos] > closest_so_far) {
+            // pruned!
+			stackpos--;
+			continue;
+		}
+		nodeid = nodestack[stackpos];
+		stackpos--;
+
+		if (KD_IS_LEAF(kd, nodeid)) {
+			dtype* data;
+			int oldbest = ibest;
+
+			L = kdtree_left(kd, nodeid);
+			R = kdtree_right(kd, nodeid);
+			for (i=L; i<=R; i++) {
+				bool bailedout = FALSE;
+				double dsqd;
+
+				data = KD_DATA(kd, D, i);
+				dist2_bailout(kd, query, data, D, bestd2, &bailedout, &dsqd);
+				if (bailedout)
+					continue;
+				// new best
+				ibest = i;
+				bestd2 = dsqd;
+			}
+
+			if (oldbest != ibest) {
+				double bestdist = sqrt(bestd2);
+                closest_so_far = DIST_ET(kd, bestdist, ceil);
+			}
+			continue;
+		}
+
+        // split/dim trees
+        split = *KD_SPLIT(kd, nodeid);
+
+		if (kd->splitdim)
+			dim = kd->splitdim[nodeid];
+        else {
+            bigint tmpsplit;
+            tmpsplit = split;
+            dim = tmpsplit & kd->dimmask;
+            split = tmpsplit & kd->splitmask;
+        }
+
+
+        if (tquery[dim] < split) {
+            // query is on the "left" side of the split.
+            assert(query[dim] < POINT_TE(kd, dim, split));
+            // is the right child within range?
+            // look mum, no int overflow!
+            if (split - tquery[dim] <= closest_so_far) {
+                // visit right child - it is within range.
+                assert(POINT_TE(kd, dim, split) - query[dim] > 0.0);
+                //assert(POINT_TE(kd, dim, split) - query[dim] <= bestdist);
+                stackpos++;
+                nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
+                mindists[stackpos] = split - tquery[dim];
+            }
+            stackpos++;
+            nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
+            mindists[stackpos] = 0;
+
+        } else {
+            // query is on "right" side.
+            assert(POINT_TE(kd, dim, split) <= query[dim]);
+            // is the left child within range?
+            if (tquery[dim] - split < closest_so_far) {
+                assert(query[dim] - POINT_TE(kd, dim, split) >= 0.0);
+                //assert(query[dim] - POINT_TE(kd, dim, split) < bestdist);
+                stackpos++;
+                nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
+                mindists[stackpos] = tquery[dim] - split;
+            }
+            stackpos++;
+
+            nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
+            mindists[stackpos] = 0;
+        }
+    }
+	*p_bestd2 = bestd2;
+	*p_ibest = ibest;
+}
+
+
+
+
+
 void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 					   double* p_bestd2, int* p_ibest) {
 	int nodestack[100];
@@ -680,7 +807,7 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 	bool use_bigtmath = FALSE;
 	bool use_tsplit = FALSE;
 	ttype tquery[D];
-	double dtl1=0.0, dtl2=0.0, dtlinf=0.0;
+	double dtl2=0.0, dtlinf=0.0;
 	ttype tlinf = 0;
 	ttype tl1 = 0;
 	ttype tl2 = 0;
@@ -708,14 +835,9 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 	}
 
 	if (TTYPE_INTEGER && use_tquery) {
-		dtl1   = DIST_ET(kd, bestdist * sqrt(D),);
-		dtl2   = DIST2_ET(kd, bestd2, );
-		dtlinf = DIST_ET(kd, bestdist, );
-		tl1    = ceil(dtl1);
-		tlinf  = ceil(dtlinf);
-		bigtl2 = ceil(dtl2);
-		tl2    = bigtl2;
-	}
+        MANGLE(kdtree_nn_int_split)(kd, query, tquery, p_bestd2, p_ibest);
+        return;
+    }
 	use_tsplit = use_tquery && (dtlinf < TTYPE_MAX);
 	if (TTYPE_INTEGER && use_tquery && (kd->bb.any || kd->nodes)) {
 		if (dtl2 < TTYPE_MAX) {

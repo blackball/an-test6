@@ -14,6 +14,7 @@ echo '
 
 #include "cutest.h"
 #include <stdio.h>
+#include <string.h>
 
 '
 
@@ -45,8 +46,12 @@ echo \
     printf("%s\n", output->buffer);
 }
 
-int main(void)
+int main(int argc, char** args)
 {
+    if (argc > 1 && !strcmp(args[1], "-d")) {
+        printf("Setting die on fail.\n");
+        CuDieOnFail();
+    }
     RunAllTests();
     return 0;
 }
