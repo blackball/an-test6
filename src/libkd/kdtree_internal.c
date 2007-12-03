@@ -2193,12 +2193,11 @@ kdtree_t* MANGLE(kdtree_build)
              "m" becomes L of the right child. */
             if (options & KD_BUILD_LINEAR_LR) {
                 kd->has_linear_lr = TRUE;
-                // FIXME - implement :)
-                // m = ...
+                m = 1 + kdtree_right(kd, KD_CHILD_LEFT(i));
+            } else {
+                /* Pivot the data at the median */
+                m = (left + right + 1) / 2;
             }
-
-			/* Pivot the data at the median */
-            m = (left + right + 1) / 2;
 			kdtree_quickselect_partition(data, kd->perm, left, right, D, dim, m);
 			s = POINT_DT(kd, d, data[D*m+d], KD_ROUND);
 

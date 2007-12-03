@@ -261,28 +261,27 @@ int kdtree_compute_levels(int N, int Nleaf) {
 	return maxlevel;
 }
 
+/* This returns the NODE id (not leaf index) */
 int kdtree_first_leaf(const kdtree_t* kd, int nodeid) {
 	int dlevel, twodl, nodeid_twodl;
 	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
 	twodl = (1 << dlevel);
 	nodeid_twodl = (nodeid << dlevel);
-	return (nodeid_twodl + twodl - 1) - kd->ninterior;
+	return nodeid_twodl + twodl - 1;
 }
 
+/* This returns the NODE id (not leaf index) */
 int kdtree_last_leaf(const kdtree_t* kd, int nodeid) {
 	int dlevel, twodl, nodeid_twodl;
 	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
 	twodl = (1 << dlevel);
 	nodeid_twodl = (nodeid << dlevel);
-	return (nodeid_twodl + (twodl - 1)*2) - kd->ninterior;
+	return nodeid_twodl + (twodl - 1)*2;
 }
 
 static int calculate_R(const kdtree_t* kd, int leafid) {
     int l;
     unsigned int mask, N, L;
-
-    if (kd->has_linear_lr)
-        return (((leafid+1) * kd->ndata) / kd->nbottom) + 1;
 
     mask = (1 << (kd->nlevels-1));
     N = kd->ndata;
@@ -305,12 +304,14 @@ static int calculate_R(const kdtree_t* kd, int leafid) {
 }
 
 int kdtree_leaf_left(const kdtree_t* kd, int nodeid) {
-    int ind = nodeid - kd->ninterior;
-    if (!ind)
+    int leafid = nodeid - kd->ninterior;
+    if (!leafid)
         return 0;
+    if (kd->has_linear_lr)
+        return ((leafid * kd->ndata) / kd->nbottom);
     if (kd->lr)
-        return kd->lr[ind-1] + 1;
-    return calculate_R(kd, ind-1) + 1;
+        return kd->lr[leafid-1] + 1;
+    return calculate_R(kd, leafid-1) + 1;
 }
 
 int kdtree_left(const kdtree_t* kd, int nodeid) {
@@ -319,11 +320,7 @@ int kdtree_left(const kdtree_t* kd, int nodeid) {
 	} else {
 		// leftmost child's L.
 		int leftmost = kdtree_first_leaf(kd, nodeid);
-		if (!leftmost)
-            return 0;
-        if (kd->lr)
-            return kd->lr[leftmost-1] + 1;
-        return calculate_R(kd, leftmost-1) + 1;
+        return kdtree_leaf_left(kd, leftmost);
 	}
 	if (kd->nodes) {
 		// assume old "real" = "double".
@@ -335,10 +332,12 @@ int kdtree_left(const kdtree_t* kd, int nodeid) {
 }
 
 int kdtree_leaf_right(const kdtree_t* kd, int nodeid) {
-    int ind = nodeid - kd->ninterior;
+    int leafid = nodeid - kd->ninterior;
+    if (kd->has_linear_lr)
+        return (((leafid+1) * kd->ndata) / kd->nbottom) - 1;
     if (kd->lr)
-        return kd->lr[ind];
-    return calculate_R(kd, ind);
+        return kd->lr[leafid];
+    return calculate_R(kd, leafid);
 }
 
 int kdtree_right(const kdtree_t* kd, int nodeid) {
@@ -347,9 +346,7 @@ int kdtree_right(const kdtree_t* kd, int nodeid) {
 	} else {
 		// rightmost child's R.
 		int rightmost = kdtree_last_leaf(kd, nodeid);
-        if (kd->lr)
-            return kd->lr[rightmost];
-        return calculate_R(kd, rightmost);
+        return kdtree_leaf_right(kd, rightmost);
 	}
 	if (kd->nodes) {
 		// assume old "real" = "double".
