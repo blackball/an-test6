@@ -1431,10 +1431,11 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
           memcpy(arr+(iB)*D, arr+(iA)*D, D*sizeof(dtype)); \
           memcpy(arr+(iA)*D, tmpdata,    D*sizeof(dtype)); }
 
-static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, int R, int D, int d) {
+static void kdtree_quickselect_partition(dtype *arr, unsigned int *parr,
+                                         int L, int R, int D, int d,
+                                         int rank) {
 	int i;
 	int low, high;
-	int median;
 
 #if defined(KD_DIM)
 	// tell the compiler this is a constant...
@@ -1444,10 +1445,10 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 	/* sanity is good */
 	assert(R >= L);
 
-	/* Find the median and partition the data */
+	/* Find the "rank"th point and partition the data. */
+    /* For us, "rank" is usually the median of L and R. */
 	low = L;
 	high = R;
-	median = (low + high + 1) / 2;
 	while(1) {
 		dtype vals[3];
 		dtype tmp;
@@ -1464,8 +1465,8 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 		if (high == low)
 			break;
 
-		/* Choose the pivot: find the median of the values in low, middle, and high
-		   positions. */
+		/* Choose the pivot: find the median of the values in low,
+         middle, and high positions. */
 		middle = (low + high) / 2;
 		vals[0] = GET(low);
 		vals[1] = GET(middle);
@@ -1480,7 +1481,6 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 				}
 		assert(vals[0] <= vals[1]);
 		assert(vals[1] <= vals[2]);
-
 		pivot = vals[1];
 
 		/* Count the number of items that are less than, and equal to, the pivot. */
@@ -1615,30 +1615,22 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 			assert(GET(i) > pivot);
 
 		/* Is the median in the "<", "=", or ">" partition? */
-		if (median < iequal)
-			/* median is in the "<" partition.
-			   low is unchanged.
-			*/
+		if (rank < iequal)
+			/* median is in the "<" partition.  low is unchanged. */
 			high = iequal - 1;
-		else if (median < igreater) {
+		else if (rank < igreater)
 			/* the median is inside the "=" partition; we're done! */
 			break;
-		} else
-			/* median is in the ">" partition.
-			   high is unchanged. */
+		else
+			/* median is in the ">" partition.  high is unchanged. */
 			low = igreater;
 	}
 
 	/* check that it worked. */
-	for (i=L; i<median; i++)
-		assert(GET(i) <= GET(median));
-	for (i=median; i<=R; i++)
-		assert(GET(i) >= GET(median));
-
-	assert (L < median);
-	assert (median <= R);
-
-	return median;
+	for (i=L; i<rank; i++)
+		assert(GET(i) <= GET(rank));
+	for (i=rank; i<=R; i++)
+		assert(GET(i) >= GET(rank));
 }
 #undef ELEM_SWAP
 #undef ELEM_ROT
@@ -2031,9 +2023,9 @@ kdtree_t* MANGLE(kdtree_build)
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
 	kd->perm = MALLOC(sizeof(u32) * N);
+	assert(kd->perm);
 	for (i = 0;i < N;i++)
 		kd->perm[i] = i;
-	assert(kd->perm);
 
 	kd->lr = MALLOC(kd->nbottom * sizeof(u32));
 	assert(kd->lr);
@@ -2050,6 +2042,7 @@ kdtree_t* MANGLE(kdtree_build)
 		(options & KD_BUILD_SPLITDIM)) {
 		kd->splitdim = MALLOC(kd->ninterior * sizeof(u8));
 		kd->splitmask = UINT32_MAX;
+        kd->dimmask = 0;
 	} else if (options & KD_BUILD_SPLIT)
 		compute_splitbits(kd);
 
@@ -2058,6 +2051,8 @@ kdtree_t* MANGLE(kdtree_build)
 		if (!kd->minval || !kd->maxval) {
 			kd->minval = MALLOC(D * sizeof(double));
 			kd->maxval = MALLOC(D * sizeof(double));
+            assert(kd->minval);
+            assert(kd->maxval);
 			kd->scale = compute_scale(kd->data.any, N, D, kd->minval, kd->maxval);
 		} else {
 			// limits were pre-set by the user.  just compute scale.
@@ -2073,7 +2068,7 @@ kdtree_t* MANGLE(kdtree_build)
 	lnext = 1;
 	level = 0;
 
-	/* And in one shot, make the kdtree. Because in inttree the lr pointers
+	/* And in one shot, make the kdtree. Because the lr pointers
 	 * are only stored for the bottom layer, we use the lr array as a
 	 * stack. At finish, it contains the r pointers for the bottom nodes.
 	 * The l pointer is simply +1 of the previous right pointer, or 0 if we
@@ -2192,7 +2187,8 @@ kdtree_t* MANGLE(kdtree_build)
 
 		} else {
 			/* Pivot the data at the median */
-			m = kdtree_quickselect_partition(data, kd->perm, left, right, D, dim);
+            m = (left + right + 1) / 2;
+			kdtree_quickselect_partition(data, kd->perm, left, right, D, dim, m);
 			s = POINT_DT(kd, d, data[D*m+d], KD_ROUND);
 
 			assert(m != 0);
