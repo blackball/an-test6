@@ -2301,7 +2301,7 @@ kdtree_t* MANGLE(kdtree_build)
     }
 
     if (options & KD_BUILD_NO_LR) {
-        free(kd->lr);
+        FREE(kd->lr);
         kd->lr = NULL;
     }
 

@@ -272,6 +272,8 @@ static inline int kdtree_treetype(const kdtree_t* kd) {
 	return kd->treetype & KDT_TREE_MASK;
 }
 
+void kdtree_memory_report(kdtree_t* kd);
+
 kdtree_t* kdtree_new(int N, int D, int Nleaf);
 
 /*

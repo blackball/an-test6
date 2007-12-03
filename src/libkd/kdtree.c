@@ -36,6 +36,96 @@ void kdtree_update_funcs(kdtree_t* kd) {
 	KD_DISPATCH(kdtree_update_funcs, kd->treetype,, (kd));
 }
 
+static int get_tree_size(int treetype) {
+    switch (treetype & KDT_TREE_MASK) {
+        case KDT_TREE_DOUBLE:
+            return sizeof(double);
+        case KDT_TREE_FLOAT:
+            return sizeof(float);
+        case KDT_TREE_U32:
+            return sizeof(u32);
+        case KDT_TREE_U16:
+            return sizeof(u16);
+    }
+    return -1;
+}
+static int get_data_size(int treetype) {
+    switch (treetype & KDT_DATA_MASK) {
+        case KDT_DATA_DOUBLE:
+            return sizeof(double);
+        case KDT_DATA_FLOAT:
+            return sizeof(float);
+        case KDT_DATA_U32:
+            return sizeof(u32);
+        case KDT_DATA_U16:
+            return sizeof(u16);
+    }
+    return -1;
+}
+
+
+void kdtree_memory_report(kdtree_t* kd) {
+    int mem;
+    int n, sz;
+    int total = 0;
+
+    int tsz = get_tree_size(kd->treetype);
+    int dsz = get_data_size(kd->treetype);
+
+    char* fmt = "%-10s:   %12i %10s * %2i = %12i B  (%10.3f MB)\n";
+
+    printf("Memory usage of kdtree (ndata %i, ndim %i, nnodes %i, nleaves %i)\n",
+           kd->ndata, kd->ndim, kd->nnodes, kd->nbottom);
+
+    if (kd->lr) {
+        n = kd->nbottom;
+        sz = sizeof(u32);
+        mem = n*sz;
+        printf(fmt, "lr", n, "leaves", sz, mem, 1e-6*mem);
+        total += mem;
+    }
+    if (kd->perm) {
+        n = kd->ndata;
+        sz = sizeof(u32);
+        mem = n*sz;
+        printf(fmt, "perm", n, "points", sz, mem, 1e-6*mem);
+        total += mem;
+    }
+    if (kd->bb.any) {
+        n = kd->nnodes * kd->ndim;
+        sz = tsz;
+        mem = n*sz;
+        printf(fmt, "bbox", n, "nodes", sz, mem, 1e-6*mem);
+        total += mem;
+    }
+    if (kd->split.any) {
+        n = kd->ninterior;
+        sz = tsz;
+        mem = n*sz;
+        printf(fmt, "split", n, "splits", sz, mem, 1e-6*mem);
+        total += mem;
+    }
+    if (kd->splitdim) {
+        n = kd->ninterior;
+        sz = sizeof(u8);
+        mem = n*sz;
+        printf(fmt, "splitdim", n, "splits", sz, mem, 1e-6*mem);
+        total += mem;
+    }
+
+    printf("Total without data:                          %12i B  (%10.3f MB)\n", total, total*1e-6);
+
+    if (kd->data.any) {
+        n = kd->ndata;
+        sz = dsz * kd->ndim;
+        mem = n*sz;
+        printf(fmt, "data", n, "points", sz, mem, 1e-6*mem);
+        total += mem;
+    }
+    printf("Total including data:                        %12i B  (%10.3f MB)\n", total, total*1e-6);
+
+}
+
 int kdtree_level_start(const kdtree_t* kd, int level) {
     return (1 << level) - 1;
 }
