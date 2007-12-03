@@ -238,7 +238,7 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
 
 	if (expected && (fits_bytes_needed(expected) != tabsize)) {
 		seterr(errstr, "Expected table size (%i => %i FITS blocks) is not equal to size of table \"%s\" (%i FITS blocks).",
-			   expected, fits_blocks_needed(expected), tablename, tabsize / FITS_BLOCK_SIZE);
+			   (int)expected, fits_blocks_needed(expected), tablename, tabsize / FITS_BLOCK_SIZE);
         goto bailout;
     }
 
