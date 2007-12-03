@@ -67,7 +67,10 @@ enum kd_build_options {
 	   splitting dimension, rather than packing it into the bottom bits
 	   of the splitting plane location. */
 	KD_BUILD_SPLITDIM  = 0x4,
-    KD_BUILD_NO_LR     = 0x8
+    KD_BUILD_NO_LR     = 0x8,
+    /* Twiddle the split locations so that computing LR is O(1).
+     Only works for double trees or int trees with KD_BUILD_SPLITDIM. */
+    KD_BUILD_LINEAR_LR     = 0x10
 };
 
 typedef uint64_t u64;
@@ -206,6 +209,9 @@ struct kdtree {
 	unsigned int nbottom;   /* Number of leaf nodes */
 	unsigned int ninterior; /* Number of internal nodes */
 	unsigned int nlevels;
+
+    bool has_linear_lr;
+
 	void* mmapped;          /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
 
@@ -308,6 +314,11 @@ int kdtree_left(const kdtree_t* kd, int nodeid);
 
 /* The rightmost point owned by this node. */
 int kdtree_right(const kdtree_t* kd, int nodeid);
+
+/* Shortcut kdtree_{left,right} for leaf nodes. */
+int kdtree_leaf_right(const kdtree_t* kd, int nodeid);
+int kdtree_leaf_left(const kdtree_t* kd, int nodeid);
+
 
 /* How many points are owned by node "nodeid"? */
 int kdtree_npoints(const kdtree_t* kd, int nodeid);

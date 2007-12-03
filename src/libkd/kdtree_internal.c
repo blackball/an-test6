@@ -2120,7 +2120,10 @@ kdtree_t* MANGLE(kdtree_build)
 		d = dim;
 		assert (d < D);
 
-		if (TTYPE_INTEGER) {
+		if (TTYPE_INTEGER &&
+            !(options & KD_BUILD_SPLITDIM)) {
+            /* We're packing dimension and split location into an int. */
+
 			/* Sort the data. */
 
 			/* Because the nature of the inttree is to bin the split
@@ -2186,6 +2189,14 @@ kdtree_t* MANGLE(kdtree_build)
 				assert(qsplit <= data[D*xx+d]);
 
 		} else {
+            /* "m-1" becomes R of the left child;
+             "m" becomes L of the right child. */
+            if (options & KD_BUILD_LINEAR_LR) {
+                kd->has_linear_lr = TRUE;
+                // FIXME - implement :)
+                // m = ...
+            }
+
 			/* Pivot the data at the median */
             m = (left + right + 1) / 2;
 			kdtree_quickselect_partition(data, kd->perm, left, right, D, dim, m);
