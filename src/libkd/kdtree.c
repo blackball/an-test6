@@ -27,6 +27,7 @@
 #include "kdtree_internal.h"
 #include "kdtree_internal_common.h"
 #include "kdtree_mem.h"
+#include "keywords.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
 KD_DECLARE(kdtree_get_splitval, double, (const kdtree_t*, int));
@@ -315,19 +316,19 @@ int kdtree_leaf_left(const kdtree_t* kd, int nodeid) {
 }
 
 int kdtree_left(const kdtree_t* kd, int nodeid) {
+	if (unlikely(kd->nodes)) {
+		// assume old "real" = "double".
+		kdtree_node_t* node = (kdtree_node_t*)
+			(((unsigned char*)kd->nodes) +
+			 nodeid * (kd->ndim * 2 * sizeof(double) + sizeof(kdtree_node_t)));
+		return node->l;
+	}
 	if (KD_IS_LEAF(kd, nodeid)) {
         return kdtree_leaf_left(kd, nodeid);
 	} else {
 		// leftmost child's L.
 		int leftmost = kdtree_first_leaf(kd, nodeid);
         return kdtree_leaf_left(kd, leftmost);
-	}
-	if (kd->nodes) {
-		// assume old "real" = "double".
-		kdtree_node_t* node = (kdtree_node_t*)
-			(((unsigned char*)kd->nodes) +
-			 nodeid * (kd->ndim * 2 * sizeof(double) + sizeof(kdtree_node_t)));
-		return node->l;
 	}
 }
 
@@ -341,19 +342,19 @@ int kdtree_leaf_right(const kdtree_t* kd, int nodeid) {
 }
 
 int kdtree_right(const kdtree_t* kd, int nodeid) {
+	if (unlikely(kd->nodes)) {
+		// assume old "real" = "double".
+		kdtree_node_t* node = (kdtree_node_t*)
+			(((unsigned char*)kd->nodes) +
+			 nodeid * (kd->ndim * 2 * sizeof(double) + sizeof(kdtree_node_t)));
+		return node->r;
+	}
 	if (KD_IS_LEAF(kd, nodeid)) {
         return kdtree_leaf_right(kd, nodeid);
 	} else {
 		// rightmost child's R.
 		int rightmost = kdtree_last_leaf(kd, nodeid);
         return kdtree_leaf_right(kd, rightmost);
-	}
-	if (kd->nodes) {
-		// assume old "real" = "double".
-		kdtree_node_t* node = (kdtree_node_t*)
-			(((unsigned char*)kd->nodes) +
-			 nodeid * (kd->ndim * 2 * sizeof(double) + sizeof(kdtree_node_t)));
-		return node->r;
 	}
 }
 
