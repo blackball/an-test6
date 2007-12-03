@@ -489,8 +489,8 @@ double MANGLE(kdtree_get_splitval)(const kdtree_t* kd, int nodeid) {
 }
 
 
-void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
-                          double* p_bestd2, int* p_ibest) {
+static void kdtree_nn_bb(const kdtree_t* kd, const etype* query,
+                         double* p_bestd2, int* p_ibest) {
 	int nodestack[100];
 	double dist2stack[100];
 	int stackpos = 0;
@@ -669,12 +669,9 @@ void MANGLE(kdtree_nn_bb)(const kdtree_t* kd, const etype* query,
 	*p_ibest = ibest;
 }
 
-
-
-
-void MANGLE(kdtree_nn_int_split)(const kdtree_t* kd, const etype* query,
-                                 const ttype* tquery,
-                                 double* p_bestd2, int* p_ibest) {
+static void kdtree_nn_int_split(const kdtree_t* kd, const etype* query,
+                                const ttype* tquery,
+                                double* p_bestd2, int* p_ibest) {
 	int nodestack[100];
     ttype mindists[100];
 
@@ -793,32 +790,19 @@ void MANGLE(kdtree_nn_int_split)(const kdtree_t* kd, const etype* query,
 }
 
 
-
-
-
 void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 					   double* p_bestd2, int* p_ibest) {
 	int nodestack[100];
 	double dist2stack[100];
 	int stackpos = 0;
 	int D = (kd ? kd->ndim : 0);
-	bool use_tquery = FALSE;
-	bool use_tmath = FALSE;
-	bool use_bigtmath = FALSE;
-	bool use_tsplit = FALSE;
-	ttype tquery[D];
-	double dtl2=0.0, dtlinf=0.0;
-	ttype tlinf = 0;
-	ttype tl1 = 0;
-	ttype tl2 = 0;
-	bigttype bigtl2 = 0;
 
 	double bestd2 = *p_bestd2;
-	double bestdist;
 	int ibest = *p_ibest;
 
+    // Bounding boxes
     if (!kd->split.any) {
-        MANGLE(kdtree_nn_bb)(kd, query, p_bestd2, p_ibest);
+        kdtree_nn_bb(kd, query, p_bestd2, p_ibest);
         return;
     }
 
@@ -829,36 +813,18 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 	D = kd->ndim;
 #endif
 
-	bestdist = sqrt(bestd2);
+    // Integers.
 	if (TTYPE_INTEGER) {
-		use_tquery = ttype_query(kd, query, tquery);
-	}
-
-	if (TTYPE_INTEGER && use_tquery) {
-        MANGLE(kdtree_nn_int_split)(kd, query, tquery, p_bestd2, p_ibest);
-        return;
+        ttype tquery[D];
+		if (ttype_query(kd, query, tquery)) {
+            kdtree_nn_int_split(kd, query, tquery, p_bestd2, p_ibest);
+            return;
+        }
     }
-	use_tsplit = use_tquery && (dtlinf < TTYPE_MAX);
-	if (TTYPE_INTEGER && use_tquery && (kd->bb.any || kd->nodes)) {
-		if (dtl2 < TTYPE_MAX) {
-			use_tmath = TRUE;
-			/*
-			  printf("Using %s integer math.\n", STRINGIFY(TTYPE));
-			  printf("(tl2 = %u).\n", (unsigned int)tl2);
-			*/
-		} else if (dtl2 < BIGTTYPE_MAX) {
-			use_bigtmath = TRUE;
-			/*
-			  printf("Using %s/%s integer math.\n", STRINGIFY(TTYPE), STRINGIFY(BIGTTYPE));
-			  printf("(bigtl2 = %llu).\n", (long long unsigned int)bigtl2);
-			*/
-		} else {
-			/*
-			  printf("L2 maxdist overflows u16 and u32 representation; not using int math.  %g -> %g > %u\n",
-			  bestd2, dtl2, UINT32_MAX);
-			*/
-		}
-	}
+
+    // We must have doubles and splitting planes.
+    assert(kd->splitdim);
+    assert(kd->split.any);
 
 	// queue root.
 	nodestack[0] = 0;
@@ -873,6 +839,11 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 		int L, R;
 		ttype split = 0;
         double del;
+        etype rsplit;
+
+        int nearchild;
+        int farchild;
+        double fard2;
 
 		if (dist2stack[stackpos] > bestd2) {
             // pruned!
@@ -889,7 +860,6 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 
 		if (KD_IS_LEAF(kd, nodeid)) {
 			dtype* data;
-			int oldbest = ibest;
 			L = kdtree_left(kd, nodeid);
 			R = kdtree_right(kd, nodeid);
 			for (i=L; i<=R; i++) {
@@ -910,134 +880,47 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
                 if (kd->fun->nn_new_best)
                     kd->fun->nn_new_best(kd, nodeid, i, bestd2);
 			}
-			if (oldbest != ibest) {
-				bestdist = sqrt(bestd2);
-				if (TTYPE_INTEGER && (use_tmath || use_bigtmath || use_tsplit)) {
-					tl1    = DIST_ET(kd, bestdist * sqrt(D), ceil);
-					tlinf  = DIST_ET(kd, bestdist, ceil);
-					bigtl2 = DIST2_ET(kd, bestd2, ceil);
-					tl2    = bigtl2;
-				}
-			}
 			continue;
 		}
 
-		if (kd->splitdim)
-			dim = kd->splitdim[nodeid];
-
         // split/dim trees
         split = *KD_SPLIT(kd, nodeid);
-        if (!kd->splitdim && TTYPE_INTEGER) {
-            bigint tmpsplit;
-            tmpsplit = split;
-            dim = tmpsplit & kd->dimmask;
-            split = tmpsplit & kd->splitmask;
-        }
+        dim = kd->splitdim[nodeid];
 
-        // use splitting plane.
-        if (TTYPE_INTEGER && use_tsplit) {
-            if (tquery[dim] < split) {
-                // query is on the "left" side of the split.
-                assert(query[dim] < POINT_TE(kd, dim, split));
-                // is the right child within range?
-                // look mum, no int overflow!
-                if (split - tquery[dim] <= tlinf) {
-                    // right child is okay.
-                    assert(POINT_TE(kd, dim, split) - query[dim] > 0.0);
-                    assert(POINT_TE(kd, dim, split) - query[dim] <= bestdist);
-                    stackpos++;
-                    nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
-                    del = DIST_TE(kd, split - tquery[dim]);
-                    dist2stack[stackpos] = del*del;
-                    if (kd->fun->nn_enqueue)
-                        kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 4);
-                } else {
-                    if (kd->fun->nn_prune) {
-                        del = DIST_TE(kd, split - tquery[dim]);
-                        kd->fun->nn_prune(kd, KD_CHILD_RIGHT(nodeid), del*del, bestd2, 5);
-                    }
-                }
-                stackpos++;
-                nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
-                dist2stack[stackpos] = 0.0;
-                if (kd->fun->nn_enqueue)
-                    kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 5);
-
-            } else {
-                // query is on "right" side.
-                assert(POINT_TE(kd, dim, split) <= query[dim]);
-                // is the left child within range?
-                if (tquery[dim] - split < tlinf) {
-                    assert(query[dim] - POINT_TE(kd, dim, split) >= 0.0);
-                    assert(query[dim] - POINT_TE(kd, dim, split) < bestdist);
-                    stackpos++;
-                    nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
-                    del = DIST_TE(kd, tquery[dim] - split);
-                    dist2stack[stackpos] = del*del;
-                    if (kd->fun->nn_enqueue)
-                        kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 6);
-                } else {
-                    if (kd->fun->nn_prune) {
-                        del = DIST_TE(kd, tquery[dim] - split);
-                        kd->fun->nn_prune(kd, KD_CHILD_LEFT(nodeid), del*del, bestd2, 6);
-                    }
-                }
-                stackpos++;
-                nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
-                dist2stack[stackpos] = 0.0;
-                if (kd->fun->nn_enqueue)
-                    kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 7);
-            }
+        rsplit = POINT_TE(kd, dim, split);
+        del = query[dim] - rsplit;
+        fard2 = del*del;
+        if (query[dim] < rsplit) {
+            nearchild = KD_CHILD_LEFT (nodeid);
+            farchild  = KD_CHILD_RIGHT(nodeid);
         } else {
-            etype rsplit = POINT_TE(kd, dim, split);
-            if (query[dim] < rsplit) {
-                // query is on the "left" side of the split.
-                // is the right child within range?
-                if (rsplit - query[dim] <= bestdist) {
-                    stackpos++;
-                    nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
-                    del = rsplit - query[dim];
-                    dist2stack[stackpos] = del*del;
-                    if (kd->fun->nn_enqueue)
-                        kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 8);
-                } else {
-                    if (kd->fun->nn_prune) {
-                        del = rsplit - query[dim];
-                        kd->fun->nn_prune(kd, KD_CHILD_RIGHT(nodeid), del*del, bestd2, 7);
-                    }
-                }
-                stackpos++;
-                nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
-                dist2stack[stackpos] = 0.0;
-                if (kd->fun->nn_enqueue)
-                    kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 9);
-            } else {
-                // query is on the "right" side
-                // is the left child within range?
-                if (query[dim] - rsplit < bestdist) {
-                    stackpos++;
-                    nodestack[stackpos] = KD_CHILD_LEFT(nodeid);
-                    del = query[dim] - rsplit;
-                    dist2stack[stackpos] = del*del;
-                    if (kd->fun->nn_enqueue)
-                        kd->fun->nn_enqueue(kd, KD_CHILD_LEFT(nodeid), 10);
-                } else {
-                    if (kd->fun->nn_prune) {
-                        del = query[dim] - rsplit;
-                        kd->fun->nn_prune(kd, KD_CHILD_LEFT(nodeid), del*del, bestd2, 8);
-                    }
-                }
-                stackpos++;
-                nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
-                dist2stack[stackpos] = 0.0;
-                if (kd->fun->nn_enqueue)
-                    kd->fun->nn_enqueue(kd, KD_CHILD_RIGHT(nodeid), 11);
-            }
+            nearchild = KD_CHILD_RIGHT(nodeid);
+            farchild  = KD_CHILD_LEFT (nodeid);
         }
+
+        if (fard2 <= bestd2) {
+            // is the far child within range?
+            stackpos++;
+            nodestack[stackpos] = farchild;
+            dist2stack[stackpos] = fard2;
+            if (kd->fun->nn_enqueue)
+                kd->fun->nn_enqueue(kd, farchild, 8);
+        } else {
+            if (kd->fun->nn_prune)
+                kd->fun->nn_prune(kd, farchild, fard2, bestd2, 7);
+        }
+
+        // stack near child.
+        stackpos++;
+        nodestack[stackpos] = nearchild;
+        dist2stack[stackpos] = 0.0;
+        if (kd->fun->nn_enqueue)
+            kd->fun->nn_enqueue(kd, nearchild, 9);
     }
 	*p_bestd2 = bestd2;
 	*p_ibest = ibest;
 }
+
 
 kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
      (const kdtree_t* kd, kdtree_qres_t* res, const etype* query,
