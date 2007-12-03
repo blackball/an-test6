@@ -266,13 +266,15 @@ void test_nn_bb_dssB(CuTest* tc) {
 
 
 
-void test_nn_bb_ddd_linearlr(CuTest* tc) {
-    run_test_nn(tc, KDTT_DOUBLE, KD_BUILD_SPLIT | KD_BUILD_NO_LR | KD_BUILD_LINEAR_LR, 1e-5);
+void test_nn_split_ddd_linearlr(CuTest* tc) {
+    run_test_nn(tc, KDTT_DOUBLE, KD_BUILD_SPLIT | KD_BUILD_NO_LR | KD_BUILD_LINEAR_LR, 1e-9);
 }
-void test_nn_bb_duu_linearlr(CuTest* tc) {
-    run_test_nn(tc, KDTT_DUU, KD_BUILD_SPLIT | KD_BUILD_SPLITDIM | KD_BUILD_NO_LR | KD_BUILD_LINEAR_LR, 1e-5);
+void test_nn_split_duu_linearlr(CuTest* tc) {
+    run_test_nn(tc, KDTT_DUU, KD_BUILD_SPLIT | KD_BUILD_SPLITDIM | KD_BUILD_NO_LR | KD_BUILD_LINEAR_LR, 1e-9);
 }
-
+void test_nn_split_dss_linearlr(CuTest* tc) {
+    run_test_nn(tc, KDTT_DSS, KD_BUILD_SPLIT | KD_BUILD_SPLITDIM | KD_BUILD_NO_LR | KD_BUILD_LINEAR_LR, 1e-5);
+}
 
 void run_test_lr(CuTest* tc, int D, int Nleaf, int treetype, int treeopts) {
     int i;
