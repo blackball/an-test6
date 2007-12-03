@@ -31,8 +31,10 @@ INTERNALS := \
 	kdint_dds.o \
 	kdint_dss.o
 
-KD := kdtree.o kdtree_dim.o kdtree_mem.o $(INTERNALS)
+KD := kdtree.o kdtree_dim.o kdtree_mem.o
 KD_FITS := kdtree_fits_io.o
+
+# These are #included by other source files.
 INTERNAL_SOURCES := kdtree_internal.c kdtree_internal_fits.c
 
 CFLAGS := $(CFLAGS_DEF)
@@ -62,11 +64,11 @@ INTERNALS_NOIO := \
 
 all: $(REMAKE_ANUTILS) $(LIBKD) $(LIBKD_NOIO) checktree
 
-$(LIBKD): $(KD) $(KD_FITS)
+$(LIBKD): $(KD) $(KD_FITS) $(INTERNALS)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
-$(LIBKD_NOIO): kdtree.o kdtree_dim.o kdtree_mem.o $(INTERNALS_NOIO)
+$(LIBKD_NOIO): $(KD) $(INTERNALS_NOIO)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
@@ -85,7 +87,13 @@ realclean: clean
 tags:
 	etags `find . -name "*.c" -o -name "*.h"`
 
-DEP_OBJ := $(KD) $(KD_FITS)
+DEP_OBJ := $(KD) $(KD_FITS) $(INTERNALS) $(INTERNALS_NOIO)
 DEP_PREREQS := $(QFITS_LIB)
 
 include $(COMMON)/makefile.deps
+
+# Borrowed from makefile.deps
+%_noio.dep : %.c
+	$(CC) $(DEP_ARGS) $< -MT $(addsuffix .o, $(basename $@)) $(DEP_OUT) $@
+
+

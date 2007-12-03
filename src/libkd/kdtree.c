@@ -140,11 +140,12 @@ void kdtree_inverse_permutation(const kdtree_t* tree, int* invperm) {
 
 const char* kdtree_build_options_to_string(int opts) {
     static char buf[256];
-    sprintf(buf, "%s%s%s%s",
+    sprintf(buf, "%s%s%s%s%s",
             (opts & KD_BUILD_BBOX) ? "BBOX ":"",
             (opts & KD_BUILD_SPLIT) ? "SPLIT ":"",
             (opts & KD_BUILD_SPLITDIM) ? "SPLITDIM ":"",
-            (opts & KD_BUILD_NO_LR) ? "NOLR ":"");
+            (opts & KD_BUILD_NO_LR) ? "NOLR ":"",
+            (opts & KD_BUILD_LINEAR_LR) ? "LINEARLR ":"");
     return buf;
 }
 
@@ -304,15 +305,28 @@ static int calculate_R(const kdtree_t* kd, int leafid) {
     return L;
 }
 
+static int linear_lr(const kdtree_t* kd, int leafid) {
+    return ((u64)leafid * kd->ndata) / kd->nbottom;
+}
+
 int kdtree_leaf_left(const kdtree_t* kd, int nodeid) {
     int leafid = nodeid - kd->ninterior;
     if (!leafid)
         return 0;
     if (kd->has_linear_lr)
-        return ((leafid * kd->ndata) / kd->nbottom);
+        return linear_lr(kd, leafid);
     if (kd->lr)
         return kd->lr[leafid-1] + 1;
     return calculate_R(kd, leafid-1) + 1;
+}
+
+int kdtree_leaf_right(const kdtree_t* kd, int nodeid) {
+    int leafid = nodeid - kd->ninterior;
+    if (kd->has_linear_lr)
+        return linear_lr(kd, leafid+1) - 1;
+    if (kd->lr)
+        return kd->lr[leafid];
+    return calculate_R(kd, leafid);
 }
 
 int kdtree_left(const kdtree_t* kd, int nodeid) {
@@ -330,15 +344,6 @@ int kdtree_left(const kdtree_t* kd, int nodeid) {
 		int leftmost = kdtree_first_leaf(kd, nodeid);
         return kdtree_leaf_left(kd, leftmost);
 	}
-}
-
-int kdtree_leaf_right(const kdtree_t* kd, int nodeid) {
-    int leafid = nodeid - kd->ninterior;
-    if (kd->has_linear_lr)
-        return (((leafid+1) * kd->ndata) / kd->nbottom) - 1;
-    if (kd->lr)
-        return kd->lr[leafid];
-    return calculate_R(kd, leafid);
 }
 
 int kdtree_right(const kdtree_t* kd, int nodeid) {

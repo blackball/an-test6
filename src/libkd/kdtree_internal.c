@@ -277,14 +277,18 @@ static inline void dist2_bailout(const kdtree_t* kd, const etype* q, const dtype
 	for (d=0; d<D; d++) {
 		double delta;
 		etype pp = POINT_DE(kd, d, p[d]);
-		if (TTYPE_INTEGER) {
-			if (q[d] > pp)
-				delta = q[d] - pp;
-			else
-				delta = pp - q[d];
-		} else {
-			delta = q[d]  - pp;
-		}
+        // But wait... "q" and "pp" are both "etype"...
+        /*
+         if (TTYPE_INTEGER) {
+         if (q[d] > pp)
+         delta = q[d] - pp;
+         else
+         delta = pp - q[d];
+         } else {
+         delta = q[d]  - pp;
+         }
+         */
+        delta = q[d]  - pp;
 		d2 += delta * delta;
 		if (d2 > maxd2) {
 			*bailedout = TRUE;
@@ -293,6 +297,32 @@ static inline void dist2_bailout(const kdtree_t* kd, const etype* q, const dtype
 	}
 	*d2res = d2;
 }
+
+static inline void ddist2_bailout(const kdtree_t* kd,
+                                  const dtype* q, const dtype* p,
+                                  int D, bigttype maxd2, bool* bailedout,
+                                  bigttype* d2res) {
+	int d;
+	bigttype d2 = 0;
+#if defined(KD_DIM)
+	D = KD_DIM;
+#endif
+	for (d=0; d<D; d++) {
+		dtype delta;
+        if (q[d] > p[d])
+            delta = q[d] - p[d];
+        else
+            delta = p[d] - q[d];
+
+		d2 += (bigttype)delta * (bigttype)delta;
+		if (d2 > maxd2) {
+			*bailedout = TRUE;
+			return;
+		}
+	}
+	*d2res = d2;
+}
+
 
 static inline bool dist2_exceeds(const kdtree_t* kd, const etype* q, const dtype* p, int D, double maxd2) {
 	int d;
@@ -679,17 +709,25 @@ static void kdtree_nn_int_split(const kdtree_t* kd, const etype* query,
 	int D = kd->ndim;
 
     ttype closest_so_far;
+    bigttype closest2;
 
-	double bestd2 = *p_bestd2;
-	int ibest = *p_ibest;
+	int ibest = -1;
     
+    dtype* data;
+    dtype* dquery = (dtype*)tquery;
+
+    /** FIXME **/
+    assert(sizeof(dtype) == sizeof(ttype));
+
     {
         double closest;
-        closest = DIST_ET(kd, sqrt(bestd2), );
+        closest = DIST_ET(kd, sqrt(*p_bestd2), );
         if (closest > TTYPE_MAX) {
             closest_so_far = TTYPE_MAX;
+            closest2 = BIGTTYPE_MAX;
         } else {
             closest_so_far = ceil(closest);
+            closest2 = (bigttype)closest_so_far * (bigttype)closest_so_far;
         }
     }
 
@@ -713,27 +751,25 @@ static void kdtree_nn_int_split(const kdtree_t* kd, const etype* query,
 		stackpos--;
 
 		if (KD_IS_LEAF(kd, nodeid)) {
-			dtype* data;
 			int oldbest = ibest;
 
 			L = kdtree_left(kd, nodeid);
 			R = kdtree_right(kd, nodeid);
 			for (i=L; i<=R; i++) {
 				bool bailedout = FALSE;
-				double dsqd;
-
+				bigttype dsqd;
 				data = KD_DATA(kd, D, i);
-				dist2_bailout(kd, query, data, D, bestd2, &bailedout, &dsqd);
+				ddist2_bailout(kd, dquery, data, D, closest2, &bailedout, &dsqd);
 				if (bailedout)
 					continue;
 				// new best
 				ibest = i;
-				bestd2 = dsqd;
+                closest2 = dsqd;
 			}
 
 			if (oldbest != ibest) {
-				double bestdist = sqrt(bestd2);
-                closest_so_far = DIST_ET(kd, bestdist, ceil);
+                // FIXME - replace with int sqrt
+                closest_so_far = ceil(sqrt((double)closest2));
 			}
 			continue;
 		}
@@ -785,8 +821,13 @@ static void kdtree_nn_int_split(const kdtree_t* kd, const etype* query,
             mindists[stackpos] = 0;
         }
     }
-	*p_bestd2 = bestd2;
-	*p_ibest = ibest;
+    if (ibest != -1) {
+        //*p_bestd2 = DIST2_TE(kd, closest2);
+        // Recompute the d2 more precisely in "etype":
+        data = KD_DATA(kd, D, ibest);
+        *p_bestd2 = dist2(kd, query, data, D);
+        *p_ibest = ibest;
+    }
 }
 
 
@@ -822,9 +863,8 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
         }
     }
 
-    // We must have doubles and splitting planes.
-    assert(kd->splitdim);
-    assert(kd->split.any);
+    // We got splitting planes, and the splits are either doubles, or ints
+    // but the query doesn't find into the integer range.
 
 	// queue root.
 	nodestack[0] = 0;
@@ -885,8 +925,14 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 
         // split/dim trees
         split = *KD_SPLIT(kd, nodeid);
-        dim = kd->splitdim[nodeid];
-
+        if (kd->splitdim) {
+            dim = kd->splitdim[nodeid];
+        } else {
+            // packed int
+            bigint tmpsplit = split;
+            dim = tmpsplit & kd->dimmask;
+            split = tmpsplit & kd->splitmask;
+        }
         rsplit = POINT_TE(kd, dim, split);
         del = query[dim] - rsplit;
         fard2 = del*del;
@@ -2063,6 +2109,9 @@ kdtree_t* MANGLE(kdtree_build)
 		kd->invscale = 1.0 / kd->scale;
 	}
 
+    if (options & KD_BUILD_LINEAR_LR)
+        kd->has_linear_lr = TRUE;
+
 	/* Use the lr array as a stack while building. In place in your face! */
 	kd->lr[0] = N - 1;
 	lnext = 1;
@@ -2191,13 +2240,14 @@ kdtree_t* MANGLE(kdtree_build)
 		} else {
             /* "m-1" becomes R of the left child;
              "m" becomes L of the right child. */
-            if (options & KD_BUILD_LINEAR_LR) {
-                kd->has_linear_lr = TRUE;
-                m = 1 + kdtree_right(kd, KD_CHILD_LEFT(i));
+            if (kd->has_linear_lr) {
+                m = kdtree_left(kd, KD_CHILD_RIGHT(i));
             } else {
                 /* Pivot the data at the median */
                 m = (left + right + 1) / 2;
             }
+            assert(m >= left);
+            assert(m <= right);
 			kdtree_quickselect_partition(data, kd->perm, left, right, D, dim, m);
 			s = POINT_DT(kd, d, data[D*m+d], KD_ROUND);
 
