@@ -307,6 +307,14 @@ function isodate_to_timestamp($datestr) {
 }
 
 function dtime2str($secs) {
+
+	// Stupid timezone HACK!
+	if ($secs < 0) {
+		// We're off by 5 hours = 18000 seconds.
+		$secs += 18000;
+	}
+
+
 	if ($secs > 3600*24) {
 		return sprintf("%.1f days", (float)$secs/(float)(3600*24));
 	} else if ($secs > 3600) {
