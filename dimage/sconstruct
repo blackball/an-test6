@@ -1,6 +1,0 @@
-import glob
-env = Environment()
-env.ParseConfig('echo -lc -lm -L../src/cfitsio/ -I../src/cfitsio/ -lcfitsio')
-files = glob.glob('src/*.c')
-files.remove('src/dlinear.c')
-env.Program('fits2xy', files)
