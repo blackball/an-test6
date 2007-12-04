@@ -111,6 +111,7 @@ $plotquad = $quads . "plotquad";
 $plot_constellations = $quads . "plot-constellations";
 $modhead = $quads . "modhead";
 $tabsort = $quads . "tabsort";
+$resort = $quads . "resort-xylist";
 $tablist = $quads . "tablist";
 $tabmerge = $quads . "tabmerge";
 $fitsgetext = $quads . "fitsgetext";

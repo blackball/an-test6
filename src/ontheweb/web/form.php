@@ -1254,7 +1254,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	global $image2xy;
 	global $modhead;
 	global $plotxy;
-	global $tabsort;
+	//global $tabsort;
+	global $resort;
 	global $objs_fn;
 	global $bigobjs_fn;
 	global $image2xyout_fn;
@@ -1438,7 +1439,10 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	// sort the xylist by FLUX.
 	$tabsortout = $mydir . "tabsort.out";
 	$sortedlist = $mydir . $xyls_fn;
-	$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
+
+	//$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
+	$cmd = $resort . " " . $xylist . " " . $sortedlist . " -d > " . $tabsortout;
+
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
 	if (($res === FALSE) || $retval) {
