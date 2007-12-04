@@ -200,6 +200,8 @@ static void run_test_rs(CuTest* tc, int treetype, int treeopts,
     free(origdata);
 }
 
+
+
 void test_rs_bb_duu(CuTest* tc) {
     run_test_rs(tc, KDTT_DUU, KD_BUILD_BBOX, 1e-9);
 }

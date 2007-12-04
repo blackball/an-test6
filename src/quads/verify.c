@@ -128,6 +128,8 @@ void verify_hit(startree* skdt,
 
 	double fieldr, fieldarcsec;
 
+    int options = 0;
+
 	assert(mo->wcs_valid || sip);
 	assert(startree);
 	assert(skdt->sweep);
@@ -147,11 +149,13 @@ void verify_hit(startree* skdt,
 		debug("%g, %g\n", fieldr, fieldarcsec);
 	}
 
+    options |= KD_OPTIONS_SMALL_RADIUS;
+    options |= KD_OPTIONS_USE_SPLIT;
+
 	// find all the index stars that are inside the circle that bounds
 	// the field.
 	// 1.01 is a little safety factor.
-	res = kdtree_rangesearch_options(startree, fieldcenter, fieldr2 * 1.01,
-									 KD_OPTIONS_SMALL_RADIUS);
+	res = kdtree_rangesearch_options(startree, fieldcenter, fieldr2 * 1.01, options);
 	assert(res);
 
 	// Project index stars into pixel space.

@@ -847,6 +847,8 @@ static void try_permutations(uint* origstars, int dimquad, double* origcode,
                 sety(pixvals, j, field_gety(solver, stars[j]));
             }
 
+            options |= KD_OPTIONS_USE_SPLIT;
+
 			*presult = kdtree_rangesearch_options_reuse(solver->index->codekd->tree,
 														*presult, code, tol2, options);
 
