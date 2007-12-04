@@ -97,3 +97,5 @@ include $(COMMON)/makefile.deps
 	$(CC) $(DEP_ARGS) $< -MT $(addsuffix .o, $(basename $@)) $(DEP_OUT) $@
 
 
+cflags:
+	echo $(CFLAGS)
