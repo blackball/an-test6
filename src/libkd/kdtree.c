@@ -92,8 +92,8 @@ void kdtree_memory_report(kdtree_t* kd) {
         total += mem;
     }
     if (kd->bb.any) {
-        n = kd->nnodes * kd->ndim;
-        sz = tsz;
+        n = kd->nnodes
+        sz = tsz * 2 * kd->ndim;
         mem = n*sz;
         printf(fmt, "bbox", n, "nodes", sz, mem, 1e-6*mem);
         total += mem;

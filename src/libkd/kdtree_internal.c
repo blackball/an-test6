@@ -992,6 +992,9 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 	bool do_precheck = FALSE;
 	bool do_l1precheck = FALSE;
 
+    bool use_bboxes = FALSE;
+    bool use_splits = FALSE;
+
 	double dtl1=0.0, dtl2=0.0, dtlinf=0.0;
 
 	//dtype dquery[D];
@@ -1022,6 +1025,26 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 		do_l1precheck = TRUE;
 	}
 
+    if (!kd->split.any) {
+        assert(kd->bb.any);
+        use_bboxes = TRUE;
+    } else {
+        if (kd->bb.any) {
+            // Got both BBoxes and Splits.
+            if (options & KD_OPTIONS_USE_SPLIT) {
+                use_splits = TRUE;
+            } else {
+                // Use bboxes by default.
+                use_bboxes = TRUE;
+            }
+        } else {
+            use_splits = TRUE;
+            assert(kd->splitdim || TTYPE_INTEGER);
+        }
+    }
+
+    assert(use_splits || use_bboxes);
+
 	maxdist = sqrt(maxd2);
 
 	if (TTYPE_INTEGER &&
@@ -1033,7 +1056,6 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 		dtl1   = DIST_ET(kd, maxdist * sqrt(D),);
 		dtl2   = DIST2_ET(kd, maxd2, );
 		dtlinf = DIST_ET(kd, maxdist, );
-
 		tl1    = ceil(dtl1);
 		tlinf  = ceil(dtlinf);
 		bigtl2 = ceil(dtl2);
@@ -1142,24 +1164,14 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 			continue;
 		}
 
-		bboxes(kd, nodeid, &tlo, &thi, D);
-
 		if (kd->splitdim)
 			dim = kd->splitdim[nodeid];
-		if (kd->split.any) {
-			// split/dim trees
-			split = *KD_SPLIT(kd, nodeid);
-			if (!kd->splitdim && TTYPE_INTEGER) {
-				bigint tmpsplit;
-				tmpsplit = split;
-				dim = tmpsplit & kd->dimmask;
-				split = tmpsplit & kd->splitmask;
-			}
-		}
 
-		if ((tlo && thi) &&
-			(!kd->split.any || !(options & KD_OPTIONS_USE_SPLIT))) {
+		if (use_bboxes) {
 			bool wholenode = FALSE;
+
+            bboxes(kd, nodeid, &tlo, &thi, D);
+            assert(tlo && thi);
 
 			if (do_precheck && nodeid) {
 				bool isleftchild = KD_IS_LEFT_CHILD(nodeid);
@@ -1252,7 +1264,15 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 			nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 
 		} else {
-            assert(kd->split.any);
+            // use_splits.
+
+			split = *KD_SPLIT(kd, nodeid);
+			if (!kd->splitdim && TTYPE_INTEGER) {
+				bigint tmpsplit;
+				tmpsplit = split;
+				dim = tmpsplit & kd->dimmask;
+				split = tmpsplit & kd->splitmask;
+			}
 
 			if (TTYPE_INTEGER && use_tsplit) {
 
