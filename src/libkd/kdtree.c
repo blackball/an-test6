@@ -355,11 +355,9 @@ int kdtree_compute_levels(int N, int Nleaf) {
 
 /* This returns the NODE id (not leaf index) */
 int kdtree_first_leaf(const kdtree_t* kd, int nodeid) {
-	int dlevel, twodl, nodeid_twodl;
+	int dlevel;
 	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
-	twodl = (1 << dlevel);
-	nodeid_twodl = (nodeid << dlevel);
-	return nodeid_twodl + twodl - 1;
+	return ((nodeid+1) << dlevel) - 1;
 }
 
 /* This returns the NODE id (not leaf index) */
