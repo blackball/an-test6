@@ -137,6 +137,7 @@ int kdtree_level_end(const kdtree_t* kd, int level) {
 static inline u8 node_level(const kdtree_t* kd, int nodeid) {
 	int val = (nodeid + 1) >> 1;
 	u8 level = 0;
+    // HACK - man ffs()?
 	while (val) {
 		val = val >> 1;
 		level++;
