@@ -20,10 +20,88 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 
 #include "cutest.h"
 #include "kdtree.h"
 #include "mathutil.h"
+
+
+static int calculate_R(int leafid, int nlevels, int N) {
+    int l;
+    unsigned int mask, L;
+
+    int nbottom = 1 << (nlevels - 1);
+    
+
+    mask = (1 << (nlevels-1));
+    L = 0;
+    // Compute the L index of the node one to the right of this node.
+    int nextguy = leafid + 1;
+    if (nextguy == nbottom)
+        return N-1;
+    for (l=0; l<(nlevels-1); l++) {
+        mask /= 2;
+        if (nextguy & mask) {
+            L += N/2;
+            N = (N+1)/2;
+        } else {
+            N = N/2;
+        }
+    }
+    L--;
+    return L;
+}
+
+int linearR(int leafid, int nbottom, int N) {
+    int64_t res = leafid + 1;
+    res *= N;
+    res /= nbottom;
+    return res - 1;
+}
+
+double linearRF(int leafid, int nbottom, int N) {
+    double res = leafid + 1.0;
+    res *= N;
+    res /= (double)nbottom;
+    return res - 1.0;
+}
+
+static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
+                            int Nleaf,
+                            int treetype, int treeopts);
+double* random_points_d(int N, int D);
+
+void test_1(CuTest* ct) {
+    kdtree_t* kd;
+    double * data;
+    int N = 1000;
+    int Nleaf = 5;
+    int D = 3;
+    int i;
+
+    data = random_points_d(N, D);
+    kd = build_tree(ct, data, N, D, Nleaf, KDTT_DOUBLE, KD_BUILD_SPLIT);
+
+    for (i=0; i<kd->nbottom; i++) {
+        int R1 = kdtree_right(kd, kd->ninterior + i);
+        int R2 = calculate_R(i, kd->nlevels, N);
+        int R3 = linearR(i, kd->nbottom, N);
+        double d3 = linearRF(i, kd->nbottom, N);
+        printf("%i %i %i %g\n", R1, R2, R3, d3);
+        printf("                               %s   %g\n",
+               (R1 != R3) ? "***" : "   ",
+               (double)R3 - d3);
+        /*
+         CuAssertIntEquals(ct, R1, R2);
+         CuAssertIntEquals(ct, R1, R3);
+         */
+    }
+}
+
+
+
+
 
 double* random_points_d(int N, int D) {
     int i;
