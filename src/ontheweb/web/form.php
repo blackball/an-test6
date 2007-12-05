@@ -491,7 +491,7 @@ function process_data ($vals) {
 			loggit("Failed to chmod text file " . $uploaded . "\n");
 		}
 		// -try to convert it to FITS.
-		$cmd = $xylist2fits . " -c " . $uploaded . " " . $xylist .
+		$cmd = $xylist2fits . " " . $uploaded . " " . $xylist .
 			" > " . $mydir . "xylist2fits.out" .
 			" 2> " . $mydir . "xylist2fits.err";
 		loggit("Command: " . $cmd . "\n");
