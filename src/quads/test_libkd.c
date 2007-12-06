@@ -21,6 +21,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
+#include <strings.h>
 
 #include "cutest.h"
 #include "kdtree.h"
@@ -83,6 +84,8 @@ void test_1(CuTest* ct) {
     data = random_points_d(N, D);
     kd = build_tree(ct, data, N, D, Nleaf, KDTT_DOUBLE, KD_BUILD_SPLIT);
 
+    printf("kd->nbottom = %i, kd->nlevels = %i.\n", kd->nbottom, kd->nlevels);
+
     for (i=0; i<kd->nbottom; i++) {
         int R1 = kdtree_right(kd, kd->ninterior + i);
         int R2 = calculate_R(i, kd->nlevels, N);
@@ -99,7 +102,27 @@ void test_1(CuTest* ct) {
     }
 }
 
+static inline u8 node_level(int nodeid) {
+	int val = (nodeid + 1) >> 1;
+	u8 level = 0;
+    // HACK - man ffs()?
+	while (val) {
+		val = val >> 1;
+		level++;
+	}
+	return level;
+}
 
+void test_2(CuTest* ct) {
+    int N = 1024;
+    int i;
+
+    for (i=0; i<N; i++) {
+        int L1 = node_level(i);
+        int L2 = ffs(i);
+        printf("%i %i\n", L1, L2);
+    }
+}
 
 
 
