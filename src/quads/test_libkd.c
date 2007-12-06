@@ -118,7 +118,8 @@ void test_2(CuTest* ct) {
 
     for (i=0; i<N; i++) {
         int L1 = node_level(i);
-        int L2 = fls(i+1) - 1;
+        //int L2 = fls(i+1) - 1;
+        int L2 = flsB(i+1);
         printf("%i %i\n", L1, L2);
     }
 }
