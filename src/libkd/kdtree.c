@@ -134,7 +134,7 @@ int kdtree_level_end(const kdtree_t* kd, int level) {
     return (1 << (level+1)) - 2;
 }
 
-static inline u8 node_level(const kdtree_t* kd, int nodeid) {
+static inline u8 node_level(int nodeid) {
 	int val = (nodeid + 1) >> 1;
 	u8 level = 0;
     // HACK - man ffs()?
@@ -146,7 +146,7 @@ static inline u8 node_level(const kdtree_t* kd, int nodeid) {
 }
 
 int kdtree_get_level(const kdtree_t* kd, int nodeid) {
-    return node_level(kd, nodeid);
+    return node_level(nodeid);
 }
 
 int kdtree_get_splitdim(const kdtree_t* kd, int nodeid) {
@@ -357,14 +357,14 @@ int kdtree_compute_levels(int N, int Nleaf) {
 /* This returns the NODE id (not leaf index) */
 int kdtree_first_leaf(const kdtree_t* kd, int nodeid) {
 	int dlevel;
-	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
+	dlevel = (kd->nlevels - 1) - node_level(nodeid);
 	return ((nodeid+1) << dlevel) - 1;
 }
 
 /* This returns the NODE id (not leaf index) */
 int kdtree_last_leaf(const kdtree_t* kd, int nodeid) {
 	int dlevel, twodl, nodeid_twodl;
-	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
+	dlevel = (kd->nlevels - 1) - node_level(nodeid);
 	twodl = (1 << dlevel);
 	nodeid_twodl = (nodeid << dlevel);
 	return nodeid_twodl + (twodl - 1)*2;
