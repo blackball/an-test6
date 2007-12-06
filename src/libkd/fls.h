@@ -20,7 +20,7 @@ static inline int fls(int x) {
     return r+1;
 } 
 
-#else if X86_64
+#elif X86_64
 
 /**
  * fls - find last bit set
@@ -71,6 +71,8 @@ static inline int fls(int x) {
     }
     return r;
 }
+
+#endif
 
 #endif /* _ASM_GENERIC_BITOPS_FLS_H_ */
 
