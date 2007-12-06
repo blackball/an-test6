@@ -1,6 +1,43 @@
 #ifndef _ASM_GENERIC_BITOPS_FLS_H_
 #define _ASM_GENERIC_BITOPS_FLS_H_
 
+static inline int fls(int x);
+
+#if I386
+
+/**
+ * fls - find last bit set
+ * @x: the word to search
+ *
+ * This is defined the same way as ffs().
+ */
+static inline int fls(int x) {
+    int r;
+    __asm__("bsrl %1,%0\n\t"
+            "jnz 1f\n\t"
+            "movl $-1,%0\n"
+            "1:" : "=r" (r) : "rm" (x));
+    return r+1;
+} 
+
+#else if X86_64
+
+/**
+ * fls - find last bit set
+ * @x: the word to search
+ *
+ * This is defined the same way as ffs.
+ */
+static __inline__ int fls(int x) {
+    int r;
+    __asm__("bsrl %1,%0\n\t"
+            "cmovzl %2,%0"
+            : "=&r" (r) : "rm" (x), "rm" (-1));
+    return r+1;
+} 
+
+#else
+
 /**
  * fls - find last (most-significant) bit set
  * @x: the word to search
