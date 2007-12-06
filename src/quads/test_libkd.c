@@ -26,7 +26,7 @@
 #include "cutest.h"
 #include "kdtree.h"
 #include "mathutil.h"
-
+#include "fls.h"
 
 static int calculate_R(int leafid, int nlevels, int N) {
     int l;
@@ -105,7 +105,6 @@ void test_1(CuTest* ct) {
 static inline u8 node_level(int nodeid) {
 	int val = (nodeid + 1) >> 1;
 	u8 level = 0;
-    // HACK - man ffs()?
 	while (val) {
 		val = val >> 1;
 		level++;
@@ -119,7 +118,7 @@ void test_2(CuTest* ct) {
 
     for (i=0; i<N; i++) {
         int L1 = node_level(i);
-        int L2 = ffs(i);
+        int L2 = fls(i+1) - 1;
         printf("%i %i\n", L1, L2);
     }
 }
