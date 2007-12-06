@@ -1,9 +1,22 @@
+/**
+ This file includes code copied from three source files in the Linux kernel
+ v 2.6.23.1:
+ - include/asm-generic/bitops/fls.h
+ - include/asm-i386/bitops.h
+ - include/asm-x86_64/bitops.h
+
+ The second and third files contain this notice:
+ * Copyright 1992, Linus Torvalds.
+
+ And of course the kernel is distributed under the terms of the GPL v2.
+ */
+
 #ifndef _ASM_GENERIC_BITOPS_FLS_H_
 #define _ASM_GENERIC_BITOPS_FLS_H_
 
 static inline int fls(int x);
 
-#if I386
+#if AN_I386
 
 /**
  * fls - find last bit set
@@ -20,7 +33,7 @@ static inline int fls(int x) {
     return r+1;
 } 
 
-#elif X86_64
+#elif AN_X86_64
 
 /**
  * fls - find last bit set
