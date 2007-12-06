@@ -28,6 +28,7 @@
 #include "kdtree_internal_common.h"
 #include "kdtree_mem.h"
 #include "keywords.h"
+#include "fls.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
 KD_DECLARE(kdtree_get_splitval, double, (const kdtree_t*, int));
@@ -135,14 +136,7 @@ int kdtree_level_end(const kdtree_t* kd, int level) {
 }
 
 static inline u8 node_level(int nodeid) {
-	int val = (nodeid + 1) >> 1;
-	u8 level = 0;
-    // HACK - fls()?
-	while (val) {
-		val = val >> 1;
-		level++;
-	}
-	return level;
+    return fls(nodeid + 1) - 1;
 }
 
 int kdtree_get_level(const kdtree_t* kd, int nodeid) {
