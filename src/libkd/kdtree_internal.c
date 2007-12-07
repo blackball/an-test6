@@ -1784,7 +1784,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			}
 		}
 
-		if (!KD_IS_LEAF(kd, KD_CHILD_LEFT(nodeid))) {
+		if (!KD_IS_LEAF(kd, nodeid)) {
 			// check that the children's bounding box corners are within
 			// the parent's bounding box.
 			bb = LOW_HR(kd, D, KD_CHILD_LEFT(nodeid));
@@ -1841,7 +1841,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 	}
 	if (kd->split.any) {
 
-		if (!KD_IS_LEAF(kd, KD_CHILD_LEFT(nodeid))) {
+		if (!KD_IS_LEAF(kd, nodeid)) {
 			// check split/dim.
 			ttype split;
 			int dim = 0;
@@ -2021,7 +2021,6 @@ static void compute_bb(const dtype* data, int D, int N, dtype* lo, dtype* hi) {
         hi[d] = DTYPE_MIN;
         lo[d] = DTYPE_MAX;
     }
-
     /* (since data is stored lexicographically we can just iterate through it) */
     /* (avoid doing kd->data[NODE(i)*D + d] many times; just ++ the pointer) */
     for (i=0; i<N; i++) {
@@ -2311,13 +2310,37 @@ kdtree_t* MANGLE(kdtree_build)
 
     if (options & KD_BUILD_BBOX) {
         // Compute bounding boxes for leaf nodes.
-        int L, R = 0;
+        int L, R = -1;
         for (i=0; i<kd->nbottom; i++) {
-            L = R;
+            L = R + 1;
             R = kd->lr[i];
-            compute_bb(kd->data.DTYPE + L * D, D, R - L + 1, lo, hi);
+            assert(L == kdtree_leaf_left(kd, i + kd->ninterior));
+            assert(R == kdtree_leaf_right(kd, i + kd->ninterior));
+            compute_bb(KD_DATA(kd, D, L), D, R - L + 1, lo, hi);
             save_bb(kd, i + kd->ninterior, lo, hi);
         }
+
+        // check that it worked...
+#ifndef NDEBUG
+        for (i=0; i<kd->nbottom; i++) {
+            ttype* lo;
+            ttype* hi;
+            int j, d;
+            int nodeid = i + kd->ninterior;
+            lo = LOW_HR(kd, kd->ndim, nodeid);
+            hi = HIGH_HR(kd, kd->ndim, nodeid);
+            for (j=kdtree_leaf_left(kd, nodeid); j<=kdtree_leaf_right(kd, nodeid); j++) {
+                dtype* data = KD_DATA(kd, kd->ndim, j);
+                for (d=0; d<kd->ndim; d++) {
+                    assert(POINT_TD(kd, d, lo[d]) <= data[d]);
+                    assert(POINT_TD(kd, d, hi[d]) >= data[d]);
+                    assert(POINT_DT(kd, d, data[d], KD_ROUND) <= hi[d]);
+                    assert(POINT_DT(kd, d, data[d], KD_ROUND) >= lo[d]);
+                }
+            }
+        }
+#endif
+
     }
 
     if (options & KD_BUILD_NO_LR) {
