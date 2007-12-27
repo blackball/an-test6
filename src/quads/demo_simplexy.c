@@ -139,10 +139,12 @@ int main(void) {
 
 	for (n = 0; n < N; n++) {
 
-		strcpy(fullpath, "demo_simplexy_images/");
+//		strcpy(fullpath, "demo_simplexy_images/");
+		strcpy(fullpath, "m44_images/");
 		strcat(fullpath, namelist[n]->d_name);
 
-		strcpy(outpath, "demo_simplexy_images/out_");
+//		strcpy(outpath, "demo_simplexy_images/out_");
+		strcpy(outpath, "m44_images/out_");
 		strcat(outpath, namelist[n]->d_name);
 		outpath[strlen(outpath)-4] = '\0';
 		strcat(outpath, ".png");
