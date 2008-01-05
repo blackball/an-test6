@@ -562,12 +562,12 @@ int main(int argc, char** args) {
         sl_append_nocopy(tempfiles, xylsfn);
 
         append_executable(cmd, "image2xy", me);
+        if (!verbose)
+            sl_append(cmd, "-q");
         sl_append(cmd, "-O");
         sl_append(cmd, "-o");
         append_escape(cmd, xylsfn);
         append_escape(cmd, fitsimgfn);
-        if (!verbose)
-            sl_append(cmd, "-q");
 
         cmdstr = sl_implode(cmd, " ");
         sl_remove_all(cmd);
