@@ -198,7 +198,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
     kdtree->nnodes = nnodes;
 	kdtree->nbottom = (nnodes+1)/2;
 	kdtree->ninterior = nnodes - kdtree->nbottom;
-	for (kdtree->nlevels=0, i=nnodes; i; kdtree->nlevels++, i=i>>1);
+    kdtree->nlevels = kdtree_nnodes_to_nlevels(nnodes);
 	kdtree->treetype = treetype;
 
 	size = 0;

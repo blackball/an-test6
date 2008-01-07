@@ -24,11 +24,10 @@
 #include "kdtree.h"
 #include "kdtree_internal.h"
 #include "kdtree_mem.h"
+#include "keywords.h"
 
 #define KDTREE_MAX_RESULTS 1000
 #define KDTREE_MAX_DIM 100
-
-#define UNUSED __attribute__((unused))
 
 #define MANGLE(x) KDMANGLE(x, ETYPE, DTYPE, TTYPE)
 
@@ -1343,7 +1342,7 @@ static void* get_data(const kdtree_t* kd, int i) {
 
 static void copy_data_double(const kdtree_t* kd, int start, int N,
 							 double* dest) {
-	UNUSED int i, j, d;
+	Unused int i, j, d;
 	int D;
 
 	D = kd->ndim;
@@ -1774,7 +1773,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 		for (i=L; i<=R; i++) {
 			dtype* dat = KD_DATA(kd, D, i);
 			for (d=0; d<D; d++) {
-				UNUSED ttype t = POINT_DT(kd, d, dat[d], KD_ROUND);
+				Unused ttype t = POINT_DT(kd, d, dat[d], KD_ROUND);
 				assert(plo[d] <= t);
 				assert(t <= phi[d]);
 				if (plo[d] > t || t > phi[d]) {
@@ -1865,7 +1864,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			cL = kdtree_left (kd, KD_CHILD_LEFT(nodeid));
 			cR = kdtree_right(kd, KD_CHILD_LEFT(nodeid));
 			for (i=cL; i<=cR; i++) {
-				UNUSED dtype* dat = KD_DATA(kd, D, i);
+				Unused dtype* dat = KD_DATA(kd, D, i);
 				assert(dat[dim] <= dsplit);
 				if (dat[dim] > dsplit) {
 					fprintf(stderr, "kdtree_check: split-plane failure.\n");
@@ -1876,7 +1875,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			cL = kdtree_left (kd, KD_CHILD_RIGHT(nodeid));
 			cR = kdtree_right(kd, KD_CHILD_RIGHT(nodeid));
 			for (i=cL; i<=cR; i++) {
-				UNUSED dtype* dat = KD_DATA(kd, D, i);
+				Unused dtype* dat = KD_DATA(kd, D, i);
 				assert(dat[dim] >= dsplit);
 				if (dat[dim] < dsplit) {
 					fprintf(stderr, "kdtree_check: split-plane failure.\n");
