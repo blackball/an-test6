@@ -26,8 +26,8 @@
 
 #define KDTREE_MAX_LEVELS 1000
 
-#define KDT_INFTY_DOUBLE 1e309
-#define KDT_INFTY_FLOAT  1e39
+#define KDT_INFTY_DOUBLE HUGE_VAL
+#define KDT_INFTY_FLOAT  HUGE_VALF
 
 enum kd_rangesearch_options {
 	KD_OPTIONS_COMPUTE_DISTS    = 0x1,
