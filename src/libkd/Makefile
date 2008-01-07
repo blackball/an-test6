@@ -62,7 +62,7 @@ INTERNALS_NOIO := \
 %_noio.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS) -DKDTREE_NO_FITS
 
-all: $(REMAKE_ANUTILS) $(LIBKD) $(LIBKD_NOIO) checktree
+all: $(REMAKE_ANUTILS) $(LIBKD) $(LIBKD_NOIO) checktree fix-bb
 
 $(LIBKD): $(KD) $(KD_FITS) $(INTERNALS)
 	$(AR) rc $@ $^
@@ -73,6 +73,9 @@ $(LIBKD_NOIO): $(KD) $(INTERNALS_NOIO)
 	$(RANLIB) $@
 
 checktree: checktree.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+fix-bb: fix_bb.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 .PHONY: clean
