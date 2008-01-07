@@ -35,6 +35,10 @@ static inline int fls(int x);
  */
 static inline uint8_t flsB(uint32_t x);
 
+
+
+/**** Below this line are the implementations for different CPUs. ****/
+
 #if AN_I386
 
 static inline int fls(int x) {
