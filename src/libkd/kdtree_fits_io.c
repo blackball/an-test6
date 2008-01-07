@@ -135,7 +135,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 	qfits_header* header;
 	unsigned int ndata, ndim, nnodes;
 	int size;
-	void* map;
+	unsigned char* map;
 	int i;
 
 	if (!qfits_is_fits(fn)) {
