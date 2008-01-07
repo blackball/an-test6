@@ -23,16 +23,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/mman.h>
+#include <sys/param.h>
 
 #include "kdtree_fits_io.h"
 #include "kdtree_internal.h"
 #include "kdtree_mem.h"
 #include "fitsioutils.h"
 #include "qfits.h"
-
-static int imax(int a, int b) {
-	return a > b ? a : b;
-}
 
 kdtree_t* kdtree_fits_read(char* fn, qfits_header** p_hdr) {
 	return kdtree_fits_read_extras(fn, p_hdr, NULL, 0);
@@ -251,7 +248,7 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 			return NULL;
 		}
 
-		size = imax(size, tab->offset + tab->size);
+		size = MAX(size, tab->offset + tab->size);
 	}
 
 	// launch!
