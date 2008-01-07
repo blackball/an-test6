@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#! /bin/sh
 
 # Auto generate single AllTests file for CuTest.
 # Searches through all *.c files in the current directory.

@@ -126,7 +126,16 @@ void test_2(CuTest* ct) {
     }
 }
 
-
+void test_nlevels(CuTest* ct) {
+    // No nodes: no levels!
+    CuAssertIntEquals(ct, 0, kdtree_nnodes_to_nlevels(0));
+    // Single node.
+    CuAssertIntEquals(ct, 1, kdtree_nnodes_to_nlevels(1));
+    // sort of invalid input - incomplete level...
+    CuAssertIntEquals(ct, 1, kdtree_nnodes_to_nlevels(2));
+    CuAssertIntEquals(ct, 2, kdtree_nnodes_to_nlevels(3));
+    CuAssertIntEquals(ct, 10, kdtree_nnodes_to_nlevels(1023));
+}
 
 double* random_points_d(int N, int D) {
     int i;

@@ -179,33 +179,33 @@ TESTED_FILES += dallpeaks.o dcen3x3.o dmedsmooth.o dobjects.o dpeaks.o \
 # 2. Add your individual test case like the ones below
 test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
 test_dfind-main.c: make-tests.sh test_dfind.c
-	bash make-tests.sh test_dfind.c > test_dfind-main.c
+	$(AN_SHELL) make-tests.sh test_dfind.c > test_dfind-main.c
 
 test_bl: cutest.o test_bl-main.o test_bl.o $(ANUTILS_LIB)
 test_bl-main.c: make-tests.sh test_bl.c
-	bash make-tests.sh test_bl.c > test_bl-main.c
+	$(AN_SHELL) make-tests.sh test_bl.c > test_bl-main.c
 
 test_ctmf: cutest.o ctmf.o test_ctmf-main.o test_ctmf.o
 test_ctmf-main.c: make-tests.sh test_dfind.c
-	bash make-tests.sh test_ctmf.c > test_ctmf-main.c
+	$(AN_SHELL) make-tests.sh test_ctmf.c > test_ctmf-main.c
 
 test_simplexy: cutest.o test_simplexy-main.o test_simplexy.o simplexy.o \
 		ctmf.o dsigma.o dobjects.o dselip.o dallpeaks.o qsort_reentrant.o \
 		radix.o dsmooth.o dfind.o dmedsmooth.o dpeaks.o dcen3x3.o
 test_simplexy-main.c: make-tests.sh test_simplexy.c
-	bash make-tests.sh test_simplexy.c > test_simplexy-main.c
+	$(AN_SHELL) make-tests.sh test_simplexy.c > test_simplexy-main.c
 
 test_dsmooth: cutest.o dsmooth.o test_dsmooth-main.o test_dsmooth.o
 test_dsmooth-main.c: make-tests.sh test_dsmooth.c
-	bash make-tests.sh test_dsmooth.c > test_dsmooth-main.c
+	$(AN_SHELL) make-tests.sh test_dsmooth.c > test_dsmooth-main.c
 
 test_libkd: cutest.o test_libkd-main.o test_libkd.o $(LIBKD_LIB) $(QFITS_LIB) $(ANUTILS_LIB)
 test_libkd-main.c: make-tests.sh test_libkd.c
-	bash make-tests.sh test_libkd.c > test_libkd-main.c
+	$(AN_SHELL) make-tests.sh test_libkd.c > test_libkd-main.c
 
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
-	bash make-tests.sh $(ALL_TEST_FILES_C) > test.c
+	$(AN_SHELL) make-tests.sh $(ALL_TEST_FILES_C) > test.c
 test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(LIBKD_LIB) $(QFITS_LIB) \
 		$(ANUTILS_LIB) $(CAIRO_LIB) $(COMMON)/cairoutils.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
