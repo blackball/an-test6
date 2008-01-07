@@ -25,6 +25,8 @@
 
 #include "kdtree.h"
 #include "kdtree_fits_io.h"
+#include "ioutils.h"
+#include "fitsioutils.h"
 
 void printHelp(char* progname) {
 	printf("\nUsage: %s <input> <output>\n"
@@ -42,6 +44,13 @@ int main(int argc, char** args) {
 	kdtree_t* kd;
 	char* infn;
 	char* outfn;
+    qfits_header* hdr;
+    qfits_header* outhdr;
+    int i, Next;
+    //int nextras;
+    //extra_table* extras;
+    FILE* fout;
+    FILE* fin;
 
     while ((argchar = getopt(argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -59,7 +68,7 @@ int main(int argc, char** args) {
     outfn = args[optind+1];
 
     printf("Reading kdtree from file %s ...\n", infn);
-    kd = kdtree_fits_read(infn, NULL);
+    kd = kdtree_fits_read(infn, &hdr);
 
     printf("Treetype: 0x%x\n", kd->treetype);
     printf("Data type:     %s\n", kdtree_kdtype_to_string(kdtree_datatype(kd)));
@@ -88,12 +97,98 @@ int main(int argc, char** args) {
             printf("  %i: [%g, %g]\n", d, kd->minval[d], kd->maxval[d]);
     }
 
+    printf("Computing bounding boxes...\n");
+    kdtree_fix_bounding_boxes(kd);
+
     printf("Running kdtree_check...\n");
     if (kdtree_check(kd)) {
         printf("kdtree_check failed.\n");
         exit(-1);
     }
 
+    outhdr = qfits_header_new();
+    fits_append_long_comment(outhdr, "This file was processed by the fix-bb "
+                             "program, part of the Astrometry.net suite.  The "
+                             "extra FITS headers in the original file are "
+                             "given below:");
+    fits_append_long_comment(outhdr, "---------------------------------");
+                          
+    for (i=0; i<hdr->n; i++) {
+        char key[FITS_LINESZ+1];
+        char val[FITS_LINESZ+1];
+        char com[FITS_LINESZ+1];
+        qfits_header_getitem(hdr, i, key, val, com, NULL);
+        //qfits_header_getitem(hdr, i, key, NULL, NULL, NULL);
+        if (!(fits_is_primary_header(key) ||
+              fits_is_table_header(key))) {
+            qfits_header_append(outhdr, key, val, com, NULL);
+        }
+    }
+    fits_append_long_comment(outhdr, "---------------------------------");
+
+    //if (kdtree_fits_write_extras(kd, outfn, hdr, extras, nextras)) {
+    if (kdtree_fits_write(kd, outfn, outhdr)) {
+        fprintf(stderr, "Failed to write output.\n");
+        exit(-1);
+    }
+    //free(extras);
+
+    printf("Finding extra extensions...\n");
+    Next = qfits_query_n_ext(infn);
+    //extras = calloc(Next, sizeof(extra_table));
+    //nextras = 0;
+
+    fin = fopen(infn, "rb");
+    if (!fin) {
+        fprintf(stderr, "Failed to re-open input file for reading: %s\n", strerror(errno));
+        exit(-1);
+    }
+    fout = fopen(outfn, "ab");
+    if (!fout) {
+        fprintf(stderr, "Failed to re-open output file for writing: %s\n", strerror(errno));
+        exit(-1);
+    }
+
+    for (i=0; i<Next; i++) {
+        int hoffset, hlength;
+        int doffset, dlength;
+        int ext = i+1;
+
+        if (qfits_is_table(infn, ext)) {
+            qfits_table* table;
+            table = qfits_table_open(infn, ext);
+            if (table &&
+                (table->nc == 1) &&
+                kdtree_fits_column_is_kdtree(table->col[0].tlabel))
+                continue;
+        }
+        printf("Extension %i is not part of the kdtree.  Copying it verbatim.\n", ext);
+        /*
+         extras[nextras].name = strdup(;
+         nextras++;
+         */
+        if (qfits_get_hdrinfo(infn, ext, &hoffset, &hlength) ||
+            qfits_get_datinfo(infn, ext, &doffset, &dlength)) {
+            fprintf(stderr, "Failed to get header or data offset & length for extension %i.\n", ext);
+            exit(-1);
+        }
+
+        if (pipe_file_offset(fin, hoffset, hlength, fout) ||
+            pipe_file_offset(fin, doffset, dlength, fout)) {
+            fprintf(stderr, "Failed to write extension %i verbatim.\n", ext);
+            exit(-1);
+        }
+    }
+    fclose(fin);
+    if (fclose(fout)) {
+        fprintf(stderr, "Failed to close output file: %s\n", strerror(errno));
+        exit(-1);
+    }
+
+    /*
+     free(kd->bb.any);
+     kd->bb.any = NULL;
+     */
     kdtree_fits_close(kd);
 
 	return 0;

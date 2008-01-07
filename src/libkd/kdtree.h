@@ -420,6 +420,8 @@ bool kdtree_node_point_maxdist2_exceeds(const kdtree_t* kd, int node,
 /* Sanity-check a tree. 0=okay. */
 int kdtree_check(const kdtree_t* t);
 
+void kdtree_fix_bounding_boxes(kdtree_t* kd);
+
 #if 0
 /* Range seach using callback */
 void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,

@@ -2350,6 +2350,23 @@ kdtree_t* MANGLE(kdtree_build)
 	return kd;
 }
 
+void MANGLE(kdtree_fix_bounding_boxes)(kdtree_t* kd) {
+    // FIXME - do this log(N) times more efficiently by propagating
+    // bounding boxes up the levels of the tree...
+    int i;
+    int D = kd->ndim;
+    kd->bb.any = MALLOC(kd->nnodes * sizeof(ttype) * D * 2);
+    assert(kd->bb.any);
+	for (i=0; i<kd->nnodes; i++) {
+		unsigned int left, right;
+        dtype hi[D], lo[D];
+        left = kdtree_left(kd, i);
+        right = kdtree_right(kd, i);
+        compute_bb(KD_DATA(kd, D, left), D, right - left + 1, lo, hi);
+        save_bb(kd, i, lo, hi);
+    }
+}
+
 bool MANGLE(kdtree_node_point_mindist2_exceeds)
 	 (const kdtree_t* kd, int node, const etype* query, double maxd2) {
 	int D = kd->ndim;

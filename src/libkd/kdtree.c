@@ -569,6 +569,11 @@ bool kdtree_get_bboxes(const kdtree_t* kd, int node, void* bblo, void* bbhi) {
 
 
 
+KD_DECLARE(kdtree_fix_bounding_boxes, void, (kdtree_t* kd));
+
+void kdtree_fix_bounding_boxes(kdtree_t* kd) {
+	KD_DISPATCH(kdtree_fix_bounding_boxes, kd->treetype, , (kd));
+}
 
 
 

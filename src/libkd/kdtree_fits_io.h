@@ -63,6 +63,19 @@ struct extra_table_info {
 };
 
 
+// names of FITS tables.
+#define KD_STR_NODES     "kdtree_nodes"
+#define KD_STR_LR        "kdtree_lr"
+#define KD_STR_PERM      "kdtree_perm"
+#define KD_STR_BB        "kdtree_bb"
+#define KD_STR_SPLIT     "kdtree_split"
+#define KD_STR_SPLITDIM  "kdtree_splitdim"
+#define KD_STR_DATA      "kdtree_data"
+#define KD_STR_RANGE     "kdtree_range"
+
+// is the given column name one of the above strings?
+int kdtree_fits_column_is_kdtree(char* columnname);
+
 /* These shouldn't be called by user code; they are used internally. */
 kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras);
 int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extra_table* extras, int nextras);

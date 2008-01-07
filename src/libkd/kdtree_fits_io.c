@@ -31,6 +31,19 @@
 #include "fitsioutils.h"
 #include "qfits.h"
 
+// is the given table name one of the above strings?
+int kdtree_fits_column_is_kdtree(char* columnname) {
+    return
+        (strcmp(columnname, KD_STR_NODES) == 0) ||
+        (strcmp(columnname, KD_STR_LR   ) == 0) ||
+        (strcmp(columnname, KD_STR_PERM ) == 0) ||
+        (strcmp(columnname, KD_STR_BB   ) == 0) ||
+        (strcmp(columnname, KD_STR_SPLIT) == 0) ||
+        (strcmp(columnname, KD_STR_SPLITDIM) == 0) ||
+        (strcmp(columnname, KD_STR_DATA ) == 0) ||
+        (strcmp(columnname, KD_STR_RANGE) == 0);
+}
+
 kdtree_t* kdtree_fits_read(char* fn, qfits_header** p_hdr) {
 	return kdtree_fits_read_extras(fn, p_hdr, NULL, 0);
 }

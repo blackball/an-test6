@@ -22,16 +22,6 @@
 #include "fitsioutils.h"
 #include "kdtree.h"
 
-// names of FITS tables.
-#define KD_STR_NODES     "kdtree_nodes"
-#define KD_STR_LR        "kdtree_lr"
-#define KD_STR_PERM      "kdtree_perm"
-#define KD_STR_BB        "kdtree_bb"
-#define KD_STR_SPLIT     "kdtree_split"
-#define KD_STR_SPLITDIM  "kdtree_splitdim"
-#define KD_STR_DATA      "kdtree_data"
-#define KD_STR_RANGE     "kdtree_range"
-
 static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 	if (!strcmp(ext->name, KD_STR_NODES)) {
 		ext->datasize = COMPAT_NODE_SIZE(kd);
@@ -40,9 +30,9 @@ static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 		ext->nitems = kd->nbottom;
 	} else if (!strcmp(ext->name, KD_STR_PERM)) {
 		ext->nitems = kd->ndata;
-	} else if (!strcmp(ext->name, KD_STR_BB)) {
-		ext->datasize = sizeof(ttype) * kd->ndim * 2;
-		ext->nitems = kd->nnodes;
+    } else if (!strcmp(ext->name, KD_STR_BB)) {
+        ext->datasize = sizeof(ttype) * kd->ndim * 2;
+        // ext->nitems = kd->nnodes;
 	} else if (!strcmp(ext->name, KD_STR_SPLIT)) {
 		ext->nitems = kd->ninterior;
 	} else if (!strcmp(ext->name, KD_STR_SPLITDIM)) {
@@ -149,6 +139,26 @@ kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int 
 		return NULL;
 	}
 
+    // accept (but warn about) old-school buggy BB extension.
+    if (extras[ibb].found) {
+        int nitems_old = (kdt->nnodes + 1) / 2 - 1;
+        int nitems_new = kdt->nnodes;
+        if (!((extras[ibb].nitems == nitems_old) ||
+              (extras[ibb].nitems == nitems_new))) {
+            fprintf(stderr, "The %s table should contain either %i (new) or "
+                    "%i (old buggy) bounding-boxes, but it has %i.  Proceeding "
+                    "as though this table extension doesn't exist.\n",
+                    KD_STR_BB, nitems_new, nitems_old, extras[ibb].nitems);
+            extras[ibb].found = 0;
+        }
+        if (extras[ibb].nitems == nitems_old) {
+            fprintf(stderr, "Warning: this file contains an old buggy %s extension; it "
+                    "has %i rather than %i items.  Proceeding anyway, but this is probably a "
+                    "bug unless you are running the fix-bb program!\n",
+                    KD_STR_BB, nitems_old, nitems_new);
+        }
+    }
+
 	// you need either bounding boxes, compatibility nodes, or split position/dim
 	if (!(extras[ibb].found ||
 		  extras[inodes].found ||
@@ -235,7 +245,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_NODES;
 		ext->datasize = COMPAT_NODE_SIZE(kd);
 		ext->nitems = kd->nnodes;
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The table containing column \"%s\" contains \"legacy\" "
 			 "kdtree nodes (kdtree_node_t structs).  These nodes contain two "
 			 "%u-byte, native-endian unsigned ints, followed by a bounding-box, "
@@ -250,7 +260,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_LR;
 		ext->datasize = sizeof(u32);
 		ext->nitems = kd->nbottom;
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the kdtree \"LR\" array. "
 			 "This array has one %u-byte, native-endian unsigned int for each "
 			 "leaf node in the tree. For each node, it gives the index of the "
@@ -263,7 +273,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_PERM;
 		ext->datasize = sizeof(u32);
 		ext->nitems = kd->ndata;
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the kdtree permutation array. "
 			 "This array contains one %u-byte, native-endian unsigned int for "
 			 "each data point in the tree. For each data point, it gives the "
@@ -276,7 +286,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_BB;
 		ext->datasize = sizeof(ttype) * kd->ndim * 2;
 		ext->nitems = kd->nnodes;
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the kdtree bounding-box array. "
 			 "This array contains two %u-dimensional points, stored as %u-byte, "
 			 "native-endian %ss, for each node in the tree. Each data "
@@ -291,7 +301,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->datasize = sizeof(ttype);
 		ext->nitems = kd->ninterior;
 		if (!kd->splitdim) {
-			fits_add_long_comment
+			fits_append_long_comment
 				(hdr, "The \"%s\" table contains the kdtree splitting-plane "
 				 "boundaries, and also the splitting dimension, packed into "
 				 "a %u-byte, native-endian %s, for each interior node in the tree. "
@@ -304,7 +314,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 				 kdtree_kdtype_to_string(kdtree_treetype(kd)),
 				 kd->dimbits, (kd->dimbits > 1 ? "s" : ""));
 		} else {
-			fits_add_long_comment
+			fits_append_long_comment
 				(hdr, "The \"%s\" table contains the kdtree splitting-plane "
 				 "boundaries as %u-byte, native-endian %s, for each interior node in the tree. "
 				 "The dimension along which the splitting-plane splits is stored in "
@@ -322,7 +332,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_SPLITDIM;
 		ext->datasize = sizeof(u8);
 		ext->nitems = kd->ninterior;
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the kdtree splitting-plane "
 			 "dimensions as %u-byte unsigned ints, for each interior node in the tree. "
 			 "The location of the splitting-plane along that dimension is stored "
@@ -338,7 +348,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_DATA;
 		ext->datasize = sizeof(dtype) * kd->ndim;
 		ext->nitems = kd->ndata;
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the kdtree data. "
 			 "It is stored as %u-dimensional, %u-byte native-endian %ss.",
 			 KD_STR_DATA, (unsigned int)kd->ndim, (unsigned int)sizeof(dtype),
@@ -355,7 +365,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 		ext->name = KD_STR_RANGE;
 		ext->datasize = sizeof(double);
 		ext->nitems = (kd->ndim * 2 + 1);
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the scaling parameters of the "
 			 "kdtree.  This tells how to convert from the format of the data "
 			 "to the internal format of the tree (and vice versa). "
@@ -365,14 +375,14 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 			 "bound, and the final element is the scale, which says how many "
 			 "tree units there are per data unit.",
 			 KD_STR_RANGE, (unsigned int)sizeof(double), (unsigned int)kd->ndim, (unsigned int)kd->ndim);
-		fits_add_long_comment
+		fits_append_long_comment
 			(hdr, "For reference, here are the ranges of the data.  Note that "
 			 "this is not used by the libkd software, it's just for human readers.");
 		for (d=0; d<kd->ndim; d++)
-			fits_add_long_comment
+			fits_append_long_comment
 				(hdr, "  dim %i: [%g, %g]", d, kd->minval[d], kd->maxval[d]);
-		fits_add_long_comment(hdr, "scale: %g", kd->scale);
-		fits_add_long_comment(hdr, "1/scale: %g", kd->invscale);
+		fits_append_long_comment(hdr, "scale: %g", kd->scale);
+		fits_append_long_comment(hdr, "1/scale: %g", kd->invscale);
 		ext++;
 	}
 
@@ -384,9 +394,9 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 
 	Ne = ext - extras;
 	
-	qfits_header_add(hdr, "KDT_EXT",  (char*)kdtree_kdtype_to_string(kdtree_exttype(kd)),  "kdtree: external type", NULL);
-	qfits_header_add(hdr, "KDT_INT",  (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
-	qfits_header_add(hdr, "KDT_DATA", (char*)kdtree_kdtype_to_string(kdtree_datatype(kd)), "kdtree: type of the data", NULL);
+	qfits_header_append(hdr, "KDT_EXT",  (char*)kdtree_kdtype_to_string(kdtree_exttype(kd)),  "kdtree: external type", NULL);
+	qfits_header_append(hdr, "KDT_INT",  (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
+	qfits_header_append(hdr, "KDT_DATA", (char*)kdtree_kdtype_to_string(kdtree_datatype(kd)), "kdtree: type of the data", NULL);
 
 	rtn = kdtree_fits_common_write(kd, fn, hdr, extras, Ne);
 
