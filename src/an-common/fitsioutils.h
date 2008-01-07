@@ -32,6 +32,12 @@ double fits_get_double_val(const qfits_table* table, int column,
 int fits_is_table_header(const char* keyword);
 
 /*
+ Returns 1 if the given keyword is one of the required keywords in the
+ primary header.
+ */
+int fits_is_primary_header(const char* key);
+
+/*
  Copies headers that aren't part of the BINTABLE specification from "src"
  to "dest".
  */
@@ -72,6 +78,10 @@ int fits_add_args(qfits_header* src, char** args, int argc);
 int 
 ATTRIB_FORMAT(printf,2,3)
 fits_add_long_comment(qfits_header* dst, const char* format, ...);
+
+int 
+ATTRIB_FORMAT(printf,2,3)
+fits_append_long_comment(qfits_header* dst, const char* format, ...);
 
 int 
 ATTRIB_FORMAT(printf,2,3)

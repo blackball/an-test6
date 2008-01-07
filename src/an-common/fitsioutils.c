@@ -81,6 +81,14 @@ int fits_is_table_header(const char* key) {
             !strcasecmp(key, "END")) ? 1 : 0;
 }
 
+int fits_is_primary_header(const char* key) {
+    return (!strcasecmp(key, "SIMPLE") ||
+            !strcasecmp(key, "BITPIX") ||
+            !strncasecmp(key, "NAXIS...", 5) ||
+            !strcasecmp(key, "EXTEND") ||
+            !strcasecmp(key, "END")) ? 1 : 0;
+}
+
 void fits_copy_non_table_headers(qfits_header* dest, const qfits_header* src) {
     char key[FITS_LINESZ+1];
     char val[FITS_LINESZ+1];
@@ -151,7 +159,7 @@ int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue) 
   return 0;
 }
 
-static int add_long_line(qfits_header* hdr, const char* keyword, const char* indent, const char* format, va_list lst) {
+static int add_long_line(qfits_header* hdr, const char* keyword, const char* indent, int append, const char* format, va_list lst) {
 	const int charsperline = 60;
 	char* origstr = NULL;
 	char* str;
@@ -179,7 +187,10 @@ static int add_long_line(qfits_header* hdr, const char* keyword, const char* ind
 			}
 		}
 		sprintf(copy, "%s%.*s", (doindent ? indent : ""), nchars, str);
-		qfits_header_add(hdr, keyword, copy, NULL, NULL);
+        if (append)
+            qfits_header_append(hdr, keyword, copy, NULL, NULL);
+        else
+            qfits_header_add(hdr, keyword, copy, NULL, NULL);
 		len -= nchars;
 		str += nchars;
 	} while (len > 0);
@@ -192,7 +203,7 @@ add_long_line_b(qfits_header* hdr, const char* keyword, const char* indent, cons
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(hdr, keyword, indent, format, lst);
+	rtn = add_long_line(hdr, keyword, indent, 0, format, lst);
 	va_end(lst);
 	return rtn;
 }
@@ -202,7 +213,17 @@ fits_add_long_comment(qfits_header* dst, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(dst, "COMMENT", "  ", format, lst);
+	rtn = add_long_line(dst, "COMMENT", "  ", 0, format, lst);
+	va_end(lst);
+	return rtn;
+}
+
+int 
+fits_append_long_comment(qfits_header* dst, const char* format, ...) {
+	va_list lst;
+	int rtn;
+	va_start(lst, format);
+	rtn = add_long_line(dst, "COMMENT", "  ", 1, format, lst);
 	va_end(lst);
 	return rtn;
 }
@@ -212,7 +233,7 @@ fits_add_long_history(qfits_header* dst, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(dst, "HISTORY", "  ", format, lst);
+	rtn = add_long_line(dst, "HISTORY", "  ", 0, format, lst);
 	va_end(lst);
 	return rtn;
 }
@@ -222,7 +243,7 @@ int fits_add_args(qfits_header* hdr, char** args, int argc) {
 	for (i=0; i<argc; i++) {
 		const char* str = args[i];
 		int rtn;
-		rtn = add_long_line_b(hdr, "HISTORY", "  ", "%s", str);
+		rtn = add_long_line_b(hdr, "HISTORY", "  ", 0, "%s", str);
 		if (rtn)
 			return rtn;
 	}
