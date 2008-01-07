@@ -8,6 +8,7 @@
 
 if test $# -eq 0 ; then FILES=*.c ; else FILES=$* ; fi
 
+
 echo '
 
 /* This is auto-generated code. Edit at your own peril. */
@@ -43,13 +44,13 @@ echo \
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
-    printf("%s\n", output->buffer);
+    printf("%s\\n", output->buffer);
 }
 
 int main(int argc, char** args)
 {
     if (argc > 1 && !strcmp(args[1], "-d")) {
-        printf("Setting die on fail.\n");
+        printf("Setting die on fail.\\n");
         CuDieOnFail();
     }
     RunAllTests();
