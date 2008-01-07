@@ -75,7 +75,7 @@ $(LIBKD_NOIO): $(KD) $(INTERNALS_NOIO)
 checktree: checktree.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-fix-bb: fix_bb.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
+fix-bb: fix-bb.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 .PHONY: clean

@@ -101,10 +101,11 @@ kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int 
 	ext++;
 
 	// kd->bb
-	ext->name = KD_STR_BB;
-	ext->compute_tablesize = tablesize_kd;
-	ibb = ext - extras;
-	ext++;
+    ext->name = KD_STR_BB;
+    //ext->compute_tablesize = tablesize_kd;
+    ext->compute_tablesize = NULL;
+    ibb = ext - extras;
+    ext++;
 
 	// kd->split
 	ext->name = KD_STR_SPLIT;
