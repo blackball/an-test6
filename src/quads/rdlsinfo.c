@@ -23,6 +23,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "starutil.h"
 #include "mathutil.h"
@@ -37,18 +38,9 @@ void printHelp(char* progname) {
 			"\n", progname);
 }
 
-static double ra2mercx(double ra) {
-	return ra / 360.0;
-}
-static double dec2mercy(double dec) {
-	return 0.5 + (asinh(tan(deg2rad(dec))) / (2.0 * M_PI));
-}
 static double mercy2dec(double y) {
 	return rad2deg(atan(sinh((y - 0.5) * (2.0 * M_PI))));
 }
-
-#define min(a,b) (((a)<(b))?(a):(b))
-#define max(a,b) (((a)>(b))?(a):(b))
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -116,9 +108,9 @@ int main(int argc, char** args) {
 			for (i=0; i<(dl_size(rd)/2); i++) {
 				double ra  = dl_get(rd, 2*i);
 				if (ra > 180)
-					ramin = min(ramin, ra);
+					ramin = MIN(ramin, ra);
 				else
-					ramax = max(ramax, ra);
+					ramax = MAX(ramax, ra);
 			}
 			racenter = (ramax - 360 + ramin) / 2.0;
 			if (racenter < 0.0)
