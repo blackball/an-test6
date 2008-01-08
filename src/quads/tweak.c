@@ -810,7 +810,7 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 		char buf[1000];
 		snprintf(buf, 1000, t->hppath, hp);
 		printf("opening %s\n", buf);
-		kd = kdtree_fits_read(buf, NULL);
+		kd = kdtree_fits_read(buf, NULL, NULL);
 		printf("success\n");
 		assert(kd);
 		cached_kd_hp = hp;
