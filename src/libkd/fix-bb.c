@@ -47,8 +47,6 @@ int main(int argc, char** args) {
     qfits_header* hdr;
     qfits_header* outhdr;
     int i, Next;
-    //int nextras;
-    //extra_table* extras;
     FILE* fout;
     FILE* fin;
 
@@ -119,7 +117,6 @@ int main(int argc, char** args) {
         char val[FITS_LINESZ+1];
         char com[FITS_LINESZ+1];
         qfits_header_getitem(hdr, i, key, val, com, NULL);
-        //qfits_header_getitem(hdr, i, key, NULL, NULL, NULL);
         if (!(fits_is_primary_header(key) ||
               fits_is_table_header(key))) {
             qfits_header_append(outhdr, key, val, com, NULL);
@@ -127,17 +124,15 @@ int main(int argc, char** args) {
     }
     fits_append_long_comment(outhdr, "---------------------------------");
 
-    //if (kdtree_fits_write_extras(kd, outfn, hdr, extras, nextras)) {
+    kd->name = strdup("tst");
+
     if (kdtree_fits_write(kd, outfn, outhdr)) {
         fprintf(stderr, "Failed to write output.\n");
         exit(-1);
     }
-    //free(extras);
 
     printf("Finding extra extensions...\n");
     Next = qfits_query_n_ext(infn);
-    //extras = calloc(Next, sizeof(extra_table));
-    //nextras = 0;
 
     fin = fopen(infn, "rb");
     if (!fin) {
@@ -164,10 +159,6 @@ int main(int argc, char** args) {
                 continue;
         }
         printf("Extension %i is not part of the kdtree.  Copying it verbatim.\n", ext);
-        /*
-         extras[nextras].name = strdup(;
-         nextras++;
-         */
         if (qfits_get_hdrinfo(infn, ext, &hoffset, &hlength) ||
             qfits_get_datinfo(infn, ext, &doffset, &dlength)) {
             fprintf(stderr, "Failed to get header or data offset & length for extension %i.\n", ext);
@@ -186,10 +177,6 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
-    /*
-     free(kd->bb.any);
-     kd->bb.any = NULL;
-     */
     kdtree_fits_close(kd);
 
 	return 0;

@@ -72,6 +72,7 @@ struct extra_table_info {
 
 
 // names (actually prefixes) of FITS tables.
+#define KD_STR_HEADER    "kdtree_header"
 #define KD_STR_NODES     "kdtree_nodes"
 #define KD_STR_LR        "kdtree_lr"
 #define KD_STR_PERM      "kdtree_perm"
@@ -85,7 +86,7 @@ struct extra_table_info {
 int kdtree_fits_column_is_kdtree(char* columnname);
 
 /* These shouldn't be called by user code; they are used internally. */
-kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras);
+int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extras, int nextras);
 int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* hdr, const extra_table* extras, int nextras, FILE* out);
 
 #endif

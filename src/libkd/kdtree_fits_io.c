@@ -35,22 +35,57 @@
 // is the given table name one of the above strings?
 int kdtree_fits_column_is_kdtree(char* columnname) {
     return
-        (strcmp(columnname, KD_STR_NODES) == 0) ||
-        (strcmp(columnname, KD_STR_LR   ) == 0) ||
-        (strcmp(columnname, KD_STR_PERM ) == 0) ||
-        (strcmp(columnname, KD_STR_BB   ) == 0) ||
-        (strcmp(columnname, KD_STR_SPLIT) == 0) ||
-        (strcmp(columnname, KD_STR_SPLITDIM) == 0) ||
-        (strcmp(columnname, KD_STR_DATA ) == 0) ||
-        (strcmp(columnname, KD_STR_RANGE) == 0);
+        (strcmp(columnname, KD_STR_HEADER) == 0) ||
+        starts_with(columnname, KD_STR_NODES) ||
+        starts_with(columnname, KD_STR_LR   ) ||
+        starts_with(columnname, KD_STR_PERM ) ||
+        starts_with(columnname, KD_STR_BB   ) ||
+        starts_with(columnname, KD_STR_SPLIT) ||
+        starts_with(columnname, KD_STR_SPLITDIM) ||
+        starts_with(columnname, KD_STR_DATA ) ||
+        starts_with(columnname, KD_STR_RANGE);
 }
 
 kdtree_t* kdtree_fits_read(const char* fn, const char* treename, qfits_header** p_hdr) {
 	return kdtree_fits_read_extras(fn, treename, p_hdr, NULL, 0);
 }
 
+static int is_tree_header_ok(qfits_header* header, int* ndim, int* ndata,
+                             int* nnodes, unsigned int* treetype, int oldstyle) {
+	unsigned int ext_type, int_type, data_type;
+    char* str;
+    if (oldstyle) {
+        *ndim   = qfits_header_getint(header, "NDIM", -1);
+        *ndata  = qfits_header_getint(header, "NDATA", -1);
+        *nnodes = qfits_header_getint(header, "NNODES", -1);
+    } else {
+        *ndim   = qfits_header_getint(header, "KDT_NDIM", -1);
+        *ndata  = qfits_header_getint(header, "KDT_NDAT", -1);
+        *nnodes = qfits_header_getint(header, "KDT_NNOD", -1);
+    }
+    str = qfits_pretty_string(qfits_header_getstr(header, "KDT_EXT"));
+    ext_type = kdtree_kdtype_parse_ext_string(str);
+    str = qfits_pretty_string(qfits_header_getstr(header, "KDT_INT"));
+    int_type = kdtree_kdtype_parse_tree_string(str);
+    str = qfits_pretty_string(qfits_header_getstr(header, "KDT_DATA"));
+    data_type = kdtree_kdtype_parse_data_string(str);
+
+    // default: external world is doubles.
+	if (ext_type == KDT_NULL)
+		ext_type = KDT_EXT_DOUBLE;
+
+	*treetype = kdtree_kdtypes_to_treetype(ext_type, int_type, data_type);
+
+    if ((*ndim > -1) && (*ndata > -1) && (*nnodes > -1) &&
+        (int_type != KDT_NULL) && (data_type != KDT_NULL) &&
+        (fits_check_endian(header) == 0)) {
+        return 1;
+    }
+    return 0;
+}
+
 // declarations
-KD_DECLARE(kdtree_read_fits, kdtree_t*, (const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* uextras, int nuextras));
+KD_DECLARE(kdtree_read_fits, int, (const char* fn, kdtree_t* kd, extra_table* uextras, int nuextras));
 
 /**
    This function reads FITS headers to try to determine which kind of tree
@@ -61,66 +96,93 @@ KD_DECLARE(kdtree_read_fits, kdtree_t*, (const char* fn, const char* treename, q
  */
 kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_header** p_hdr, extra_table* extras, int nextras) {
 	qfits_header* header;
-	unsigned int ext_type, int_type, data_type;
+    int ndim, ndata, nnodes;
 	unsigned int tt;
-	char* str;
-	kdtree_t* kd = NULL;
-	int legacy = 0;
+	kdtree_t* kdtree = NULL;
+    int found = 0;
+    int rtn;
 
 	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		return NULL;
 	}
-	header = qfits_header_read(fn);
-	if (!header) {
-		fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
+
+    kdtree = CALLOC(1, sizeof(kdtree_t));
+    if (!kdtree) {
+		fprintf(stderr, "Couldn't allocate kdtree.\n");
 		return NULL;
-	}
+    }
 
-	str = qfits_header_getstr(header, "KDT_EXT");
-	ext_type = kdtree_kdtype_parse_ext_string(qfits_pretty_string(str));
+    if (!treename) {
+        // Look in the primary header...
+        header = qfits_header_read(fn);
+        if (!header) {
+            fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
+            return NULL;
+        }
+        if (is_tree_header_ok(header, &ndim, &ndata, &nnodes, &tt, 1)) {
+            found = 1;
+        } else {
+            qfits_header_destroy(header);
+        }
+    }
+    if (!found) {
+        int i, nexten;
+        // scan the extension headers, looking for one that contains a matching KDT_NAME entry.
+        nexten = qfits_query_n_ext(fn);
+        header = NULL;
+        for (i=1; i<=nexten; i++) {
+            char* name;
+            header = qfits_header_readext(fn, i);
+            if (!header) {
+                fprintf(stderr, "Failed to read header for extension %i.\n", i);
+                return NULL;
+            }
+            name = fits_get_dupstring(header, "KDT_NAME");
+            if (!name)
+                continue;
+            // no treename specified: take the first one found.
+            if (treename && strcmp(name, treename)) {
+                free(name);
+                continue;
+            }
 
-	str = qfits_header_getstr(header, "KDT_INT");
-	int_type = kdtree_kdtype_parse_tree_string(qfits_pretty_string(str));
+            if (is_tree_header_ok(header, &ndim, &ndata, &nnodes, &tt, 0)) {
+                kdtree->name = name;
+                break;
+            }
+            qfits_header_destroy(header);
+        }
+        if (i > nexten) {
+            // Not found.
+            fprintf(stderr, "Kdtree named \"%s\" not found in file %s.\n", treename, fn);
+            FREE(kdtree);
+            return NULL;
+        }
+    }
 
-	str = qfits_header_getstr(header, "KDT_DATA");
-	data_type = kdtree_kdtype_parse_data_string(qfits_pretty_string(str));
+    if (p_hdr)
+        *p_hdr = header;
+    else
+        qfits_header_destroy(header);
 
-	/*
-	  printf("kdtree types: external %s, internal %s, data %s.\n",
-	  kdtree_kdtype_to_string(ext_type),
-	  kdtree_kdtype_to_string(int_type),
-	  kdtree_kdtype_to_string(data_type));
-	*/
+    kdtree->ndata  = ndata;
+    kdtree->ndim   = ndim;
+    kdtree->nnodes = nnodes;
+	kdtree->nbottom = (nnodes+1)/2;
+	kdtree->ninterior = nnodes - kdtree->nbottom;
+    kdtree->nlevels = kdtree_nnodes_to_nlevels(nnodes);
+	kdtree->treetype = tt;
 
-	if ((ext_type == KDT_NULL) &&
-		(int_type == KDT_NULL) &&
-		(data_type == KDT_NULL)) {
-		// if it's got a REAL_SZ header, it might be a legacy kdtree.
-		int realsz = qfits_header_getint(header, "REAL_SZ", 0);
-		if (realsz == sizeof(double)) {
-			//printf("it might be a legacy kdtree!\n");
-			legacy = 1;
-			// select KDTT_DOUBLE
-			int_type  = KDT_TREE_DOUBLE;
-			data_type = KDT_DATA_DOUBLE;
-			ext_type  = KDT_EXT_DOUBLE;
-		}
-	}
+	KD_DISPATCH(kdtree_read_fits, tt, rtn = , (fn, kdtree, extras, nextras));
 
-	// default: external world is doubles.
-	if (ext_type == KDT_NULL) {
-		ext_type = KDT_EXT_DOUBLE;
-	}
+    if (rtn) {
+        FREE(kdtree->name);
+        FREE(kdtree);
+        return NULL;
+    }
 
-	qfits_header_destroy(header);
-
-	tt = kdtree_kdtypes_to_treetype(ext_type, int_type, data_type);
-	//printf("kd treetype %#x\n", tt);
-
-	KD_DISPATCH(kdtree_read_fits, tt, kd = , (fn, treename, p_hdr, tt, extras, nextras));
-
-	return kd;
+	return kdtree;
 }
 
 KD_DECLARE(kdtree_append_fits, int, (const kdtree_t* kd, const qfits_header* hdr, const extra_table* ue, int nue, FILE* out));
@@ -172,130 +234,23 @@ int kdtree_fits_write(const kdtree_t* kdtree, const char* fn, const qfits_header
 	return kdtree_fits_write_extras(kdtree, fn, hdr, NULL, 0);
 }
 
-kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras) {
+int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extras, int nextras) {
 	FILE* fid;
-	kdtree_t* kdtree = NULL;
-	qfits_header* header;
-    int ndata, ndim, nnodes;
 	int size;
 	unsigned char* map;
 	int i;
-    int found = 0;
-
-	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-		return NULL;
-	}
-
-	fid = fopen(fn, "rb");
-	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s to read kdtree: %s\n",
-				fn, strerror(errno));
-		return NULL;
-	}
-
-    if (!treename) {
-        header = qfits_header_read(fn);
-        if (!header) {
-            fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
-            fclose(fid);
-            return NULL;
-        }
-        ndim   = qfits_header_getint(header, "NDIM", -1);
-        ndata  = qfits_header_getint(header, "NDATA", -1);
-        nnodes = qfits_header_getint(header, "NNODES", -1);
-
-        if ((ndim > -1) && (ndata > -1) && (nnodes > -1)) {
-            found = 1;
-            if (fits_check_endian(header)) {
-                fprintf(stderr, "File %s was written with wrong endianness.\n", fn);
-                qfits_header_destroy(header);
-                fclose(fid);
-                return NULL;
-            }
-        }
-
-    }
-    if (!found) {
-        int nexten;
-        // scan the extension headers, looking for one that contains a matching KDT_NAME entry.
-        nexten = qfits_query_n_ext(fn);
-        header = NULL;
-        for (i=1; i<=nexten; i++) {
-            char* name;
-            if (header)
-                qfits_header_destroy(header);
-            header = qfits_header_readext(fn, i);
-            if (!header) {
-                fprintf(stderr, "Failed to read header for extension %i.\n", i);
-                fclose(fid);
-                return NULL;
-            }
-            name = fits_get_dupstring(header, "KDT_NAME");
-            if (!name)
-                continue;
-            // no treename specified: take the first one found.
-            if (treename && strcmp(name, treename))
-                continue;
-
-            if (fits_check_endian(header)) {
-                fprintf(stderr, "File %s was written with wrong endianness.\n", fn);
-                qfits_header_destroy(header);
-                fclose(fid);
-                return NULL;
-            }
-
-            ndim   = qfits_header_getint(header, "KDT_NDIM", -1);
-            ndata  = qfits_header_getint(header, "KDT_NDAT", -1);
-            nnodes = qfits_header_getint(header, "KDT_NNOD", -1);
-            if ((ndim == -1) || (ndata == -1) || (nnodes == -1)) {
-                fprintf(stderr, "Couldn't find KDT_NDIM, KDT_NDAT, or KDT_NNOD entries in the FITS header.\n");
-                qfits_header_destroy(header);
-                fclose(fid);
-                return NULL;
-            }
-            break;
-        }
-        if (i > nexten) {
-            // Not found.
-            fprintf(stderr, "Kdtree named \"%s\" not found in file %s.\n", treename, fn);
-            if (header) qfits_header_destroy(header);
-            fclose(fid);
-            return NULL;
-        }
-    }
-
-    if (p_hdr)
-        *p_hdr = header;
-    else
-        qfits_header_destroy(header);
 
 	for (i=0; i<nextras; i++) {
 		extra_table* tab = extras + i;
 		if (fits_find_table_column(fn, tab->name, &tab->offset, &tab->size, NULL)) {
 			if (tab->required) {
 				fprintf(stderr, "Failed to find table %s in file %s.\n", tab->name, fn);
-				fclose(fid);
-				return NULL;
+				return -1;
 			}
 			tab->found = 0;
 		} else
 			tab->found = 1;
 	}
-
-    kdtree = CALLOC(1, sizeof(kdtree_t));
-    if (!kdtree) {
-		fprintf(stderr, "Couldn't allocate kdtree.\n");
-		return NULL;
-    }
-    kdtree->name = strdup_safe(treename);
-    kdtree->ndata  = ndata;
-    kdtree->ndim   = ndim;
-    kdtree->nnodes = nnodes;
-	kdtree->nbottom = (nnodes+1)/2;
-	kdtree->ninterior = nnodes - kdtree->nbottom;
-    kdtree->nlevels = kdtree_nnodes_to_nlevels(nnodes);
-	kdtree->treetype = treetype;
 
 	size = 0;
 	for (i=0; i<nextras; i++) {
@@ -315,9 +270,8 @@ kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_he
 			if (tab->nitems != table->nr) {
 				fprintf(stderr, "Table %s in file %s: expected %i data items, found %i.\n",
 						tab->name, fn, tab->nitems, table->nr);
-				FREE(kdtree);
 				qfits_table_close(table);
-				return NULL;
+				return -1;
 			}
 		} else {
 			tab->nitems = table->nr;
@@ -327,9 +281,8 @@ kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_he
 			if (tab->datasize != ds) {
 				fprintf(stderr, "Table %s in file %s: expected data size %i, found %i.\n",
 						tab->name, fn, tab->datasize, ds);
-				FREE(kdtree);
 				qfits_table_close(table);
-				return NULL;
+				return -1;
 			}
 		} else {
 			tab->datasize = ds;
@@ -340,20 +293,24 @@ kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_he
 		if (fits_bytes_needed(tablesize) != tab->size) {
 			fprintf(stderr, "The size of table %s in file %s doesn't jive with what's expected: %i vs %i.\n",
 					tab->name, fn, fits_bytes_needed(tablesize), tab->size);
-			FREE(kdtree);
-			return NULL;
+			return -1;
 		}
 
 		size = MAX(size, tab->offset + tab->size);
 	}
 
 	// launch!
+	fid = fopen(fn, "rb");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s to read kdtree: %s\n",
+				fn, strerror(errno));
+		return -1;
+	}
 	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
 	fclose(fid);
 	if (map == MAP_FAILED) {
 		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
-		FREE(kdtree);
-		return NULL;
+		return -1;
 	}
 
 	kdtree->mmapped = map;
@@ -366,7 +323,7 @@ kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_he
 		tab->ptr = (map + tab->offset);
 	}
 
-	return kdtree;
+	return 0;
 }
 
 int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* inhdr, const extra_table* extras, int nextras, FILE* out) {
@@ -376,8 +333,11 @@ int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* inhdr, 
     int ncols, nrows;
     int tablesize;
 
-    nrows = ncols = tablesize = 0;
+    nrows = tablesize = 0;
+    ncols = 1;
     table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+    qfits_col_fill(table->col, 0, 0, 1, TFITS_BIN_TYPE_A,
+                   KD_STR_HEADER, "", "", "", 0, 0, 0, 0, 0);
     tablehdr = qfits_table_ext_header_default(table);
 
 	if (inhdr)

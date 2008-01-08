@@ -19,39 +19,50 @@
 #ifndef KDTREE_NO_FITS
 
 #include "kdtree_fits_io.h"
-#include "fitsioutils.h"
 #include "kdtree.h"
+#include "fitsioutils.h"
+#include "ioutils.h"
 
 static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
-	if (!strcmp(ext->name, KD_STR_NODES)) {
+    // This function should only be called if the column name matched, so we
+    // don't have to worry about columns from different kdtrees.
+	if (starts_with(ext->name, KD_STR_NODES)) {
 		ext->datasize = COMPAT_NODE_SIZE(kd);
 		ext->nitems = kd->nnodes;
-	} else if (!strcmp(ext->name, KD_STR_LR)) {
+	} else if (starts_with(ext->name, KD_STR_LR)) {
 		ext->nitems = kd->nbottom;
-	} else if (!strcmp(ext->name, KD_STR_PERM)) {
+	} else if (starts_with(ext->name, KD_STR_PERM)) {
 		ext->nitems = kd->ndata;
-    } else if (!strcmp(ext->name, KD_STR_BB)) {
+    } else if (starts_with(ext->name, KD_STR_BB)) {
         ext->datasize = sizeof(ttype) * kd->ndim * 2;
         // ext->nitems = kd->nnodes;
-	} else if (!strcmp(ext->name, KD_STR_SPLIT)) {
+	} else if (starts_with(ext->name, KD_STR_SPLIT)) {
 		ext->nitems = kd->ninterior;
-	} else if (!strcmp(ext->name, KD_STR_SPLITDIM)) {
+	} else if (starts_with(ext->name, KD_STR_SPLITDIM)) {
 		ext->nitems = kd->ninterior;
-	} else if (!strcmp(ext->name, KD_STR_DATA)) {
+	} else if (starts_with(ext->name, KD_STR_DATA)) {
 		ext->datasize = sizeof(dtype) * kd->ndim;
 		ext->nitems = kd->ndata;
-	} else if (!strcmp(ext->name, KD_STR_RANGE)) {
+	} else if (starts_with(ext->name, KD_STR_RANGE)) {
 		ext->nitems = (kd->ndim * 2 + 1);
 	} else {
 		fprintf(stderr, "tablesize_kd called with ext->name %s\n", ext->name);
 	}
 }
 
-kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* userextras, int nuserextras) {
+static char* get_table_name(const char* treename, const char* tabname) {
+    char* rtn;
+    if (!treename) {
+        return strdup_safe(tabname);
+    }
+    asprintf_safe(&rtn, "%s_%s", tabname, treename);
+    return rtn;
+}
+
+int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras, int nextra) {
 	extra_table* ext;
 	int Ne;
 	double* tempranges;
-	kdtree_t* kdt;
 
 	int inodes;
 	int ilr;
@@ -64,98 +75,97 @@ kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, const char* treename, qfits_h
 
 	bool bbtree;
 
-	extra_table extras[10 + nuserextras];
+	extra_table extras[10 + nextra];
 
 	memset(extras, 0, sizeof(extras));
 
 	ext = extras;
 
 	// kd->nodes
-	ext->name = KD_STR_NODES;
+	ext->name = get_table_name(kd->name, KD_STR_NODES);
 	ext->compute_tablesize = tablesize_kd;
 	inodes = ext - extras;
 	ext++;
 
 	// kd->lr
-	ext->name = KD_STR_LR;
+	ext->name = get_table_name(kd->name, KD_STR_LR);
 	ext->compute_tablesize = tablesize_kd;
 	ext->datasize = sizeof(u32);
 	ilr = ext - extras;
 	ext++;
 
 	// kd->perm
-	ext->name = KD_STR_PERM;
+	ext->name = get_table_name(kd->name, KD_STR_PERM);
 	ext->compute_tablesize = tablesize_kd;
 	ext->datasize = sizeof(u32);
 	iperm = ext - extras;
 	ext++;
 
 	// kd->bb
-    ext->name = KD_STR_BB;
+	ext->name = get_table_name(kd->name, KD_STR_BB);
     //ext->compute_tablesize = tablesize_kd;
     ext->compute_tablesize = NULL;
     ibb = ext - extras;
     ext++;
 
 	// kd->split
-	ext->name = KD_STR_SPLIT;
+	ext->name = get_table_name(kd->name, KD_STR_SPLIT);
 	ext->datasize = sizeof(ttype);
 	ext->compute_tablesize = tablesize_kd;
 	isplit = ext - extras;
 	ext++;
 
 	// kd->splitdim
-	ext->name = KD_STR_SPLITDIM;
+	ext->name = get_table_name(kd->name, KD_STR_SPLITDIM);
 	ext->datasize = sizeof(u8);
 	ext->compute_tablesize = tablesize_kd;
 	isplitdim = ext - extras;
 	ext++;
 
 	// kd->data
-	ext->name = KD_STR_DATA;
+	ext->name = get_table_name(kd->name, KD_STR_DATA);
 	ext->compute_tablesize = tablesize_kd;
 	ext->required = TRUE;
 	idata = ext - extras;
 	ext++;
 
 	// kd->minval/kd->maxval/kd->scale
-	ext->name = KD_STR_RANGE;
+	ext->name = get_table_name(kd->name, KD_STR_RANGE);
 	ext->datasize = sizeof(double);
 	ext->compute_tablesize = tablesize_kd;
 	irange = ext - extras;
 	ext++;
 
 	// user tables are processed after internal ones...
-	if (nuserextras) {
+	if (nextra) {
 		// copy in...
-		memcpy(ext, userextras, nuserextras * sizeof(extra_table));
-		ext += nuserextras;
+		memcpy(ext, uextras, nextra * sizeof(extra_table));
+		ext += nextra;
 	}
 
 	Ne = ext - extras;
-	kdt = kdtree_fits_common_read(fn, treename, p_hdr, treetype, extras, Ne);
-	if (!kdt) {
+	if (kdtree_fits_common_read(fn, kd, extras, Ne)) {
 		fprintf(stderr, "Failed to read kdtree from file %s.\n", fn);
-		return NULL;
+        goto bailout;
 	}
 
     // accept (but warn about) old-school buggy BB extension.
     if (extras[ibb].found) {
-        int nitems_old = (kdt->nnodes + 1) / 2 - 1;
-        int nitems_new = kdt->nnodes;
+        int nitems_old = (kd->nnodes + 1) / 2 - 1;
+        int nitems_new = kd->nnodes;
         if (!((extras[ibb].nitems == nitems_old) ||
               (extras[ibb].nitems == nitems_new))) {
             fprintf(stderr, "The %s table should contain either %i (new) or "
                     "%i (old buggy) bounding-boxes, but it has %i.  Proceeding "
                     "as though this table extension doesn't exist.\n",
-                    KD_STR_BB, nitems_new, nitems_old, extras[ibb].nitems);
+                    extras[ibb].name, nitems_new, nitems_old, extras[ibb].nitems);
             extras[ibb].found = 0;
         }
         if (extras[ibb].nitems == nitems_old) {
             fprintf(stderr, "Warning: this file contains an old buggy %s extension; it "
                     "has %i rather than %i items.  Proceeding anyway, but this is probably a "
                     "bug unless you are running the fix-bb program!\n",
-                    KD_STR_BB, nitems_old, nitems_new);
+                    extras[ibb].name, nitems_old, nitems_new);
         }
     }
 
@@ -165,66 +175,75 @@ kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, const char* treename, qfits_h
 		  (extras[isplit].found &&
 		   (TTYPE_INTEGER || extras[isplitdim].found)))) {
 		fprintf(stderr, "tree contains neither traditional nodes, bounding boxes nor split+dim data.\n");
-		kdtree_fits_close(kdt);
-		return NULL;
+        goto bailout;
 	}
 
 	if ((TTYPE_INTEGER && !ETYPE_INTEGER) &&
 		!(extras[irange].found)) {
 		fprintf(stderr, "treee does not contain required range information.\n");
-		kdtree_fits_close(kdt);
-		return NULL;
+        goto bailout;
 	}
 
 	bbtree = extras[ibb].found;
 
 	if (extras[irange].found) {
 		tempranges = extras[irange].ptr;
-		kdt->minval = tempranges;
-		kdt->maxval = tempranges + kdt->ndim;
-		kdt->scale  = tempranges[kdt->ndim * 2];
-		kdt->invscale = 1.0 / kdt->scale;
+		kd->minval = tempranges;
+		kd->maxval = tempranges + kd->ndim;
+		kd->scale  = tempranges[kd->ndim * 2];
+		kd->invscale = 1.0 / kd->scale;
 	}
 
-	kdt->data.any = extras[idata].ptr;
+	kd->data.any = extras[idata].ptr;
 	
 	if (extras[isplit].found) {
         if (extras[isplitdim].found) {
-            kdt->splitmask = UINT32_MAX;
+            kd->splitmask = UINT32_MAX;
         } else {
-            compute_splitbits(kdt);
+            compute_splitbits(kd);
         }
 	}
 
 	if (extras[isplitdim].found) {
-		kdt->splitdim = extras[isplitdim].ptr;
+		kd->splitdim = extras[isplitdim].ptr;
 	}
 
 	if (extras[isplit].found) {
-		kdt->split.any = extras[isplit].ptr;
+		kd->split.any = extras[isplit].ptr;
 	}
 
 	if (extras[ibb].found) {
-		kdt->bb.any = extras[ibb].ptr;
+		kd->bb.any = extras[ibb].ptr;
 	}
 
 	if (extras[iperm].found) {
-		kdt->perm = extras[iperm].ptr;
+		kd->perm = extras[iperm].ptr;
 	}
 
 	if (extras[ilr].found) {
-		kdt->lr = extras[ilr].ptr;
+		kd->lr = extras[ilr].ptr;
 	}
 
 	if (extras[inodes].found) {
-		kdt->nodes = extras[inodes].ptr;
+		kd->nodes = extras[inodes].ptr;
 	}
 
-	if (nuserextras)
+	if (nextra)
 		// copy out...
-		memcpy(userextras, extras + (Ne - nuserextras), nuserextras * sizeof(extra_table));
+		memcpy(uextras, extras + (Ne - nextra), nextra * sizeof(extra_table));
 
-	return kdt;
+	return 0;
+
+ bailout:
+    free(extras[inodes].name);
+    free(extras[ilr].name);
+    free(extras[iperm].name);
+    free(extras[ibb].name);
+    free(extras[isplit].name);
+    free(extras[isplitdim].name);
+    free(extras[idata].name);
+    free(extras[irange].name);
+    return -1;
 }
 
 int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
@@ -235,6 +254,8 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 	double tempranges[kd->ndim * 2 + 1];
 	extra_table extras[10 + nue];
     qfits_header* hdr;
+    int i, Nkdext;
+    int rtn;
 
 	memset(extras, 0, sizeof(extras));
 	ext = extras;
@@ -245,7 +266,7 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 
 	if (kd->nodes) {
 		ext->ptr = kd->nodes;
-		ext->name = KD_STR_NODES;
+		ext->name = get_table_name(kd->name, KD_STR_NODES);
 		ext->datasize = COMPAT_NODE_SIZE(kd);
 		ext->nitems = kd->nnodes;
 		fits_append_long_comment
@@ -254,13 +275,13 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 			 "%u-byte, native-endian unsigned ints, followed by a bounding-box, "
 			 "which is two points in NDIM (=%u) dimensional space, stored as "
 			 "native-endian doubles (%u bytes each).  The whole struct has size %u.",
-			 KD_STR_NODES, (unsigned int)sizeof(unsigned int), kd->ndim, (unsigned int)sizeof(double),
-			 (unsigned int)COMPAT_NODE_SIZE(kd));
+			 ext->name, (unsigned int)sizeof(unsigned int), kd->ndim, (unsigned int)sizeof(double),
+			 ext->datasize);
 		ext++;
 	}
 	if (kd->lr) {
 		ext->ptr = kd->lr;
-		ext->name = KD_STR_LR;
+		ext->name = get_table_name(kd->name, KD_STR_LR);
 		ext->datasize = sizeof(u32);
 		ext->nitems = kd->nbottom;
 		fits_append_long_comment
@@ -268,12 +289,12 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 			 "This array has one %u-byte, native-endian unsigned int for each "
 			 "leaf node in the tree. For each node, it gives the index of the "
 			 "rightmost data point owned by the node.",
-			 KD_STR_LR, (unsigned int)sizeof(u32));
+			 ext->name, ext->datasize);
 		ext++;
 	}
 	if (kd->perm) {
 		ext->ptr = kd->perm;
-		ext->name = KD_STR_PERM;
+		ext->name = get_table_name(kd->name, KD_STR_PERM);
 		ext->datasize = sizeof(u32);
 		ext->nitems = kd->ndata;
 		fits_append_long_comment
@@ -281,12 +302,12 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 			 "This array contains one %u-byte, native-endian unsigned int for "
 			 "each data point in the tree. For each data point, it gives the "
 			 "index that the data point had in the original array on which the "
-			 "kdtree was built.", KD_STR_PERM, (unsigned int)sizeof(u32));
+			 "kdtree was built.", ext->name, ext->datasize);
 		ext++;
 	}
 	if (kd->bb.any) {
 		ext->ptr = kd->bb.any;
-		ext->name = KD_STR_BB;
+		ext->name = get_table_name(kd->name, KD_STR_BB);
 		ext->datasize = sizeof(ttype) * kd->ndim * 2;
 		ext->nitems = kd->nnodes;
 		fits_append_long_comment
@@ -294,13 +315,13 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 			 "This array contains two %u-dimensional points, stored as %u-byte, "
 			 "native-endian %ss, for each node in the tree. Each data "
 			 "point owned by a node is contained within its bounding box.",
-			 KD_STR_BB, (unsigned int)kd->ndim, (unsigned int)sizeof(ttype),
+			 ext->name, (unsigned int)kd->ndim, (unsigned int)sizeof(ttype),
 			 kdtree_kdtype_to_string(kdtree_treetype(kd)));
 		ext++;
 	}
 	if (kd->split.any) {
 		ext->ptr = kd->split.any;
-		ext->name = KD_STR_SPLIT;
+		ext->name = get_table_name(kd->name, KD_STR_SPLIT);
 		ext->datasize = sizeof(ttype);
 		ext->nitems = kd->ninterior;
 		if (!kd->splitdim) {
@@ -313,7 +334,7 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 				 "The left child of a node contains data points that lie on the "
 				 "low side of the splitting plane, and the right child contains "
 				 "data points on the high side of the plane.",
-				 KD_STR_SPLIT, (unsigned int)sizeof(ttype),
+				 ext->name, ext->datasize,
 				 kdtree_kdtype_to_string(kdtree_treetype(kd)),
 				 kd->dimbits, (kd->dimbits > 1 ? "s" : ""));
 		} else {
@@ -325,14 +346,14 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 				 "The left child of a node contains data points that lie on the "
 				 "low side of the splitting plane, and the right child contains "
 				 "data points on the high side of the plane.",
-				 KD_STR_SPLIT, (unsigned int)sizeof(ttype),
+				 ext->name, ext->datasize,
 				 kdtree_kdtype_to_string(kdtree_treetype(kd)));
 		}
 		ext++;
 	}
 	if (kd->splitdim) {
 		ext->ptr = kd->splitdim;
-		ext->name = KD_STR_SPLITDIM;
+		ext->name = get_table_name(kd->name, KD_STR_SPLITDIM);
 		ext->datasize = sizeof(u8);
 		ext->nitems = kd->ninterior;
 		fits_append_long_comment
@@ -343,18 +364,18 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 			 "The left child of a node contains data points that lie on the "
 			 "low side of the splitting plane, and the right child contains "
 			 "data points on the high side of the plane.",
-			 KD_STR_SPLITDIM, (unsigned int)sizeof(u8));
+			 ext->name, ext->datasize);
 		ext++;
 	}
 	if (kd->data.any) {
 		ext->ptr = kd->data.any;
-		ext->name = KD_STR_DATA;
+		ext->name = get_table_name(kd->name, KD_STR_DATA);
 		ext->datasize = sizeof(dtype) * kd->ndim;
 		ext->nitems = kd->ndata;
 		fits_append_long_comment
 			(hdr, "The \"%s\" table contains the kdtree data. "
 			 "It is stored as %u-dimensional, %u-byte native-endian %ss.",
-			 KD_STR_DATA, (unsigned int)kd->ndim, (unsigned int)sizeof(dtype),
+			 ext->name, (unsigned int)kd->ndim, (unsigned int)sizeof(dtype),
 			 kdtree_kdtype_to_string(kdtree_datatype(kd)));
 		ext++;
 	}
@@ -365,7 +386,7 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 		tempranges[kd->ndim*2] = kd->scale;
 
 		ext->ptr = tempranges;
-		ext->name = KD_STR_RANGE;
+		ext->name = get_table_name(kd->name, KD_STR_RANGE);
 		ext->datasize = sizeof(double);
 		ext->nitems = (kd->ndim * 2 + 1);
 		fits_append_long_comment
@@ -377,7 +398,7 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 			 "the lower bound of the data, the next %u elements are the upper "
 			 "bound, and the final element is the scale, which says how many "
 			 "tree units there are per data unit.",
-			 KD_STR_RANGE, (unsigned int)sizeof(double), (unsigned int)kd->ndim, (unsigned int)kd->ndim);
+			 ext->name, ext->datasize, (unsigned int)kd->ndim, (unsigned int)kd->ndim);
 		fits_append_long_comment
 			(hdr, "For reference, here are the ranges of the data.  Note that "
 			 "this is not used by the libkd software, it's just for human readers.");
@@ -388,6 +409,8 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 		fits_append_long_comment(hdr, "1/scale: %g", kd->invscale);
 		ext++;
 	}
+
+    Nkdext = ext - extras;
 
 	if (nue) {
 		// copy in user extras...
@@ -401,7 +424,13 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 	qfits_header_append(hdr, "KDT_INT",  (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
 	qfits_header_append(hdr, "KDT_DATA", (char*)kdtree_kdtype_to_string(kdtree_datatype(kd)), "kdtree: type of the data", NULL);
 
-	return kdtree_fits_common_write(kd, hdr, extras, Ne, out);
+	rtn = kdtree_fits_common_write(kd, hdr, extras, Ne, out);
+
+    for (i=0; i<Nkdext; i++) {
+        free(extras[i].name);
+    }
+
+    return rtn;
 }
 
 #endif
