@@ -203,6 +203,10 @@ test_libkd: cutest.o test_libkd-main.o test_libkd.o $(LIBKD_LIB) $(QFITS_LIB) $(
 test_libkd-main.c: make-tests.sh test_libkd.c
 	$(AN_SHELL) make-tests.sh test_libkd.c > test_libkd-main.c
 
+ALL_OBJ += $(ALL_TEST_FILES_O) cutest.o
+ALL_OBJ += test_dfind-main.o test_bl-main.o test_ctmf-main.o \
+	test_simplexy-main.o test_dsmooth-main.o test_libkd-main.o test.o
+
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
 	$(AN_SHELL) make-tests.sh $(ALL_TEST_FILES_C) > test.c

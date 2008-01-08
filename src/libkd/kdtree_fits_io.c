@@ -319,6 +319,7 @@ int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extr
 		char lin[FITS_LINESZ+1];
 		for (i=0; i<hdr->n; i++) {
 			qfits_header_getitem(hdr, i, key, val, com, lin);
+            // FIXME - don't copy headers that used by the kdtree IO!
 			qfits_header_add(header, key, val, com, lin);
 		}
 	}

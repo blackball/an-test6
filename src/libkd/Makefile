@@ -80,7 +80,9 @@ fix-bb: fix-bb.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 
 .PHONY: clean
 clean:
-	-rm $(LIBKD) checktree $(KD) $(KD_FITS) deps $(DEPS) checktree.o \
+	-rm $(LIBKD) $(KD) $(KD_FITS) deps $(DEPS) \
+		checktree checktree.o \
+		fix-bb fix-bb.o \
 		$(INTERNALS) $(INTERNALS_NOIO) $(LIBKD_NOIO)
 
 realclean: clean

@@ -102,6 +102,7 @@ clean:
 	$(MAKE) -C libkd clean
 	$(MAKE) -C quads clean
 	-$(MAKE) -C tilecache/render clean
+	-$(MAKE) -C ontheweb/execs clean
 
 TAGS:
 	etags -I `find . -name "*.c" -o -name "*.h"`
