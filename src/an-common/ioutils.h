@@ -69,6 +69,10 @@ sl* dir_get_contents(const char* path, sl* result, bool filesonly, bool recursiv
  */
 int is_word(const char* cmdline, const char* keyword, char** p_next_word);
 
+int starts_with(const char* str, const char* prefix);
+
+int ends_with(const char* str, const char* prefix);
+
 char* strdup_safe(const char* str);
 
 void add_sigbus_mmap_warning();

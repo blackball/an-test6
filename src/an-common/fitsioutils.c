@@ -261,7 +261,7 @@ int fits_copy_all_headers(const qfits_header* src, qfits_header* dest, char* tar
 
 	for (i=0; i<src->n; i++) {
 		qfits_header_getitem(src, i, key, val, com, lin);
-		if (strcasecmp(key, targetkey))
+		if (targetkey && strcasecmp(key, targetkey))
 			continue;
 		qfits_header_add(dest, key, val, com, lin);
 	}
@@ -554,15 +554,17 @@ int fits_check_double_size(const qfits_header* header) {
 }
 
 int fits_check_endian(const qfits_header* header) {
-	char endian[256];
-    char* str;
-	snprintf(endian, sizeof(endian), "%s", qfits_header_getstr(header, "ENDIAN"));
-	// "endian" contains ' characters around the string, like
-	// '04:03:02:01', so we start at index 1, and only compare the length of
-	// str.
-    str = fits_get_endian_string();
-	if (strncmp(str, endian+1, strlen(str)) != 0) {
-		fprintf(stderr, "File was written with endianness %s, this machine has endianness %s.\n", endian, str);
+    char* filestr;
+    char* localstr;
+
+	filestr = qfits_pretty_string(qfits_header_getstr(header, "ENDIAN"));
+    if (!filestr) {
+        // No ENDIAN header found.
+        return 1;
+    }
+    localstr = fits_get_endian_string();
+	if (strcmp(filestr, localstr)) {
+		fprintf(stderr, "File was written with endianness %s, this machine has endianness %s.\n", filestr, localstr);
 		return -1;
 	}
     return 0;

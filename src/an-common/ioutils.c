@@ -403,6 +403,23 @@ bool file_executable(const char* fn) {
     return (access(fn, X_OK) == 0);
 }
 
+int starts_with(const char* str, const char* prefix) {
+	int len = strlen(prefix);
+	if (strncmp(str, prefix, len))
+		return 0;
+	return 1;
+}
+
+int ends_with(const char* str, const char* suffix) {
+	int len = strlen(suffix);
+    int len2 = strlen(str);
+    if (len > len2)
+        return 0;
+	if (strncmp(str + len2 - len, suffix, len))
+		return 0;
+	return 1;
+}
+
 char* strdup_safe(const char* str) {
 	char* rtn;
 	if (!str) return NULL;

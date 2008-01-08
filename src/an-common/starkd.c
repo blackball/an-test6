@@ -70,7 +70,7 @@ startree* startree_open(char* fn) {
 	if (!s)
 		return s;
 
-	s->tree = kdtree_fits_read_extras(fn, &s->header, extras,
+	s->tree = kdtree_fits_read_extras(fn, NULL, &s->header, extras,
 									  sizeof(extras)/sizeof(extra_table));
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read star kdtree from file %s\n", fn);
