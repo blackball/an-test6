@@ -346,7 +346,8 @@ def getfile(request):
     res = HttpResponse()
 
     pngimages = [ 'annotation', 'annotation-big',
-                  'sources', 'sources-big' ]
+                  'sources', 'sources-big',
+                  'redgreen', 'redgreen-big' ]
     if f in pngimages:
         fn = convert(job, job.field, f)
         res['Content-Type'] = 'image/png'

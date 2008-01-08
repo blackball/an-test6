@@ -118,6 +118,13 @@ endif
 #cairoutils.o: cairoutils.c
 #	$(CC) $(CFLAGS) $(NETPBM_INC) $(CAIRO_INC) $(JPEG_INC) $(PNG_INC) -c $< -o $@
 
+.PHONY: allclean realclean clean
+
+allclean: clean
+	rm -f *.o *~ *.dep 
+
+realclean: allclean
+
 clean:
 	rm -f $(ANUTILS_LIB) $(ANFILES_LIB) $(ALL_OBJ) \
-		$(DEPS) deps cairoutils.o
+		$(DEPS) deps cairoutils.o _sip.so grab-stellarium-constellations

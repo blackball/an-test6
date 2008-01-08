@@ -119,8 +119,12 @@ DEP_PREREQS := $(QFITS_LIB)
 CFLAGS += $(NETPBM_INC)
 include $(COMMON)/makefile.deps
 
+.PHONY: allclean realclean clean
+
 allclean: clean
 	rm -f *.o *~ *.dep 
+
+realclean: allclean
 
 clean:
 	rm -f $(USNOBMAP_EXECS) $(MISC_EXECS) $(ALL_OBJS) \

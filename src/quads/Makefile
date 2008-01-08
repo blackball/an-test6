@@ -117,6 +117,7 @@ ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 	$(PIPELINE_MAIN_OBJ) $(PROSPECTUS_MAIN_OBJ) $(FITS_UTILS_MAIN_OBJ) \
 	$(OTHER_OBJS) $(2MASSOBJ) $(SIMPLEXY_OBJ) $(SIMPLEXY_SHARED_OBJ) $(FIXAXIS_OBJ) \
 	$(TEST_DFIND_OBJ) $(SIMPLEXY2_OBJ)
+ALL_EXECS :=
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) \
@@ -206,6 +207,8 @@ test_libkd-main.c: make-tests.sh test_libkd.c
 ALL_OBJ += $(ALL_TEST_FILES_O) cutest.o
 ALL_OBJ += test_dfind-main.o test_bl-main.o test_ctmf-main.o \
 	test_simplexy-main.o test_dsmooth-main.o test_libkd-main.o test.o
+
+ALL_EXECS += test test_libkd test_simplexy
 
 # You shouldn't need to edit this.
 test.c: make-tests.sh $(ALL_TEST_FILES_C)
@@ -470,11 +473,18 @@ CFLAGS += $(CFITSIO_CFLAGS)
 CFLAGS += $(CAIRO_INC)
 include $(COMMON)/makefile.deps
 
+.PHONY: allclean realclean clean
+
 allclean: clean
 	rm -f *.o *~ *.dep 
+
+realclean: allclean
 
 clean:
 	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \
 		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ) $(IMAGE2XY) \
-		$(NODEP_OBJS)
+		$(NODEP_OBJS) plot-constellations fitsverify plotquad plotxy \
+		$(ALL_EXECS)
+
+
 

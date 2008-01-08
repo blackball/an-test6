@@ -78,7 +78,7 @@ checktree: checktree.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 fix-bb: fix-bb.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-.PHONY: clean
+.PHONY: realclean clean
 clean:
 	-rm $(LIBKD) $(KD) $(KD_FITS) deps $(DEPS) \
 		checktree checktree.o \

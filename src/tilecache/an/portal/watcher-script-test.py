@@ -189,7 +189,6 @@ def real_handle_job(job, sshconfig):
 
     (lower, upper) = job.get_scale_bounds()
     units = job.get_scaleunits()
-    (dotweak, tweakorder) = job.get_tweak()
 
     axyargs.update({
         '-o' : axy,
@@ -202,10 +201,16 @@ def real_handle_job(job, sshconfig):
         '--match' : 'match.fits',
         '--solved' : 'solved',
         })
+
+    (dotweak, tweakorder) = job.get_tweak()
+    log('do tweak?', dotweak, 'order', tweakorder)
     if dotweak:
-        axyargs['--no-tweak'] = None
-    else:
         axyargs['--tweak-order'] = tweakorder
+    else:
+        axyargs['--no-tweak'] = None
+
+    #for (k,v) in axyargs.items():
+    #log('  ', k, ' = ', str(v))
 
     cmd = 'augment-xylist ' + ' '.join(k + ((v and ' ' + str(v)) or '') for (k,v) in axyargs.items())
 

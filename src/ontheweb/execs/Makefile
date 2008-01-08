@@ -55,8 +55,12 @@ DEP_OBJ := $(ALL_OBJS)
 
 include $(COMMON)/makefile.deps
 
+.PHONY: allclean realclean clean
+
 allclean: clean
 	rm -f *.o *~ *.dep 
+
+realclean: allclean
 
 clean:
 	rm -f $(EXECS) $(ALL_OBJS) \

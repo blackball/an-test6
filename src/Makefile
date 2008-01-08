@@ -96,13 +96,24 @@ test:
 clean:
 	$(MAKE) -C an-common clean
 	-$(MAKE) -C cfitsio distclean
-	$(MAKE) -C qfits-an distclean
+	-$(MAKE) -C qfits-an distclean
 	-rm -R qfits-an/stage
 	$(MAKE) -C gsl-an clean
 	$(MAKE) -C libkd clean
 	$(MAKE) -C quads clean
 	-$(MAKE) -C tilecache/render clean
 	-$(MAKE) -C ontheweb/execs clean
+
+realclean:
+	$(MAKE) -C an-common realclean
+	-$(MAKE) -C cfitsio distclean
+	-$(MAKE) -C qfits-an distclean
+	-rm -R qfits-an/stage
+	$(MAKE) -C gsl-an clean
+	$(MAKE) -C libkd realclean
+	$(MAKE) -C quads realclean
+	-$(MAKE) -C tilecache/render realclean
+	-$(MAKE) -C ontheweb/execs realclean
 
 TAGS:
 	etags -I `find . -name "*.c" -o -name "*.h"`

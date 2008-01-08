@@ -287,6 +287,31 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         run_convert_command(cmd)
         return fullfn
 
+    elif fn == 'redgreen' or fn == 'redgreen-big':
+        if fn == 'redgreen':
+            imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
+            scale = 1.0 / field.displayscale
+        else:
+            imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
+            scale = 1.0
+        fxy = job.get_filename('job.axy')
+        ixy = convert(job, field, 'index-xy', store_imgtype, store_imgsize)
+        commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
+        logfn = 'blind.log'
+        cmd = ('plotxy -i %s -I %s -r 4 -C green -P' % (ixy, imgfn) + commonargs 
+               + '| plotxy -i %s -I - -P -r 6 -C brightred -N 50' % (fxy) + commonargs 
+               + '| plotxy -i %s -I - -r 4 -C brightred -n 50 > %s' %
+               (fxy, fullfn) + commonargs)
+        run_convert_command(cmd, fullfn)
+        return fullfn
+
+    elif fn == 'index-xy':
+        irdfn = job.get_filename('index.rd.fits')
+        wcsfn = job.get_filename('wcs.fits')
+        cmd = 'wcs-rd2xy -q -w %s -i %s -o %s' % (wcsfn, irdfn, fullfn)
+        run_convert_command(cmd, fullfn)
+        return fullfn
+
     elif fn == 'sources':
         imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
         xyls = job.get_filename('job.axy')
