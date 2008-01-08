@@ -48,6 +48,7 @@ void printHelp() {
             "   [-8]  don't use optimization for byte (u8) images.\n"
             "   [-H]  downsample by a factor of 2 before running simplexy.\n"
 			"   [-o <output-filename>]  write XYlist to given filename.\n"
+            "   [-q] be quiet (non-verbose).\n"
 			"\n"
 			"   image2xy 'file.fits[1]'   - process first extension.\n"
 			"   image2xy 'file.fits[2]'   - process second extension \n"
