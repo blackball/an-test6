@@ -30,6 +30,7 @@
 #include "kdtree_mem.h"
 #include "fitsioutils.h"
 #include "qfits.h"
+#include "ioutils.h"
 
 // is the given table name one of the above strings?
 int kdtree_fits_column_is_kdtree(char* columnname) {
@@ -44,12 +45,12 @@ int kdtree_fits_column_is_kdtree(char* columnname) {
         (strcmp(columnname, KD_STR_RANGE) == 0);
 }
 
-kdtree_t* kdtree_fits_read(const char* fn, qfits_header** p_hdr) {
-	return kdtree_fits_read_extras(fn, p_hdr, NULL, 0);
+kdtree_t* kdtree_fits_read(const char* fn, const char* treename, qfits_header** p_hdr) {
+	return kdtree_fits_read_extras(fn, treename, p_hdr, NULL, 0);
 }
 
 // declarations
-KD_DECLARE(kdtree_read_fits, kdtree_t*, (const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* uextras, int nuextras));
+KD_DECLARE(kdtree_read_fits, kdtree_t*, (const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* uextras, int nuextras));
 
 /**
    This function reads FITS headers to try to determine which kind of tree
@@ -58,7 +59,7 @@ KD_DECLARE(kdtree_read_fits, kdtree_t*, (const char* fn, qfits_header** p_hdr, u
    calls kdtree_fits_common_read(), then does some extras processing and
    returns.
  */
-kdtree_t* kdtree_fits_read_extras(const char* fn, qfits_header** p_hdr, extra_table* extras, int nextras) {
+kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_header** p_hdr, extra_table* extras, int nextras) {
 	qfits_header* header;
 	unsigned int ext_type, int_type, data_type;
 	unsigned int tt;
@@ -117,7 +118,7 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, qfits_header** p_hdr, extra_ta
 	tt = kdtree_kdtypes_to_treetype(ext_type, int_type, data_type);
 	//printf("kd treetype %#x\n", tt);
 
-	KD_DISPATCH(kdtree_read_fits, tt, kd = , (fn, p_hdr, tt, extras, nextras));
+	KD_DISPATCH(kdtree_read_fits, tt, kd = , (fn, treename, p_hdr, tt, extras, nextras));
 
 	return kd;
 }
@@ -143,11 +144,19 @@ int kdtree_fits_append(const kdtree_t* kdtree, const qfits_header* hdr, FILE* ou
 
 int kdtree_fits_write_extras(const kdtree_t* kdtree, const char* fn, const qfits_header* hdr, const extra_table* extras, int nextras) {
     int rtn;
-    FILE* fout = fopen(fn, "wb");
+    FILE* fout;
+    qfits_header* header;
+
+    fout = fopen(fn, "wb");
     if (!fout) {
         fprintf(stderr, "Failed to open file %s for writing: %s\n", fn, strerror(errno));
         return -1;
     }
+
+    header = qfits_table_prim_header_default();
+    qfits_header_dump(header, fout);
+    qfits_header_destroy(header);
+
     rtn = kdtree_fits_append_extras(kdtree, hdr, extras, nextras, fout);
     if (rtn) {
         return rtn;
@@ -163,14 +172,15 @@ int kdtree_fits_write(const kdtree_t* kdtree, const char* fn, const qfits_header
 	return kdtree_fits_write_extras(kdtree, fn, hdr, NULL, 0);
 }
 
-kdtree_t* kdtree_fits_common_read(const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras) {
+kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras) {
 	FILE* fid;
 	kdtree_t* kdtree = NULL;
 	qfits_header* header;
-	unsigned int ndata, ndim, nnodes;
+    int ndata, ndim, nnodes;
 	int size;
 	unsigned char* map;
 	int i;
+    int found = 0;
 
 	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -184,33 +194,81 @@ kdtree_t* kdtree_fits_common_read(const char* fn, qfits_header** p_hdr, unsigned
 		return NULL;
 	}
 
-	header = qfits_header_read(fn);
-	if (!header) {
-		fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
-		fclose(fid);
-		return NULL;
-	}
+    if (!treename) {
+        header = qfits_header_read(fn);
+        if (!header) {
+            fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
+            fclose(fid);
+            return NULL;
+        }
+        ndim   = qfits_header_getint(header, "NDIM", -1);
+        ndata  = qfits_header_getint(header, "NDATA", -1);
+        nnodes = qfits_header_getint(header, "NNODES", -1);
 
-    if (fits_check_endian(header)) {
-		fprintf(stderr, "File %s was written with wrong endianness.\n", fn);
-        fclose(fid);
-        return NULL;
+        if ((ndim > -1) && (ndata > -1) && (nnodes > -1)) {
+            found = 1;
+            if (fits_check_endian(header)) {
+                fprintf(stderr, "File %s was written with wrong endianness.\n", fn);
+                qfits_header_destroy(header);
+                fclose(fid);
+                return NULL;
+            }
+        }
+
+    }
+    if (!found) {
+        int nexten;
+        // scan the extension headers, looking for one that contains a matching KDT_NAME entry.
+        nexten = qfits_query_n_ext(fn);
+        header = NULL;
+        for (i=1; i<=nexten; i++) {
+            char* name;
+            if (header)
+                qfits_header_destroy(header);
+            header = qfits_header_readext(fn, i);
+            if (!header) {
+                fprintf(stderr, "Failed to read header for extension %i.\n", i);
+                fclose(fid);
+                return NULL;
+            }
+            name = fits_get_dupstring(header, "KDT_NAME");
+            if (!name)
+                continue;
+            // no treename specified: take the first one found.
+            if (treename && strcmp(name, treename))
+                continue;
+
+            if (fits_check_endian(header)) {
+                fprintf(stderr, "File %s was written with wrong endianness.\n", fn);
+                qfits_header_destroy(header);
+                fclose(fid);
+                return NULL;
+            }
+
+            ndim   = qfits_header_getint(header, "KDT_NDIM", -1);
+            ndata  = qfits_header_getint(header, "KDT_NDAT", -1);
+            nnodes = qfits_header_getint(header, "KDT_NNOD", -1);
+            if ((ndim == -1) || (ndata == -1) || (nnodes == -1)) {
+                fprintf(stderr, "Couldn't find KDT_NDIM, KDT_NDAT, or KDT_NNOD entries in the FITS header.\n");
+                qfits_header_destroy(header);
+                fclose(fid);
+                return NULL;
+            }
+            break;
+        }
+        if (i > nexten) {
+            // Not found.
+            fprintf(stderr, "Kdtree named \"%s\" not found in file %s.\n", treename, fn);
+            if (header) qfits_header_destroy(header);
+            fclose(fid);
+            return NULL;
+        }
     }
 
-	ndim   = qfits_header_getint(header, "NDIM", -1);
-	ndata  = qfits_header_getint(header, "NDATA", -1);
-	nnodes = qfits_header_getint(header, "NNODES", -1);
-
-	if (p_hdr)
-		*p_hdr = header;
-	else
-		qfits_header_destroy(header);
-
-	if ((ndim == -1) || (ndata == -1) || (nnodes == -1)) {
-		fprintf(stderr, "Couldn't find NDIM, NDATA, or NNODES entries in the startree FITS header.\n");
-		fclose(fid);
-		return NULL;
-	}
+    if (p_hdr)
+        *p_hdr = header;
+    else
+        qfits_header_destroy(header);
 
 	for (i=0; i<nextras; i++) {
 		extra_table* tab = extras + i;
@@ -230,6 +288,7 @@ kdtree_t* kdtree_fits_common_read(const char* fn, qfits_header** p_hdr, unsigned
 		fprintf(stderr, "Couldn't allocate kdtree.\n");
 		return NULL;
     }
+    kdtree->name = strdup_safe(treename);
     kdtree->ndata  = ndata;
     kdtree->ndim   = ndim;
     kdtree->nnodes = nnodes;
@@ -310,41 +369,36 @@ kdtree_t* kdtree_fits_common_read(const char* fn, qfits_header** p_hdr, unsigned
 	return kdtree;
 }
 
-int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* hdr, const extra_table* extras, int nextras, FILE* out) {
-    int ncols, nrows;
-    int datasize;
-    int tablesize;
-    qfits_table* table;
-    qfits_header* header;
-    qfits_header* tablehdr;
-    void* dataptr;
+int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* inhdr, const extra_table* extras, int nextras, FILE* out) {
 	int i;
+    qfits_table* table;
+    qfits_header* tablehdr;
+    int ncols, nrows;
+    int tablesize;
 
-    // we create a new header and copy in the user's header items.
-    header = qfits_table_prim_header_default();
-    fits_add_endian(header);
-    fits_header_add_int(header, "NDATA", kdtree->ndata, "kdtree: number of data points");
-    fits_header_add_int(header, "NDIM", kdtree->ndim, "kdtree: number of dimensions");
-    fits_header_add_int(header, "NNODES", kdtree->nnodes, "kdtree: number of nodes");
+    nrows = ncols = tablesize = 0;
+    table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+    tablehdr = qfits_table_ext_header_default(table);
 
-	if (hdr) {
-		int i;
-		char key[FITS_LINESZ+1];
-		char val[FITS_LINESZ+1];
-		char com[FITS_LINESZ+1];
-		char lin[FITS_LINESZ+1];
-		for (i=0; i<hdr->n; i++) {
-			qfits_header_getitem(hdr, i, key, val, com, lin);
-            // FIXME - don't copy headers that used by the kdtree IO!
-			qfits_header_add(header, key, val, com, lin);
-		}
-	}
+	if (inhdr)
+        // FIXME - don't copy headers that conflict with the ones used by this routine!
+        fits_copy_all_headers(inhdr, tablehdr, NULL);
+    fits_add_endian(tablehdr);
+    fits_header_addf   (tablehdr, "KDT_NAME", "kdtree: name of this tree", "'%s'", kdtree->name ? kdtree->name : "");
+    fits_header_add_int(tablehdr, "KDT_NDAT", kdtree->ndata,  "kdtree: number of data points");
+    fits_header_add_int(tablehdr, "KDT_NDIM", kdtree->ndim,   "kdtree: number of dimensions");
+    fits_header_add_int(tablehdr, "KDT_NNOD", kdtree->nnodes, "kdtree: number of nodes");
 
-    qfits_header_dump(header, out);
-    qfits_header_destroy(header);
+    qfits_header_dump(tablehdr, out);
+    qfits_header_destroy(tablehdr);
+    qfits_table_close(table);
 
 	for (i=0; i<nextras; i++) {
-		const extra_table* tab = extras + i;
+		const extra_table* tab;
+        int datasize;
+        void* dataptr;
+
+        tab = extras + i;
 		if (tab->dontwrite)
 			continue;
 		datasize = tab->datasize;
@@ -371,6 +425,7 @@ int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* hdr, co
 
 void kdtree_fits_close(kdtree_t* kd) {
 	if (!kd) return;
+    FREE(kd->name);
 	munmap(kd->mmapped, kd->mmapped_size);
 	FREE(kd);
 }

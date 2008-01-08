@@ -466,6 +466,7 @@ void kdtree_free_query(kdtree_qres_t *kq)
 void kdtree_free(kdtree_t *kd)
 {
 	if (!kd) return;
+    FREE(kd->name);
 	FREE(kd->nodes);
 	FREE(kd->lr);
 	FREE(kd->perm);

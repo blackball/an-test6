@@ -69,7 +69,9 @@ int main(int argc, char** args) {
 	}
 
 	printf("Reading kdtree from file %s ...\n", fn);
-	kd = kdtree_fits_read(fn, NULL);
+	kd = kdtree_fits_read(fn, NULL, NULL);
+
+    printf("Tree name: \"%s\"\n", kd->name);
 
 	printf("Treetype: 0x%x\n", kd->treetype);
 

@@ -47,7 +47,7 @@ static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 	}
 }
 
-kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* userextras, int nuserextras) {
+kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* userextras, int nuserextras) {
 	extra_table* ext;
 	int Ne;
 	double* tempranges;
@@ -133,7 +133,7 @@ kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, qfits_header** p_hdr, unsigne
 	}
 
 	Ne = ext - extras;
-	kdt = kdtree_fits_common_read(fn, p_hdr, treetype, extras, Ne);
+	kdt = kdtree_fits_common_read(fn, treename, p_hdr, treetype, extras, Ne);
 	if (!kdt) {
 		fprintf(stderr, "Failed to read kdtree from file %s.\n", fn);
 		return NULL;

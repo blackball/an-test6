@@ -28,9 +28,9 @@ struct extra_table_info;
 typedef struct extra_table_info extra_table;
 
 
-kdtree_t* kdtree_fits_read(const char* fn, qfits_header** p_hdr);
+kdtree_t* kdtree_fits_read(const char* fn, const char* treename, qfits_header** p_hdr);
 
-kdtree_t* kdtree_fits_read_extras(const char* fn, qfits_header** p_hdr, extra_table* extras, int nextras);
+kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_header** p_hdr, extra_table* extras, int nextras);
 
 int kdtree_fits_write(const kdtree_t* kdtree, const char* fn, const qfits_header* hdr);
 
@@ -43,8 +43,6 @@ void kdtree_fits_close(kdtree_t* kd);
 int kdtree_fits_append(const kdtree_t* kdtree, const qfits_header* hdr, FILE* out);
 
 int kdtree_fits_append_extras(const kdtree_t* kdtree, const qfits_header* hdr, const extra_table* extras, int nextras, FILE* out);
-
-kdtree_t* kdtree_fits_read_named(const char* fn, const char* treename, qfits_header** hdr);
 
 
 
@@ -73,7 +71,7 @@ struct extra_table_info {
 };
 
 
-// names of FITS tables.
+// names (actually prefixes) of FITS tables.
 #define KD_STR_NODES     "kdtree_nodes"
 #define KD_STR_LR        "kdtree_lr"
 #define KD_STR_PERM      "kdtree_perm"
@@ -87,7 +85,7 @@ struct extra_table_info {
 int kdtree_fits_column_is_kdtree(char* columnname);
 
 /* These shouldn't be called by user code; they are used internally. */
-kdtree_t* kdtree_fits_common_read(const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras);
+kdtree_t* kdtree_fits_common_read(const char* fn, const char* treename, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras);
 int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* hdr, const extra_table* extras, int nextras, FILE* out);
 
 #endif
