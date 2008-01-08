@@ -34,20 +34,7 @@
 #include <dirent.h>
 
 #include "ioutils.h"
-
-#ifdef __APPLE__
-static char* canonicalize_file_name(const char* fn) {
-    char* path = malloc(1024);
-    char* canon;
-    canon = realpath(fn, path);
-    if (!canon) {
-        free(path);
-        return NULL;
-    }
-    path = realloc(path, strlen(path) + 1);
-    return path;
-}
-#endif
+#include "gnu-specific.h"
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 

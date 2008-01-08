@@ -61,7 +61,7 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so
 ANUTILS_DEPS :=
 
 ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o \
-	sip.o sip-utils.o md5.o constellations.o
+	sip.o sip-utils.o md5.o constellations.o gnu-specific.o
 ifndef NO_QFITS
 ANUTILS_OBJ += fitsbin.o fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
@@ -96,6 +96,22 @@ _sip.so: sip-utils.o sip.o starutil.o mathutil.o sip_qfits.o \
 		fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
 	$(CC) -shared -o $@ $^
 
+gnu-specific-config.h: gnu-specific-test.c
+	(($(CC) -o gnu-specific-test-canonicalize \
+		$(CFLAGS) -DTEST_CANONICALIZE_FILE_NAME $(LDFLAGS) $^ && \
+	  ./gnu-specific-test-canonicalize) \
+	|| echo "#define NEED_CANONICALIZE_FILE_NAME 1") > $@
+
+ALL_OBJ += gnu-specific.o
+ALL_TARGETS := gnu-specific-test.o gnu-specific-test-canonicalize \
+	gnu-specific-config.h
+
+#gnu-specific-test-canonicalize
+#	(./gnu-specific-test-canonicalize) > $@
+#gnu-specific-test-canonicalize: gnu-specific-config.c
+#	$(CC) -o $@ $(CFLAGS) -DTEST_CANONICALIZE_FILE_NAME $(LDFLAGS) $^ || \
+#		echo "#define NEED_CANONICALIZE_FILE_NAME 1"
+
 DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)
 ifndef NO_QFITS
 DEP_PREREQS := $(QFITS_LIB)
@@ -127,4 +143,5 @@ realclean: allclean
 
 clean:
 	rm -f $(ANUTILS_LIB) $(ANFILES_LIB) $(ALL_OBJ) \
-		$(DEPS) deps cairoutils.o _sip.so grab-stellarium-constellations
+		$(DEPS) deps cairoutils.o _sip.so grab-stellarium-constellations \
+		$(ALL_TARGETS)
