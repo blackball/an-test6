@@ -21,6 +21,7 @@
 // Declarations of GNU-specific functions that we use.
 char* canonicalize_file_name(const char* fn);
 
-
+// This is actually in POSIX1b but may or may not be available.
+int fdatasync(int fd);
 
 #endif

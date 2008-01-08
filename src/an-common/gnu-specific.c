@@ -18,9 +18,16 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "gnu-specific.h"
 #include "gnu-specific-config.h"
+
+#if defined(_POSIX_SYNCHRONIZED_IO) && (_POSIX_SYNCHRONIZED_IO > 0)
+#define NEED_FDATASYNC 0
+#else
+#define NEED_FDATASYNC 1
+#endif
 
 #if NEED_CANONICALIZE_FILE_NAME
 char* canonicalize_file_name(const char* fn) {
@@ -36,3 +43,8 @@ char* canonicalize_file_name(const char* fn) {
 }
 #endif
 
+#if NEED_FDATASYNC
+int fdatasync(int fd) {
+    return fsync(fd);
+}
+#endif
