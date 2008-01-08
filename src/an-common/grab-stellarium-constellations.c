@@ -30,10 +30,15 @@
 #include "an-bool.h"
 #include "starutil.h"
 #include "bl.h"
-//#include "boilerplate.h"
 #include "mathutil.h"
+#include "an-endian.h"
 
 const char* OPTIONS = "h";
+
+// size of entries in Stellarium's hipparcos.fab file.
+static int HIP_SIZE = 15;
+// byte offset to the first element in Stellarium's hipparcos.fab file.
+static int HIP_OFFSET = 4;
 
 void print_help(char* progname) {
     //boilerplate_help_header(stdout);
@@ -55,34 +60,6 @@ static char* hip_dirs[] = {
     "/home/gmaps/usnob-map/execs"
 };
 
-// size of entries in Stellarium's hipparcos.fab file.
-static int HIP_SIZE = 15;
-// byte offset to the first element in Stellarium's hipparcos.fab file.
-static int HIP_OFFSET = 4;
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define IS_BIG_ENDIAN 1
-#else
-#define IS_BIG_ENDIAN 0
-#endif
-// Stellarium writes things in little-endian format.
-static inline void swap(void* p, int nbytes) {
-#if IS_BIG_ENDIAN
-    int i;
-    unsigned char* c = p;
-    for (i=0; i<(nbytes/2); i++) {
-        unsigned char tmp = c[i];
-        c[i] = c[nbytes-(i+1)];
-        c[nbytes-(i+1)] = tmp;
-    }
-#else
-    return;
-#endif
-}
-static inline void swap_32(void* p) {
-    return swap(p, 4);
-}
-
 typedef union {
     uint32_t i;
     float    f;
@@ -92,12 +69,12 @@ static void hip_get_radec(unsigned char* hip, int star1,
                           double* ra, double* dec) {
     intfloat ifval;
     ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1));
-    swap_32(&ifval.i);
+    v32_letoh(&ifval.i);
     *ra = ifval.f;
     // Stellarium stores RA in hours...
     *ra *= (360.0 / 24.0);
     ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1 + 4));
-    swap_32(&ifval.i);
+    v32_letoh(&ifval.i);
     *dec = ifval.f;
 }
 
@@ -161,7 +138,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "render_constellation: failed to read nstars.\n");
 		return -1;
 	}
-	swap_32(&nstars);
+	v32_letoh(&nstars);
 	fprintf(stderr, "render_constellation: Found %i Hipparcos stars\n", nstars);
 
 	mapsize = nstars * HIP_SIZE + HIP_OFFSET;

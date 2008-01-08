@@ -27,17 +27,8 @@
 #include "fitsioutils.h"
 #include "ioutils.h"
 #include "keywords.h"
+#include "an-endian.h"
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define IS_LITTLE_ENDIAN 1
-#else
-#define IS_LITTLE_ENDIAN 0
-#endif
-
-static Inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2);
-static Inline void ntoh64(void* ptr);
-static Inline void ntoh32(void* ptr);
-static Inline void ntoh16(void* ptr);
 
 double fits_get_double_val(const qfits_table* table, int column,
                            const void* rowdata) {
@@ -49,12 +40,12 @@ double fits_get_double_val(const qfits_table* table, int column,
     cdata += (table->col[column].off_beg - table->col[0].off_beg);
     if (table->col[column].atom_type == TFITS_BIN_TYPE_E) {
         memcpy(&fval, cdata, sizeof(fval));
-        ntoh32(&fval);
+        v32_ntoh(&fval);
         dval = fval;
         return fval;
     } else if (table->col[column].atom_type == TFITS_BIN_TYPE_D) {
         memcpy(&dval, cdata, sizeof(dval));
-        ntoh64(&dval);
+        v64_ntoh(&dval);
         return dval;
     } else {
         fprintf(stderr, "Invalid column type %i.\n", table->col[column].atom_type);
@@ -343,50 +334,9 @@ int fits_add_column(qfits_table* table, int column, tfits_type type,
 	return 0;
 }
 
-static Inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
-	unsigned char tmp;
-	tmp = *c1;
-	*c1 = *c2;
-	*c2 = tmp;
-}
-
-static Inline void hton64(void* ptr) {
-#if IS_LITTLE_ENDIAN
-	unsigned char* c = (unsigned char*)ptr;
-	dstn_swap_bytes(c+0, c+7);
-	dstn_swap_bytes(c+1, c+6);
-	dstn_swap_bytes(c+2, c+5);
-	dstn_swap_bytes(c+3, c+4);
-#endif
-}
-static Inline void ntoh64(void* ptr) {
-    hton64(ptr);
-}
-
-static Inline void hton32(void* ptr) {
-#if IS_LITTLE_ENDIAN
-	unsigned char* c = (unsigned char*)ptr;
-	dstn_swap_bytes(c+0, c+3);
-	dstn_swap_bytes(c+1, c+2);
-#endif
-}
-static Inline void ntoh32(void* ptr) {
-    hton32(ptr);
-}
-
-static Inline void hton16(void* ptr) {
-#if IS_LITTLE_ENDIAN
-	unsigned char* c = (unsigned char*)ptr;
-	dstn_swap_bytes(c+0, c+1);
-#endif
-}
-static Inline void ntoh16(void* ptr) {
-    hton16(ptr);
-}
-
 int fits_write_data_D(FILE* fid, double value) {
 	assert(sizeof(double) == 8);
-	hton64(&value);
+	v64_hton(&value);
 	if (fwrite(&value, 8, 1, fid) != 1) {
 		fprintf(stderr, "Failed to write a double to FITS file: %s\n", strerror(errno));
 		return -1;
@@ -396,7 +346,7 @@ int fits_write_data_D(FILE* fid, double value) {
 
 int fits_write_data_E(FILE* fid, float value) {
 	assert(sizeof(float) == 4);
-	hton32(&value);
+	v32_hton(&value);
 	if (fwrite(&value, 4, 1, fid) != 1) {
 		fprintf(stderr, "Failed to write a float to FITS file: %s\n", strerror(errno));
 		return -1;
@@ -421,7 +371,7 @@ int fits_write_data_X(FILE* fid, unsigned char value) {
 }
 
 int fits_write_data_I(FILE* fid, int16_t value) {
-	hton16(&value);
+	v16_hton(&value);
 	if (fwrite(&value, 2, 1, fid) != 1) {
 		fprintf(stderr, "Failed to write a short to FITS file: %s\n", strerror(errno));
 		return -1;
@@ -430,7 +380,7 @@ int fits_write_data_I(FILE* fid, int16_t value) {
 }
 
 int fits_write_data_J(FILE* fid, int32_t value) {
-	hton32(&value);
+	v32_hton(&value);
 	if (fwrite(&value, 4, 1, fid) != 1) {
 		fprintf(stderr, "Failed to write an int to FITS file: %s\n", strerror(errno));
 		return -1;
@@ -439,7 +389,7 @@ int fits_write_data_J(FILE* fid, int32_t value) {
 }
 
 int fits_write_data_K(FILE* fid, int64_t value) {
-	hton64(&value);
+	v64_hton(&value);
 	if (fwrite(&value, 8, 1, fid) != 1) {
 		fprintf(stderr, "Failed to write an int64 to FITS file: %s\n", strerror(errno));
 		return -1;

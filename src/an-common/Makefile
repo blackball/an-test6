@@ -120,6 +120,7 @@ include $(COMMON)/makefile.deps
 
 #stellarium-constellations.c: grab-stellarium-constellations
 stellarium-constellations.c:
+	-$(MAKE) grab-stellarium-constellations
 	-(./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@) || touch $@
 
 grab-stellarium-constellations: grab-stellarium-constellations.o \
