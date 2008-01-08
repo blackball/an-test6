@@ -212,6 +212,9 @@ struct kdtree {
 
     bool has_linear_lr;
 
+    // For i/o: the name of this tree in the file.
+    char* name;
+
 	void* mmapped;          /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
 

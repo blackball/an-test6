@@ -44,12 +44,12 @@ int kdtree_fits_column_is_kdtree(char* columnname) {
         (strcmp(columnname, KD_STR_RANGE) == 0);
 }
 
-kdtree_t* kdtree_fits_read(char* fn, qfits_header** p_hdr) {
+kdtree_t* kdtree_fits_read(const char* fn, qfits_header** p_hdr) {
 	return kdtree_fits_read_extras(fn, p_hdr, NULL, 0);
 }
 
 // declarations
-KD_DECLARE(kdtree_read_fits, kdtree_t*, (char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* uextras, int nuextras));
+KD_DECLARE(kdtree_read_fits, kdtree_t*, (const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* uextras, int nuextras));
 
 /**
    This function reads FITS headers to try to determine which kind of tree
@@ -58,7 +58,7 @@ KD_DECLARE(kdtree_read_fits, kdtree_t*, (char* fn, qfits_header** p_hdr, unsigne
    calls kdtree_fits_common_read(), then does some extras processing and
    returns.
  */
-kdtree_t* kdtree_fits_read_extras(char* fn, qfits_header** p_hdr, extra_table* extras, int nextras) {
+kdtree_t* kdtree_fits_read_extras(const char* fn, qfits_header** p_hdr, extra_table* extras, int nextras) {
 	qfits_header* header;
 	unsigned int ext_type, int_type, data_type;
 	unsigned int tt;
@@ -122,24 +122,48 @@ kdtree_t* kdtree_fits_read_extras(char* fn, qfits_header** p_hdr, extra_table* e
 	return kd;
 }
 
-KD_DECLARE(kdtree_write_fits, int, (kdtree_t* kd, char* fn, qfits_header* hdr, extra_table* ue, int nue));
+KD_DECLARE(kdtree_append_fits, int, (const kdtree_t* kd, const qfits_header* hdr, const extra_table* ue, int nue, FILE* out));
 
 /**
    This function calls the appropriate (mangled) function
-   kdtree_write_fits(), which in turn calls kdtree_fits_common_write()
+   kdtree_append_fits(), which in turn calls kdtree_fits_common_write()
    which does the actual writing.
  */
-int kdtree_fits_write_extras(kdtree_t* kd, char* fn, qfits_header* hdr, extra_table* userextras, int nuserextras) {
+int kdtree_fits_append_extras(const kdtree_t* kd, const qfits_header* hdr,
+                              const extra_table* extras, int nextras,
+                              FILE* out) {
 	int rtn = -1;
-	KD_DISPATCH(kdtree_write_fits, kd->treetype, rtn = , (kd, fn, hdr, userextras, nuserextras));
+	KD_DISPATCH(kdtree_append_fits, kd->treetype, rtn = , (kd, hdr, extras, nextras, out));
 	return rtn;
 }
 
-int kdtree_fits_write(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
+int kdtree_fits_append(const kdtree_t* kdtree, const qfits_header* hdr, FILE* out) {
+    return kdtree_fits_append_extras(kdtree, hdr, NULL, 0, out);
+}
+
+int kdtree_fits_write_extras(const kdtree_t* kdtree, const char* fn, const qfits_header* hdr, const extra_table* extras, int nextras) {
+    int rtn;
+    FILE* fout = fopen(fn, "wb");
+    if (!fout) {
+        fprintf(stderr, "Failed to open file %s for writing: %s\n", fn, strerror(errno));
+        return -1;
+    }
+    rtn = kdtree_fits_append_extras(kdtree, hdr, extras, nextras, fout);
+    if (rtn) {
+        return rtn;
+    }
+    if (fclose(fout)) {
+        fprintf(stderr, "Failed to close file %s after writing: %s\n", fn, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int kdtree_fits_write(const kdtree_t* kdtree, const char* fn, const qfits_header* hdr) {
 	return kdtree_fits_write_extras(kdtree, fn, hdr, NULL, 0);
 }
 
-kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras) {
+kdtree_t* kdtree_fits_common_read(const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* extras, int nextras) {
 	FILE* fid;
 	kdtree_t* kdtree = NULL;
 	qfits_header* header;
@@ -286,23 +310,15 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 	return kdtree;
 }
 
-int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extra_table* extras, int nextras) {
+int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* hdr, const extra_table* extras, int nextras, FILE* out) {
     int ncols, nrows;
     int datasize;
     int tablesize;
     qfits_table* table;
     qfits_header* header;
     qfits_header* tablehdr;
-    FILE* fid;
     void* dataptr;
 	int i;
-
-    fid = fopen(fn, "wb");
-    if (!fid) {
-        fprintf(stderr, "Couldn't open file %s to write kdtree: %s\n",
-                fn, strerror(errno));
-        return -1;
-    }
 
     // we create a new header and copy in the user's header items.
     header = qfits_table_prim_header_default();
@@ -324,11 +340,11 @@ int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extr
 		}
 	}
 
-    qfits_header_dump(header, fid);
+    qfits_header_dump(header, out);
     qfits_header_destroy(header);
 
 	for (i=0; i<nextras; i++) {
-		extra_table* tab = extras + i;
+		const extra_table* tab = extras + i;
 		if (tab->dontwrite)
 			continue;
 		datasize = tab->datasize;
@@ -336,25 +352,20 @@ int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extr
 		ncols = 1;
 		nrows = tab->nitems;
 		tablesize = datasize * nrows * ncols;
-		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
 		qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
 					   tab->name, "", "", "", 0, 0, 0, 0, 0);
 		tablehdr = qfits_table_ext_header_default(table);
-		qfits_header_dump(tablehdr, fid);
+		qfits_header_dump(tablehdr, out);
 		qfits_header_destroy(tablehdr);
 		qfits_table_close(table);
-		if ((fwrite(dataptr, 1, tablesize, fid) != tablesize) ||
-			fits_pad_file(fid)) {
+		if ((fwrite(dataptr, 1, tablesize, out) != tablesize) ||
+			fits_pad_file(out)) {
 			fprintf(stderr, "Failed to write kdtree table %s: %s\n", tab->name, strerror(errno));
 			return -1;
 		}
 	}
 
-    if (fclose(fid)) {
-        fprintf(stderr, "Couldn't close file %s after writing kdtree: %s\n",
-                fn, strerror(errno));
-        return -1;
-    }
     return 0;
 }
 

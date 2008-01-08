@@ -47,7 +47,7 @@ static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 	}
 }
 
-kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* userextras, int nuserextras) {
+kdtree_t* MANGLE(kdtree_read_fits)(const char* fn, qfits_header** p_hdr, unsigned int treetype, extra_table* userextras, int nuserextras) {
 	extra_table* ext;
 	int Ne;
 	double* tempranges;
@@ -227,18 +227,21 @@ kdtree_t* MANGLE(kdtree_read_fits)(char* fn, qfits_header** p_hdr, unsigned int 
 	return kdt;
 }
 
-int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_table* ue, int nue) {
+int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
+                               const extra_table* ue, int nue,
+                               FILE* out) {
 	extra_table* ext;
 	int Ne;
 	double tempranges[kd->ndim * 2 + 1];
 	extra_table extras[10 + nue];
-	int rtn;
+    qfits_header* hdr;
 
 	memset(extras, 0, sizeof(extras));
 	ext = extras;
 
-	if (!hdr)
-		hdr = qfits_header_default();
+    hdr = qfits_header_default();
+	if (inhdr)
+        fits_copy_all_headers(inhdr, hdr, NULL);
 
 	if (kd->nodes) {
 		ext->ptr = kd->nodes;
@@ -398,13 +401,7 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 	qfits_header_append(hdr, "KDT_INT",  (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
 	qfits_header_append(hdr, "KDT_DATA", (char*)kdtree_kdtype_to_string(kdtree_datatype(kd)), "kdtree: type of the data", NULL);
 
-	rtn = kdtree_fits_common_write(kd, fn, hdr, extras, Ne);
-
-	if (nue) {
-		// copy out user extras...
-		memcpy(ue, extras + Ne - nue, nue * sizeof(extra_table));
-	}
-	return rtn;
+	return kdtree_fits_common_write(kd, hdr, extras, Ne, out);
 }
 
 #endif
