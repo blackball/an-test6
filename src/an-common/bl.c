@@ -1289,7 +1289,7 @@ static int sort_helper_pl(const void* v1, const void* v2, const void* userdata) 
 }
 
 void  pl_sort(pl* list, int (*compare)(const void* v1, const void* v2)) {
-	return bl_sort_with_userdata(list, sort_helper_pl, compare);
+	bl_sort_with_userdata(list, sort_helper_pl, compare);
 }
 
 void  pl_remove_index_range(pl* list, int start, int length) {
@@ -1323,7 +1323,7 @@ pl* pl_new(int blocksize) {
 }
 
 void  pl_init(pl* l, int blocksize) {
-    return bl_init(l, blocksize, sizeof(void*));
+    bl_init(l, blocksize, sizeof(void*));
 }
 
 void pl_free(pl* list) {
