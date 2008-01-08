@@ -65,7 +65,7 @@ merctree* merctree_open(char* fn) {
 	fluxes->required = 1;
 	fluxes->compute_tablesize = merctree_flux_tablesize;
 
-	s->tree = kdtree_fits_read_extras(fn, &s->header, extras, 2);
+	s->tree = kdtree_fits_read_extras(fn, NULL, &s->header, extras, 2);
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read merc kdtree from file %s\n", fn);
 		goto bailout;
