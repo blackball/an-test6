@@ -124,7 +124,7 @@ stellarium-constellations.c:
 	-(./grab-stellarium-constellations > $@.tmp  &&  mv $@.tmp $@) || touch $@
 
 grab-stellarium-constellations: grab-stellarium-constellations.o \
-		starutil.o mathutil.o bl.o
+		starutil.o mathutil.o bl.o an-endian.o
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ -lm
 
 # we'll just tack this on here... It depends on cairo, libjpeg, etc, so it's not part
