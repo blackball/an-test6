@@ -20,7 +20,6 @@
 
 #ifdef TEST_CANONICALIZE_FILE_NAME
 int main() {
-    BUG
     char* path = canonicalize_file_name("/");
     free(path);
     printf("#define NEED_CANONICALIZE_FILE_NAME 0\n");
