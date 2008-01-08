@@ -34,11 +34,7 @@
 #include "boilerplate.h"
 #include "fitsioutils.h"
 #include "2mass_catalog.h"
-
-#ifdef __APPLE__
-// provide a stub.
-int fdatasync(int fd) { return 0; }
-#endif
+#include "gnu-specific.h"
 
 #define OPTIONS "ho:N:H:"
 
