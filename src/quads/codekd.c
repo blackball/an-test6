@@ -60,7 +60,7 @@ codetree* codetree_open(char* fn) {
 	if (!s)
 		return s;
 
-	s->tree = kdtree_fits_read(fn, &s->header);
+	s->tree = kdtree_fits_read(fn, NULL, &s->header);
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read code kdtree from file %s\n", fn);
 		goto bailout;
