@@ -24,17 +24,9 @@
 #include "healpix.h"
 #include "boilerplate.h"
 #include "assert.h"
+#include "an-endian.h"
 
-#define OPTIONS "h" //H:N:"
-
-// convert a u32 from little-endian to local.
-static inline uint from_le32(uint i) {
-#if IS_BIG_ENDIAN
-	return __bswap_32(i);
-#else
-	return i;
-#endif
-}
+#define OPTIONS "h"
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
@@ -115,13 +107,13 @@ int main(int argc, char** args) {
 				uint ival;
 				printf("\ndiffraction spike, entry %d\n", i/USNOB_RECORD_SIZE);
 				// print bytes 12-15 in base 10 of USNOB entry prior to spike
-				ival = from_le32(*((uint*)(map+i+ 12 - USNOB_RECORD_SIZE)));
+				ival = u32_letoh(*((uint*)(map+i+ 12 - USNOB_RECORD_SIZE)));
 				printf("entry prior spike: %010d\n", ival);
 				// print bytes 12-15 in base 10 of USNOB entry with spike
-				ival = from_le32(*((uint*)(map+i+ 12)));
+				ival = u32_letoh(*((uint*)(map+i+ 12)));
 				printf("diffraction spike: %010d\n", ival);
 				// print bytes 12-15 in base 10 of USNOB entry after spike
-				ival = from_le32(*((uint*)(map+i+ 12 + USNOB_RECORD_SIZE)));
+				ival = u32_letoh(*((uint*)(map+i+ 12 + USNOB_RECORD_SIZE)));
 				printf("entry after spike: %010d\n", ival);
 			}
 

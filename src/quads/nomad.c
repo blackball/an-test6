@@ -18,94 +18,81 @@
 
 #include <byteswap.h>
 #include <stdint.h>
-typedef uint32_t u32;
 
 #include "nomad.h"
+#include "an-endian.h"
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define IS_BIG_ENDIAN 1
-#else
-#define IS_BIG_ENDIAN 0
-#endif
-
-// convert a u32 from little-endian to local.
-static inline uint from_le32(uint i) {
-#if IS_BIG_ENDIAN
-	return __bswap_32(i);
-#else
-	return i;
-#endif
-}
+typedef uint32_t u32;
 
 int nomad_parse_entry(struct nomad_entry* entry, void* encoded) {
 	u32* udata = encoded;
 	u32 uval;
 	int32_t ival;
 
-	ival = uval = from_le32(udata[0]);
+	ival = uval = u32_letoh(udata[0]);
 	entry->ra = uval * 0.001 / (60.0 * 60.0);
 
-	ival = uval = from_le32(udata[1]);
+	ival = uval = u32_letoh(udata[1]);
 	entry->dec = -90.0 + uval * 0.001 / (60.0 * 60.0);
 
-	ival = uval = from_le32(udata[2]);
+	ival = uval = u32_letoh(udata[2]);
 	entry->sigma_racosdec = uval * 0.001;
 
-	ival = uval = from_le32(udata[3]);
+	ival = uval = u32_letoh(udata[3]);
 	entry->sigma_dec = uval * 0.001;
 
-	ival = uval = from_le32(udata[4]);
+	ival = uval = u32_letoh(udata[4]);
 	entry->mu_racosdec = ival * 0.0001;
 
-	ival = uval = from_le32(udata[5]);
+	ival = uval = u32_letoh(udata[5]);
 	entry->mu_dec = ival * 0.0001;
 
-	ival = uval = from_le32(udata[6]);
+	ival = uval = u32_letoh(udata[6]);
 	entry->sigma_mu_racosdec = uval * 0.0001;
 
-	ival = uval = from_le32(udata[7]);
+	ival = uval = u32_letoh(udata[7]);
 	entry->sigma_mu_dec = uval * 0.0001;
 
-	ival = uval = from_le32(udata[8]);
+	ival = uval = u32_letoh(udata[8]);
 	entry->epoch_ra = uval * 0.001;
 
-	ival = uval = from_le32(udata[9]);
+	ival = uval = u32_letoh(udata[9]);
 	entry->epoch_dec = uval * 0.001;
 
-	ival = uval = from_le32(udata[10]);
+	ival = uval = u32_letoh(udata[10]);
 	entry->mag_B = ival * 0.001;
 
-	ival = uval = from_le32(udata[11]);
+	ival = uval = u32_letoh(udata[11]);
 	entry->mag_V = ival * 0.001;
 
-	ival = uval = from_le32(udata[12]);
+	ival = uval = u32_letoh(udata[12]);
 	entry->mag_R = ival * 0.001;
 
-	ival = uval = from_le32(udata[13]);
+	ival = uval = u32_letoh(udata[13]);
 	entry->mag_J = ival * 0.001;
 
-	ival = uval = from_le32(udata[14]);
+	ival = uval = u32_letoh(udata[14]);
 	entry->mag_H = ival * 0.001;
 
-	ival = uval = from_le32(udata[15]);
+	ival = uval = u32_letoh(udata[15]);
 	entry->mag_K = ival * 0.001;
 
-	ival = uval = from_le32(udata[16]);
+	ival = uval = u32_letoh(udata[16]);
 	entry->usnob_id = uval;
 
-	ival = uval = from_le32(udata[17]);
+	ival = uval = u32_letoh(udata[17]);
 	entry->twomass_id = uval;
 
-	ival = uval = from_le32(udata[18]);
+	ival = uval = u32_letoh(udata[18]);
 	entry->yb6_id = uval;
 
-	ival = uval = from_le32(udata[19]);
+	ival = uval = u32_letoh(udata[19]);
 	entry->ucac2_id = uval;
 
-	ival = uval = from_le32(udata[20]);
+	ival = uval = u32_letoh(udata[20]);
 	entry->tycho2_id = uval;
 
-	ival = uval = from_le32(udata[21]);
+	ival = uval = u32_letoh(udata[21]);
 	entry->astrometry_src = (uval >> 0) & 0x7;
 	entry->blue_src       = (uval >> 3) & 0x7;
 	entry->visual_src     = (uval >> 6) & 0x7;

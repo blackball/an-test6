@@ -22,31 +22,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define IS_BIG_ENDIAN 1
-#if __APPLE__ == 1
-// Apple gcc
-static uint32_t __bswap_32(uint32_t x) {
-    return (((x & 0x000000ff) << 24) |
-	    ((x & 0x0000ff00) << 8) |
-	    ((x & 0x00ff0000) >> 8) |
-	    ((x & 0xff000000) >> 24));
-}
-#endif
-#else
-#define IS_BIG_ENDIAN 0
-#endif
-
 #include "usnob.h"
-
-// convert a u32 from little-endian to local.
-static inline uint32_t from_le32(uint32_t i) {
-#if IS_BIG_ENDIAN
-	return __bswap_32(i);
-#else
-	return i;
-#endif
-}
+#include "an-endian.h"
 
 int unsob_get_survey_epoch(int survey, int obsnum) {
 	switch (survey) {
@@ -148,7 +125,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	uint A, S, P, i, j, M, R, Q, y, x, k, e, v, u;
 
 	// bytes 0-3: uint, RA in units of 0.01 arcsec.
-	ival = from_le32(*(uint32_t*)line);
+	ival = u32_letoh(*(uint32_t*)line);
 	if (ival > (100*60*60*360)) {
 		fprintf(stderr, "USNOB: RA should be in [0, %u), but got %u.\n",
 				100*60*60*360, ival);
@@ -158,14 +135,14 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	usnob->ra = (double)ival / (100.0 * 60.0 * 60.0);
 
 	// bytes 4-7: uint, SPD (south polar distance) in units of 0.01 arcsec.
-	ival = from_le32(*(uint32_t*)(line + 4));
+	ival = u32_letoh(*(uint32_t*)(line + 4));
 	assert(ival <= (100*60*60*180));
 	// DEC = south polar distance - 90 degrees
 	usnob->dec = (double)ival / (100.0 * 60.0 * 60.0) - 90.0;
 
 	// bytes 8-11: uint, packed in base-10:
 	//    iPSSSSAAAA
-	ival = from_le32(*(uint32_t*)(line + 8));
+	ival = u32_letoh(*(uint32_t*)(line + 8));
 	A = (ival % 10000);
 	ival     /= 10000;
 	S = (ival % 10000);
@@ -192,7 +169,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 	// bytes 12-15: uint, packed in base-10:
 	//     jMRQyyyxxx
-	ival = from_le32(*((uint32_t*)(line + 12)));
+	ival = u32_letoh(*((uint32_t*)(line + 12)));
 	x = (ival % 1000);
 	ival     /= 1000;
 	y = (ival % 1000);
@@ -229,7 +206,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 	// bytes 16-19: uint, packed in base-10:
 	//     keeevvvuuu
-	ival = from_le32(*(uint32_t*)(line + 16));
+	ival = u32_letoh(*(uint32_t*)(line + 16));
 	u = (ival % 1000);
 	ival     /= 1000;
 	v = (ival % 1000);
@@ -257,7 +234,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 		// bytes 20-23, 24-27, ...: uint, packed in base-10:
 		//     GGSFFFmmmm
-		ival = from_le32(*(uint32_t*)(line + 20 + obs * 4));
+		ival = u32_letoh(*(uint32_t*)(line + 20 + obs * 4));
 		m = (ival % 10000);
 		ival     /= 10000;
 		F = (ival % 1000);
@@ -288,7 +265,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 		// bytes 40-43, 44-47, ...: uint, packed in base-10:
 		//     CrrrrRRRR
-		ival = from_le32(*(uint32_t*)(line + 40 + obs * 4));
+		ival = u32_letoh(*(uint32_t*)(line + 40 + obs * 4));
 		R = (ival % 10000);
 		ival     /= 10000;
 		r = (ival % 10000);
@@ -306,7 +283,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 		// bytes 60-63, 64-67, ...: uint
 		// index into PMM scan file.
-		ival = from_le32(*(uint32_t*)(line + 60 + obs * 4));
+		ival = u32_letoh(*(uint32_t*)(line + 60 + obs * 4));
 		assert(ival <= 9999999);
 		usnob->obs[obs].pmmscan = ival;
 	}

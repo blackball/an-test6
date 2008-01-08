@@ -28,6 +28,7 @@
 #include "tycho2_fits.h"
 #include "starutil.h"
 #include "mathutil.h"
+#include "an-endian.h"
 
 #define OPTIONS "ho:"
 
@@ -38,38 +39,6 @@ static void print_help(char* progname) {
 		   "Input files must be Tycho-2 FITS files.\n"
 		   "Output file will be in Stellarium format.\n\n",
 		   progname);
-}
-
-/*
-  static void qfits_dispfn(char* str) {
-  printf("qfits: %s\n", str);
-  }
-*/
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define IS_BIG_ENDIAN 1
-#else
-#define IS_BIG_ENDIAN 0
-#endif
-// Stellarium writes things in little-endian format.
-static inline void swap(void* p, int nbytes) {
-#if IS_BIG_ENDIAN
-	int i;
-	unsigned char* c = p;
-	for (i=0; i<(nbytes/2); i++) {
-		unsigned char tmp = c[i];
-		c[i] = c[nbytes-(i+1)];
-		c[nbytes-(i+1)] = tmp;
-	}
-#else
-	return;
-#endif
-}
-static inline void swap_32(void* p) {
-	return swap(p, 4);
-}
-static inline void swap_16(void* p) {
-	return swap(p, 2);
 }
 
 static int write_32(FILE* fout, void* p) {
@@ -162,8 +131,7 @@ int main(int argc, char** args) {
 
 		// Stellarium header: how many stars in the catalog
 		// (32-bit uint).
-		ui = N;
-		swap_32(&ui);
+		ui = u32_htole(N);
 		if (write_32(fout, &ui)) exit(-1);
 
 		for (i=0; i<N; i++) {
@@ -217,10 +185,10 @@ int main(int argc, char** args) {
 			//type = 12; // "other"
 			type = 0; // "other"
 
-			swap_32(&ra);
-			swap_32(&dec);
-			swap_16(&imag);
-			swap_32(&distance);
+            v32_htole(&ra);
+            v32_htole(&dec);
+            v16_htole(&imag);
+            v32_htole(&distance);
 
 			write_32(fout, &ra);
 			write_32(fout, &dec);
