@@ -27,8 +27,6 @@
 #include "cutest.h"
 #include "kdtree.h"
 #include "kdtree_fits_io.h"
-#include "mathutil.h"
-#include "fls.h"
 
 #include "test_libkd_common.c"
 
@@ -53,7 +51,7 @@ static void assert_kdtrees_equal(CuTest* ct, const kdtree_t* kd, const kdtree_t*
     CuAssertIntEquals(ct, kd->ninterior, kd2->ninterior);
     CuAssertIntEquals(ct, kd->nlevels, kd2->nlevels);
     CuAssertIntEquals(ct, kd->has_linear_lr, kd2->has_linear_lr);
-    CuAssertIntEquals(ct, kd->converted_data, kd2->converted_data);
+    //CuAssertIntEquals(ct, kd->converted_data, kd2->converted_data);
     CuAssertDblEquals(ct, kd->scale,    kd2->scale,    del);
     CuAssertDblEquals(ct, kd->invscale, kd2->invscale, del);
 
@@ -210,18 +208,102 @@ void test_read_write_single_tree_named(CuTest* ct) {
         CuFail(ct, "mkstemp");
     }
     close(fd);
-    printf("Single tree unnamed: writing to file %s.\n", fn);
+    printf("Single tree named: writing to file %s.\n", fn);
 
     rtn = kdtree_fits_write(kd, fn, NULL);
     CuAssertIntEquals(ct, 0, rtn);
 
+    // Loading any tree should succeed.
     kd2 = kdtree_fits_read(fn, NULL, NULL);
-
     assert_kdtrees_equal(ct, kd, kd2);
+    kdtree_fits_close(kd2);
+
+    // Attempting to load a nonexist named tree should fail.
+    kd2 = kdtree_fits_read(fn, "none", NULL);
+    CuAssertPtrEquals(ct, NULL, kd2);
+
+    // Loading by its correct name should work.
+    kd2 = kdtree_fits_read(fn, "christmas", NULL);
+    assert_kdtrees_equal(ct, kd, kd2);
+    kdtree_fits_close(kd2);
 
     free(data);
     kdtree_free(kd);
-    kdtree_fits_close(kd2);
 }
 
+void test_read_write_two_trees(CuTest* ct) {
+    kdtree_t* kd;
+    kdtree_t* kdB;
+    double * data;
+    double * dataB;
+    int N = 1000;
+    int Nleaf = 5;
+    int D = 3;
+    char fn[1024];
+    int rtn;
+    kdtree_t* kd2;
+    kdtree_t* kd2B;
+    int fd;
+    FILE* fout;
+
+    data = random_points_d(N, D);
+    kd = build_tree(ct, data, N, D, Nleaf, KDTT_DOUBLE,
+                    KD_BUILD_SPLIT | KD_BUILD_BBOX | KD_BUILD_LINEAR_LR);
+    kd->name = strdup("christmas");
+
+    dataB = random_points_d(N, D);
+    kdB = build_tree(ct, dataB, N, D, Nleaf, KDTT_DUU,
+                     KD_BUILD_SPLIT | KD_BUILD_SPLITDIM | KD_BUILD_LINEAR_LR);
+    kdB->name = strdup("watermelon");
+
+    sprintf(fn, "/tmp/test_libkd_io_two_trees.XXXXXX");
+    fd = mkstemp(fn);
+    if (fd == -1) {
+        fprintf(stderr, "Failed to generate a temp filename: %s\n", strerror(errno));
+        CuFail(ct, "mkstemp");
+    }
+    printf("Two trees: writing to file %s.\n", fn);
+
+    //fout = fdopen(fd, "wb");
+    close(fd);
+    fout = kdtree_fits_write_primary_header(fn);
+    if (!fout) {
+        fprintf(stderr, "Failed to open temp file: %s\n", strerror(errno));
+        CuFail(ct, "fdopen");
+    }
+    rtn = kdtree_fits_append(kd, NULL, fout);
+    CuAssertIntEquals(ct, 0, rtn);
+    rtn = kdtree_fits_append(kdB, NULL, fout);
+    CuAssertIntEquals(ct, 0, rtn);
+
+    if (fclose(fout)) {
+        fprintf(stderr, "Failed to close temp file: %s\n", strerror(errno));
+        CuFail(ct, "fclose");
+    }
+
+    // Loading any tree should return the first one.
+    kd2 = kdtree_fits_read(fn, NULL, NULL);
+    assert_kdtrees_equal(ct, kd, kd2);
+    kdtree_fits_close(kd2);
+
+    // Attempting to load a nonexist named tree should fail.
+    kd2 = kdtree_fits_read(fn, "none", NULL);
+    CuAssertPtrEquals(ct, NULL, kd2);
+
+    // Loading by the correct names should work.
+    kd2 = kdtree_fits_read(fn, "christmas", NULL);
+    assert_kdtrees_equal(ct, kd, kd2);
+
+    kd2B = kdtree_fits_read(fn, "watermelon", NULL);
+    assert_kdtrees_equal(ct, kdB, kd2B);
+
+    kdtree_fits_close(kd2);
+    kdtree_fits_close(kd2B);
+
+    free(data);
+    kdtree_free(kd);
+
+    free(dataB);
+    kdtree_free(kdB);
+}
 
