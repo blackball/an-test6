@@ -271,6 +271,7 @@ size_t kdtree_sizeof_bb(const kdtree_t* kd);
 size_t kdtree_sizeof_split(const kdtree_t* kd);
 size_t kdtree_sizeof_splitdim(const kdtree_t* kd);
 size_t kdtree_sizeof_data(const kdtree_t* kd);
+size_t kdtree_sizeof_nodes(const kdtree_t* kd);
 
 static inline int kdtree_exttype(const kdtree_t* kd) {
 	return kd->treetype & KDT_EXT_MASK;

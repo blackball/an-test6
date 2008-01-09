@@ -63,7 +63,6 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 	extra_table* ext;
 	int Ne;
 	double* tempranges;
-
 	int inodes;
 	int ilr;
 	int iperm;
@@ -72,10 +71,9 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 	int isplitdim;
 	int idata;
 	int irange;
-
 	bool bbtree;
-
 	extra_table extras[10 + nextra];
+    int rtnval = 0;
 
 	memset(extras, 0, sizeof(extras));
 
@@ -103,8 +101,8 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 
 	// kd->bb
 	ext->name = get_table_name(kd->name, KD_STR_BB);
-    //ext->compute_tablesize = tablesize_kd;
-    ext->compute_tablesize = NULL;
+    ext->compute_tablesize = tablesize_kd;
+    //ext->compute_tablesize = NULL;
     ibb = ext - extras;
     ext++;
 
@@ -146,6 +144,7 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 	Ne = ext - extras;
 	if (kdtree_fits_common_read(fn, kd, extras, Ne)) {
 		fprintf(stderr, "Failed to read kdtree from file %s.\n", fn);
+        rtnval = -1;
         goto bailout;
 	}
 
@@ -175,12 +174,14 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 		  (extras[isplit].found &&
 		   (TTYPE_INTEGER || extras[isplitdim].found)))) {
 		fprintf(stderr, "tree contains neither traditional nodes, bounding boxes nor split+dim data.\n");
+        rtnval = -1;
         goto bailout;
 	}
 
 	if ((TTYPE_INTEGER && !ETYPE_INTEGER) &&
 		!(extras[irange].found)) {
 		fprintf(stderr, "treee does not contain required range information.\n");
+        rtnval = -1;
         goto bailout;
 	}
 
@@ -232,8 +233,6 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 		// copy out...
 		memcpy(uextras, extras + (Ne - nextra), nextra * sizeof(extra_table));
 
-	return 0;
-
  bailout:
     free(extras[inodes].name);
     free(extras[ilr].name);
@@ -243,7 +242,8 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
     free(extras[isplitdim].name);
     free(extras[idata].name);
     free(extras[irange].name);
-    return -1;
+
+    return rtnval;
 }
 
 int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
@@ -429,6 +429,8 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
     for (i=0; i<Nkdext; i++) {
         free(extras[i].name);
     }
+
+    qfits_header_destroy(hdr);
 
     return rtn;
 }

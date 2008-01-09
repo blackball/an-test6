@@ -88,6 +88,10 @@ size_t kdtree_sizeof_data(const kdtree_t* kd) {
     return get_data_size(kd->treetype) * kd->ndim * kd->ndata;
 }
 
+size_t kdtree_sizeof_nodes(const kdtree_t* kd) {
+    return sizeof(kdtree_node_t) + 2 * kd->ndim * sizeof(double);
+}
+
 void kdtree_memory_report(kdtree_t* kd) {
     int mem;
     int n, sz;
