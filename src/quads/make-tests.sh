@@ -13,9 +13,11 @@ echo '
 
 /* This is auto-generated code. Edit at your own peril. */
 
-#include "cutest.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+#include "cutest.h"
 
 '
 
@@ -45,6 +47,9 @@ echo \
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
     printf("%s\\n", output->buffer);
+
+    CuSuiteFree(suite);
+    CuStringFree(output);
 }
 
 int main(int argc, char** args)

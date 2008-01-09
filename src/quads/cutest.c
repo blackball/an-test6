@@ -107,6 +107,12 @@ void CuStringInsert(CuString* str, const char* text, int pos)
 	memcpy(str->buffer + pos, text, length);
 }
 
+void CuStringFree(CuString* str) {
+    if (!str) return;
+    free(str->buffer);
+    free(str);
+}
+
 /*-------------------------------------------------------------------------*
  * CuTest
  *-------------------------------------------------------------------------*/
@@ -119,6 +125,13 @@ void CuTestInit(CuTest* t, const char* name, TestFunction function)
 	t->message = NULL;
 	t->function = function;
 	t->jumpBuf = NULL;
+}
+
+void CuTestFree(CuTest* t) {
+    if (!t) return;
+    free((void*)t->name);
+    free((void*)t->message);
+    free(t);
 }
 
 CuTest* CuTestNew(const char* name, TestFunction function)
@@ -245,6 +258,15 @@ CuSuite* CuSuiteNew(void)
 	CuSuite* testSuite = CU_ALLOC(CuSuite);
 	CuSuiteInit(testSuite);
 	return testSuite;
+}
+
+void CuSuiteFree(CuSuite* cs) {
+    int i;
+    if (!cs) return;
+    for (i=0; i<cs->count; i++) {
+        CuTestFree(cs->list[i]);
+    }
+    free(cs);
 }
 
 void CuSuiteAdd(CuSuite* testSuite, CuTest *testCase)

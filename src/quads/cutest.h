@@ -24,6 +24,7 @@ typedef struct
 
 void CuStringInit(CuString* str);
 CuString* CuStringNew(void);
+void CuStringFree(CuString* str);
 void CuStringRead(CuString* str, const char* path);
 void CuStringAppend(CuString* str, const char* text);
 void CuStringAppendChar(CuString* str, char ch);
@@ -51,6 +52,7 @@ struct CuTest
 
 void CuTestInit(CuTest* t, const char* name, TestFunction function);
 CuTest* CuTestNew(const char* name, TestFunction function);
+void CuTestFree(CuTest* tc);
 void CuTestRun(CuTest* tc);
 
 /* Internal versions of assert functions -- use the public versions */
@@ -103,6 +105,7 @@ typedef struct
 
 
 void CuSuiteInit(CuSuite* testSuite);
+void CuSuiteFree(CuSuite* cs);
 CuSuite* CuSuiteNew(void);
 void CuSuiteAdd(CuSuite* testSuite, CuTest *testCase);
 void CuSuiteAddSuite(CuSuite* testSuite, CuSuite* testSuite2);
