@@ -136,14 +136,19 @@ static void assert_kdtrees_equal(CuTest* ct, const kdtree_t* kd, const kdtree_t*
     }
 
     if (kd->maxval) {
-        sz  = kd->ndim * sizeof(double);
         CuAssertPtrNotNull(ct, kd2->maxval);
+        sz  = kd->ndim * sizeof(double);
         CuAssert(ct, "maxval equal", memcmp(kd->maxval, kd2->maxval, sz) == 0);
     } else {
         CuAssertPtrEquals(ct, NULL, kd2->maxval);
     }
-    
 
+    if (kd->name) {
+        CuAssertPtrNotNull(ct, kd2->name);
+        CuAssert(ct, "name equal", strcmp(kd->name, kd2->name) == 0);
+    } else {
+        CuAssertPtrEquals(ct, NULL, kd2->name);
+    }
 }
 
 void test_read_write_single_tree_unnamed(CuTest* ct) {
@@ -182,5 +187,41 @@ void test_read_write_single_tree_unnamed(CuTest* ct) {
     kdtree_fits_close(kd2);
 }
 
+void test_read_write_single_tree_named(CuTest* ct) {
+    kdtree_t* kd;
+    double * data;
+    int N = 1000;
+    int Nleaf = 5;
+    int D = 3;
+    char fn[1024];
+    int rtn;
+    kdtree_t* kd2;
+    int fd;
+
+    data = random_points_d(N, D);
+    kd = build_tree(ct, data, N, D, Nleaf, KDTT_DOUBLE,
+                    KD_BUILD_SPLIT | KD_BUILD_BBOX | KD_BUILD_LINEAR_LR);
+    kd->name = strdup("christmas");
+
+    sprintf(fn, "/tmp/test_libkd_io_single_tree_named.XXXXXX");
+    fd = mkstemp(fn);
+    if (fd == -1) {
+        fprintf(stderr, "Failed to generate a temp filename: %s\n", strerror(errno));
+        CuFail(ct, "mkstemp");
+    }
+    close(fd);
+    printf("Single tree unnamed: writing to file %s.\n", fn);
+
+    rtn = kdtree_fits_write(kd, fn, NULL);
+    CuAssertIntEquals(ct, 0, rtn);
+
+    kd2 = kdtree_fits_read(fn, NULL, NULL);
+
+    assert_kdtrees_equal(ct, kd, kd2);
+
+    free(data);
+    kdtree_free(kd);
+    kdtree_fits_close(kd2);
+}
 
 
