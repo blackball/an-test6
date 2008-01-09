@@ -17,8 +17,12 @@
 LIBKD_DIR := $(BASEDIR)/libkd
 LIBKD_INC := -I$(LIBKD_DIR)
 LIBKD_LIB := $(LIBKD_DIR)/libkd.a
+LIBKD_NOIO_LIB := $(LIBKD_DIR)/libkd-noio.a
 
 $(LIBKD_LIB):
+	cd $(LIBKD_DIR) && $(MAKE)
+
+$(LIBKD_NOIO_LIB):
 	cd $(LIBKD_DIR) && $(MAKE)
 
 REMAKE_LIBKD := remake-libkd
