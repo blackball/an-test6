@@ -212,20 +212,28 @@ int kdtree_fits_append(const kdtree_t* kdtree, const qfits_header* hdr, FILE* ou
     return kdtree_fits_append_extras(kdtree, hdr, NULL, 0, out);
 }
 
-int kdtree_fits_write_extras(const kdtree_t* kdtree, const char* fn, const qfits_header* hdr, const extra_table* extras, int nextras) {
-    int rtn;
+FILE* kdtree_fits_write_primary_header(const char* fn) {
     FILE* fout;
     qfits_header* header;
 
     fout = fopen(fn, "wb");
     if (!fout) {
         fprintf(stderr, "Failed to open file %s for writing: %s\n", fn, strerror(errno));
-        return -1;
+        return NULL;
     }
 
     header = qfits_table_prim_header_default();
     qfits_header_dump(header, fout);
     qfits_header_destroy(header);
+
+    return fout;
+}
+
+int kdtree_fits_write_extras(const kdtree_t* kdtree, const char* fn, const qfits_header* hdr, const extra_table* extras, int nextras) {
+    int rtn;
+    FILE* fout;
+
+    fout = kdtree_fits_write_primary_header(fn);
 
     rtn = kdtree_fits_append_extras(kdtree, hdr, extras, nextras, fout);
     if (rtn) {

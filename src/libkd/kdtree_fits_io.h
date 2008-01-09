@@ -40,6 +40,8 @@ void kdtree_fits_close(kdtree_t* kd);
 
 
 
+FILE* kdtree_fits_write_primary_header(const char* fn);
+
 int kdtree_fits_append(const kdtree_t* kdtree, const qfits_header* hdr, FILE* out);
 
 int kdtree_fits_append_extras(const kdtree_t* kdtree, const qfits_header* hdr, const extra_table* extras, int nextras, FILE* out);
