@@ -64,6 +64,29 @@ static int get_data_size(int treetype) {
     return -1;
 }
 
+size_t kdtree_sizeof_lr(const kdtree_t* kd) {
+    return sizeof(u32) * kd->nbottom;
+}
+
+size_t kdtree_sizeof_perm(const kdtree_t* kd) {
+    return sizeof(u32) * kd->ndata;
+}
+
+size_t kdtree_sizeof_bb(const kdtree_t* kd) {
+    return get_tree_size(kd->treetype) * kd->ndim * kd->nnodes;
+}
+
+size_t kdtree_sizeof_split(const kdtree_t* kd) {
+    return get_tree_size(kd->treetype) * kd->ninterior;
+}
+
+size_t kdtree_sizeof_splitdim(const kdtree_t* kd) {
+    return sizeof(u8) * kd->ninterior;
+}
+
+size_t kdtree_sizeof_data(const kdtree_t* kd) {
+    return get_data_size(kd->treetype) * kd->ndim * kd->ndata;
+}
 
 void kdtree_memory_report(kdtree_t* kd) {
     int mem;

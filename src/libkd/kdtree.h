@@ -260,6 +260,18 @@ struct kdtree_funcs {
 };
 typedef struct kdtree_funcs kdtree_funcs;
 
+
+/* These functions return the number of bytes each entry in the kdtree is
+ expected to have.  These return positive values EVEN IF THE ACTUAL array
+ is NULL in the particular tree.  Ie, it answers the question "how big
+ would the LR array for this tree be, if it had one?" */
+size_t kdtree_sizeof_lr(const kdtree_t* kd);
+size_t kdtree_sizeof_perm(const kdtree_t* kd);
+size_t kdtree_sizeof_bb(const kdtree_t* kd);
+size_t kdtree_sizeof_split(const kdtree_t* kd);
+size_t kdtree_sizeof_splitdim(const kdtree_t* kd);
+size_t kdtree_sizeof_data(const kdtree_t* kd);
+
 static inline int kdtree_exttype(const kdtree_t* kd) {
 	return kd->treetype & KDT_EXT_MASK;
 }

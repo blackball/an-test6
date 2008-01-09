@@ -141,7 +141,13 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
             name = fits_get_dupstring(header, "KDT_NAME");
             if (!name)
                 continue;
-            // no treename specified: take the first one found.
+            printf("Found KDT_NAME entry \"%s\".\n", name);
+            if (name && !name[0]) {
+                // treat empty string as NULL.
+                free(name);
+                name = NULL;
+            }
+            // if the desired treename was specified and this one doesn't match...
             if (treename && strcmp(name, treename)) {
                 free(name);
                 continue;
