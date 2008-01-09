@@ -1,5 +1,5 @@
 # This file is part of the Astrometry.net suite.
-# Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+# Copyright 2006-2008 Dustin Lang, Keir Mierle and Sam Roweis.
 #
 # The Astrometry.net suite is free software; you can redistribute
 # it and/or modify it under the terms of the GNU General Public License
@@ -169,53 +169,66 @@ solver_test.o: solver.c
 # KEIR'S SUPER SIMPLE TESTING FRAMEWORK
 # 1. Add your file's test_blah.c and corresponding files needed to compile it
 #    to the all tests executable 'test' by editing the three variables below:
-ALL_TEST_FILES_C := test_dfind.c test_bl.c test_ctmf.c test_simplexy.c \
-		test_dsmooth.c test_libkd.c
-ALL_TEST_FILES_O := test_dfind.o test_bl.o test_ctmf.o test_simplexy.o \
-		test_dsmooth.o test_libkd.o
-TESTED_FILES := dfind.o ctmf.o
-TESTED_FILES += dallpeaks.o dcen3x3.o dmedsmooth.o dobjects.o dpeaks.o \
-	dselip.o dsigma.o dsmooth.o simplexy.o radix.o qsort_reentrant.o
+ALL_TEST_FILES := test_dfind test_bl test_ctmf test_simplexy test_dsmooth \
+		test_libkd test_libkd_io
+ALL_TEST_FILES_C := $(addsuffix .c, $(ALL_TEST_FILES))
+ALL_TEST_FILES_O := $(addsuffix .o, $(ALL_TEST_FILES))
+ALL_TEST_FILES_MAIN_C := $(addsuffix -main.c, $(ALL_TEST_FILES))
+ALL_TEST_FILES_MAIN_O := $(addsuffix -main.o, $(ALL_TEST_FILES))
 
-# 2. Add your individual test case like the ones below
-test_dfind: cutest.o dfind.o test_dfind-main.o test_dfind.o
-test_dfind-main.c: make-tests.sh test_dfind.c
-	$(AN_SHELL) make-tests.sh test_dfind.c > test_dfind-main.c
+TESTED_OBJS :=
 
-test_bl: cutest.o test_bl-main.o test_bl.o $(ANUTILS_LIB)
-test_bl-main.c: make-tests.sh test_bl.c
-	$(AN_SHELL) make-tests.sh test_bl.c > test_bl-main.c
+$(ALL_TEST_FILES_MAIN_C): %-main.c: make-tests.sh
+%-main.c: %.c
+	$(AN_SHELL) make-tests.sh $^ > $@
 
-test_ctmf: cutest.o ctmf.o test_ctmf-main.o test_ctmf.o
-test_ctmf-main.c: make-tests.sh test_dfind.c
-	$(AN_SHELL) make-tests.sh test_ctmf.c > test_ctmf-main.c
+$(ALL_TEST_FILES): %: %-main.o %.o cutest.o
 
-test_simplexy: cutest.o test_simplexy-main.o test_simplexy.o simplexy.o \
-		ctmf.o dsigma.o dobjects.o dselip.o dallpeaks.o qsort_reentrant.o \
-		radix.o dsmooth.o dfind.o dmedsmooth.o dpeaks.o dcen3x3.o
-test_simplexy-main.c: make-tests.sh test_simplexy.c
-	$(AN_SHELL) make-tests.sh test_simplexy.c > test_simplexy-main.c
+# 2. Add the files you're testing (and their dependencies) here:
+TEST_DFIND_OBJS := dfind.o
+TESTED_OBJS += $(TEST_DFIND_OBJS)
+test_dfind: $(TEST_DFIND_OBJS)
 
-test_dsmooth: cutest.o dsmooth.o test_dsmooth-main.o test_dsmooth.o
-test_dsmooth-main.c: make-tests.sh test_dsmooth.c
-	$(AN_SHELL) make-tests.sh test_dsmooth.c > test_dsmooth-main.c
+TEST_BL_OBJS := 
+TESTED_OBJS += $(TEST_BL_OBJS)
+test_bl: $(TEST_BL_OBJS) $(ANUTILS_LIB)
 
-test_libkd: cutest.o test_libkd-main.o test_libkd.o $(LIBKD_LIB) $(QFITS_LIB) $(ANUTILS_LIB)
-test_libkd-main.c: make-tests.sh test_libkd.c
-	$(AN_SHELL) make-tests.sh test_libkd.c > test_libkd-main.c
+TEST_CTMF_OBJS := ctmf.o
+TESTED_OBJS += $(TEST_CTMF_OBJS)
+test_ctmf: $(TEST_CTMF_OBJS)
 
-ALL_OBJ += $(ALL_TEST_FILES_O) cutest.o
-ALL_OBJ += test_dfind-main.o test_bl-main.o test_ctmf-main.o \
-	test_simplexy-main.o test_dsmooth-main.o test_libkd-main.o test.o
+TEST_SIMPLEXY_OBJS := simplexy.o ctmf.o dsigma.o dobjects.o dselip.o \
+		dallpeaks.o qsort_reentrant.o radix.o dsmooth.o dfind.o \
+		dmedsmooth.o dpeaks.o dcen3x3.o
+TESTED_OBJS += $(TEST_SIMPLEXY_OBJS)
+test_simplexy: $(TEST_SIMPLEXY_OBJS)
 
-ALL_EXECS += test test_libkd test_simplexy
+TEST_DSMOOTH_OBJS := dsmooth.o
+TESTED_OBJS += $(TEST_DSMOOTH_OBJS)
+test_dsmooth: $(TEST_DSMOOTH_OBJS)
+
+TEST_LIBKD_OBJS := 
+TESTED_OBJS += $(TEST_LIBKD_OBJS)
+test_libkd: $(TEST_LIBKD_OBJS) $(LIBKD_NOIO_LIB) $(ANUTILS_LIB)
+
+TEST_LIBKD_IO_OBJS := 
+TESTED_OBJS += $(TEST_LIBKD_IO_OBJS)
+test_libkd_io: $(TEST_LIBKD_IO_OBJS) $(LIBKD_LIB) $(QFITS_LIB) \
+		$(ANUTILS_LIB)
 
 # You shouldn't need to edit this.
-test.c: make-tests.sh $(ALL_TEST_FILES_C)
-	$(AN_SHELL) make-tests.sh $(ALL_TEST_FILES_C) > test.c
-test: test.o cutest.o $(TESTED_FILES) $(ALL_TEST_FILES_O) $(LIBKD_LIB) $(QFITS_LIB) \
-		$(ANUTILS_LIB) $(CAIRO_LIB) $(COMMON)/cairoutils.o 
-	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
+TEST_SOURCES := $(ALL_TEST_FILES_C)
+test.c: make-tests.sh $(TEST_SOURCES)
+	$(AN_SHELL) make-tests.sh $(TEST_SOURCES) > $@
+
+test: test.o cutest.o $(ALL_TEST_FILES_O) $(sort $(TESTED_OBJS)) $(LIBKD_LIB) $(QFITS_LIB) $(ANUTILS_LIB)
+
+ALL_OBJ += $(ALL_TEST_FILES_O) $(ALL_TEST_FILES_MAIN_O) cutest.o
+ALL_OBJ += $(TESTED_OBJS) test.o
+
+GENERATED_FILES += $(ALL_TEST_FILES_MAIN_C)
+
+ALL_EXECS += $(ALL_TEST_FILES) test
 
 # END OF KEIR'S SUPER SIMPLE TESTING FRAMEWORK
 ######################################################
@@ -230,7 +243,7 @@ demo_dsmooth: demo_dsmooth.o dsmooth.o \
 	$(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
 
-ctmf.o: ctmf.c
+#ctmf.o: ctmf.c
 
 image2xy: $(SIMPLEXY2_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
 PNG2XY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
@@ -484,7 +497,7 @@ clean:
 	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \
 		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ) $(IMAGE2XY) \
 		$(NODEP_OBJS) plot-constellations fitsverify plotquad plotxy \
-		$(ALL_EXECS)
+		$(ALL_EXECS) $(GENERATED_FILES)
 
 
 
