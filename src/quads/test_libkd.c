@@ -28,6 +28,8 @@
 #include "mathutil.h"
 #include "fls.h"
 
+#include "test_libkd_common.c"
+
 static int calculate_R(int leafid, int nlevels, int N) {
     int l;
     unsigned int mask, L;
@@ -67,11 +69,6 @@ double linearRF(int leafid, int nbottom, int N) {
     res /= (double)nbottom;
     return res - 1.0;
 }
-
-static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
-                            int Nleaf,
-                            int treetype, int treeopts);
-double* random_points_d(int N, int D);
 
 void test_1(CuTest* ct) {
     kdtree_t* kd;
@@ -135,42 +132,6 @@ void test_nlevels(CuTest* ct) {
     CuAssertIntEquals(ct, 1, kdtree_nnodes_to_nlevels(2));
     CuAssertIntEquals(ct, 2, kdtree_nnodes_to_nlevels(3));
     CuAssertIntEquals(ct, 10, kdtree_nnodes_to_nlevels(1023));
-}
-
-double* random_points_d(int N, int D) {
-    int i;
-    double* data = malloc(N * D * sizeof(double));
-    for (i=0; i<(N*D); i++) {
-        data[i] = rand() / (double)RAND_MAX;
-    }
-    return data;
-}
-
-static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
-                            int Nleaf,
-                            int treetype, int treeopts) {
-    kdtree_t* kd;
-    int datatype;
-    int convert = 0;
-
-    datatype = treetype & KDT_DATA_MASK;
-	if (datatype != KDT_DATA_DOUBLE)
-		convert = 1;
-
-    if (convert) {
-        kd = kdtree_new(N, D, Nleaf);
-        kd = kdtree_convert_data(kd, data, N, D, Nleaf, treetype);
-        kd = kdtree_build(kd, kd->data.any, N, D, Nleaf, treetype, treeopts);
-    } else {
-        kd = kdtree_build(NULL, data, N, D, Nleaf, treetype, treeopts);
-    }
-
-    if (!kd)
-        return NULL;
-
-    CuAssertIntEquals(tc, kdtree_check(kd), 0);
-
-    return kd;
 }
 
 static void run_test_nn(CuTest* tc, int treetype, int treeopts,
