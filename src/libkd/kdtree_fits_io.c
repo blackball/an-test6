@@ -167,6 +167,8 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
         }
     }
 
+    kdtree->has_linear_lr = qfits_header_getboolean(header, "KDT_LINL", 0);
+
     if (p_hdr)
         *p_hdr = header;
     else

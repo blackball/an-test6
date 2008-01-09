@@ -424,6 +424,8 @@ int MANGLE(kdtree_append_fits)(const kdtree_t* kd, const qfits_header* inhdr,
 	qfits_header_append(hdr, "KDT_INT",  (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
 	qfits_header_append(hdr, "KDT_DATA", (char*)kdtree_kdtype_to_string(kdtree_datatype(kd)), "kdtree: type of the data", NULL);
 
+	qfits_header_append(hdr, "KDT_LINL", (kd->has_linear_lr ? "T" : "F"), "kdtree: has_linear_lr", NULL);
+
 	rtn = kdtree_fits_common_write(kd, hdr, extras, Ne, out);
 
     for (i=0; i<Nkdext; i++) {
