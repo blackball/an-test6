@@ -24,6 +24,7 @@
 
 #include "starutil.h"
 #include "qfits.h"
+#include "fitsbin.h"
 
 struct codefile {
 	uint numcodes;
@@ -32,7 +33,7 @@ struct codefile {
 	int dimcodes;
 
 	// upper bound
-	double index_scale;
+	double index_scale_upper;
 	// lower bound
 	double index_scale_lower;
 	// unique ID of this index
@@ -40,16 +41,10 @@ struct codefile {
 	// healpix covered by this index
 	int healpix;
 
+    fitsbin_t* fb;
+
 	// when reading:
-	void*  mmap_code;
-	size_t mmap_code_size;
 	double* codearray;
-
-	// when writing:
-	FILE* fid;
-	off_t header_end;
-
-	qfits_header* header;
 };
 typedef struct codefile codefile;
 

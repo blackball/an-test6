@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2007 Dustin Lang.
+  Copyright 2007-2008 Dustin Lang.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -38,17 +38,20 @@ seterr(char** errstr, const char* format, ...) {
 	va_end(va);
 }
 
-void fitsbin_close(fitsbin_t* fb) {
-	if (!fb) return;
+int fitsbin_close(fitsbin_t* fb) {
+    int rtn = 0;
+	if (!fb) return rtn;
 	if (fb->map) {
 		if (munmap(fb->map, fb->mapsize)) {
 			fprintf(stderr, "Failed to munmap fitsbin: %s\n", strerror(errno));
+            rtn = -1;
 		}
 	}
 	if (fb->fid) {
 		fits_pad_file(fb->fid);
 		if (fclose(fb->fid)) {
 			fprintf(stderr, "Error closing fitsbin: %s\n", strerror(errno));
+            rtn = -1;
 		}
 	}
 	free(fb->filename);
@@ -56,6 +59,7 @@ void fitsbin_close(fitsbin_t* fb) {
 	qfits_header_destroy(fb->primheader);
 	qfits_header_destroy(fb->header);
 	free(fb);
+    return rtn;
 }
 
 static fitsbin_t* new_fitsbin() {

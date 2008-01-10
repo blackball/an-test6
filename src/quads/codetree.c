@@ -74,6 +74,7 @@ int main(int argc, char *argv[]) {
 	int tt;
 	int buildopts = 0;
 	int N, D;
+    qfits_header* chdr;
 
     if (argc <= 2) {
         printHelp(progname);
@@ -168,11 +169,14 @@ int main(int argc, char *argv[]) {
 	N = codes->numcodes;
 	D = codefile_dimcodes(codes);
 	codekd->tree = kdtree_new(N, D, Nleaf);
+
+    chdr = codefile_get_header(codes);
 	{
 		double low[D];
 		double high[D];
 		int d;
-		bool circ = qfits_header_getboolean(codes->header, "CIRCLE", 0);
+		bool circ;
+        circ = qfits_header_getboolean(chdr, "CIRCLE", 0);
 		for (d=0; d<D; d++) {
 			if (circ) {
 				low [d] = 0.5 - M_SQRT1_2;
@@ -210,11 +214,11 @@ int main(int argc, char *argv[]) {
 
 	hdr = codetree_header(codekd);
 	fits_header_add_int(hdr, "NLEAF", Nleaf, "Target number of points in leaves.");
-	fits_copy_header(codes->header, hdr, "INDEXID");
-	fits_copy_header(codes->header, hdr, "HEALPIX");
-	fits_copy_header(codes->header, hdr, "CXDX");
-	fits_copy_header(codes->header, hdr, "CXDXLT1");
-	fits_copy_header(codes->header, hdr, "CIRCLE");
+	fits_copy_header(chdr, hdr, "INDEXID");
+	fits_copy_header(chdr, hdr, "HEALPIX");
+	fits_copy_header(chdr, hdr, "CXDX");
+	fits_copy_header(chdr, hdr, "CXDXLT1");
+	fits_copy_header(chdr, hdr, "CIRCLE");
 
 	boilerplate_add_fits_headers(hdr);
 	qfits_header_add(hdr, "HISTORY", "This file was created by the program \"codetree\".", NULL, NULL);
@@ -222,7 +226,7 @@ int main(int argc, char *argv[]) {
 	fits_add_args(hdr, argv, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of codetree command line)", NULL, NULL);
 	qfits_header_add(hdr, "HISTORY", "** codetree: history from input file:", NULL, NULL);
-	fits_copy_all_headers(codes->header, hdr, "HISTORY");
+	fits_copy_all_headers(chdr, hdr, "HISTORY");
 	qfits_header_add(hdr, "HISTORY", "** codetree: end of history from input file.", NULL, NULL);
 
 	rtn = codetree_write_to_file(codekd, treefname);

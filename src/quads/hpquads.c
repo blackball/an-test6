@@ -917,7 +917,7 @@ int main(int argc, char** argv) {
 	free_fn(codefname);
 
     codes->numstars = startree_N(starkd);
-    codes->index_scale       = sqrt(quad_scale_upper2);
+    codes->index_scale_upper = sqrt(quad_scale_upper2);
     codes->index_scale_lower = sqrt(quad_scale_lower2);
 
     quads->numstars = startree_N(starkd);

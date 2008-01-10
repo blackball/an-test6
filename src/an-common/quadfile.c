@@ -100,10 +100,11 @@ quadfile* quadfile_open(const char* fn) {
 }
 
 int quadfile_close(quadfile* qf) {
+    int rtn;
 	if (!qf) return 0;
-	fitsbin_close(qf->fb);
+	rtn = fitsbin_close(qf->fb);
 	free(qf);
-    return 0;
+    return rtn;
 }
 
 quadfile* quadfile_open_for_writing(const char* fn) {
@@ -171,7 +172,7 @@ int quadfile_write_quad(quadfile* qf, uint* stars) {
 			ustars[i] = stars[i];
 	}
 	if (fwrite(data, sizeof(uint32_t), qf->dimquads, qf->fb->fid) != qf->dimquads) {
-		fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
+		fprintf(stderr, "quadfile_write_quad: failed to write: %s\n", strerror(errno));
 		return -1;
 	}
 	qf->numquads++;
@@ -216,7 +217,7 @@ int quadfile_get_stars(const quadfile* qf, uint quadid, uint* stars) {
 	if (quadid >= qf->numquads) {
 		fprintf(stderr, "Requested quadid %i, but number of quads is %i.\n",
 				quadid, qf->numquads);
-        assert(0);
+        assert(quadid < qf->numquads);
 		return -1;
 	}
 

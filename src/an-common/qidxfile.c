@@ -85,10 +85,11 @@ qidxfile* qidxfile_open(const char* fn) {
 }
 
 int qidxfile_close(qidxfile* qf) {
+    int rtn;
 	if (!qf) return 0;
-	fitsbin_close(qf->fb);
+	rtn = fitsbin_close(qf->fb);
 	free(qf);
-    return 0;
+    return rtn;
 }
 
 qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {

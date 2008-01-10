@@ -65,7 +65,7 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
 fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 									char** errstr);
 
-void fitsbin_close(fitsbin_t* fb);
+int fitsbin_close(fitsbin_t* fb);
 
 int fitsbin_write_primary_header(fitsbin_t* fb);
 
