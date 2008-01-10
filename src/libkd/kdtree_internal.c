@@ -227,6 +227,8 @@ typedef u32 bigint;
 
 #undef CAN_OVERFLOW
 
+void MANGLE(kdtree_update_funcs)(kdtree_t* kd);
+
 static bool bboxes(const kdtree_t* kd, int node,
 				   ttype** p_tlo, ttype** p_thi, int D) {
 	if (kd->bb.any) {
