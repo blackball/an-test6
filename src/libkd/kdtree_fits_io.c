@@ -339,6 +339,8 @@ int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extra
 		tab->ptr = (map + tab->offset);
 	}
 
+    kdtree_update_funcs(kdtree);
+
 	return 0;
 }
 
