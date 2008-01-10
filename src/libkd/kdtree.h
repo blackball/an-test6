@@ -140,7 +140,50 @@ enum kd_tree_types {
 	KDTT_DSS = KDT_EXT_DOUBLE | KDT_DATA_U16 | KDT_TREE_U16,
 };
 
-struct kdtree_funcs;
+struct kdtree;
+typedef struct kdtree kdtree_t;
+
+struct kdtree_qres;
+typedef struct kdtree_qres kdtree_qres_t;
+
+struct kdtree_funcs {
+	void* (*get_data)(const kdtree_t* kd, int i);
+	void  (*copy_data_double)(const kdtree_t* kd, int start, int N, double* dest);
+    double (*get_splitval)(const kdtree_t* kd, int nodeid);
+    bool (*get_bboxes)(const kdtree_t* kd, int node, void* bblo, void* bbhi);
+
+    int (*check)(const kdtree_t* kd);
+    void (*fix_bounding_boxes)(kdtree_t* kd);
+
+	//int   (*nearest_neighbour)(const kdtree_t* kd, const void *pt, double* bestd2);
+	//int   (*nearest_neighbour_within)(const kdtree_t* kd, const void *pt, double maxd2, double* bestd2);
+    void  (*nearest_neighbour_internal)(const kdtree_t* kd, const void* query, double* bestd2, int* pbest);
+	kdtree_qres_t* (*rangesearch)(const kdtree_t* kd, kdtree_qres_t* res, const void* pt, double maxd2, int options);
+
+    void (*nodes_contained)(const kdtree_t* kd,
+                            const void* querylow, const void* queryhi,
+                            void (*callback_contained)(const kdtree_t* kd, int node, void* extra),
+                            void (*callback_overlap)(const kdtree_t* kd, int node, void* extra),
+                            void* cb_extra);
+
+    //bool (*node_node_mindist2_exceeds)(const kdtree_t* kd1, int node1, const kdtree_t* kd2, int node2, double maxd2);
+
+    // instrumentation functions - set these to get callbacks about
+    // the progress of the algorithm.
+
+    // a node was enqueued to be searched during nearest-neighbour.
+    void (*nn_enqueue)(const kdtree_t* kd, int nodeid, int place);
+    // a node was pruned during nearest-neighbour.
+    void (*nn_prune)(const kdtree_t* kd, int nodeid, double d2, double bestd2, int place);
+    // a node is being explored during nearest-neighbour.
+    void (*nn_explore)(const kdtree_t* kd, int nodeid, double d2, double bestd2);
+    // a point is being examined during nearest-neighbour.
+    void (*nn_point)(const kdtree_t* kd, int nodeid, int pointindex);
+    // a new best point has been found.
+    void (*nn_new_best)(const kdtree_t* kd, int nodeid, int pointindex, double d2);
+};
+typedef struct kdtree_funcs kdtree_funcs;
+
 
 struct kdtree {
 	/*
@@ -218,9 +261,9 @@ struct kdtree {
 	void* mmapped;          /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
 
-	struct kdtree_funcs* fun;
+	struct kdtree_funcs fun;
 };
-typedef struct kdtree kdtree_t;
+//typedef struct kdtree kdtree_t;
 
 struct kdtree_qres {
 	unsigned int nres;
@@ -235,30 +278,7 @@ struct kdtree_qres {
 	double *sdists;          /* Squared distance from query point */
 	u32 *inds;    /* Indexes into original data set */
 };
-typedef struct kdtree_qres kdtree_qres_t;
-
-struct kdtree_funcs {
-	void* (*get_data)(const kdtree_t* kd, int i);
-	void  (*copy_data_double)(const kdtree_t* kd, int start, int N, double* dest);
-	int   (*nearest_neighbour)(const kdtree_t* kd, const void *pt, double* bestd2);
-	int   (*nearest_neighbour_within)(const kdtree_t* kd, const void *pt, double maxd2, double* bestd2);
-	kdtree_qres_t* (*rangesearch)(const kdtree_t* kd, kdtree_qres_t* res, const void* pt, double maxd2, int options);
-
-    // instrumentation functions - set these to get callbacks about
-    // the progress of the algorithm.
-
-    // a node was enqueued to be searched during nearest-neighbour.
-    void (*nn_enqueue)(const kdtree_t* kd, int nodeid, int place);
-    // a node was pruned during nearest-neighbour.
-    void (*nn_prune)(const kdtree_t* kd, int nodeid, double d2, double bestd2, int place);
-    // a node is being explored during nearest-neighbour.
-    void (*nn_explore)(const kdtree_t* kd, int nodeid, double d2, double bestd2);
-    // a point is being examined during nearest-neighbour.
-    void (*nn_point)(const kdtree_t* kd, int nodeid, int pointindex);
-    // a new best point has been found.
-    void (*nn_new_best)(const kdtree_t* kd, int nodeid, int pointindex, double d2);
-};
-typedef struct kdtree_funcs kdtree_funcs;
+//typedef struct kdtree_qres kdtree_qres_t;
 
 
 /* These functions return the number of bytes each entry in the kdtree is

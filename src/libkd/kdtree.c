@@ -31,7 +31,6 @@
 #include "fls.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
-KD_DECLARE(kdtree_get_splitval, double, (const kdtree_t*, int));
 
 void kdtree_update_funcs(kdtree_t* kd) {
 	KD_DISPATCH(kdtree_update_funcs, kd->treetype,, (kd));
@@ -189,9 +188,8 @@ int kdtree_get_splitdim(const kdtree_t* kd, int nodeid) {
 }
 
 double kdtree_get_splitval(const kdtree_t* kd, int nodeid) {
-    double res = 0.0;
-	KD_DISPATCH(kdtree_get_splitval, kd->treetype, res=, (kd, nodeid));
-    return res;
+    assert(kd->fun.get_splitval);
+    return kd->fun.get_splitval(kd, nodeid);
 }
 
 void* kdtree_get_data(const kdtree_t* kd, int i) {
@@ -338,7 +336,7 @@ kdtree_t* kdtree_new(int N, int D, int Nleaf) {
 	kd->nbottom = 1 << (maxlevel - 1);
 	kd->ninterior = kd->nbottom - 1;
 	assert(kd->nbottom + kd->ninterior == kd->nnodes);
-	kd->fun = CALLOC(1, sizeof(kdtree_funcs));
+	//kd->fun = CALLOC(1, sizeof(kdtree_funcs));
 	return kd;
 }
 
@@ -481,8 +479,7 @@ int kdtree_npoints(const kdtree_t* kd, int nodeid) {
 	return 1 + kdtree_right(kd, nodeid) - kdtree_left(kd, nodeid);
 }
 
-void kdtree_free_query(kdtree_qres_t *kq)
-{
+void kdtree_free_query(kdtree_qres_t *kq) {
 	if (!kq) return;
 	FREE(kq->results.any);
 	FREE(kq->sdists);
@@ -490,8 +487,7 @@ void kdtree_free_query(kdtree_qres_t *kq)
 	FREE(kq);
 }
 
-void kdtree_free(kdtree_t *kd)
-{
+void kdtree_free(kdtree_t *kd) {
 	if (!kd) return;
     FREE(kd->name);
 	FREE(kd->nodes);
@@ -504,7 +500,7 @@ void kdtree_free(kdtree_t *kd)
 		FREE(kd->data.any);
 	FREE(kd->minval);
 	FREE(kd->maxval);
-	FREE(kd->fun);
+	//FREE(kd->fun);
 	FREE(kd);
 }
 
@@ -512,22 +508,18 @@ int kdtree_nearest_neighbour(const kdtree_t* kd, const void* pt, double* p_mindi
 	return kdtree_nearest_neighbour_within(kd, pt, HUGE_VAL, p_mindist2);
 }
 
-KD_DECLARE(kdtree_check, int, (const kdtree_t* kd));
-
 int kdtree_check(const kdtree_t* kd) {
-	int res = -1;
-	KD_DISPATCH(kdtree_check, kd->treetype, res=, (kd));
-	return res;
+    assert(kd->fun.check);
+    return kd->fun.check(kd);
 }
-
-KD_DECLARE(kdtree_nn, void, (const kdtree_t* kd, const void* data, double* bestd2, int* pbest));
 
 int kdtree_nearest_neighbour_within(const kdtree_t* kd, const void *pt, double maxd2,
 									double* p_mindist2) {
 	double bestd2 = maxd2;
 	int ibest = -1;
 
-	KD_DISPATCH(kdtree_nn, kd->treetype,, (kd, pt, &bestd2, &ibest));
+    assert(kd->fun.nearest_neighbour_internal);
+    kd->fun.nearest_neighbour_internal(kd, pt, &bestd2, &ibest);
 
 	if (p_mindist2 && (ibest != -1))
 		*p_mindist2 = bestd2;
@@ -572,35 +564,23 @@ bool kdtree_node_point_maxdist2_exceeds(const kdtree_t* kd, int node, const void
 	return res;
 }
 
-KD_DECLARE(kdtree_nodes_contained, void, (const kdtree_t* kd,
-										  const void* querylow, const void* queryhi,
-										  void (*callback_contained)(const kdtree_t* kd, int node, void* extra),
-										  void (*callback_overlap)(const kdtree_t* kd, int node, void* extra),
-										  void* cb_extra));
-
 void kdtree_nodes_contained(const kdtree_t* kd,
 							const void* querylow, const void* queryhi,
 							void (*callback_contained)(const kdtree_t* kd, int node, void* extra),
 							void (*callback_overlap)(const kdtree_t* kd, int node, void* extra),
 							void* cb_extra) {
-	KD_DISPATCH(kdtree_nodes_contained, kd->treetype,, (kd, querylow, queryhi, callback_contained, callback_overlap, cb_extra));
+    assert(kd->fun.nodes_contained);
+    kd->fun.nodes_contained(kd, querylow, queryhi, callback_contained, callback_overlap, cb_extra);
 }
-
-KD_DECLARE(kdtree_get_bboxes, bool, (const kdtree_t* kd, int node,
-									 void* bblo, void* bbhi));
 
 bool kdtree_get_bboxes(const kdtree_t* kd, int node, void* bblo, void* bbhi) {
-	bool res = FALSE;
-	KD_DISPATCH(kdtree_get_bboxes, kd->treetype, res=, (kd,node, bblo, bbhi));
-	return res;
+    assert(kd->fun.get_bboxes);
+    return kd->fun.get_bboxes(kd, node, bblo, bbhi);
 }
 
-
-
-KD_DECLARE(kdtree_fix_bounding_boxes, void, (kdtree_t* kd));
-
 void kdtree_fix_bounding_boxes(kdtree_t* kd) {
-	KD_DISPATCH(kdtree_fix_bounding_boxes, kd->treetype, , (kd));
+    assert(kd->fun.fix_bounding_boxes);
+    kd->fun.fix_bounding_boxes(kd);
 }
 
 
