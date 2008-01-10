@@ -970,7 +970,7 @@ void MANGLE(kdtree_nn)(const kdtree_t* kd, const void* vquery,
 
 
 kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
-     (const kdtree_t* kd, kdtree_qres_t* res, const etype* query,
+     (const kdtree_t* kd, kdtree_qres_t* res, const void* vquery,
       double maxd2, int options)
 {
 	int nodestack[100];
@@ -997,6 +997,8 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
     bool use_splits = FALSE;
 
 	double dtl1=0.0, dtl2=0.0, dtlinf=0.0;
+
+    const etype* query = vquery;
 
 	//dtype dquery[D];
 	ttype tquery[D];
@@ -1364,11 +1366,6 @@ static void copy_data_double(const kdtree_t* kd, int start, int N,
 			j++;
 		}
 #endif
-}
-
-static kdtree_qres_t* rangesearch(const kdtree_t* kd, kdtree_qres_t* res,
-								  const void* pt, double maxd2, int options) {
-	return MANGLE(kdtree_rangesearch_options)(kd, res, (etype*)pt, maxd2, options);
 }
 
 static dtype* kdqsort_arr;
@@ -2624,7 +2621,7 @@ void MANGLE(kdtree_update_funcs)(kdtree_t* kd) {
     kd->fun.check = MANGLE(kdtree_check);
     kd->fun.fix_bounding_boxes = MANGLE(kdtree_fix_bounding_boxes);
 	kd->fun.nearest_neighbour_internal = MANGLE(kdtree_nn);
-	kd->fun.rangesearch = rangesearch;
+	kd->fun.rangesearch = MANGLE(kdtree_rangesearch_options);
     kd->fun.nodes_contained = MANGLE(kdtree_nodes_contained);
 }
 
