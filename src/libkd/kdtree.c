@@ -336,7 +336,6 @@ kdtree_t* kdtree_new(int N, int D, int Nleaf) {
 	kd->nbottom = 1 << (maxlevel - 1);
 	kd->ninterior = kd->nbottom - 1;
 	assert(kd->nbottom + kd->ninterior == kd->nnodes);
-	//kd->fun = CALLOC(1, sizeof(kdtree_funcs));
 	return kd;
 }
 

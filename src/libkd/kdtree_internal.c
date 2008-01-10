@@ -1364,24 +1364,6 @@ static void copy_data_double(const kdtree_t* kd, int start, int N,
 #endif
 }
 
-/*
- static int nearest_neighbour_within(const kdtree_t* kd, const void *pt,
- double maxd2, double* p_bestd2) {
- double bestd2 = maxd2;
- int ibest = -1;
- MANGLE(kdtree_nn)(kd, pt, &bestd2, &ibest);
- if (p_bestd2 && (ibest != -1)) *p_bestd2 = bestd2;
- return ibest;
- }
- */
-
-/*
- static int nearest_neighbour(const kdtree_t* kd, const void* pt,
- double* p_mindist2) {
- return nearest_neighbour_within(kd, pt, HUGE_VAL, p_mindist2);
- }
- */
-
 static kdtree_qres_t* rangesearch(const kdtree_t* kd, kdtree_qres_t* res,
 								  const void* pt, double maxd2, int options) {
 	return MANGLE(kdtree_rangesearch_options)(kd, res, (etype*)pt, maxd2, options);
@@ -2341,6 +2323,9 @@ kdtree_t* MANGLE(kdtree_build)
         kd->lr = NULL;
     }
 
+    // set function table pointers.
+    MANGLE(kdtree_update_funcs)(kd);
+
 	return kd;
 }
 
@@ -2629,22 +2614,15 @@ bool MANGLE(kdtree_get_bboxes)(const kdtree_t* kd, int node,
 	return TRUE;
 }
 
-//KD_DECLARE(kdtree_get_splitval, double, (const kdtree_t*, int));
-//KD_DECLARE(kdtree_check, int, (const kdtree_t* kd));
-
 void MANGLE(kdtree_update_funcs)(kdtree_t* kd) {
-	//memset(kd->fun, 0, sizeof(kdtree_funcs));
 	kd->fun.get_data = get_data;
 	kd->fun.copy_data_double = copy_data_double;
     kd->fun.get_splitval = MANGLE(kdtree_get_splitval);
     kd->fun.get_bboxes = MANGLE(kdtree_get_bboxes);
     kd->fun.check = MANGLE(kdtree_check);
     kd->fun.fix_bounding_boxes = MANGLE(kdtree_fix_bounding_boxes);
-	//kd->fun.nearest_neighbour = nearest_neighbour;
-	//kd->fun.nearest_neighbour_within = nearest_neighbour_within;
 	kd->fun.nearest_neighbour_internal = MANGLE(kdtree_nn);
 	kd->fun.rangesearch = rangesearch;
-	//kd->fun.rangesearch = MANGLE(kdtree_rangesearch_options);
     kd->fun.nodes_contained = MANGLE(kdtree_nodes_contained);
 }
 
