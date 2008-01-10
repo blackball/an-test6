@@ -179,7 +179,7 @@ ALL_TEST_FILES_MAIN_O := $(addsuffix -main.o, $(ALL_TEST_FILES))
 TESTED_OBJS :=
 
 $(ALL_TEST_FILES_MAIN_C): %-main.c: make-tests.sh
-%-main.c: %.c
+$(ALL_TEST_FILES_MAIN_C): %-main.c: %.c
 	$(AN_SHELL) make-tests.sh $^ > $@
 
 $(ALL_TEST_FILES): %: %-main.o %.o cutest.o
