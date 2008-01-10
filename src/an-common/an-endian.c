@@ -83,11 +83,11 @@ inline void v64_ntoh(void* p) {
 }
 // convert a 32-bit object from big-endian (network) to local.
 inline void v32_ntoh(void* p) {
-	return v_ntoh(p, 8);
+	return v_ntoh(p, 4);
 }
 // convert a 16-bit object from big-endian (network) to local.
 inline void v16_ntoh(void* p) {
-	return v_ntoh(p, 8);
+	return v_ntoh(p, 2);
 }
 
 // convert a 64-bit object from local to big-endian (network).
