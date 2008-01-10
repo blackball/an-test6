@@ -1,6 +1,6 @@
 /*
   This file is part of libkd.
-  Copyright 2006, 2007 Dustin Lang and Keir Mierle.
+  Copyright 2006-2008 Dustin Lang and Keir Mierle.
 
   libkd is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
