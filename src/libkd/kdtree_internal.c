@@ -1288,7 +1288,8 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 					if (split - tquery[dim] <= tlinf) {
 						// right child is okay.
 						assert(POINT_TE(kd, dim, split) - query[dim] >= 0.0);
-						assert(POINT_TE(kd, dim, split) - query[dim] <= maxdist);
+                        // This may fail due to rounding?
+						//assert(POINT_TE(kd, dim, split) - query[dim] <= maxdist);
 						stackpos++;
 						nodestack[stackpos] = KD_CHILD_RIGHT(nodeid);
 					}
