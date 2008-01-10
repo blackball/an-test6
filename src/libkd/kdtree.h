@@ -155,8 +155,6 @@ struct kdtree_funcs {
     int (*check)(const kdtree_t* kd);
     void (*fix_bounding_boxes)(kdtree_t* kd);
 
-	//int   (*nearest_neighbour)(const kdtree_t* kd, const void *pt, double* bestd2);
-	//int   (*nearest_neighbour_within)(const kdtree_t* kd, const void *pt, double maxd2, double* bestd2);
     void  (*nearest_neighbour_internal)(const kdtree_t* kd, const void* query, double* bestd2, int* pbest);
 	kdtree_qres_t* (*rangesearch)(const kdtree_t* kd, kdtree_qres_t* res, const void* pt, double maxd2, int options);
 
