@@ -23,57 +23,90 @@
 
 #include "qfits.h"
 
-struct fitsbin_t {
-	char* filename;
+struct fitsbin_chunk_t {
 	char* tablename;
-
-	// The primary FITS header
-	qfits_header* primheader;
 
 	// Extra FITS headers to add to the extension header containing the table.
 	qfits_header* header;
 
-	// The data
+	// The data (NULL if the table was not found)
 	void* data;
 
-	// The size of a single data item
+	// The size of a single row in bytes.
 	int itemsize;
+
 	// The number of items (rows)
 	int nrows;
 
-	// Internal use:
+	// abort if this table isn't found?
+	int required;
 
+    // Reading:
+    int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata);
+    void* userdata;
+
+    // Writing:
+	off_t header_start;
+	off_t header_end;
+
+	// Internal use:
 	// The mmap'ed address
 	char* map;
 	// The mmap'ed size.
 	size_t mapsize;
+};
+typedef struct fitsbin_chunk_t fitsbin_chunk_t;
+
+
+struct fitsbin_t {
+	char* filename;
+
+    fitsbin_chunk_t* chunks;
+    int nchunks;
+
+	// The primary FITS header
+	qfits_header* primheader;
+
+    // Error string in which to report errors.
+    char** errstr;
 
 	// Writing:
 	FILE* fid;
 	off_t primheader_end;
-	off_t header_start;
-	off_t header_end;
 };
 typedef struct fitsbin_t fitsbin_t;
 
 
-fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
-						char** errstr, 
-						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
-						void* userdata);
+fitsbin_t* fitsbin_new(int nchunks);
 
-fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
-									char** errstr);
+int fitsbin_read(fitsbin_t* fb);
 
 int fitsbin_close(fitsbin_t* fb);
 
 int fitsbin_write_primary_header(fitsbin_t* fb);
 
-int fitsbin_write_header(fitsbin_t* fb);
-
 int fitsbin_fix_primary_header(fitsbin_t* fb);
 
+int fitsbin_write_chunk_header(fitsbin_t* fb, int chunk);
+
+int fitsbin_fix_chunk_header(fitsbin_t* fb, int chunk);
+
+int fitsbin_start_write(fitsbin_t* fb);
+
+
+// Single-chunk shortcuts:
+
+fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
+						char** errstr, 
+						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
+						void* userdata);
+int fitsbin_write_header(fitsbin_t* fb);
 int fitsbin_fix_header(fitsbin_t* fb);
+
+fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
+									char** errstr);
+
+
 
 
 

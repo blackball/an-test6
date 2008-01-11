@@ -90,7 +90,7 @@ quadfile* quadfile_open(const char* fn) {
 		goto bailout;
 	}
 	qf->fb = fb;
-	qf->quadarray = (uint32_t*)(fb->data);
+	qf->quadarray = (uint32_t*)(fb->chunks[0].data);
     return qf;
 
  bailout:
@@ -149,8 +149,8 @@ quadfile* quadfile_open_for_writing(const char* fn) {
 
 int quadfile_write_header(quadfile* qf) {
 	fitsbin_t* fb = qf->fb;
-	fb->itemsize = qf->dimquads * sizeof(uint32_t);
-	fb->nrows = qf->numquads;
+	fb->chunks[0].itemsize = qf->dimquads * sizeof(uint32_t);
+	fb->chunks[0].nrows = qf->numquads;
 
 	if (fitsbin_write_primary_header(fb) ||
 		fitsbin_write_header(fb)) {
@@ -182,8 +182,8 @@ int quadfile_write_quad(quadfile* qf, uint* stars) {
 int quadfile_fix_header(quadfile* qf) {
 	qfits_header* hdr;
 	fitsbin_t* fb = qf->fb;
-	fb->itemsize = qf->dimquads * sizeof(uint32_t);
-	fb->nrows = qf->numquads;
+	fb->chunks[0].itemsize = qf->dimquads * sizeof(uint32_t);
+	fb->chunks[0].nrows = qf->numquads;
 
 	hdr = fb->primheader;
 

@@ -74,7 +74,7 @@ qidxfile* qidxfile_open(const char* fn) {
 		goto bailout;
 	}
 	qf->fb = fb;
-	qf->index = (uint32_t*)fb->data;
+	qf->index = (uint32_t*)fb->chunks[0].data;
 	qf->heap  = qf->index + 2 * qf->numstars;
 	return qf;
 
@@ -138,8 +138,8 @@ bailout:
 
 int qidxfile_write_header(qidxfile* qf) {
 	fitsbin_t* fb = qf->fb;
-	fb->itemsize = sizeof(uint32_t);
-	fb->nrows = 2 * qf->numstars + qf->dimquads * qf->numquads;
+	fb->chunks[0].itemsize = sizeof(uint32_t);
+	fb->chunks[0].nrows = 2 * qf->numstars + qf->dimquads * qf->numquads;
 	if (fitsbin_write_primary_header(fb) ||
 		fitsbin_write_header(fb)) {
 		fprintf(stderr, "Failed to write qidxfile header.\n");
@@ -157,7 +157,7 @@ int qidxfile_write_star(qidxfile* qf, uint* quads, uint nquads) {
 	int i;
 
 	// Write the offset & size:
-	if (fseeko(fid, fb->header_end + qf->cursor_index * 2 * sizeof(uint32_t), SEEK_SET)) {
+	if (fseeko(fid, fb->chunks[0].header_end + qf->cursor_index * 2 * sizeof(uint32_t), SEEK_SET)) {
 		fprintf(stderr, "qidxfile_write_star: failed to fseek: %s\n", strerror(errno));
 		return -1;
 	}
@@ -168,7 +168,7 @@ int qidxfile_write_star(qidxfile* qf, uint* quads, uint nquads) {
 		return -1;
 	}
 	// Write the quads.
-	if (fseeko(fid, fb->header_end + qf->numstars * 2 * sizeof(uint32_t) +
+	if (fseeko(fid, fb->chunks[0].header_end + qf->numstars * 2 * sizeof(uint32_t) +
 			   qf->cursor_heap * sizeof(uint32_t), SEEK_SET)) {
 		fprintf(stderr, "qidxfile_write_star: failed to fseek: %s\n", strerror(errno));
 		return -1;
