@@ -121,11 +121,15 @@ int usnob_get_index(usnob_entry* entry) {
 }
 
 int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
-	uint ival, obs;
+    uint obs;
 	uint A, S, P, i, j, M, R, Q, y, x, k, e, v, u;
+	uint32_t ival;
+    uint32_t* uline;
+
+    uline = (uint32_t*)line;
 
 	// bytes 0-3: uint, RA in units of 0.01 arcsec.
-	ival = u32_letoh(*(uint32_t*)line);
+	ival = u32_letoh(uline[0]);
 	if (ival > (100*60*60*360)) {
 		fprintf(stderr, "USNOB: RA should be in [0, %u), but got %u.\n",
 				100*60*60*360, ival);
@@ -135,14 +139,14 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	usnob->ra = (double)ival / (100.0 * 60.0 * 60.0);
 
 	// bytes 4-7: uint, SPD (south polar distance) in units of 0.01 arcsec.
-	ival = u32_letoh(*(uint32_t*)(line + 4));
+	ival = u32_letoh(uline[1]);
 	assert(ival <= (100*60*60*180));
 	// DEC = south polar distance - 90 degrees
 	usnob->dec = (double)ival / (100.0 * 60.0 * 60.0) - 90.0;
 
 	// bytes 8-11: uint, packed in base-10:
 	//    iPSSSSAAAA
-	ival = u32_letoh(*(uint32_t*)(line + 8));
+	ival = u32_letoh(uline[2]);
 	A = (ival % 10000);
 	ival     /= 10000;
 	S = (ival % 10000);
@@ -169,7 +173,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 	// bytes 12-15: uint, packed in base-10:
 	//     jMRQyyyxxx
-	ival = u32_letoh(*((uint32_t*)(line + 12)));
+	ival = u32_letoh(uline[3]);
 	x = (ival % 1000);
 	ival     /= 1000;
 	y = (ival % 1000);
@@ -206,7 +210,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 	// bytes 16-19: uint, packed in base-10:
 	//     keeevvvuuu
-	ival = u32_letoh(*(uint32_t*)(line + 16));
+	ival = u32_letoh(uline[4]);
 	u = (ival % 1000);
 	ival     /= 1000;
 	v = (ival % 1000);
@@ -226,7 +230,8 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	usnob->epoch = 1950.0 + 0.1 * e;
 
 	// k: YS4.0 correlation flag: 0=no, 1=yes.
-	assert((k == 0) || (k == 1));
+    // (if M==0, it's a Tycho star and this has a different meaning)
+	assert((M == 0) || (k == 0) || (k == 1));
 	usnob->ys4 = (k == 1) ? 1 : 0;
 
 	for (obs=0; obs<5; obs++) {
@@ -234,7 +239,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 		// bytes 20-23, 24-27, ...: uint, packed in base-10:
 		//     GGSFFFmmmm
-		ival = u32_letoh(*(uint32_t*)(line + 20 + obs * 4));
+		ival = u32_letoh(uline[5 + obs]);
 		m = (ival % 10000);
 		ival     /= 10000;
 		F = (ival % 1000);
@@ -256,16 +261,20 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 		// G: star-galaxy estimate.  0=galaxy, 11=star.
 		if (M >= 2) {
-			assert(G <= 11 || G == 19);
-			if ((G > 11) && (G != 19)) {
-				fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but found %u.\n", G);
-			}
+            // Hmm, this is triggered by USNOB10/033/b0337.cat
+            // byte offset 10282000, observation 2, and MANY others.
+			/*
+             assert(G <= 11 || G == 19);
+             if ((G > 11) && (G != 19)) {
+             fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but found %u.\n", G);
+             }
+             */
 		}
 		usnob->obs[obs].star_galaxy = G;
 
 		// bytes 40-43, 44-47, ...: uint, packed in base-10:
 		//     CrrrrRRRR
-		ival = u32_letoh(*(uint32_t*)(line + 40 + obs * 4));
+		ival = u32_letoh(uline[10 + obs]);
 		R = (ival % 10000);
 		ival     /= 10000;
 		r = (ival % 10000);
@@ -283,7 +292,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 		// bytes 60-63, 64-67, ...: uint
 		// index into PMM scan file.
-		ival = u32_letoh(*(uint32_t*)(line + 60 + obs * 4));
+		ival = u32_letoh(uline[15 + obs]);
 		assert(ival <= 9999999);
 		usnob->obs[obs].pmmscan = ival;
 	}

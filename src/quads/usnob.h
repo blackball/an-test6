@@ -52,6 +52,8 @@ struct observation {
 
 	// star/galaxy estimate.  0=galaxy, 11=star. 19=no value computed.
 	//     (GG:2)
+    // (but note, in fact values 12, 13, 14, 15 and possibly others exist
+    //  in the data files as well!)
 	unsigned char star_galaxy;
 
 	// in arcsec (R:4)

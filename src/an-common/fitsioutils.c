@@ -190,7 +190,9 @@ static int add_long_line(qfits_header* hdr, const char* keyword, const char* ind
 }
 
 static int 
-add_long_line_b(qfits_header* hdr, const char* keyword, const char* indent, const char* format, ...) {
+ATTRIB_FORMAT(printf,4,5)
+add_long_line_b(qfits_header* hdr, const char* keyword,
+                const char* indent, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
@@ -234,7 +236,7 @@ int fits_add_args(qfits_header* hdr, char** args, int argc) {
 	for (i=0; i<argc; i++) {
 		const char* str = args[i];
 		int rtn;
-		rtn = add_long_line_b(hdr, "HISTORY", "  ", 0, "%s", str);
+		rtn = add_long_line_b(hdr, "HISTORY", "  ", "%s", str);
 		if (rtn)
 			return rtn;
 	}
