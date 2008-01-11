@@ -28,6 +28,37 @@
 #include "ioutils.h"
 #include "fitsioutils.h"
 
+#define CHUNK_CODES 0
+
+static int callback_read_header(qfits_header* primheader, qfits_header* header,
+								size_t* expected, char** errstr,
+								void* userdata) {
+	codefile* cf = userdata;
+
+    cf->dimcodes = qfits_header_getint(primheader, "DIMCODES", 4);
+    cf->numcodes = qfits_header_getint(primheader, "NCODES", -1);
+    cf->numstars = qfits_header_getint(primheader, "NSTARS", -1);
+    cf->index_scale_upper = qfits_header_getdouble(primheader, "SCALE_U", -1.0);
+    cf->index_scale_lower = qfits_header_getdouble(primheader, "SCALE_L", -1.0);
+	cf->indexid = qfits_header_getint(primheader, "INDEXID", 0);
+	cf->healpix = qfits_header_getint(primheader, "HEALPIX", -1);
+
+	if ((cf->numcodes == -1) || (cf->numstars == -1) ||
+		(cf->index_scale_upper == -1.0) || (cf->index_scale_lower == -1.0)) {
+		if (errstr) *errstr = "Couldn't find NCODES or NSTARS or SCALE_U or SCALE_L entries in FITS header.";
+		return -1;
+	}
+    if (fits_check_endian(primheader)) {
+		if (errstr) *errstr = "File was written with the wrong endianness.";
+		return -1;
+    }
+
+    cf->fb->chunks[CHUNK_CODES].itemsize = cf->dimcodes * sizeof(double);
+
+    *expected = cf->numcodes * cf->dimcodes * sizeof(double);
+	return 0;
+}
+
 static codefile* new_codefile() {
 	codefile* cf = calloc(1, sizeof(codefile));
 	if (!cf) {
@@ -35,6 +66,15 @@ static codefile* new_codefile() {
 		return NULL;
 	}
 	cf->healpix = -1;
+
+    cf->fb = fitsbin_new(1);
+
+    chunk = cf->fb->chunks + CHUNK_CODES;
+    chunk->tablename = strdup("codes");
+    chunk->required = 1;
+    chunk->callback_read_header = callback_read_header;
+    chunk->userdata = cf;
+
 	return cf;
 }
 
@@ -59,79 +99,43 @@ int codefile_close(codefile* cf) {
     return rtn;
 }
 
-static int callback_read_header(qfits_header* primheader, qfits_header* header,
-								size_t* expected, char** errstr,
-								void* userdata) {
-	codefile* cf = userdata;
-
-    cf->dimcodes = qfits_header_getint(primheader, "DIMCODES", 4);
-    cf->numcodes = qfits_header_getint(primheader, "NCODES", -1);
-    cf->numstars = qfits_header_getint(primheader, "NSTARS", -1);
-    cf->index_scale_upper = qfits_header_getdouble(primheader, "SCALE_U", -1.0);
-    cf->index_scale_lower = qfits_header_getdouble(primheader, "SCALE_L", -1.0);
-	cf->indexid = qfits_header_getint(primheader, "INDEXID", 0);
-	cf->healpix = qfits_header_getint(primheader, "HEALPIX", -1);
-
-	if ((cf->numcodes == -1) || (cf->numstars == -1) ||
-		(cf->index_scale_upper == -1.0) || (cf->index_scale_lower == -1.0)) {
-		if (errstr) *errstr = "Couldn't find NCODES or NSTARS or SCALE_U or SCALE_L entries in FITS header.";
-		return -1;
-	}
-
-    if (fits_check_endian(primheader)) {
-		if (errstr) *errstr = "File was written with the wrong endianness.";
-		return -1;
-    }
-
-    *expected = cf->numcodes * cf->dimcodes * sizeof(double);
-	return 0;
-}
-
 codefile* codefile_open(const char* fn) {
     codefile* cf = NULL;
-	fitsbin_t* fb = NULL;
-	char* errstr = NULL;
 
     cf = new_codefile();
     if (!cf)
         goto bailout;
 
-	fb = fitsbin_open(fn, "codes", &errstr, callback_read_header, cf);
-	if (!fb) {
-		fprintf(stderr, "%s\n", errstr);
-		goto bailout;
-	}
-	cf->fb = fb;
-	cf->codearray = fb->chunks[0].data;
+    cf->fb->filename = strdup(fn);
+    if (fitsbin_read(cf->fb))
+        goto bailout;
+
+	cf->codearray = cf->fb->chunks[CHUNK_CODES].data;
     return cf;
 
  bailout:
     if (cf)
-        free(cf);
+        codefile_close(cf);
     return NULL;
 }
 
 codefile* codefile_open_for_writing(const char* fn) {
 	codefile* cf;
-	fitsbin_t* fb = NULL;
-	char* errstr = NULL;
 	qfits_header* hdr;
 
 	cf = new_codefile();
 	if (!cf)
 		goto bailout;
 
-	fb = fitsbin_open_for_writing(fn, "codes", &errstr);
-	if (!fb) {
-		fprintf(stderr, "%s\n", errstr);
-		goto bailout;
-	}
-	cf->fb = fb;
     // default
     cf->dimcodes = 4;
 
+    cf->fb->filename = strdup(fn);
+    if (fitsbin_start_write(cf->fb))
+		goto bailout;
+
 	// add default values to header
-	hdr = fb->primheader;
+	hdr = cf->fb->primheader;
     fits_add_endian(hdr);
 	qfits_header_add(hdr, "AN_FILE", "CODE", "This file lists the code for each quad.", NULL);
 	qfits_header_add(hdr, "NCODES", "0", "", NULL);
@@ -148,14 +152,14 @@ codefile* codefile_open_for_writing(const char* fn) {
 
  bailout:
 	if (cf)
-		free(cf);
+		codefile_close(cf);
 	return NULL;
 }
 
 int codefile_write_header(codefile* cf) {
 	fitsbin_t* fb = cf->fb;
-	fb->chunks[0].itemsize = cf->dimcodes * sizeof(double);
-	fb->chunks[0].nrows = cf->numcodes;
+	fb->chunks[CHUNK_CODES].itemsize = cf->dimcodes * sizeof(double);
+	fb->chunks[CHUNK_CODES].nrows = cf->numcodes;
 
 	if (fitsbin_write_primary_header(fb) ||
 		fitsbin_write_header(fb)) {
@@ -168,8 +172,8 @@ int codefile_write_header(codefile* cf) {
 int codefile_fix_header(codefile* cf) {
 	qfits_header* hdr;
 	fitsbin_t* fb = cf->fb;
-	fb->chunks[0].itemsize = cf->dimcodes * sizeof(double);
-	fb->chunks[0].nrows = cf->numcodes;
+	fb->chunks[CHUNK_CODES].itemsize = cf->dimcodes * sizeof(double);
+	fb->chunks[CHUNK_CODES].nrows = cf->numcodes;
 
 	hdr = fb->primheader;
 
@@ -191,7 +195,7 @@ int codefile_fix_header(codefile* cf) {
 }
 
 int codefile_write_code(codefile* cf, double* code) {
-	if (fwrite(code, sizeof(double), cf->dimcodes, cf->fb->fid) != cf->dimcodes) {
+    if (fitsbin_write_item(cf->fb, CHUNK_CODES, code)) {
 		fprintf(stderr, "codefile_write_code: failed to write: %s\n", strerror(errno));
 		return -1;
 	}
