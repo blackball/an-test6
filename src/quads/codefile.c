@@ -106,7 +106,7 @@ codefile* codefile_open(const char* fn) {
     if (!cf)
         goto bailout;
 
-    cf->fb->filename = strdup(fn);
+    fitsbin_set_filename(cf->fb, fn);
     if (fitsbin_read(cf->fb))
         goto bailout;
 
@@ -130,7 +130,7 @@ codefile* codefile_open_for_writing(const char* fn) {
     // default
     cf->dimcodes = 4;
 
-    cf->fb->filename = strdup(fn);
+    fitsbin_set_filename(cf->fb, fn);
     if (fitsbin_start_write(cf->fb))
 		goto bailout;
 
