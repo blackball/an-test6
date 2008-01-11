@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Astrometry.net file type: \"%s\".\n", valstr);
 			if (strncasecmp(valstr, AN_FILETYPE_CATALOG, strlen(AN_FILETYPE_CATALOG)) == 0) {
 				fprintf(stderr, "Looks like a catalog.\n");
-				cat = catalog_open(fname, 0);
+				cat = catalog_open(fname);
 				if (!cat) {
 					fprintf(stderr, "Couldn't open catalog.\n");
 					return 1;

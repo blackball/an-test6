@@ -123,7 +123,7 @@ int main(int argc, char** args) {
 
 		fn = mk_catfn(basename);
 		printf("Trying to open catalog file %s...\n", fn);
-		cat = catalog_open(fn, 0);
+		cat = catalog_open(fn);
 		free_fn(fn);
 		if (cat) {
 			Nstars = cat->numstars;

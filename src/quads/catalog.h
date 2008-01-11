@@ -20,7 +20,9 @@
 #define CATUTILS_H
 
 #include <sys/types.h>
+
 #include "qfits.h"
+#include "fitsbin.h"
 
 #define AN_FILETYPE_CATALOG "OBJS"
 
@@ -30,24 +32,22 @@ struct catalog {
 	double ramax;
 	double decmin;
 	double decmax;
-	double* stars;
 	int healpix;
+
+	double* stars;
 
 	// optional table: star magnitudes.
 	float* mags;
 
-	FILE* fid;
-	void* mmap_ptr;
-	size_t mmap_size;
-	qfits_header* header;
-	off_t header_end;
+    fitsbin_t* fb;
 };
 typedef struct catalog catalog;
 
+// FIXME.
 // if "modifiable" is non-zero, a private copy-on-write is made.
 // (changes don't automatically get written to the file.)
 
-catalog* catalog_open(char* catfn, int modifiable);
+catalog* catalog_open(char* catfn);
 
 catalog* catalog_open_for_writing(char* catfn);
 
@@ -62,6 +62,8 @@ int catalog_close(catalog* cat);
 void catalog_compute_radecminmax(catalog* cat);
 
 int catalog_write_header(catalog* cat);
+
+qfits_header* catalog_get_header(catalog* cat);
 
 int catalog_fix_header(catalog* cat);
 

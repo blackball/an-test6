@@ -102,7 +102,7 @@ codefile* codefile_open(const char* fn) {
 		goto bailout;
 	}
 	cf->fb = fb;
-	cf->codearray = (double*)(fb->data);
+	cf->codearray = fb->chunks[0].data;
     return cf;
 
  bailout:
@@ -154,8 +154,8 @@ codefile* codefile_open_for_writing(const char* fn) {
 
 int codefile_write_header(codefile* cf) {
 	fitsbin_t* fb = cf->fb;
-	fb->itemsize = cf->dimcodes * sizeof(double);
-	fb->nrows = cf->numcodes;
+	fb->chunks[0].itemsize = cf->dimcodes * sizeof(double);
+	fb->chunks[0].nrows = cf->numcodes;
 
 	if (fitsbin_write_primary_header(fb) ||
 		fitsbin_write_header(fb)) {
@@ -168,8 +168,8 @@ int codefile_write_header(codefile* cf) {
 int codefile_fix_header(codefile* cf) {
 	qfits_header* hdr;
 	fitsbin_t* fb = cf->fb;
-	fb->itemsize = cf->dimcodes * sizeof(double);
-	fb->nrows = cf->numcodes;
+	fb->chunks[0].itemsize = cf->dimcodes * sizeof(double);
+	fb->chunks[0].nrows = cf->numcodes;
 
 	hdr = fb->primheader;
 

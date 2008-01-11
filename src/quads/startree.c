@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "Will write output to %s\n", treefname);
 
     fprintf(stderr, "Reading star catalogue...");
-    cat = catalog_open(catfname, 1);
+    cat = catalog_open(catfname);
     free_fn(catfname);
     if (!cat) {
         fprintf(stderr, "Couldn't read catalogue.\n");
@@ -200,8 +200,7 @@ int main(int argc, char *argv[]) {
 		starkd->tree = kdtree_convert_data(starkd->tree, catalog_get_base(cat),
 										   N, D, Nleaf, tt);
 		// close the catalog to save space, but grab the FITS header first.
-		catheader = cat->header;
-		cat->header = NULL;
+		catheader = qfits_header_copy(catalog_get_header(cat));
         catalog_close(cat);
 
 		fprintf(stderr, "Building tree...\n");
@@ -213,8 +212,7 @@ int main(int argc, char *argv[]) {
 		fflush(stderr);
 		starkd->tree = kdtree_build(NULL, catalog_get_base(cat), N, D,
 									Nleaf, tt, buildopts);
-		catheader = cat->header;
-		cat->header = NULL;
+		catheader = qfits_header_copy(catalog_get_header(cat));
         catalog_close(cat);
 	}
 
