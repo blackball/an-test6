@@ -235,28 +235,23 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'pnm-small':
         imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
-        if not field.displayscale:
-            field.set_display_scale()
-            field.save()
+        (scale, dx, dy) = field.get_display_scale()
         # (don't make this an elif)
-        if field.displayscale == 1:
+        if scale == 1:
             return imgfn
-        cmd = 'pnmscale -reduce %g %s > %s' % (float(field.displayscale), imgfn, fullfn)
+        cmd = 'pnmscale -reduce %g %s > %s' % (float(scale), imgfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'ppm-small':
         if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
-            if not field.displayscale:
-                field.set_display_scale()
-                field.save()
-            scale = field.displayscale
+            (scale, dw, dh) = field.get_display_scale()
             if scale == 1:
                 return convert(job, field, 'ppm', store_imgtype, store_imgsize)
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -s %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
-                   (xylist, field.displayw, field.displayh, scale, fullfn))
+                   (xylist, dw, dh, scale, fullfn))
             run_convert_command(cmd)
             return fullfn
 
@@ -274,8 +269,9 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'annotation':
         wcsfn = job.get_filename('wcs.fits')
         imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
+        (scale, dw, dh) = field.get_display_scale()
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
-               (wcsfn, fullfn, 1.0/field.displayscale, imgfn))
+               (wcsfn, fullfn, 1.0/float(scale), imgfn))
         run_convert_command(cmd)
         return fullfn
 
@@ -290,7 +286,8 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'redgreen' or fn == 'redgreen-big':
         if fn == 'redgreen':
             imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
-            scale = 1.0 / field.displayscale
+            (dscale, dw, dh) = field.get_display_scale()
+            scale = 1.0 / float(dscale)
         else:
             imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
             scale = 1.0
@@ -315,7 +312,8 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'sources':
         imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
         xyls = job.get_filename('job.axy')
-        scale = 1.0 / float(field.displayscale)
+        (dscale, dw, dh) = field.get_display_scale()
+        scale = 1.0 / float(dscale)
         commonargs = ('-i %s -x %g -y %g -w 2 -S %g -C red' %
                       (xyls, scale, scale, scale))
         cmd = (('plotxy %s -I %s -N 100 -r 6 -P' %

@@ -45,12 +45,6 @@ class AstroField(models.Model):
     imagew = models.PositiveIntegerField(editable=False, null=True)
     imageh = models.PositiveIntegerField(editable=False, null=True)
 
-    # shrink factor (= 1 / (scale factor)) for rendering images; >=1.
-    displayscale = models.FloatField(editable=False, null=True)
-    # size to render images.
-    displayw = models.PositiveIntegerField(editable=False, null=True)
-    displayh = models.PositiveIntegerField(editable=False, null=True)
-
     def __str__(self):
         s = '<Field ' + str(self.id)
         if self.imgtype:
@@ -95,14 +89,15 @@ class AstroField(models.Model):
     def filename(self):
         return os.path.join(config.fielddir, str(self.id))
 
-    def set_display_scale(self):
+    def get_display_scale(self):
         w = self.imagew
         h = self.imageh
-        self.displayscale = max(1.0,
-                                math.pow(2, math.ceil(
+        scale = max(1.0,
+                    math.pow(2, math.ceil(
             math.log(max(self.imagew, self.imageh) / float(800)) / math.log(2))))
-        self.displayw = int(round(self.imagew / float(self.displayscale)))
-        self.displayh = int(round(self.imageh / float(self.displayscale)))
+        displayw = int(round(self.imagew / float(scale)))
+        displayh = int(round(self.imageh / float(scale)))
+        return (scale, displayw, displayh)
 
 class JobSet(models.Model):
     scaleunits_CHOICES = (
