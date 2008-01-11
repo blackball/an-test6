@@ -52,7 +52,7 @@ def is_tarball(fn):
     log('file type: "%s"' % typeinfo)
     return typeinfo == 'POSIX tar archive'
 
-def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
+def convert(job, field, fn):
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir
     basename = os.path.join(tempdir, job.jobid + '-')
@@ -71,7 +71,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'pnm':
-        infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'uncomp')
         #andir = gmaps_config.basedir + 'quads/'
         log('Converting %s to %s...\n' % (infn, fullfn))
         (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, None, False)
@@ -84,7 +84,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'getimagesize':
-        infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pnm')
         x = run_pnmfile(infn)
         if x is None:
             raise FileConversionError('couldn\'t find file size')
@@ -97,7 +97,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'pgm':
         # run 'pnmfile' on the pnm.
-        infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pnm')
         x = run_pnmfile(infn)
         if x is None:
             raise FileConversionError('couldn\'t find file size')
@@ -121,7 +121,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
             run_convert_command(cmd)
             return fullfn
 
-        imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'pnm')
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
@@ -135,7 +135,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
     elif fn == 'fitsimg':
         if store_imgtype:
             # check the uncompressed input image type...
-            infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+            infn = convert(job, field, 'uncomp')
             (field.imgtype, errmsg) = image2pnm.get_image_type(infn)
             if errmsg:
                 log(errmsg)
@@ -150,36 +150,35 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
             return fullfn
 
         # else, convert to pgm and run pnm2fits.
-        infn = convert(job, field, 'pgm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pgm')
         cmd = 'pnmtofits %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'xyls':
         if job.is_input_text():
-            infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+            infn = convert(job, field, 'uncomp')
             cmd = 'xylist2fits %s %s' % (infn, fullfn)
             run_convert_command(cmd)
             return fullfn
 
         if job.is_input_fits():
             # For FITS bintable uploads: put it through fits2fits.
-            infn = convert(job, field, 'uncomp', store_imgtype, store_imgsize)
+            infn = convert(job, field, 'uncomp')
             errmsg = fits2fits.fits2fits(infn, fullfn, False)
             if errmsg:
                 log(errmsg)
                 raise FileConversionError(errmsg)
             return fullfn
 
-        infn = convert(job, field, 'fitsimg', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'fitsimg')
         sxylog = 'blind.log'
         cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'xyls-half':
-        #infn = convert(job, field, 'fitsimg-half', store_imgtype, store_imgsize)
-        infn = convert(job, field, 'fitsimg', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'fitsimg')
         sxylog = 'blind.log'
         cmd = 'image2xy -H -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
@@ -187,9 +186,9 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'xyls-sorted' or fn == 'xyls-half-sorted':
         if fn == 'xyls-sorted':
-            infn = convert(job, field, 'xyls', store_imgtype, store_imgsize)
+            infn = convert(job, field, 'xyls')
         else:
-            infn = convert(job, field, 'xyls-half', store_imgtype, store_imgsize)
+            infn = convert(job, field, 'xyls-half')
         logfn = 'blind.log'
         cmd = 'resort-xylist -d %s %s 2>> %s' % (infn, fullfn, logfn)
         run_convert_command(cmd)
@@ -218,7 +217,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
                    (xylist, field.imagew, field.imageh, fullfn))
             run_convert_command(cmd)
             return fullfn
-        infn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
+        infn = convert(job, field, 'pnm')
         cmd = 'pnmtopng %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
@@ -234,9 +233,8 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'pnm-small':
-        imgfn = convert(job, field, 'pnm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'pnm')
         (scale, dx, dy) = field.get_display_scale()
-        # (don't make this an elif)
         if scale == 1:
             return imgfn
         cmd = 'pnmscale -reduce %g %s > %s' % (float(scale), imgfn, fullfn)
@@ -248,14 +246,14 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
             # just create the red-circle plot.
             (scale, dw, dh) = field.get_display_scale()
             if scale == 1:
-                return convert(job, field, 'ppm', store_imgtype, store_imgsize)
+                return convert(job, field, 'ppm')
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -s %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
                    (xylist, dw, dh, scale, fullfn))
             run_convert_command(cmd)
             return fullfn
 
-        imgfn = convert(job, field, 'pnm-small', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'pnm-small')
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
@@ -268,7 +266,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'annotation':
         wcsfn = job.get_filename('wcs.fits')
-        imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm-small')
         (scale, dw, dh) = field.get_display_scale()
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/float(scale), imgfn))
@@ -276,7 +274,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'annotation-big':
-        imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm')
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s' %
                (wcsfn, fullfn, imgfn))
@@ -285,14 +283,14 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
 
     elif fn == 'redgreen' or fn == 'redgreen-big':
         if fn == 'redgreen':
-            imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
+            imgfn = convert(job, field, 'ppm-small')
             (dscale, dw, dh) = field.get_display_scale()
             scale = 1.0 / float(dscale)
         else:
-            imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
+            imgfn = convert(job, field, 'ppm')
             scale = 1.0
         fxy = job.get_filename('job.axy')
-        ixy = convert(job, field, 'index-xy', store_imgtype, store_imgsize)
+        ixy = convert(job, field, 'index-xy')
         commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
         logfn = 'blind.log'
         cmd = ('plotxy -i %s -I %s -r 4 -C green -P' % (ixy, imgfn) + commonargs 
@@ -310,7 +308,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'sources':
-        imgfn = convert(job, field, 'ppm-small', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm-small')
         xyls = job.get_filename('job.axy')
         (dscale, dw, dh) = field.get_display_scale()
         scale = 1.0 / float(dscale)
@@ -324,7 +322,7 @@ def convert(job, field, fn, store_imgtype=False, store_imgsize=False):
         return fullfn
 
     elif fn == 'sources-big':
-        imgfn = convert(job, field, 'ppm', store_imgtype, store_imgsize)
+        imgfn = convert(job, field, 'ppm')
         xyls = job.get_filename('job.axy')
         commonargs = ('-i %s -x %g -y %g -w 2 -C red' %
                       (xyls, 1, 1))

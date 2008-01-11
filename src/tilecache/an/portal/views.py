@@ -186,7 +186,7 @@ def jobstatus(request):
         }
 
     if job.solved:
-        wcsinfofn = convert(job, job.field, 'wcsinfo', store_imgtype=True, store_imgsize=True)
+        wcsinfofn = convert(job, job.field, 'wcsinfo')
         f = open(wcsinfofn)
         wcsinfotxt = f.read()
         f.close()
@@ -211,7 +211,7 @@ def jobstatus(request):
 
 
 
-        objsfn = convert(job, job.field, 'objsinfield', store_imgtype=True, store_imgsize=True)
+        objsfn = convert(job, job.field, 'objsinfield')
         f = open(objsfn)
         objtxt = f.read()
         f.close()

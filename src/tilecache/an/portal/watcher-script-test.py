@@ -99,7 +99,7 @@ def real_handle_job(job, sshconfig):
         log('source extraction...')
         userlog('Doing source extraction...')
 
-        convert(job, field, 'getimagesize', store_imgtype=True, store_imgsize=True)
+        convert(job, field, 'getimagesize')
         if (field.imagew * field.imageh) > 5000000:  # 5 MPixels
             userlog('Downsampling your image...')
             target = 'xyls-half-sorted'
@@ -108,7 +108,7 @@ def real_handle_job(job, sshconfig):
 
         try:
             log('image2xy...')
-            xylist = convert(job, field, target, store_imgtype=True, store_imgsize=True)
+            xylist = convert(job, field, target)
             log('xylist is', xylist)
         except FileConversionError,e:
             userlog('Source extraction failed.')
@@ -123,7 +123,7 @@ def real_handle_job(job, sshconfig):
             field.imgtype = 'text'
             try:
                 userlog('Parsing your text file...')
-                xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
+                xylist = convert(job, field, 'xyls')
                 log('xylist is', xylist)
             except FileConversionError,e:
                 userlog('Parsing your text file failed.')
@@ -134,7 +134,7 @@ def real_handle_job(job, sshconfig):
             field.imgtype = 'xyls'
             try:
                 log('fits2fits...')
-                xylist = convert(job, field, 'xyls', store_imgtype=True, store_imgsize=True)
+                xylist = convert(job, field, 'xyls')
                 log('xylist is', xylist)
             except FileConversionError,e:
                 userlog('Sanitizing your FITS file failed.')
