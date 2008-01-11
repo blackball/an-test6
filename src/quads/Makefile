@@ -187,7 +187,7 @@ $(ALL_TEST_FILES): %: %-main.o %.o cutest.o
 # 2. Add the files you're testing (and their dependencies) here:
 TEST_DFIND_OBJS := dfind.o
 TESTED_OBJS += $(TEST_DFIND_OBJS)
-test_dfind: $(TEST_DFIND_OBJS)
+test_dfind: $(TEST_DFIND_OBJS) $(ANUTILS_LIB)
 
 TEST_BL_OBJS := 
 TESTED_OBJS += $(TEST_BL_OBJS)

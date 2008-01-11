@@ -22,6 +22,7 @@
 // I did this so that we can handle int* and
 // unsigned char* images using the same code.
 
+#include "bl.h"
 
 int DFIND2(IMGTYPE* image,
            int nx,
@@ -35,9 +36,7 @@ int DFIND2(IMGTYPE* image,
 	short unsigned int maxcontiguouslabel = 0;
 
 	/* Keep track of 'on' pixels to avoid later rescanning */
-	int num_on_pixels = 0;
-	int max_num_on_pixels = 100;
-	int **on_pixels = malloc(sizeof(int*)*max_num_on_pixels);
+    il* on_pixels = il_new(256);
 
 	/* Find blobs and track equivalences */
 	for (iy = 0; iy < ny; iy++) {
@@ -48,15 +47,8 @@ int DFIND2(IMGTYPE* image,
 			if (!image[nx*iy+ix])
 				continue;
 
-			/* Store location of each 'on' pixel. May be inefficient on 64 bit with large ptrs */
-			// FIXME switch to a blocklist!!!!
-			if (num_on_pixels >= max_num_on_pixels) {
-				max_num_on_pixels *= 2;
-				on_pixels = realloc(on_pixels, sizeof(int*) * max_num_on_pixels);
-				assert(on_pixels);
-			}
-			on_pixels[num_on_pixels] = object + nx*iy+ix;
-			num_on_pixels++;
+			/* Store location of each 'on' pixel. */
+            il_append(on_pixels, nx * iy + ix);
 
 			if (ix && image[nx*iy+ix-1]) {
 				/* Old group */
@@ -120,15 +112,18 @@ int DFIND2(IMGTYPE* image,
 	assert(number);
 	for (i = 0; i < maxlabel; i++)
 		number[i] = 0xFFFF;
-	for (i=0; i<num_on_pixels; i++) {
-		int minlabel = collapsing_find_minlabel(*on_pixels[i], equivs);
+	for (i=0; i<il_size(on_pixels); i++) {
+        int onpix;
+		int minlabel;
+        onpix = il_get(on_pixels, i);
+        minlabel = collapsing_find_minlabel(object[onpix], equivs);
 		if (number[minlabel] == 0xFFFF)
 			number[minlabel] = maxcontiguouslabel++;
-		*on_pixels[i] = number[minlabel];
+        object[onpix] = number[minlabel];
 	}
 
 	free(equivs);
 	free(number);
-	free(on_pixels);
+	il_free(on_pixels);
 	return 1;
 }
