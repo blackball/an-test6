@@ -46,7 +46,9 @@ echo \
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
-    printf("%s\\n", output->buffer);
+'
+printf %s \
+'    printf("%s\n", output->buffer);
 
     CuSuiteFree(suite);
     CuStringFree(output);
@@ -55,7 +57,7 @@ echo \
 int main(int argc, char** args)
 {
     if (argc > 1 && !strcmp(args[1], "-d")) {
-        printf("Setting die on fail.\\n");
+        printf("Setting die on fail.\n");
         CuDieOnFail();
     }
     RunAllTests();
