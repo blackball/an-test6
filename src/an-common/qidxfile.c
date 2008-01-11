@@ -84,7 +84,7 @@ qidxfile* qidxfile_open(const char* fn) {
 	if (!qf)
 		goto bailout;
 
-    qf->fb->filename = strdup(fn);
+    fitsbin_set_filename(qf->fb, fn);
     if (fitsbin_read(qf->fb))
         goto bailout;
 
@@ -115,7 +115,7 @@ qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 		goto bailout;
 	qf->numstars = nstars;
 	qf->numquads = nquads;
-    qf->fb->filename = strdup(fn);
+    fitsbin_set_filename(qf->fb, fn);
 
     if (fitsbin_start_write(qf->fb))
         goto bailout;

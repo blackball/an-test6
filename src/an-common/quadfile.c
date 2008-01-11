@@ -96,7 +96,7 @@ quadfile* quadfile_open(const char* fn) {
     if (!qf)
         goto bailout;
 
-    qf->fb->filename = strdup(fn);
+    fitsbin_set_filename(qf->fb, fn);
     if (fitsbin_read(qf->fb))
         goto bailout;
 
@@ -126,7 +126,7 @@ quadfile* quadfile_open_for_writing(const char* fn) {
 		goto bailout;
 
     qf->dimquads = 4;
-    qf->fb->filename = strdup(fn);
+    fitsbin_set_filename(qf->fb, fn);
     if (fitsbin_start_write(qf->fb))
         goto bailout;
 

@@ -97,6 +97,8 @@ int fitsbin_write_item(fitsbin_t* fb, int chunk, void* data);
 
 int fitsbin_write_items(fitsbin_t* fb, int chunk, void* data, int N);
 
+void fitsbin_set_filename(fitsbin_t* fb, const char* fn);
+
 // Single-chunk shortcuts:
 
 fitsbin_t* fitsbin_open(const char* fn, const char* tablename,

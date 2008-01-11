@@ -38,6 +38,11 @@ seterr(char** errstr, const char* format, ...) {
 	va_end(va);
 }
 
+void fitsbin_set_filename(fitsbin_t* fb, const char* fn) {
+    free(fb->filename);
+    fb->filename = strdup(fn);
+}
+
 fitsbin_t* fitsbin_new(int nchunks) {
 	fitsbin_t* fb;
 	fb = calloc(1, sizeof(fitsbin_t));
