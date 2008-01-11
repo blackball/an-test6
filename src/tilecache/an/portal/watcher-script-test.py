@@ -120,7 +120,7 @@ def real_handle_job(job, sshconfig):
 
     elif (filetype == 'fits') or (filetype == 'text'):
         if filetype == 'text':
-            field.imgtype = 'text'
+            field.filetype = 'text'
             try:
                 userlog('Parsing your text file...')
                 xylist = convert(job, field, 'xyls')
@@ -131,7 +131,7 @@ def real_handle_job(job, sshconfig):
                 return -1
 
         else:
-            field.imgtype = 'xyls'
+            field.filetype = 'xyls'
             try:
                 log('fits2fits...')
                 xylist = convert(job, field, 'xyls')
@@ -378,8 +378,6 @@ def main(sshconfig, joblink):
 
         for p in validpaths:
             field = AstroField(user = jobset.user,
-                               xcol = jobset.xcol,
-                               ycol = jobset.ycol,
                                origname = os.path.basename(p),
                                )
             field.save()

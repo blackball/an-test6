@@ -20,6 +20,10 @@ from an.portal.models import UserPreferences
 class AstroField(models.Model):
     user = models.ForeignKey(User, editable=False)
 
+    # ID number of the file on the filesystem.  This is NOT necessarily
+    # unique (multiple AstroFields may share a file).
+    fileid = models.PositiveIntegerField(editable=False, null=True)
+
     # Has the user explicitly granted us permission to redistribute this image?
     allowredist = models.BooleanField(default=False)
     # Has the user explicitly forbidden us permission to redistribute this image?
@@ -32,7 +36,7 @@ class AstroField(models.Model):
 
     # type of the uploaded file, after decompression
     # ("jpg", "png", "gif", "fits", etc)
-    imgtype = models.CharField(max_length=16, editable=False)
+    filetype = models.CharField(max_length=16, editable=False)
 
     # sha-1 hash of the uncompressed file.
     filehash = models.CharField(max_length=40, editable=False)
@@ -41,10 +45,17 @@ class AstroField(models.Model):
     imagew = models.PositiveIntegerField(editable=False, null=True)
     imageh = models.PositiveIntegerField(editable=False, null=True)
 
+    def __init__(self, *args, **kwargs):
+        super(AstroField, self).__init__(*args, **kwargs)
+        # ???
+        if not self.fileid:
+            self.fileid = self.id
+
     def __str__(self):
         s = '<Field ' + str(self.id)
-        if self.imgtype:
-            s += ', ' + self.imgtype
+        s += ', fileid ' + str(self.fileid)
+        if self.filetype:
+            s += ', ' + self.filetype
         s += '>'
         return s
 
@@ -57,9 +68,9 @@ class AstroField(models.Model):
             'text' : 'text/plain',
             'xyls' : 'image/fits', # ??
             }
-        if not self.imgtype in typemap:
+        if not self.filetype in typemap:
             return None
-        return typemap[self.imgtype]
+        return typemap[self.filetype]
 
     def redistributable(self, prefs=None):
         if self.allowredist:
@@ -83,7 +94,7 @@ class AstroField(models.Model):
         self.filehash = h.hexdigest()
 
     def filename(self):
-        return os.path.join(config.fielddir, str(self.id))
+        return os.path.join(config.fielddir, str(self.fileid))
 
     def get_display_scale(self):
         w = self.imagew

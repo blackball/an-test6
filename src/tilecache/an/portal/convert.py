@@ -74,12 +74,12 @@ def convert(job, field, fn):
         infn = convert(job, field, 'uncomp')
         #andir = gmaps_config.basedir + 'quads/'
         log('Converting %s to %s...\n' % (infn, fullfn))
-        (imgtype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, None, False)
+        (filetype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, None, False)
         if errstr:
             err = 'Error converting image file: %s' % errstr
             log(err)
             raise FileConversionError(errstr)
-        field.imgtype = imgtype
+        field.filetype = filetype
         return fullfn
 
     elif fn == 'getimagesize':
@@ -132,13 +132,13 @@ def convert(job, field, fn):
     elif fn == 'fitsimg':
         # check the uncompressed input image type...
         infn = convert(job, field, 'uncomp')
-        (field.imgtype, errmsg) = image2pnm.get_image_type(infn)
+        (field.filetype, errmsg) = image2pnm.get_image_type(infn)
         if errmsg:
             log(errmsg)
             raise FileConversionError(errmsg)
 
         # fits image: fits2fits it.
-        if field.imgtype == image2pnm.fitstype:
+        if field.filetype == image2pnm.fitstype:
             errmsg = fits2fits.fits2fits(infn, fullfn, False)
             if errmsg:
                 log(errmsg)
