@@ -79,8 +79,7 @@ def convert(job, field, fn):
             err = 'Error converting image file: %s' % errstr
             log(err)
             raise FileConversionError(errstr)
-        if store_imgtype:
-            field.imgtype = imgtype
+        field.imgtype = imgtype
         return fullfn
 
     elif fn == 'getimagesize':
@@ -90,9 +89,8 @@ def convert(job, field, fn):
             raise FileConversionError('couldn\'t find file size')
         (w, h, pnmtype) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
-        if store_imgsize:
-            field.imagew = w
-            field.imageh = h
+        field.imagew = w
+        field.imageh = h
         return None
 
     elif fn == 'pgm':
@@ -103,9 +101,8 @@ def convert(job, field, fn):
             raise FileConversionError('couldn\'t find file size')
         (w, h, pnmtype) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
-        if store_imgsize:
-            field.imagew = w
-            field.imageh = h
+        field.imagew = w
+        field.imageh = h
         if pnmtype == 'G':
             return infn
         cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
@@ -133,13 +130,12 @@ def convert(job, field, fn):
         return fullfn
 
     elif fn == 'fitsimg':
-        if store_imgtype:
-            # check the uncompressed input image type...
-            infn = convert(job, field, 'uncomp')
-            (field.imgtype, errmsg) = image2pnm.get_image_type(infn)
-            if errmsg:
-                log(errmsg)
-                raise FileConversionError(errmsg)
+        # check the uncompressed input image type...
+        infn = convert(job, field, 'uncomp')
+        (field.imgtype, errmsg) = image2pnm.get_image_type(infn)
+        if errmsg:
+            log(errmsg)
+            raise FileConversionError(errmsg)
 
         # fits image: fits2fits it.
         if field.imgtype == image2pnm.fitstype:
