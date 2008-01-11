@@ -201,6 +201,18 @@ int fitsbin_start_write(fitsbin_t* fb) {
     return 0;
 }
 
+int fitsbin_write_items(fitsbin_t* fb, int chunk, void* data, int N) {
+    if (fwrite(data, fb->chunks[chunk].itemsize, N, fb->fid) != N) {
+        fprintf(stderr, "Failed to write %i items: %s\n", N, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int fitsbin_write_item(fitsbin_t* fb, int chunk, void* data) {
+    return fitsbin_write_items(fb, chunk, data, 1);
+}
+
 fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 									char** errstr) {
 	fitsbin_t* fb;

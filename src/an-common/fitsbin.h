@@ -93,6 +93,9 @@ int fitsbin_fix_chunk_header(fitsbin_t* fb, int chunk);
 
 int fitsbin_start_write(fitsbin_t* fb);
 
+int fitsbin_write_item(fitsbin_t* fb, int chunk, void* data);
+
+int fitsbin_write_items(fitsbin_t* fb, int chunk, void* data, int N);
 
 // Single-chunk shortcuts:
 

@@ -28,14 +28,7 @@
 #include "ioutils.h"
 #include "qidxfile.h"
 
-static qidxfile* new_qidxfile() {
-	qidxfile* qf = calloc(1, sizeof(qidxfile));
-	if (!qf) {
-		fprintf(stderr, "Couldn't malloc a qidxfile struct: %s\n", strerror(errno));
-		return NULL;
-	}
-	return qf;
-}
+#define CHUNK_QIDX 0
 
 static int callback_read_header(qfits_header* primheader, qfits_header* header,
 								size_t* expected, char** errstr,
@@ -59,28 +52,48 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
 	return 0;
 }
 
+static qidxfile* new_qidxfile() {
+	qidxfile* qf;
+	fitsbin_chunk_t* chunk;
+
+    qf = calloc(1, sizeof(qidxfile));
+	if (!qf) {
+		fprintf(stderr, "Couldn't malloc a qidxfile struct: %s\n", strerror(errno));
+		return NULL;
+	}
+
+    // default
+    qf->dimquads = 4;
+
+    qf->fb = fitsbin_new(1);
+
+    chunk = qf->fb->chunks + CHUNK_QIDX;
+    chunk->tablename = strdup("qidx");
+    chunk->required = 1;
+    chunk->callback_read_header = callback_read_header;
+    chunk->userdata = qf;
+	chunk->itemsize = sizeof(uint32_t);
+
+	return qf;
+}
+
 qidxfile* qidxfile_open(const char* fn) {
 	qidxfile* qf = NULL;
-	fitsbin_t* fb = NULL;
-	char* errstr = NULL;
 
 	qf = new_qidxfile();
 	if (!qf)
 		goto bailout;
 
-	fb = fitsbin_open(fn, "qidx", &errstr, callback_read_header, qf);
-	if (!fb) {
-		fprintf(stderr, "%s\n", errstr);
-		goto bailout;
-	}
-	qf->fb = fb;
-	qf->index = (uint32_t*)fb->chunks[0].data;
+    if (fitsbin_read(qf->fb))
+        goto bailout;
+
+	qf->index = qf->fb->chunks[CHUNK_QIDX].data;
 	qf->heap  = qf->index + 2 * qf->numstars;
 	return qf;
 
  bailout:
 	if (qf)
-		free(qf);
+        qidxfile_close(qf);
 	return NULL;
 }
 
@@ -94,8 +107,6 @@ int qidxfile_close(qidxfile* qf) {
 
 qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 	qidxfile* qf;
-	fitsbin_t* fb = NULL;
-	char* errstr = NULL;
 	qfits_header* hdr;
 
 	qf = new_qidxfile();
@@ -104,18 +115,11 @@ qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 	qf->numstars = nstars;
 	qf->numquads = nquads;
 
-	fb = fitsbin_open_for_writing(fn, "quads", &errstr);
-	if (!fb) {
-		fprintf(stderr, "%s\n", errstr);
-		goto bailout;
-	}
-	qf->fb = fb;
+    if (fitsbin_start_write(qf->fb))
+        goto bailout;
 
-    // default
-    qf->dimquads = 4;
-
-	hdr = fb->primheader;
-    fits_add_endian(fb->primheader);
+	hdr = qf->fb->primheader;
+    fits_add_endian(hdr);
 	fits_header_add_int(hdr, "NSTARS", qf->numstars, "Number of stars used.");
 	fits_header_add_int(hdr, "NQUADS", qf->numquads, "Number of quads used.");
 	qfits_header_add(hdr, "AN_FILE", "QIDX", "This is a quad index file.", NULL);
@@ -132,14 +136,13 @@ qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 
 bailout:
 	if (qf)
-		free(qf);
+		qidxfile_close(qf);
 	return NULL;
 }
 
 int qidxfile_write_header(qidxfile* qf) {
 	fitsbin_t* fb = qf->fb;
-	fb->chunks[0].itemsize = sizeof(uint32_t);
-	fb->chunks[0].nrows = 2 * qf->numstars + qf->dimquads * qf->numquads;
+	fb->chunks[CHUNK_QIDX].nrows = 2 * qf->numstars + qf->dimquads * qf->numquads;
 	if (fitsbin_write_primary_header(fb) ||
 		fitsbin_write_header(fb)) {
 		fprintf(stderr, "Failed to write qidxfile header.\n");
@@ -157,29 +160,32 @@ int qidxfile_write_star(qidxfile* qf, uint* quads, uint nquads) {
 	int i;
 
 	// Write the offset & size:
-	if (fseeko(fid, fb->chunks[0].header_end + qf->cursor_index * 2 * sizeof(uint32_t), SEEK_SET)) {
+	if (fseeko(fid, fb->chunks[CHUNK_QIDX].header_end + qf->cursor_index * 2 * sizeof(uint32_t), SEEK_SET)) {
 		fprintf(stderr, "qidxfile_write_star: failed to fseek: %s\n", strerror(errno));
 		return -1;
 	}
 	nq = nquads;
-	if ((fwrite(&qf->cursor_heap, sizeof(uint32_t), 1, fid) != 1) ||
-		(fwrite(&nq, sizeof(uint32_t), 1, fid) != 1)) {
+	if (fitsbin_write_item(fb, CHUNK_QIDX, &qf->cursor_heap) ||
+        fitsbin_write_item(fb, CHUNK_QIDX, &nq)) {
 		fprintf(stderr, "qidxfile_write_star: failed to write a qidx offset/size.\n");
 		return -1;
 	}
 	// Write the quads.
-	if (fseeko(fid, fb->chunks[0].header_end + qf->numstars * 2 * sizeof(uint32_t) +
+	if (fseeko(fid, fb->chunks[CHUNK_QIDX].header_end + qf->numstars * 2 * sizeof(uint32_t) +
 			   qf->cursor_heap * sizeof(uint32_t), SEEK_SET)) {
 		fprintf(stderr, "qidxfile_write_star: failed to fseek: %s\n", strerror(errno));
 		return -1;
 	}
+
 	for (i=0; i<nquads; i++) {
+        // (in case uint != uint32_t)
 		uint32_t q = quads[i];
-		if (fwrite(&q, sizeof(uint32_t), 1, fid) != 1) {
-			fprintf(stderr, "qidxfile_write_star: failed to write quads.\n");
-			return -1;
-		}
-	}
+        if (fitsbin_write_item(fb, CHUNK_QIDX, &q)) {
+            fprintf(stderr, "qidxfile_write_star: failed to write quads.\n");
+            return -1;
+        }
+    }
+
 	qf->cursor_index++;
 	qf->cursor_heap += nquads;
 	return 0;
