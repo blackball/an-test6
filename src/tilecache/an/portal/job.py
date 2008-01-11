@@ -99,11 +99,11 @@ class AstroField(models.Model):
     def get_display_scale(self):
         w = self.imagew
         h = self.imageh
-        scale = max(1.0,
-                    math.pow(2, math.ceil(
-            math.log(max(self.imagew, self.imageh) / float(800)) / math.log(2))))
-        displayw = int(round(self.imagew / float(scale)))
-        displayh = int(round(self.imageh / float(scale)))
+        scale = float(max(1.0,
+                          math.pow(2, math.ceil(
+            math.log(max(w, h) / float(800)) / math.log(2)))))
+        displayw = int(round(w / scale))
+        displayh = int(round(h / scale))
         return (scale, displayw, displayh)
 
 class JobSet(models.Model):
