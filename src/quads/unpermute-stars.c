@@ -134,7 +134,7 @@ int main(int argc, char **args) {
 
 	fn = mk_idfn(basein);
 	printf("Reading id file from %s ...\n", fn);
-	idin = idfile_open(fn, 0);
+	idin = idfile_open(fn);
 	if (!idin) {
 		fprintf(stderr, "Failed to read id file from %s.  Will not generate output id file.\n", fn);
 	}
@@ -204,17 +204,21 @@ int main(int argc, char **args) {
 	qfits_header_add(qouthdr, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
 
 	if (idin) {
-		boilerplate_add_fits_headers(idout->header);
-		qfits_header_add(idout->header, "HISTORY", "This file was created by the program \"unpermute-stars\".", NULL, NULL);
-		qfits_header_add(idout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
-		fits_add_args(idout->header, args, argc);
-		qfits_header_add(idout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
-		qfits_header_add(idout->header, "HISTORY", "** unpermute-stars: history from input:", NULL, NULL);
-		fits_copy_all_headers(idin->header, idout->header, "HISTORY");
-		qfits_header_add(idout->header, "HISTORY", "** unpermute-stars: end of history from input.", NULL, NULL);
-		qfits_header_add(idout->header, "COMMENT", "** unpermute-stars: comments from input:", NULL, NULL);
-		fits_copy_all_headers(idin->header, idout->header, "COMMENT");
-		qfits_header_add(idout->header, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
+        qfits_header* idinhdr;
+        qfits_header* idouthdr;
+        idouthdr = idfile_get_header(idout);
+        idinhdr = idfile_get_header(idin);
+		boilerplate_add_fits_headers(idouthdr);
+		qfits_header_add(idouthdr, "HISTORY", "This file was created by the program \"unpermute-stars\".", NULL, NULL);
+		qfits_header_add(idouthdr, "HISTORY", "unpermute-stars command line:", NULL, NULL);
+		fits_add_args(idouthdr, args, argc);
+		qfits_header_add(idouthdr, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
+		qfits_header_add(idouthdr, "HISTORY", "** unpermute-stars: history from input:", NULL, NULL);
+		fits_copy_all_headers(idinhdr, idouthdr, "HISTORY");
+		qfits_header_add(idouthdr, "HISTORY", "** unpermute-stars: end of history from input.", NULL, NULL);
+		qfits_header_add(idouthdr, "COMMENT", "** unpermute-stars: comments from input:", NULL, NULL);
+		fits_copy_all_headers(idinhdr, idouthdr, "COMMENT");
+		qfits_header_add(idouthdr, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
 	}
 
 	if (quadfile_write_header(qfout) ||

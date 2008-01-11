@@ -60,6 +60,7 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
 }
 
 static codefile* new_codefile() {
+	fitsbin_chunk_t* chunk;
 	codefile* cf = calloc(1, sizeof(codefile));
 	if (!cf) {
 		fprintf(stderr, "Couldn't calloc a codefile struct: %s\n", strerror(errno));

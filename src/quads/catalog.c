@@ -95,15 +95,15 @@ catalog* catalog_open(char* catfn) {
         goto bailout;
 
     fitsbin_set_filename(cat->fb, catfn);
-    if (fitsbin_read(fb)) {
-        if (*fb->errstr)
-            fprintf(stderr, "%s\n", *fb->errstr);
+    if (fitsbin_read(cat->fb)) {
+        if (*cat->fb->errstr)
+            fprintf(stderr, "%s\n", *cat->fb->errstr);
         else
             fprintf(stderr, "fitsbin_read() failed.\n");
 		goto bailout;
 	}
-	cat->stars = fb->chunks[CHUNK_XYZ].data;
-    cat->mags  = fb->chunks[CHUNK_MAG].data;
+	cat->stars = cat->fb->chunks[CHUNK_XYZ].data;
+    cat->mags  = cat->fb->chunks[CHUNK_MAG].data;
     return cat;
 
  bailout:

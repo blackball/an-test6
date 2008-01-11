@@ -101,7 +101,7 @@ index_t* index_load(const char* indexname, int flags)
 		logerr("BLAH:%d\n",flags);
 		idfname = mk_idfn(indexname);
 		// Read .id file...
-		index->id_file = idfile_open(idfname, 0);
+		index->id_file = idfile_open(idfname);
 		if (!index->id_file) {
 			logerr("Couldn't open id file %s.\n", idfname);
 			free_fn(idfname);

@@ -24,26 +24,24 @@
 #include <assert.h>
 
 #include "qfits.h"
+#include "fitsbin.h"
 
 struct idfile {
 	unsigned int numstars;
 	int healpix;
 
-	// when reading:
-	void*  mmap_base;
-	size_t mmap_size;
-	uint64_t* anidarray;
+    fitsbin_t* fb;
 
-	// when writing:
-	FILE* fid;
-	qfits_header* header;
-	off_t header_end;
+	// when reading:
+	uint64_t* anidarray;
 };
 typedef struct idfile idfile;
 
-idfile* idfile_open(char* fname, int modifiable);
+idfile* idfile_open(char* fn);
 
-idfile* idfile_open_for_writing(char* quadfname);
+idfile* idfile_open_for_writing(char* fn);
+
+qfits_header* idfile_get_header(idfile* id);
 
 int idfile_close(idfile* qf);
 

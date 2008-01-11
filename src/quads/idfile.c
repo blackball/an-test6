@@ -28,268 +28,159 @@
 #include "starutil.h"
 #include "ioutils.h"
 
-static idfile* new_idfile()
-{
+#define CHUNK_IDS 0
+
+static int callback_read_header(qfits_header* primheader, qfits_header* header,
+								size_t* expected, char** errstr,
+								void* userdata) {
+	idfile* id = userdata;
+
+    id->numstars = qfits_header_getint(primheader, "NSTARS", -1);
+	//qf->indexid = qfits_header_getint(primheader, "INDEXID", 0);
+	id->healpix = qfits_header_getint(primheader, "HEALPIX", -1);
+
+	if (id->numstars == -1) {
+		if (errstr) *errstr = "Couldn't find NSTARS entries in FITS header.";
+		return -1;
+	}
+    if (fits_check_endian(primheader)) {
+		if (errstr) *errstr = "File was written with the wrong endianness.";
+		return -1;
+    }
+
+    id->fb->chunks[CHUNK_IDS].itemsize = sizeof(uint64_t);
+
+    *expected = id->numstars * sizeof(uint64_t);
+	return 0;
+}
+
+static idfile* new_idfile() {
 	idfile* id = calloc(1, sizeof(idfile));
+	fitsbin_chunk_t* chunk;
+
 	if (!id) {
 		fflush(stdout);
 		fprintf(stderr, "Couldn't malloc a idfile struct: %s\n", strerror(errno));
 		return NULL;
 	}
 	id->healpix = -1;
+
+    id->fb = fitsbin_new(1);
+
+    chunk = id->fb->chunks + CHUNK_IDS;
+    chunk->tablename = strdup("ids");
+    chunk->required = 1;
+    chunk->callback_read_header = callback_read_header;
+    chunk->userdata = id;
+
 	return id;
 }
 
-idfile* idfile_open(char* fn, int modifiable)
-{
-	FILE* fid = NULL;
-	idfile* id = NULL;
-	int off, sizeanids;
-	int size;
-	void* map;
-	int mode, flags;
-	qfits_header* header = NULL;
-
-	if (!qfits_is_fits(fn)) {
-		fflush(stdout);
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-		goto bailout;
-	}
-	fid = fopen(fn, "rb");
-	if (!fid) {
-		fflush(stdout);
-		fprintf(stderr, "Couldn't open file %s to read id file: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
-	header = qfits_header_read(fn);
-	if (!header) {
-		fflush(stdout);
-		fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
-		goto bailout;
-	}
-
-	if (fits_check_endian(header)) {
-		fflush(stdout);
-		fprintf(stderr, "File %s was written with wrong endianness or uint size.\n", fn);
-		goto bailout;
-	}
+idfile* idfile_open(char* fn) {
+    idfile* id = NULL;
 
 	id = new_idfile();
 	if (!id)
 		goto bailout;
 
-	id->header = header;
-	id->numstars = qfits_header_getint(header, "NSTARS", -1);
-	id->healpix = qfits_header_getint(header, "HEALPIX", -1);
+    fitsbin_set_filename(id->fb, fn);
+    if (fitsbin_read(id->fb))
+        goto bailout;
 
-	if (id->numstars == -1) {
-		fflush(stdout);
-		fprintf(stderr, "Couldn't find NUMSTARS of stars entries in FITS header.");
-		goto bailout;
-	}
-	//fprintf(stderr, "nstars %u\n", id->numstars);
-
-	if (fits_find_table_column(fn, "ids", &off, &sizeanids, NULL)) {
-		fflush(stdout);
-		fprintf(stderr, "Couldn't find \"ids\" column in FITS file.");
-		goto bailout;
-	}
-
-	if (fits_bytes_needed(id->numstars * sizeof(uint64_t)) != sizeanids) {
-		fflush(stdout);
-		fprintf(stderr, "Number of stars promised does jive with the table size: %u vs %u.\n",
-		        fits_bytes_needed(id->numstars * sizeof(uint64_t)), sizeanids);
-		goto bailout;
-	}
-
-	if (modifiable) {
-		mode = PROT_READ | PROT_WRITE;
-		flags = MAP_PRIVATE;
-	} else {
-		mode = PROT_READ;
-		flags = MAP_SHARED;
-	}
-	size = off + sizeanids;
-	map = mmap(0, size, mode, flags, fileno(fid), 0);
-	fclose(fid);
-	fid = NULL;
-	if (map == MAP_FAILED) {
-		fflush(stdout);
-		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
-		goto bailout;
-	}
-
-	id->anidarray = (uint64_t*)(map + off);
-	id->mmap_base = map;
-	id->mmap_size = size;
+	id->anidarray = id->fb->chunks[CHUNK_IDS].data;
 	return id;
 
 bailout:
-	if (header)
-		qfits_header_destroy(header);
-	if (id)
-		free(id);
-	if (fid)
-		fclose(fid);
+    if (id)
+        idfile_close(id);
 	return NULL;
 }
 
-int idfile_close(idfile* id)
-{
-	int rtn = 0;
-	if (id->mmap_base)
-		if (munmap(id->mmap_base, id->mmap_size)) {
-			fflush(stdout);
-			fprintf(stderr, "Error munmapping idfile: %s\n", strerror(errno));
-			rtn = -1;
-		}
-	if (id->fid) {
-		fits_pad_file(id->fid);
-		if (fclose(id->fid)) {
-			fflush(stdout);
-			fprintf(stderr, "Error closing idfile: %s\n", strerror(errno));
-			rtn = -1;
-		}
-	}
-	if (id->header)
-		qfits_header_destroy(id->header);
-
+int idfile_close(idfile* id) {
+    int rtn;
+	if (!id) return 0;
+	rtn = fitsbin_close(id->fb);
 	free(id);
-	return rtn;
+    return rtn;
 }
 
-idfile* idfile_open_for_writing(char* fn)
-{
+idfile* idfile_open_for_writing(char* fn) {
 	idfile* id;
+	qfits_header* hdr;
 
 	id = new_idfile();
 	if (!id)
 		goto bailout;
-	id->fid = fopen(fn, "wb");
-	if (!id->fid) {
-		fflush(stdout);
-		fprintf(stderr, "Couldn't open file %s for FITS output: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
+
+    fitsbin_set_filename(id->fb, fn);
+    if (fitsbin_start_write(id->fb))
+        goto bailout;
 
 	// the header
-	id->header = qfits_table_prim_header_default();
-	fits_add_endian(id->header);
+    hdr = id->fb->primheader;
+    fits_add_endian(hdr);
 
 	// These are be placeholder values...
-	qfits_header_add(id->header, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
-	qfits_header_add(id->header, "NSTARS", "0", "Number of stars used.", NULL);
-	qfits_header_add(id->header, "HEALPIX", "-1", "Healpix covered by this file.", NULL);
-	qfits_header_add(id->header, "COMMENT", "This is a flat array of ANIDs for each catalog star.", NULL, NULL);
-	qfits_header_add(id->header, "COMMENT", " (each A.N id is a native-endian uint64)", NULL, NULL);
+	qfits_header_add(hdr, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
+	qfits_header_add(hdr, "NSTARS", "0", "Number of stars used.", NULL);
+	qfits_header_add(hdr, "HEALPIX", "-1", "Healpix covered by this file.", NULL);
+	qfits_header_add(hdr, "COMMENT", "This is a flat array of ANIDs for each catalog star.", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", " (each A.N id is a native-endian uint64)", NULL, NULL);
 
 	return id;
 
 bailout:
-	if (id) {
-		if (id->fid)
-			fclose(id->fid);
-		free(id);
-	}
+	if (id)
+        idfile_close(id);
 	return NULL;
 }
 
-int idfile_write_anid(idfile* id, uint64_t anid)
-{
-	if (!id->fid) {
-		fflush(stdout);
-		fprintf(stderr, "idfile_fits_write_anid: fid is null.\n");
+int idfile_write_anid(idfile* id, uint64_t anid) {
+    if (fitsbin_write_item(id->fb, CHUNK_IDS, &anid)) {
+        fprintf(stderr, "idfile_fits_write_anid: failed to write: %s\n", strerror(errno));
 		return -1;
 	}
-	if (fwrite(&anid, sizeof(uint64_t), 1, id->fid) == 1) {
-		id->numstars++;
-		return 0;
-	}
-	fflush(stdout);
-	fprintf(stderr, "idfile_fits_write_anid: failed to write: %s\n", strerror(errno));
-	return -1;
+    id->numstars++;
+    return 0;
 }
 
-int idfile_fix_header(idfile* id)
-{
-	off_t offset;
-	off_t new_header_end;
-	qfits_table* table;
-	qfits_header* tablehdr;
-	void* dataptr;
-	uint datasize;
-	uint ncols, nrows, tablesize;
-	const char* fn;
+qfits_header* idfile_get_header(idfile* id) {
+    return id->fb->primheader;
+}
 
-	if (!id->fid) {
-		fflush(stdout);
-		fprintf(stderr, "idfile_fix_header: fid is null.\n");
-		return -1;
-	}
+int idfile_fix_header(idfile* id) {
+	qfits_header* hdr;
+	fitsbin_t* fb = id->fb;
 
-	offset = ftello(id->fid);
-	fseeko(id->fid, 0, SEEK_SET);
+	fb->chunks[CHUNK_IDS].nrows = id->numstars;
+
+	hdr = fb->primheader;
 
 	// fill in the real values...
-	fits_header_mod_int(id->header, "NSTARS", id->numstars, "Number of stars.");
-	fits_header_mod_int(id->header, "HEALPIX", id->healpix, "Healpix covered by this file.");
+	fits_header_mod_int(hdr, "NSTARS", id->numstars, "Number of stars.");
+	fits_header_mod_int(hdr, "HEALPIX", id->healpix, "Healpix covered by this file.");
 
-	dataptr = NULL;
-	datasize = sizeof(uint64_t);
-	ncols = 1;
-	nrows = id->numstars;
-	tablesize = datasize * nrows * ncols;
-	fn = "";
-	table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
-	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-	               "ids",
-	               "", "", "", 0, 0, 0, 0, 0);
-	qfits_header_dump(id->header, id->fid);
-	tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, id->fid);
-	qfits_table_close(table);
-	qfits_header_destroy(tablehdr);
-
-	new_header_end = ftello(id->fid);
-
-	if (new_header_end != id->header_end) {
-		fflush(stdout);
-		fprintf(stderr, "Warning: idfile header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)id->header_end,
-		        (unsigned long)new_header_end);
+	if (fitsbin_fix_primary_header(fb) ||
+		fitsbin_fix_header(fb)) {
+        fprintf(stderr, "Failed to fix idfile header.\n");
 		return -1;
 	}
-
-	fseek(id->fid, offset, SEEK_SET);
-
-	fits_pad_file(id->fid);
-
 	return 0;
 }
 
-int idfile_write_header(idfile* id)
-{
-	// first table: the quads.
-	int datasize = sizeof(uint64_t);
-	int ncols = 1;
-	// may be dummy
-	int nrows = id->numstars;
-	int tablesize = datasize * nrows * ncols;
-	qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-   qfits_header* tablehdr;
-	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-	               "ids", "", "", "", 0, 0, 0, 0, 0);
-	qfits_header_dump(id->header, id->fid);
-	tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, id->fid);
-	qfits_table_close(table);
-	qfits_header_destroy(tablehdr);
-	id->header_end = ftello(id->fid);
+int idfile_write_header(idfile* id) {
+	fitsbin_t* fb = id->fb;
+	fb->chunks[CHUNK_IDS].nrows = id->numstars;
+
+	if (fitsbin_write_primary_header(fb) ||
+		fitsbin_write_header(fb)) {
+		fprintf(stderr, "Failed to write quadfile header.\n");
+		return -1;
+	}
 	return 0;
 }
 
-uint64_t idfile_get_anid(idfile* id, uint starid) 
-{
+uint64_t idfile_get_anid(idfile* id, uint starid) {
 	if (starid >= id->numstars) {
 		fflush(stdout);
 		fprintf(stderr, "Requested quadid %i, but number of quads is %i. SKY IS FALLING\n",
