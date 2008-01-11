@@ -26,7 +26,8 @@ class AstroField(models.Model):
     forbidredist = models.BooleanField(default=False)
 
     # The original filename on the user's machine, or basename of URL, etc.
-    # Needed for, eg, tarball jobsets.
+    # Needed for, eg, tarball jobsets.  Purely for informative purposes,
+    # to show the user a filename that makes sense.
     origname = models.CharField(max_length=64, null=True)
 
     # type of the uploaded file, after decompression
@@ -35,11 +36,6 @@ class AstroField(models.Model):
 
     # sha-1 hash of the uncompressed file.
     filehash = models.CharField(max_length=40, editable=False)
-
-    # for FITS tables, the names of the X and Y columns.
-    # ?????
-    xcol = models.CharField(max_length=16, blank=True)
-    ycol = models.CharField(max_length=16, blank=True)
 
     # size of the image
     imagew = models.PositiveIntegerField(editable=False, null=True)

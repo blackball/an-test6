@@ -308,10 +308,7 @@ def main(sshconfig, joblink):
     jobset = jobsets[0]
     log('Running jobset: ' + str(jobset))
 
-    field = AstroField(user = jobset.user,
-                       xcol = jobset.xcol,
-                       ycol = jobset.ycol,
-                       )
+    field = AstroField(user = jobset.user)
     # save() so the "id" field gets a unique value
     field.save()
     origfile = field.filename()
