@@ -26,8 +26,9 @@
 #include "an-bool.h"
 #include "qfits.h"
 #include "bl.h"
+#include "ioutils.h"
 
-char* OPTIONS = "he:i:o:ba";
+char* OPTIONS = "he:i:o:baDH";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "%s    -i <input-file>\n"
@@ -35,6 +36,8 @@ void printHelp(char* progname) {
 		   "      [-a]: write out ALL extensions; the output filename should be\n"
 		   "            a \"sprintf\" pattern such as  \"extension-%%04i\".\n"
 		   "      [-b]: print sizes and offsets in FITS blocks (of 2880 bytes)\n"
+            "      [-D]: data blocks only\n"
+            "      [-H]: header blocks only\n"
 		   "      -e <extension-number> ...\n\n",
 		   progname);
 }
@@ -52,17 +55,23 @@ int main(int argc, char *argv[]) {
 	FILE* fout = NULL;
 	il* exts;
 	int i;
-	char* map;
-	int mapsize;
 	char* progname = argv[0];
 	int inblocks = 0;
 	int allexts = 0;
 	int Next = -1;
+    bool dataonly = FALSE;
+    bool headeronly = FALSE;
 
 	exts = il_new(16);
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'D':
+            dataonly = TRUE;
+            break;
+        case 'H':
+            headeronly = TRUE;
+            break;
 		case 'a':
 			allexts = 1;
 			break;
@@ -85,6 +94,11 @@ int main(int argc, char *argv[]) {
         default:
             return -1;
         }
+
+    if (headeronly && dataonly) {
+        fprintf(stderr, "Can't write data blocks only AND header blocks only!\n");
+        exit(-1);
+    }
 
 	if (infn) {
 		Next = qfits_query_n_ext(infn);
@@ -153,16 +167,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-	fseeko(fin, 0, SEEK_END);
-	mapsize = ftello(fin);
-	fseeko(fin, 0, SEEK_SET);
-	map = mmap(NULL, mapsize, PROT_READ, MAP_SHARED, fileno(fin), 0);
-	if (map == MAP_FAILED) {
-		fprintf(stderr, "Failed to mmap input file: %s\n", strerror(errno));
-		exit(-1);
-	}
-	fclose(fin);
-
 	for (i=0; i<il_size(exts); i++) {
 		int hdrstart, hdrlen, datastart, datalen;
 		int ext = il_get(exts, i);
@@ -188,12 +192,19 @@ int main(int argc, char *argv[]) {
 		else
 			fprintf(stderr, "Writing extension %i: header start %i, length %i, data start %i, length %i.\n",
 				   ext, hdrstart, hdrlen, datastart, datalen);
-		
-		if ((hdrlen  && (fwrite(map + hdrstart , 1, hdrlen , fout) != hdrlen )) ||
-			(datalen && (fwrite(map + datastart, 1, datalen, fout) != datalen))) {
-			fprintf(stderr, "Failed to write extension %i: %s\n", ext, strerror(errno));
-			exit(-1);
-		}
+
+        if (hdrlen && !dataonly) {
+            if (pipe_file_offset(fin, hdrstart, hdrlen, fout)) {
+                fprintf(stderr, "Failed to write header for extension %i: %s\n", ext, strerror(errno));
+                exit(-1);
+            }
+        }
+        if (datalen && !headeronly) {
+            if (pipe_file_offset(fin, datastart, datalen, fout)) {
+                fprintf(stderr, "Failed to write data for extension %i: %s\n", ext, strerror(errno));
+                exit(-1);
+            }
+        }
 
 		if (allexts)
 			if (fclose(fout)) {
@@ -202,7 +213,7 @@ int main(int argc, char *argv[]) {
 			}
 	}
 
-	munmap(map, mapsize);
+	fclose(fin);
 	if (!allexts && !tostdout)
 		fclose(fout);
 	il_free(exts);
