@@ -900,7 +900,6 @@ static int qfits_query_column_seq_to_array_endian(
     size_t              size ;
 	int                 i ;
 	int do_swap;
-	int j;
    
     if (th->tab_w == -1) {
         /* Compute the table width in bytes */
