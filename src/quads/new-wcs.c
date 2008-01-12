@@ -28,13 +28,15 @@
 #include "qfits_error.h"
 #include "an-bool.h"
 #include "fitsioutils.h"
+#include "ioutils.h"
 
-static const char* OPTIONS = "hi:w:o:";
+static const char* OPTIONS = "hi:w:o:d";
 
 static void printHelp(char* progname) {
 	printf("%s    -i <input-file>\n"
 		   "      -w <WCS-file>\n"
 		   "      -o <output-file>\n"
+           "      [-d]: also copy the data segment\n"
 		   "\n",
 		   progname);
 }
@@ -105,6 +107,7 @@ int main(int argc, char *argv[]) {
 	regex_t re1[NE1];
 	regex_t re2[NE2];
 	qfits_header *inhdr, *outhdr, *wcshdr;
+    bool copydata = FALSE;
 
     char key[FITS_LINESZ + 1];
     char newkey[FITS_LINESZ + 1];
@@ -123,6 +126,9 @@ int main(int argc, char *argv[]) {
         case 'w':
 			wcsfn = optarg;
 			break;
+        case 'd':
+            copydata = TRUE;
+            break;
         case '?':
         case 'h':
 			printHelp(progname);
@@ -235,11 +241,34 @@ int main(int argc, char *argv[]) {
 	qfits_header_append(outhdr, "END", NULL, NULL, NULL);
 
 	if (qfits_header_dump(outhdr, outfid) ||
-		fits_pad_file(outfid) ||
-		fclose(outfid)) {
-		fprintf(stderr, "Failed to write output header.\n");
+		fits_pad_file(outfid)) {
+		fprintf(stderr, "Failed to write output header: %s\n", strerror(errno));
 		exit(-1);
 	}
+
+    if (copydata) {
+		int datsize, datstart;
+        FILE* infid;
+        printf("Copying data block...\n");
+		if (qfits_get_datinfo(infn, 0, &datstart, &datsize)) {
+			fprintf(stderr, "Couldn't get data block extent.\n");
+			exit(-1);
+		}
+        infid = fopen(infn, "rb");
+        if (!infid) {
+            fprintf(stderr, "Couldn't open input file: %s\n", strerror(errno));
+            exit(-1);
+        }
+        if (pipe_file_offset(infid, datstart, datsize, outfid)) {
+            fprintf(stderr, "Failed to copy the data block.\n");
+            exit(-1);
+        }
+    }
+
+    if (fclose(outfid)) {
+		fprintf(stderr, "Failed to close output file: %s.\n", strerror(errno));
+		exit(-1);
+    }
 
 	qfits_header_destroy(inhdr);
 	qfits_header_destroy(wcshdr);
