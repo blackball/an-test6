@@ -207,6 +207,22 @@ xy* xylist_get_field(xylist* ls, uint field) {
 	return rtn;
 }
 
+field_t* xylist_get_field2(xylist* ls, unsigned int field) {
+	int nobjs;
+	double* vals;
+    field_t* f;
+    assert(field > 0);
+	nobjs = xylist_n_entries(ls, field);
+	if (nobjs == -1) {
+		fprintf(stderr, "Field %i couldn't be read.\n", field);
+		return NULL;
+	}
+	vals = malloc(2 * nobjs * sizeof(double));
+	xylist_read_entries(ls, field, 0, nobjs, vals);
+    f = field_new_from_data(vals, nobjs);
+    return f;
+}
+
 qfits_header* xylist_get_field_header(xylist* ls, uint field) {
 	qfits_header* hdr;
     assert(field > 0);

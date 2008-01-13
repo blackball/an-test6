@@ -25,6 +25,7 @@
 #include "starutil.h"
 #include "qfits.h"
 #include "bl.h"
+#include "field.h"
 
 typedef dl xy;
 #define mk_xy(n) dl_new((n)*2)
@@ -86,6 +87,9 @@ int xylist_n_fields(xylist* ls);
 
 // it's your responsibility to free_xy() this.
 xy* xylist_get_field(xylist* ls, unsigned int field);
+
+// it's your responsibility to free_xy() this.
+field_t* xylist_get_field2(xylist* ls, unsigned int field);
 
 // it's your responsibility to call qfits_header_destroy().
 qfits_header* xylist_get_field_header(xylist* ls, unsigned int field);
