@@ -698,6 +698,8 @@ static sip_t* tweak(blind_t* bp, MatchObj* mo, startree* starkd) {
 
 	logmsg("Done tweaking!\n");
 
+    tweak_print_rms_curve(twee);
+
 	// Steal the resulting SIP structure
 	sip = twee->sip;
 	// Set it NULL so tweak_free() doesn't delete it.

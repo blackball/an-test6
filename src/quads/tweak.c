@@ -34,6 +34,7 @@
 #include "kdtree_fits_io.h"
 #include "mathutil.h"
 #include "log.h"
+#include "permutedsort.h"
 
 // TODO:
 //
@@ -709,6 +710,58 @@ double dtrs_dist2_callback(void* p1, void* p2, int D)
 {
 	double* pp1 = p1, *pp2 = p2;
 	return distsq(pp1, pp2, D);
+}
+
+void tweak_print_rms_curve(tweak_t* t) {
+    // sort by t->dist2; t->image and t->ref are the correspondences.
+    int* perm;
+    double* dists;
+    int i, N;
+    double ssumpix, ssumarcsec;
+
+    N = dl_size(t->dist2);
+    dists = malloc(N * sizeof(double));
+    perm = malloc(N * sizeof(int));
+
+    for (i=0; i<N; i++)
+        perm[i] = i;
+    dl_copy(t->dist2, 0, N, dists);
+
+    permuted_sort_set_params(dists, sizeof(double), compare_doubles);
+    permuted_sort(perm, N);
+
+    ssumpix = ssumarcsec = 0.0;
+    for (i=0; i<N; i++) {
+        double ix, iy, fx, fy;
+        int ind = perm[i];
+        int ii, fi;
+        double pix2;
+        double rmspix, rmsarcsec;
+
+        // index or reference:
+        ii = il_get(t->ref, ind);
+        ix = t->x_ref[ii];
+        iy = t->y_ref[ii];
+
+        // field or image:
+        fi = il_get(t->image, ind);
+        fx = t->x[fi];
+        fy = t->y[fi];
+
+        pix2 = square(fx - ix) + square(fy - iy);
+
+        ssumpix += pix2;
+        rmspix = sqrt(ssumpix / (double)(i + 1));
+
+        ssumarcsec += distsq2arcsec(dl_get(t->dist2, ind));
+        rmsarcsec = sqrt(ssumarcsec / (double)(i + 1));
+
+        printf("Including %i correspondences: RMS = %g pixels, %g arcsec.\n",
+               (i+1), rmspix, rmsarcsec);
+    }
+
+    free(dists);
+    free(perm);
 }
 
 // The jitter is in radians

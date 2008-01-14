@@ -143,4 +143,6 @@ void tweak_clear_ref_xy(tweak_t* t);
 void tweak_clear_image_xyz(tweak_t* t);
 void tweak_free(tweak_t* t);
 
+void tweak_print_rms_curve(tweak_t* t);
+
 #endif
