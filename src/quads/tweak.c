@@ -720,9 +720,9 @@ void tweak_print_rms_curve(tweak_t* t) {
     double ssumpix, ssumarcsec;
     dl* allvals;
 
-    tweak_go_to(twee, TWEAK_HAS_REF_XY);
-    tweak_go_to(twee, TWEAK_HAS_IMAGE_XY);
-    tweak_go_to(twee, TWEAK_HAS_CORRESPONDENCES);
+    tweak_go_to(t, TWEAK_HAS_REF_XY);
+    tweak_go_to(t, TWEAK_HAS_IMAGE_XY);
+    tweak_go_to(t, TWEAK_HAS_CORRESPONDENCES);
 
     N = dl_size(t->dist2);
     dists = malloc(N * sizeof(double));
