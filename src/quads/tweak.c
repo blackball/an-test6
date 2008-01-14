@@ -756,7 +756,7 @@ void tweak_print_rms_curve(tweak_t* t) {
         ssumarcsec += distsq2arcsec(dl_get(t->dist2, ind));
         rmsarcsec = sqrt(ssumarcsec / (double)(i + 1));
 
-        printf("Including %i correspondences: RMS = %g pixels, %g arcsec.\n",
+        fprintf(stderr, "Including best %i correspondences: RMS = %g pixels, %g arcsec.\n",
                (i+1), rmspix, rmsarcsec);
     }
 
