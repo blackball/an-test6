@@ -775,22 +775,22 @@ void tweak_print_rms_curve(tweak_t* t) {
 
     fprintf(stderr, "pixerrs = [");
     for (i=0; i<N; i++)
-        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 0));
+        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 0));
     fprintf(stderr, "];\n");
 
     fprintf(stderr, "arcsecerrs = [");
     for (i=0; i<N; i++)
-        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 1));
+        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 1));
     fprintf(stderr, "];\n");
 
     fprintf(stderr, "pixrms = [");
     for (i=0; i<N; i++)
-        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 2));
+        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 2));
     fprintf(stderr, "];\n");
 
     fprintf(stderr, "arcsecrms = [");
     for (i=0; i<N; i++)
-        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 3));
+        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 3));
     fprintf(stderr, "];\n");
 
     dl_free(allvals);
