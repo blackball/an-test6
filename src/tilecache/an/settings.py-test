@@ -14,18 +14,12 @@ ADMINS = (
 
 ACCOUNT_ADMIN = 'dstn@cs.toronto.edu'
 
-SESSION_COOKIE_NAME = 'AstrometrySession'
+SESSION_COOKIE_NAME = 'AstrometryTestSession'
 
 MANAGERS = ADMINS
 
-#DATABASE_ENGINE = 'sqlite3'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'ado_mssql'.
-#DATABASE_NAME = gmaps_config.dbfile   # Or path to database file if using sqlite3.
-
-#DATABASE_ENGINE = 'sqlite3'           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'ado_mssql'.
-#DATABASE_NAME = '/tmp/tst.db'
-
 DATABASE_ENGINE = 'postgresql_psycopg2'
-DATABASE_NAME = 'an'
+DATABASE_NAME = 'an-test'
 DATABASE_USER = 'gmaps'             # Not used with sqlite3.
 DATABASE_PASSWORD = ''         # Not used with sqlite3.
 DATABASE_HOST = ''             # Set to empty string for localhost. Not used with sqlite3.
@@ -78,7 +72,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.doc.XViewMiddleware',
 	)
 
-ROOT_URLCONF = 'an.root-urls-deploy'
+ROOT_URLCONF = 'an.root-urls-test'
 
 TEMPLATE_DIRS = (
     gmaps_config.templatedir,
