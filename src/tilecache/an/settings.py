@@ -78,7 +78,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.doc.XViewMiddleware',
 	)
 
-ROOT_URLCONF = 'an.urls'
+ROOT_URLCONF = 'an.root-urls'
 
 TEMPLATE_DIRS = (
     gmaps_config.templatedir,
