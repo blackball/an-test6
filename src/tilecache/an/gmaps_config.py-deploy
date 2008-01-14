@@ -1,4 +1,4 @@
-basedir = "/home/gmaps/test/"
+basedir = "/home/gmaps/deploy/"
 tcdir = basedir + "tilecache/"
 
 jobqueuedir = basedir + "job-queue/"
@@ -10,16 +10,16 @@ templatedir = tcdir + "an/"
 mediadir = tcdir + "an/media/"
 portal_logfile = tcdir + "portal.log"
 
-cachedir = "/data2/test-tilecache"
-rendercachedir = "/data2/test-rendercache/"
-dbfile = "/data2/test-django/tile.db"
+cachedir = "/data2/deploy-tilecache"
+rendercachedir = "/data2/deploy-rendercache/"
+dbfile = "/data2/deploy-django/tile.db"
 imgdir = "/data2/apod-solves"
 
 tempdir = "/tmp"
 
 siteid = 'test'
-jobdir = '/home/gmaps/test/web-data'
-fielddir = '/home/gmaps/test/web-data/fields'
+jobdir = '/home/gmaps/deploy/web-data'
+fielddir = '/home/gmaps/deploy/web-data/fields'
 
 gmaps_base = 'http://oven.cosmo.fas.nyu.edu/'
 gmaps_url = gmaps_base + 'tilecache2/'
