@@ -718,6 +718,11 @@ void tweak_print_rms_curve(tweak_t* t) {
     double* dists;
     int i, N;
     double ssumpix, ssumarcsec;
+    dl* allvals;
+
+    tweak_go_to(twee, TWEAK_HAS_REF_XY);
+    tweak_go_to(twee, TWEAK_HAS_IMAGE_XY);
+    tweak_go_to(twee, TWEAK_HAS_CORRESPONDENCES);
 
     N = dl_size(t->dist2);
     dists = malloc(N * sizeof(double));
@@ -730,12 +735,14 @@ void tweak_print_rms_curve(tweak_t* t) {
     permuted_sort_set_params(dists, sizeof(double), compare_doubles);
     permuted_sort(perm, N);
 
+    allvals = dl_new(256);
+
     ssumpix = ssumarcsec = 0.0;
     for (i=0; i<N; i++) {
         double ix, iy, fx, fy;
         int ind = perm[i];
         int ii, fi;
-        double pix2;
+        double pix2, arcsec2;
         double rmspix, rmsarcsec;
 
         // index or reference:
@@ -753,12 +760,40 @@ void tweak_print_rms_curve(tweak_t* t) {
         ssumpix += pix2;
         rmspix = sqrt(ssumpix / (double)(i + 1));
 
-        ssumarcsec += distsq2arcsec(dl_get(t->dist2, ind));
+        arcsec2 = square(distsq2arcsec(dl_get(t->dist2, ind)));
+        ssumarcsec += arcsec2;
         rmsarcsec = sqrt(ssumarcsec / (double)(i + 1));
 
         fprintf(stderr, "Including best %i correspondences: RMS = %g pixels, %g arcsec.\n",
                (i+1), rmspix, rmsarcsec);
+
+        dl_append(allvals, sqrt(pix2));
+        dl_append(allvals, sqrt(arcsec2));
+        dl_append(allvals, rmsarcsec);
+        dl_append(allvals, rmspix);
     }
+
+    fprintf(stderr, "pixerrs = [");
+    for (i=0; i<N; i++)
+        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 0));
+    fprintf(stderr, "];\n");
+
+    fprintf(stderr, "arcsecerrs = [");
+    for (i=0; i<N; i++)
+        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 1));
+    fprintf(stderr, "];\n");
+
+    fprintf(stderr, "pixrms = [");
+    for (i=0; i<N; i++)
+        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 2));
+    fprintf(stderr, "];\n");
+
+    fprintf(stderr, "arcsecrms = [");
+    for (i=0; i<N; i++)
+        fprintf(stderr, "%g ", dl_get(allvals, i*4 + 3));
+    fprintf(stderr, "];\n");
+
+    dl_free(allvals);
 
     free(dists);
     free(perm);
