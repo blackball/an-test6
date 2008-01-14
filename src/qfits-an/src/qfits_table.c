@@ -953,6 +953,7 @@ static int qfits_query_column_seq_to_array_endian(
 
 #ifndef WORDS_BIGENDIAN
 		if (do_swap) {
+			int j;
 			unsigned char* r2 = r;
 			for (j=0; j<col->atom_nb; j++) {
 				qfits_swap_bytes(r2, col->atom_size);
