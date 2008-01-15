@@ -23,11 +23,12 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include "an-bool.h"
 #include "qfits.h"
 #include "permutedsort.h"
 #include "qfits_error.h"
 
-static const char* OPTIONS = "hi:o:Oe:p:m:";
+static const char* OPTIONS = "hi:o:Oe:p:m:I";
 
 static void printHelp(char* progname) {
 	printf("%s    -i <input-file>\n"
@@ -36,6 +37,7 @@ static void printHelp(char* progname) {
 		   "      [-p <plane-number>]      Image plane number (default 0)\n"
 		   "      [-m <margin>]            Number of pixels to avoid at the image edges (default 0)\n"
 		   "      [-O]: do ordinal transform (default: map 25-95 percentile)\n"
+           "      [-I]: invert black-on-white image\n"
 		   "\n", progname);
 }
 
@@ -57,9 +59,13 @@ int main(int argc, char *argv[]) {
 	qfitsloader ldr;
 	float* img;
 	int nx, ny;
+    bool invert = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'I':
+            invert = TRUE;
+            break;
         case 'i':
 			infn = optarg;
 			break;
@@ -181,12 +187,19 @@ int main(int argc, char *argv[]) {
 		// I'm lazy: just sort it, even though we just need two percentiles.
 		qsort(pix, np, sizeof(float), compare_floats);
 
-		// 25th percentile.
-		j = (int)((0.25) * np) - 1;
-		minval = pix[j];
-		// 95th percentile.
-		j = (int)((0.95) * np) - 1;
-		maxval = pix[j];
+        if (!invert) {
+            // 25th percentile.
+            j = (int)((0.25) * np) - 1;
+            minval = pix[j];
+            // 95th percentile.
+            j = (int)((0.95) * np) - 1;
+            maxval = pix[j];
+        } else {
+            j = (int)((0.75) * np) - 1;
+            minval = pix[j];
+            j = (int)((0.05) * np) - 1;
+            maxval = pix[j];
+        }
 
 		scale = (255.0 / (maxval - minval));
 
@@ -197,6 +210,9 @@ int main(int argc, char *argv[]) {
 			float f = (img[i] - minval) * scale;
 			if (f < 0) f = 0.0;
 			if (f >= 256.0) f = 255.0;
+            // FIXME - could count how many pixels are under/over-saturated
+            // and readjust the scaling if our estimate of the percentiles
+            // are very far off.
 			fputc((int)f, fout);
 		}
 
