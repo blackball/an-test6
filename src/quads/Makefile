@@ -180,7 +180,7 @@ TESTED_OBJS :=
 
 $(ALL_TEST_FILES_MAIN_C): %-main.c: make-tests.sh
 $(ALL_TEST_FILES_MAIN_C): %-main.c: %.c
-	$(AN_SHELL) make-tests.sh $^ > $@
+	$(AN_SHELL) ./make-tests.sh $^ > $@
 
 $(ALL_TEST_FILES): %: %-main.o %.o cutest.o
 
@@ -219,7 +219,7 @@ test_libkd_io: $(TEST_LIBKD_IO_OBJS) $(LIBKD_LIB) $(QFITS_LIB) \
 # You shouldn't need to edit this.
 TEST_SOURCES := $(ALL_TEST_FILES_C)
 test.c: make-tests.sh $(TEST_SOURCES)
-	$(AN_SHELL) make-tests.sh $(TEST_SOURCES) > $@
+	$(AN_SHELL) ./make-tests.sh $(TEST_SOURCES) > $@
 
 test: test.o cutest.o $(ALL_TEST_FILES_O) $(sort $(TESTED_OBJS)) $(LIBKD_LIB) $(QFITS_LIB) $(ANUTILS_LIB)
 
