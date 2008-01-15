@@ -259,10 +259,17 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Couldn't open input file: %s\n", strerror(errno));
             exit(-1);
         }
+        printf("Copying from offset %i to offset %i (length %i) of the input file to the output.\n",
+               datstart, datstart + datsize, datsize);
         if (pipe_file_offset(infid, datstart, datsize, outfid)) {
             fprintf(stderr, "Failed to copy the data block.\n");
             exit(-1);
         }
+		if (fits_pad_file(outfid)) {
+            fprintf(stderr, "Failed to pad data block: %s\n", strerror(errno));
+            exit(-1);
+        }
+        fclose(infid);
     }
 
     if (fclose(outfid)) {
