@@ -97,6 +97,7 @@ clean:
 	$(MAKE) -C an-common clean
 	-$(MAKE) -C cfitsio distclean
 	-$(MAKE) -C qfits-an distclean
+	-rm qfits-an/Makefile
 	-rm -R qfits-an/stage
 	$(MAKE) -C gsl-an clean
 	$(MAKE) -C libkd clean
