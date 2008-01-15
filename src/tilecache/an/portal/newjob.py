@@ -6,6 +6,9 @@ from django.db import models
 from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
+from django.core.urlresolvers import reverse
+
+import an
 
 from an.upload.models import UploadedFile
 from an.upload.views  import UploadIdField
@@ -240,7 +243,7 @@ def submit_jobset(request, jobset):
 
 def newurl(request):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(an.portal.views.login))
     urlerr = None
     if len(request.POST):
         form = SimpleURLForm(request.POST)
@@ -269,7 +272,7 @@ def newurl(request):
 
 def newfile(request):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(an.portal.views.login))
 
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
@@ -292,8 +295,8 @@ def newfile(request):
     t = loader.get_template('portal/newjobfile.html')
     c = RequestContext(request, {
         'form' : form,
-        'uploadform' : '/upload/form/',
-        'progressform' : '/upload/progress_ajax/?upload_id='
+        'uploadform' : reverse(an.upload.views.uploadform),
+        'progressform' : reverse(an.upload.views.progress_ajax) + '/?upload_id='
         })
     return HttpResponse(t.render(c))
 
@@ -370,7 +373,7 @@ def newlong(request):
     ds0 = render[0].tag()
     ds1 = render[1].tag()
 
-    uploadform = '/upload/form/'
+    uploadform = reverse(an.upload.views.uploadform)
 
     inline = False
 
@@ -381,13 +384,13 @@ def newlong(request):
     else:
         progress_meter_html = ''
         progress_meter_js   = ''
-        progressform = '/upload/progress_ajax/?upload_id='
+        progressform = reverse(an.upload.views.progress_ajax) + '/?upload_id='
 
     ctxt = {
         'form' : form,
         'uploadform' : uploadform,
         'progressform' : progressform,
-        'myurl' : '/job/newlong/',
+        'myurl' : reverse(an.portal.newjob.newlong),
         'scale_ul' : r0txt,
         'scale_ee' : r1txt,
         'datasrc_url' : ds0,

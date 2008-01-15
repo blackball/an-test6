@@ -9,12 +9,6 @@ from django.core import validators
 import an.gmaps_config as config
 from an.portal.log import log
 
-# To install a new database table:
-# > python manage.py sql portal
-# > sqlite3 /data2/test-django/tile.db
-# sqlite> drop table portal_job;
-# sqlite>   (paste CREATE TABLE statement)
-
 class UserPreferences(models.Model):
     user = models.ForeignKey(User, editable=False)
 
@@ -40,10 +34,6 @@ class UserPreferences(models.Model):
         return prefs
     for_user = staticmethod(for_user)
 
-
-
-#from an.portal.job import Job, JobSet, AstroField
-#from an.portal.wcs import TanWCS, SipWCS
 
 from an.portal.job import *
 from an.portal.wcs import *

@@ -6,12 +6,12 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 <head>
 
 {% block favicon %}
-<link rel="shortcut icon" type="image/x-icon" href="/anmedia/favicon.ico" />
-<link rel="icon" type="image/png" href="/anmedia/favicon.png" />
+<link rel="shortcut icon" type="image/x-icon" href="{% url an.media %}favicon.ico" />
+<link rel="icon" type="image/png" href="{% url an.media %}favicon.png" />
 {% endblock favicon %}
 
 {% block linkcss %}
-<link rel="stylesheet" href="/anmedia/style.css" />
+<link rel="stylesheet" href="{% url an.media %}style.css" />
 {% endblock linkcss %}
 {% block inlinecssblock %}
 <style type="text/css">

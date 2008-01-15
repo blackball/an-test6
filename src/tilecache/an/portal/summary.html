@@ -66,7 +66,7 @@ File: {{ job.jobset.uploaded.userfilename }}
 </td>
 
 <td class="c">
-<form action="/job/changeperms/" method="post" name="fieldpermsform_{{ forloop.counter }}">
+<form action="{% url an.portal.views.changeperms %}" method="post" name="fieldpermsform_{{ forloop.counter }}">
 <input type="hidden" name="fieldid" value="{{ job.field.id }}" />
 {% if job.field.redistributable %}
 <input type="hidden" name="redist" value="0" />
@@ -83,7 +83,7 @@ No
 </td>
 
 <td class="c">
-<form action="/job/changeperms/" method="post" name="jobpermsform_{{ forloop.counter }}">
+<form action="{% url an.portal.views.changeperms %}" method="post" name="jobpermsform_{{ forloop.counter }}">
 <input type="hidden" name="jobid" value="{{ job.jobid }}" />
 {% if job.allowanonymous %}
 <input type="hidden" name="allowanon" value="0" />

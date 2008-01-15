@@ -1,6 +1,8 @@
 basedir = "/home/gmaps/deploy/"
 tcdir = basedir + "tilecache/"
 
+uploader_url = '/uploader'
+
 jobqueuedir = basedir + "job-queue/"
 
 logfile = basedir + "tilecache-django.log"

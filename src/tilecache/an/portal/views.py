@@ -15,6 +15,7 @@ from django.db import models
 from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
+from django.core.urlresolvers import reverse
 
 import an.portal.mercator as merc
 
@@ -59,8 +60,9 @@ def login(request, redirect_to=None):
         if user is not None:
             if user.is_active:
                 auth.login(request, user)
-                # Success
-                return HttpResponseRedirect('/job/newurl')
+                # Success - go to '/job/newurl'
+                import an.portal.newjob
+                return HttpResponseRedirect(reverse(an.portal.newjob.newurl))
             else:
                 authfailed = True
                 passerr = 'Your account is not active.'
@@ -86,12 +88,12 @@ def login(request, redirect_to=None):
 
 def logout(request):
     if not request.user.is_authenticated():
-        return HttpResponse("piss off.")
+        return HttpResponseForbidden("piss off.")
     auth.logout(request)
-    return HttpResponseRedirect('/login')
+    return HttpResponseRedirect(reverse(login))
 
 def get_status_url(jobid):
-    return '/job/status/?jobid=' + jobid
+    return reverse(jobstatus) + '/?jobid=' + jobid
 
 def get_job(jobid):
     jobs = Job.objects.all().filter(jobid=jobid)
@@ -102,7 +104,7 @@ def get_job(jobid):
     return job
 
 def get_url(job, fn):
-    return '/job/getfile?jobid=%s&f=%s' % (job.jobid, fn)
+    return reverse(getfile) + '?jobid=%s&f=%s' % (job.jobid, fn)
 
 def getsessionjob(request):
     if not 'jobid' in request.session:
@@ -113,13 +115,13 @@ def getsessionjob(request):
 
 def jobsetstatus(request, jobset):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(login))
 
     jobs = jobset.jobs.all().order_by('starttime', 'jobid')
     ctxt = {
         'jobset' : jobset,
         'jobs' : jobs,
-        'statusurl' : '/job/status/?jobid=',
+        'statusurl' : reverse(status) + '/?jobid=',
         }
     t = loader.get_template('portal/jobset_status.html')
     c = RequestContext(request, ctxt)
@@ -397,7 +399,7 @@ def printvals(request):
 
 def userprefs(request):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(login))
 
     prefs = UserPreferences.for_user(request.user)
 
@@ -429,7 +431,7 @@ def userprefs(request):
 
 def summary(request):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(login))
 
     prefs = UserPreferences.for_user(request.user)
 
@@ -451,9 +453,9 @@ def summary(request):
         'jobs' : jobs,
         'voimgs' : voimgs,
         'prefs' : prefs,
-        'statusurl' : '/job/status/?jobid=',
-        'getfileurl' : '/job/getfile/?jobid=',
-        'getfield' : '/job/getfile/?fieldid=',
+        'statusurl' : reverse(status) + '/?jobid=',
+        'getfileurl' : reverse(getfile) + '/?jobid=',
+        'getfield' : reverse(getfile) + '/?fieldid=',
         }
     t = loader.get_template('portal/summary.html')
     c = RequestContext(request, ctxt)
@@ -462,7 +464,7 @@ def summary(request):
 
 def changeperms(request):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(login))
     if not request.POST:
         return HttpResponse('no POST')
 
@@ -491,7 +493,7 @@ def changeperms(request):
             field.save()
             if 'HTTP_REFERER' in request.META:
                 return HttpResponseRedirect(request.META['HTTP_REFERER'])
-            return HttpResponseRedirect('/job/summary')
+            return HttpResponseRedirect(reverse(summary))
             
         return HttpResponse('no action.')
 
@@ -518,14 +520,14 @@ def changeperms(request):
             job.save()
             if 'HTTP_REFERER' in request.META:
                 return HttpResponseRedirect(request.META['HTTP_REFERER'])
-            return HttpResponseRedirect('/job/summary')
+            return HttpResponseRedirect(reverse(summary))
 
         return HttpResponse('no action.')
 
 
 def publishtovo(request):
     if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
+        return HttpResponseRedirect(reverse(login))
     if not 'jobid' in request.POST:
         return HttpResponse('no jobid')
     job = get_job(request.POST['jobid'])

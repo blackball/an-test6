@@ -80,7 +80,7 @@ def get_uploadform_body():
     form = UploadForm({'upload_id': id})
     ctxt = {
         'form' : form,
-        'action' : '/uploader',
+        'action' : gmaps_config.uploader_url,
         }
     t = loader.get_template('upload/upload-body.html')
     c = Context(ctxt)
@@ -94,6 +94,7 @@ def uploadform(request):
     body = get_uploadform_body()
     ctxt = {
         'body' : body,
+        'uploadtarget' : gmaps_config.uploader_url,
         }
     t = loader.get_template('upload/upload.html')
     c = RequestContext(request, ctxt)
