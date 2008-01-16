@@ -4,12 +4,10 @@
 
 # Careful about writing things to stdout - we pipe it to tar on the other end.
 
-QUADS=/u/dstn/amd-an-2/quads/
+QUADS=/u/dstn/amd-an-2/quads
 
-BACKEND="$QUADS/backend"
-
-BACKEND_CFG="$QUADS/backend-test.cfg"
-
+BACKEND="${QUADS}/backend"
+BACKEND_CFG="${QUADS}/backend-test.cfg"
 AXY="job.axy"
 
 # Read jobid
