@@ -1,0 +1,92 @@
+<html>
+  <head>
+    <title>
+      Astrometry.net / Picasaweb / comments2tags converter
+    </title>
+
+    <script type="text/javascript">
+
+// the most important function
+      function commentsToTags(root) {
+        var myFeed= root.feed;
+        var myAccountOwner= myFeed.author[0].name.$t;
+        var myEntry= myFeed.entry || [];
+	for (var ii = 0; ii < myEntry.length; ii++) {
+
+// read material about this comment
+	  var thisEntry = myEntry[ii];
+          var thisCommentAuthor = thisEntry.author[0].name.$t;
+          var thisComment = thisEntry.content.$t;
+          var thisPhotoID = thisEntry.gphoto$photoid.$t;
+
+// make a safe tag
+          var thisTag = thisCommentAuthor.replace(/[\W]/g,"")+':comment='+thisComment.replace(/[\W]/g,"");
+
+// format paragraph in excruciating javascript
+	  var thisCommentAuthorHTML = document.createElement('b');
+	  thisCommentAuthorHTML.appendChild(document.createTextNode(thisCommentAuthor));
+	  var thisCommentHTML = document.createElement('q');
+	  thisCommentHTML.appendChild(document.createTextNode(thisComment));
+	  var thisPhotoIDHTML = document.createElement('i');
+	  thisPhotoIDHTML.appendChild(document.createTextNode(thisPhotoID));
+	  var thisTagHTML = document.createElement('tt');
+	  thisTagHTML.appendChild(document.createTextNode(thisTag));
+	  var newPara = document.createElement('p');
+	  newPara.appendChild(thisCommentAuthorHTML);
+	  newPara.appendChild(document.createTextNode(' said '));
+	  newPara.appendChild(thisCommentHTML);
+	  newPara.appendChild(document.createTextNode(' about photo '));
+	  newPara.appendChild(thisPhotoIDHTML);
+	  newPara.appendChild(document.createTextNode('; I will tag it '));
+	  newPara.appendChild(thisTagHTML);
+	  newPara.appendChild(document.createTextNode('.'));
+	  document.body.appendChild(newPara);
+
+// make data for tag post request
+          var tagPostJSON = {"xmlns" : "http://www.w3.org/2005/Atom",
+                             "title"    : {"$t" : "AtTheBeach"},
+                             "category" : {"scheme" : "http://schemas.google.com/g/2005#kind",
+                                           "term"   : "http://schemas.google.com/photos/2007#tag"}};
+
+// make data for comment post request
+          var commentPostJSON = {"xmlns" : "http://www.w3.org/2005/Atom",
+                                 "title"    : {"$t" : "AtTheBeach"},
+                                 "category" : {"scheme" : "http://schemas.google.com/g/2005#kind",
+                                               "term"   : "http://schemas.google.com/photos/2007#tag"}};
+        }
+        return true;
+      }
+
+// this function is called when the username is submitted
+      function usernameEntered(elem){
+        if(elem.value.length == 0){
+	  alert("please enter a username");
+	  elem.focus();
+	  return false;
+        }
+        var username = elem.value;
+	var newPara = document.createElement('h1');
+        var newText = document.createTextNode('converting comments on '+username+'\'s photos.');
+        newPara.appendChild(newText);
+        document.body.appendChild(newPara);
+        var feedURL = 'http://picasaweb.google.com/data/feed/api/user/'+username+'?kind=comment&alt=json&callback=commentsToTags';
+        var scriptTag = document.createElement('script');
+        scriptTag.src = feedURL;
+        document.body.appendChild(scriptTag);
+        return true;
+      }
+
+    </script>
+
+  </head>
+
+  <body>
+    <form>
+      Picasaweb username:
+      <input type='text' id='username'/>
+      <input type='button'
+        onclick="usernameEntered(document.getElementById('username'))"
+        value='submit' />
+    </form>
+  </body>
+</html>
