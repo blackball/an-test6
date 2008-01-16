@@ -453,7 +453,7 @@ def summary(request):
         'jobs' : jobs,
         'voimgs' : voimgs,
         'prefs' : prefs,
-        'statusurl' : reverse(status) + '/?jobid=',
+        'statusurl' : reverse(jobstatus) + '/?jobid=',
         'getfileurl' : reverse(getfile) + '/?jobid=',
         'getfield' : reverse(getfile) + '/?fieldid=',
         }
