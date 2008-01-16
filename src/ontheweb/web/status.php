@@ -246,6 +246,10 @@ if ($didsolve) {
 		$rac = $infomap["ra_center"];
 		$decc = $infomap["dec_center"];
 		$fieldsize = $infomap["field_size"];
+		$ra_min = $infomap['ra_min'];
+		$ra_max = $infomap['ra_max'];
+		$dec_min = $infomap['dec_min'];
+		$dec_max = $infomap['dec_max'];
 	}
 
 	if (!array_key_exists("cd11", $jd)) {
@@ -858,6 +862,18 @@ if ($job_done) {
 		echo '<tr><td>(RA, Dec) center:</td><td>';
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
+
+		echo '<tr><td>RA bounds:</td><td>';
+		echo $ra_min . " to " . $ra_max . " degrees\n";
+		echo "</td></tr>\n";
+
+		echo '<tr><td>Dec bounds:</td><td>';
+		echo $dec_min . " to " . $dec_max . " degrees\n";
+		echo "</td></tr>\n";
+
+		//echo '<tr><td>(RA, Dec) bounds:</td><td>';
+		//echo "([" . $ra_min . ", " . $ra_max . "], [" . $dec_min . ", " . $dec_max . "]) degrees\n";
+		//echo "</td></tr>\n";
 
 		echo '<tr><td>(RA, Dec) center (H:M:S, D:M:S):</td><td>';
 		ra_deg2hms($rac, $rah, $ram, $ras);
