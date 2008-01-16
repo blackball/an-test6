@@ -93,7 +93,7 @@ $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
 	$(RANLIB) $@
 
 _sip.so: sip-utils.o sip.o starutil.o mathutil.o sip_qfits.o \
-		fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
+		fitsioutils.o ioutils.o bl.o gnu-specific.o an-endian.o $(QFITS_LIB)
 	$(CC) -shared -o $@ $^
 
 gnu-specific-config.h: gnu-specific-test.c
