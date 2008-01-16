@@ -59,6 +59,15 @@ class AstroField(models.Model):
         s += '>'
         return s
 
+    def save(self):
+        # FIXME??
+        # if "fileid" is not set, it gets the value of "id".
+        # (but "id" may not get set until after save())
+        super(AstroField, self).save()
+        if not self.fileid:
+            self.fileid = self.id
+            super(AstroField, self).save()
+
     def content_type(self):
         typemap = {
             'jpg' : 'image/jpeg',

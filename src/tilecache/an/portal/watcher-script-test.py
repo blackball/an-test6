@@ -227,6 +227,12 @@ def real_handle_job(job, sshconfig):
     field.save()
 
     # shell into compute server...
+
+    # For the "test" instance:
+    #  ssh an_remote_test  (as gmaps)
+    #  runs cluster24:amd-an-2/quads/an-remote-test.sh
+    #  run backend with amd-an-2/quads/backend-test.cfg
+
     cmd = ('(echo %(jobid)s; '
            ' tar cf - --ignore-failed-read %(axyfile)s) | '
            'ssh -x -T %(sshconfig)s 2>>%(logfile)s | '
@@ -317,6 +323,7 @@ def main(sshconfig, joblink):
     if jobset.datasrc == 'url':
         # download the URL.
         userlog('Retrieving URL...')
+        log('Retrieving URL ' + jobset.url + ' to file ' + origfile)
         f = urllib.urlretrieve(jobset.url, origfile)
         p = urlparse(jobset.url)
         p = p[2]

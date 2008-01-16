@@ -13,11 +13,6 @@ urlpatterns = patterns('',
                        # This is a fake placeholder to allow {% url %} and reverse() to resolve an.media to /anmedia.
                        # (see also media() in an/__init__.py)
                        (r'^anmedia/', 'an.media'),
-                       # DEBUG
-					   #(r'^upload-demo/', 'an.uploaddemo.view'),
-					   #(r'^upload-demo-main/', 'an.uploaddemo.mainview'),
-                       #					   (r'^admin/', include('django.contrib.admin.urls')),
-					   #(r'^anmedia/(?P<path>.*)$', 'django.views.static.serve', {'document_root' : settings.MEDIA_ROOT}),
 					   )
 
 

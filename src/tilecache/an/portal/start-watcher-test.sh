@@ -13,5 +13,4 @@ umask 007
 export LD_LIBRARY_PATH=/home/gmaps/test/an-common
 
 /home/gmaps/test/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd"
-#/home/gmaps/test/ontheweb/execs/watcher -n $Nthreads -c "$Cmd"
 

@@ -93,7 +93,7 @@ def logout(request):
     return HttpResponseRedirect(reverse(login))
 
 def get_status_url(jobid):
-    return reverse(jobstatus) + '/?jobid=' + jobid
+    return reverse(jobstatus) + '?jobid=' + jobid
 
 def get_job(jobid):
     jobs = Job.objects.all().filter(jobid=jobid)
@@ -121,7 +121,7 @@ def jobsetstatus(request, jobset):
     ctxt = {
         'jobset' : jobset,
         'jobs' : jobs,
-        'statusurl' : reverse(status) + '/?jobid=',
+        'statusurl' : get_status_url(''),
         }
     t = loader.get_template('portal/jobset_status.html')
     c = RequestContext(request, ctxt)
@@ -453,9 +453,9 @@ def summary(request):
         'jobs' : jobs,
         'voimgs' : voimgs,
         'prefs' : prefs,
-        'statusurl' : reverse(jobstatus) + '/?jobid=',
-        'getfileurl' : reverse(getfile) + '/?jobid=',
-        'getfield' : reverse(getfile) + '/?fieldid=',
+        'statusurl' : get_status_url(''),
+        'getfileurl' : reverse(getfile) + '?jobid=',
+        'getfield' : reverse(getfile) + '?fieldid=',
         }
     t = loader.get_template('portal/summary.html')
     c = RequestContext(request, ctxt)
