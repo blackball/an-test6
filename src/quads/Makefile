@@ -52,7 +52,7 @@ QFITS_UTILS := fitsgetext subtable tabsort column-merge add-healpix-column \
 		resort-xylist
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc \
-		listhead imcopy imarith
+		listhead imcopy imarith imstat
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
