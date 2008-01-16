@@ -14,7 +14,7 @@ $base = "/home/gmaps/test/";
 // Google Maps URL to use.
 $gmaps_base = "http://oven.cosmo.fas.nyu.edu/";
 $gmaps_url = $gmaps_base . "tilecache2";
-$tiles_url = $gmaps_base . "tile/get/";
+$tiles_url = $gmaps_base . "test/tile/get/";
 
 // Log file name.
 $logfile = "test.log";
