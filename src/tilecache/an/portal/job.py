@@ -47,9 +47,6 @@ class AstroField(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(AstroField, self).__init__(*args, **kwargs)
-        # ???
-        if not self.fileid:
-            self.fileid = self.id
 
     def __str__(self):
         s = '<Field ' + str(self.id)
@@ -59,14 +56,44 @@ class AstroField(models.Model):
         s += '>'
         return s
 
-    def save(self):
-        # FIXME??
-        # if "fileid" is not set, it gets the value of "id".
-        # (but "id" may not get set until after save())
-        super(AstroField, self).save()
+    #def save(self):
+    #    super(AstroField, self).save()
+
+    # Choose a new unique fileid that does not conflict with an existing
+    # file.  May have the side-effect of calling save().
+    def choose_new_fileid(self):
         if not self.fileid:
-            self.fileid = self.id
-            super(AstroField, self).save()
+            # find the largest existing fileid and add 1.
+            try:
+                v = AstroField.objects.filter(fileid__isnull=False).order_by('-fileid').values('fileid')[0]
+                v = v['fileid']
+                self.fileid = v + 1
+            except IndexError:
+                self.fileid = 1
+        while True:
+            log('Trying fileid %i...\n' % self.fileid)
+            # save() to indicate that we are going to try to use this fileid.
+            self.save()
+            # check if any other AstroField has this fileid:
+            n = AstroField.objects.filter(fileid=self.fileid).count()
+            if n > 1:
+                # some other AstroField already has this fileid.
+                self.fileid += 1
+                continue
+            # check if the file already exists.
+            fn = get_filename_for_fileid(self.fileid)
+            if os.path.exists(fn):
+                # the file already exists.
+                self.fileid += 1
+                continue
+            # touch the file to claim it.
+            try:
+                f = open(fn, 'wb')
+                f.close()
+            except IOError:
+                # error touching the file.
+                self.fileid += 1
+                continue
 
     def content_type(self):
         typemap = {
@@ -103,7 +130,9 @@ class AstroField(models.Model):
         self.filehash = h.hexdigest()
 
     def filename(self):
-        return os.path.join(config.fielddir, str(self.fileid))
+        if not self.fileid:
+            self.choose_new_fileid()
+        return get_filename_for_fileid(self.fileid)
 
     def get_display_scale(self):
         w = self.imagew
@@ -114,6 +143,10 @@ class AstroField(models.Model):
         displayw = int(round(w / scale))
         displayh = int(round(h / scale))
         return (scale, displayw, displayh)
+
+    def get_filename_for_fileid(fileid):
+        return os.path.join(config.fielddir, str(fileid))
+    get_filename_for_fileid = staticmethod(get_filename_for_fileid)
 
 class Submission(models.Model):
     scaleunits_CHOICES = (

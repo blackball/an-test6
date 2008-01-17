@@ -315,7 +315,7 @@ def main(sshconfig, joblink):
     log('Running submission: ' + str(submission))
 
     field = AstroField(user = submission.user)
-    # save() so the "id" field gets a unique value
+    field.choose_new_fileid()
     field.save()
     origfile = field.filename()
     basename = None
