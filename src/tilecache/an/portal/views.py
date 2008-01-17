@@ -437,8 +437,8 @@ def summary(request):
 
     submissions = Submission.objects.all().filter(user=request.user)
     jobs = []
-    for js in submissions:
-        jobs += js.jobs.all()
+    for sub in submissions:
+        jobs += sub.jobs.all()
 
     for job in jobs:
         log('Job ', job, 'allow anon?', job.allowanonymous(prefs))

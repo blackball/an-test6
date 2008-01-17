@@ -283,7 +283,7 @@ class Job(models.Model):
     status = models.CharField(max_length=16)
     failurereason = models.CharField(max_length=256)
 
-    submission = models.ForeignKey(Submission, related_name='subs', null=True)
+    submission = models.ForeignKey(Submission, related_name='jobs', null=True)
 
     # has the user explicitly granted anonymous access to this job
     # status page?
