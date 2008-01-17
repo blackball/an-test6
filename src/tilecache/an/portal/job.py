@@ -71,19 +71,21 @@ class AstroField(models.Model):
             except IndexError:
                 self.fileid = 1
         while True:
-            log('Trying fileid %i...\n' % self.fileid)
+            log('Trying fileid %i...' % self.fileid)
             # save() to indicate that we are going to try to use this fileid.
             self.save()
             # check if any other AstroField has this fileid:
             n = AstroField.objects.filter(fileid=self.fileid).count()
             if n > 1:
                 # some other AstroField already has this fileid.
+                log('AstroField database: %i entries have fileid %i' % (n, self.fileid))
                 self.fileid += 1
                 continue
             # check if the file already exists.
-            fn = get_filename_for_fileid(self.fileid)
+            fn = AstroField.get_filename_for_fileid(self.fileid)
             if os.path.exists(fn):
                 # the file already exists.
+                log('AstroField: file %s already exists for fileid %i' % (fn, self.fileid))
                 self.fileid += 1
                 continue
             # touch the file to claim it.
@@ -92,8 +94,10 @@ class AstroField(models.Model):
                 f.close()
             except IOError:
                 # error touching the file.
+                log('AstroField: error touching file %s for fileid %i' % (fn, self.fileid))
                 self.fileid += 1
                 continue
+            break
 
     def content_type(self):
         typemap = {
@@ -132,7 +136,7 @@ class AstroField(models.Model):
     def filename(self):
         if not self.fileid:
             self.choose_new_fileid()
-        return get_filename_for_fileid(self.fileid)
+        return AstroField.get_filename_for_fileid(self.fileid)
 
     def get_display_scale(self):
         w = self.imagew
