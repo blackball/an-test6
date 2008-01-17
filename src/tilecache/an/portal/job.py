@@ -30,7 +30,7 @@ class AstroField(models.Model):
     forbidredist = models.BooleanField(default=False)
 
     # The original filename on the user's machine, or basename of URL, etc.
-    # Needed for, eg, tarball jobsets.  Purely for informative purposes,
+    # Needed for, eg, tarball submissions.  Purely for informative purposes,
     # to show the user a filename that makes sense.
     origname = models.CharField(max_length=64, null=True)
 
@@ -115,7 +115,7 @@ class AstroField(models.Model):
         displayh = int(round(h / scale))
         return (scale, displayw, displayh)
 
-class JobSet(models.Model):
+class Submission(models.Model):
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
         ('arcminwidth' , 'width of the field (in arcminutes)'), 
@@ -192,10 +192,10 @@ class JobSet(models.Model):
                 del kwargs[k]
         if not 'jobid' in kwargs:
             kwargs['jobid'] = Job.generate_jobid()
-        super(JobSet, self).__init__(*args, **kwargs)
+        super(Submission, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        s = '<JobSet %s, status %s, user %s' % (self.jobid, self.status, self.user.username)
+        s = '<Submission %s, status %s, user %s' % (self.jobid, self.status, self.user.username)
         if self.datasrc == 'url':
             s += ', url ' + str(self.url)
         elif self.datasrc == 'file':
@@ -250,7 +250,7 @@ class Job(models.Model):
     status = models.CharField(max_length=16)
     failurereason = models.CharField(max_length=256)
 
-    jobset = models.ForeignKey(JobSet, related_name='jobs', null=True)
+    submission = models.ForeignKey(Submission, related_name='subs', null=True)
 
     # has the user explicitly granted anonymous access to this job
     # status page?
@@ -264,14 +264,14 @@ class Job(models.Model):
 
 
     # If any of these solver parameters are set for a particular Job, they
-    # override the settings for the JobSet.
-    parity = models.PositiveSmallIntegerField(choices=JobSet.parity_CHOICES, null=True)
+    # override the settings for the Submission.
+    parity = models.PositiveSmallIntegerField(choices=Submission.parity_CHOICES, null=True)
     # for FITS tables, the names of the X and Y columns.
     xcol = models.CharField(max_length=16, null=True)
     ycol = models.CharField(max_length=16, null=True)
     # image scale.
-    scaleunits = models.CharField(max_length=16, choices=JobSet.scaleunits_CHOICES, null=True)
-    scaletype  = models.CharField(max_length=3, choices=JobSet.scaletype_CHOICES, null=True)
+    scaleunits = models.CharField(max_length=16, choices=Submission.scaleunits_CHOICES, null=True)
+    scaletype  = models.CharField(max_length=3, choices=Submission.scaletype_CHOICES, null=True)
     scalelower = models.FloatField(null=True)
     scaleupper = models.FloatField(null=True)
     scaleest   = models.FloatField(null=True)
@@ -292,7 +292,7 @@ class Job(models.Model):
 
     def __str__(self):
         s = '<Job %s, ' % self.jobid
-        s += str(self.jobset)
+        s += str(self.submission)
         if self.status:
             s += ', %s' % self.status
         s += ' ' + str(self.field)
@@ -300,10 +300,10 @@ class Job(models.Model):
         return s
 
     def is_input_fits(self):
-        return self.jobset.filetype == 'fits'
+        return self.submission.filetype == 'fits'
 
     def is_input_text(self):
-        return self.jobset.filetype == 'text'
+        return self.submission.filetype == 'text'
 
     def get_xy_cols(self):
         return (self.field.xcol, self.field.ycol)
@@ -347,35 +347,35 @@ class Job(models.Model):
     def get_parity(self):
         if self.parity is not None:
             return self.parity
-        return self.jobset.parity
+        return self.submission.parity
 
     def get_scalelower(self):
-        return self.scalelower or self.jobset.scalelower
+        return self.scalelower or self.submission.scalelower
 
     def get_scaleupper(self):
-        return self.scaleupper or self.jobset.scaleupper
+        return self.scaleupper or self.submission.scaleupper
 
     def get_scaleest(self):
-        return self.scaleest or self.jobset.scaleest
+        return self.scaleest or self.submission.scaleest
 
     def get_scaleerr(self):
-        return self.scaleerr or self.jobset.scaleerr
+        return self.scaleerr or self.submission.scaleerr
 
     def get_scaletype(self):
-        return self.scaletype or self.jobset.scaletype
+        return self.scaletype or self.submission.scaletype
 
     def get_scaleunits(self):
-        return self.scaleunits or self.jobset.scaleunits
+        return self.scaleunits or self.submission.scaleunits
 
     def get_tweak(self):
         if self.tweak is not None:
             tweak = self.tweak
         else:
-            tweak = self.jobset.tweak
+            tweak = self.submission.tweak
         if self.tweakorder is not None:
             order = self.tweakorder
         else:
-            order = self.jobset.tweak
+            order = self.submission.tweak
         return (tweak, order)
 
     def get_job_dir(self):
@@ -393,7 +393,7 @@ class Job(models.Model):
         if self.forbidanon:
             return False
         if not prefs:
-            prefs = UserPreferences.for_user(self.jobset.user)
+            prefs = UserPreferences.for_user(self.submission.user)
         return prefs.anonjobstatus
 
     def set_starttime_now(self):
@@ -465,11 +465,11 @@ class Job(models.Model):
     generate_jobid = staticmethod(generate_jobid)
 
 
-    def submit_job_or_jobset(j):
+    def submit_job_or_submission(j):
         os.umask(07)
         j.create_job_dir()
         # enqueue by creating a symlink in the job queue directory.
         jobdir = j.get_job_dir()
         link = config.jobqueuedir + j.jobid
         os.symlink(jobdir, link)
-    submit_job_or_jobset = staticmethod(submit_job_or_jobset)
+    submit_job_or_submission = staticmethod(submit_job_or_submission)

@@ -29,7 +29,7 @@ tr.odd td {}
 
 <td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
 
-<td> {{ job.jobset.format_submittime_brief }} </td>
+<td> {{ job.submission.format_submittime_brief }} </td>
 
 <td class="c">{{ job.status }}
 {% if job.failurereason %}
@@ -38,15 +38,15 @@ tr.odd td {}
 </td>
 
 <td>
-{% if job.jobset.url %}
-<a href="{{ job.jobset.url }}">{% if job.field.origname %}{{ job.field.origname }}{% else %}URL{% endif %}</a>
+{% if job.submission.url %}
+<a href="{{ job.submission.url }}">{% if job.field.origname %}{{ job.field.origname }}{% else %}URL{% endif %}</a>
 &nbsp;
 {% endif %}
-{% if job.jobset.uploaded.userfilename %}
-File: {{ job.jobset.uploaded.userfilename }}
+{% if job.submission.uploaded.userfilename %}
+File: {{ job.submission.uploaded.userfilename }}
 
 {% if job.field.origname %}
-{% ifequal job.field.origname job.jobset.uploaded.userfilename %}
+{% ifequal job.field.origname job.submission.uploaded.userfilename %}
 {% else %}
 ({{ job.field.origname }})
 {% endifequal %}
@@ -54,7 +54,7 @@ File: {{ job.jobset.uploaded.userfilename }}
 
 {% comment %}
 {# <a href="{{ getfileurl }}{{ job.jobid }}&f=original"></a> #}
-{% ifequal job.jobid job.jobset.jobid %}
+{% ifequal job.jobid job.submission.jobid %}
 {% else %}
 {# tarfile #}
 ({{ job.field.origname }})

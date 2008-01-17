@@ -21,7 +21,7 @@ import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
 
-from an.portal.job import Job, JobSet, AstroField
+from an.portal.job import Job, Submission, AstroField
 
 from an.portal.convert import convert
 from an.portal.log import log
@@ -113,17 +113,17 @@ def getsessionjob(request):
     jobid = request.session['jobid']
     return get_job(jobid)
 
-def jobsetstatus(request, jobset):
+def submission_status(request, submission):
     if not request.user.is_authenticated():
         return HttpResponseRedirect(reverse(login))
 
-    jobs = jobset.jobs.all().order_by('starttime', 'jobid')
+    jobs = submission.jobs.all().order_by('starttime', 'jobid')
     ctxt = {
-        'jobset' : jobset,
+        'submission' : submission,
         'jobs' : jobs,
         'statusurl' : get_status_url(''),
         }
-    t = loader.get_template('portal/jobset_status.html')
+    t = loader.get_template('portal/submission_status.html')
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
@@ -137,33 +137,33 @@ def jobstatus(request):
     job = get_job(jobid)
     if not job:
         log('job not found.')
-        jobsets = JobSet.objects.all().filter(jobid=jobid)
-        log('found %i jobsets.' % len(jobsets))
-        if len(jobsets):
-            jobset = jobsets[0]
-            log('jobset: ', jobset)
-            jobs = jobset.jobs.all()
-            log('jobset has %i jobs.' % len(jobs))
+        submissions = Submission.objects.all().filter(jobid=jobid)
+        log('found %i submissions.' % len(submissions))
+        if len(submissions):
+            submission = submissions[0]
+            log('submission: ', submission)
+            jobs = submission.jobs.all()
+            log('submission has %i jobs.' % len(jobs))
             if len(jobs) == 1:
                 job = jobs[0]
                 jobid = job.jobid
-                log('jobset has one job:', jobid)
+                log('submission has one job:', jobid)
                 return HttpResponseRedirect(get_status_url(jobid))
             else:
-                return jobsetstatus(request, jobset)
+                return submission_status(request, submission)
         else:
             return HttpResponse('no job with jobid ' + jobid)
 
     log('job found.')
 
-    jobowner = (job.jobset.user == request.user)
+    jobowner = (job.submission.user == request.user)
     anonymous = job.allowanonymous()
 
     if not (jobowner or anonymous):
-        return HttpResponse('The owner of this job (' + job.jobset.user.username + ') has not granted public access.')
+        return HttpResponse('The owner of this job (' + job.submission.user.username + ') has not granted public access.')
 
     field = job.field
-    jobset = job.jobset
+    submission = job.submission
 
     log('jobstatus: Job is: ' + str(job))
 
@@ -171,14 +171,14 @@ def jobstatus(request):
         'jobid' : job.jobid,
         'jobstatus' : job.status,
         'jobsolved' : job.solved,
-        'jobsubmittime' : jobset.format_submittime(),
+        'jobsubmittime' : submission.format_submittime(),
         'jobstarttime' : job.format_starttime(),
         'jobfinishtime' : job.format_finishtime(),
         'logurl' : get_url(job, 'blind.log'),
         'job' : job,
-        'jobset' : job.jobset,
-        'joburl' : (jobset.datasrc == 'url') and jobset.url or None,
-        'jobfile' : (jobset.datasrc == 'file') and jobset.uploaded.userfilename or None,
+        'submission' : job.submission,
+        'joburl' : (submission.datasrc == 'url') and submission.url or None,
+        'jobfile' : (submission.datasrc == 'file') and submission.uploaded.userfilename or None,
         'jobscale' : job.friendly_scale(),
         'jobparity' : job.friendly_parity(),
         'sources' : get_url(job, 'sources'),
@@ -338,10 +338,10 @@ def getfile(request):
     if not 'f' in request.GET:
         return HttpResponse('no f=')
 
-    jobowner = (job.jobset.user == request.user)
+    jobowner = (job.submission.user == request.user)
     anonymous = job.allowanonymous()
     if not (jobowner or anonymous):
-        return HttpResponse('The owner of this job (' + job.jobset.user.username + ') has not granted public access.')
+        return HttpResponse('The owner of this job (' + job.submission.user.username + ') has not granted public access.')
 
     f = request.GET['f']
 
@@ -435,9 +435,9 @@ def summary(request):
 
     prefs = UserPreferences.for_user(request.user)
 
-    jobsets = JobSet.objects.all().filter(user=request.user)
+    submissions = Submission.objects.all().filter(user=request.user)
     jobs = []
-    for js in jobsets:
+    for js in submissions:
         jobs += js.jobs.all()
 
     for job in jobs:
@@ -503,7 +503,7 @@ def changeperms(request):
         if not jobs or len(jobs) != 1:
             return HttpResponse('no job')
         job = jobs[0]
-        if job.jobset.user != request.user:
+        if job.submission.user != request.user:
             return HttpResponse('not your job!')
         if 'allowanon' in request.POST:
             allow = int(request.POST['allowanon'])
@@ -533,7 +533,7 @@ def publishtovo(request):
     job = get_job(request.POST['jobid'])
     if not job:
         return HttpResponse('no job')
-    if job.jobset.user != request.user:
+    if job.submission.user != request.user:
         return HttpResponse('not your job')
     if not job.solved:
         return HttpResponse('job is not solved')

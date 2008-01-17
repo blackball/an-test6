@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from an.util.run_command import run_command
 from an.testbed.models import TestbedJob
 from an.portal.wcs import TanWCS
-from an.portal.job import AstroField, JobSet, Job
+from an.portal.job import AstroField, Submission, Job
 
 
 if __name__ == '__main__':
@@ -23,21 +23,21 @@ if __name__ == '__main__':
         sys.exit(-1)
     user = us[0]
 
-    jobset = JobSet(
+    submission = Submission(
         jobid = Job.generate_jobid(),
         user = user,
         filetype = 'image',
         )
-    jobset.set_submittime_now()
-    jobset.save()
+    submission.set_submittime_now()
+    submission.save()
 
-    print 'Created jobset', jobset.jobid
+    print 'Created submission', submission.jobid
 
     for tbj in tb:
         job = Job(
             jobid = Job.generate_jobid(),
             field = tbj.field,
-            jobset = jobset,
+            submission = submission,
             )
 
         pixscale = tbj.wcs.get_pixscale()
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
         job.create_job_dir()
         job.save()
-        Job.submit_job_or_jobset(job)
+        Job.submit_job_or_submission(job)
         print 'Created job', job.jobid
 
-    print 'Created jobset', jobset.jobid
+    print 'Created submission', submission.jobid

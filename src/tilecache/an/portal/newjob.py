@@ -15,7 +15,7 @@ from an.upload.views  import UploadIdField
 
 from an import gmaps_config
 
-from an.portal.job import JobSet, Job
+from an.portal.job import Submission, Job
 from an.portal.log import log
 from an.portal.views import printvals, get_status_url
 
@@ -57,13 +57,13 @@ class SimpleFancyFileForm(forms.Form):
 
 class FullForm(forms.Form):
     
-    datasrc = forms.ChoiceField(choices=JobSet.datasrc_CHOICES,
+    datasrc = forms.ChoiceField(choices=Submission.datasrc_CHOICES,
                                 initial='url',
                                 widget=forms.RadioSelect(
         attrs={'id':'datasrc',
                'onclick':'datasourceChanged()'}))
 
-    filetype = forms.ChoiceField(choices=JobSet.filetype_CHOICES,
+    filetype = forms.ChoiceField(choices=Submission.filetype_CHOICES,
                                  initial='image',
                                  widget=forms.Select(
         attrs={'onchange':'filetypeChanged()',
@@ -72,17 +72,17 @@ class FullForm(forms.Form):
     upload_id = UploadIdField(widget=forms.HiddenInput(),
                               required=False)
 
-    scaleunits = forms.ChoiceField(choices=JobSet.scaleunits_CHOICES,
-                                   initial=JobSet.scaleunits_default,
+    scaleunits = forms.ChoiceField(choices=Submission.scaleunits_CHOICES,
+                                   initial=Submission.scaleunits_default,
                                    widget=forms.Select(
         attrs={'onchange':'unitsChanged()',
                'onkeyup':'unitsChanged()'}))
-    scaletype = forms.ChoiceField(choices=JobSet.scaletype_CHOICES,
+    scaletype = forms.ChoiceField(choices=Submission.scaletype_CHOICES,
                                   widget=forms.RadioSelect(
         attrs={'id':'scaletype',
                'onclick':'scalechanged()'}),
                                   initial='ul')
-    parity = forms.ChoiceField(choices=JobSet.parity_CHOICES,
+    parity = forms.ChoiceField(choices=Submission.parity_CHOICES,
                                initial=2)
     scalelower = forms.DecimalField(widget=forms.TextInput(
         attrs={'onfocus':'setFsUl()',
@@ -233,13 +233,13 @@ class FullForm(forms.Form):
 
         return self.cleaned_data
 
-def submit_jobset(request, jobset):
-    log('submit_jobset(): JobSet is: ' + str(jobset))
-    jobset.set_submittime_now()
-    jobset.status = 'Queued'
-    jobset.save()
-    request.session['jobid'] = jobset.jobid
-    Job.submit_job_or_jobset(jobset)
+def submit_submission(request, submission):
+    log('submit_submission(): Submission is: ' + str(submission))
+    submission.set_submittime_now()
+    submission.status = 'Queued'
+    submission.save()
+    request.session['jobid'] = submission.jobid
+    Job.submit_job_or_submission(submission)
 
 def newurl(request):
     if not request.user.is_authenticated():
@@ -249,13 +249,13 @@ def newurl(request):
         form = SimpleURLForm(request.POST)
         if form.is_valid():
             url = form.cleaned_data['url']
-            jobset = JobSet(user = request.user,
+            submission = Submission(user = request.user,
                             filetype = 'image',
                             datasrc = 'url',
                             url = url)
-            jobset.save()
-            submit_jobset(request, jobset)
-            return HttpResponseRedirect(get_status_url(jobset.jobid))
+            submission.save()
+            submit_submission(request, submission)
+            return HttpResponseRedirect(get_status_url(submission.jobid))
         else:
             urlerr = form['url'].errors[0]
     else:
@@ -277,14 +277,14 @@ def newfile(request):
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
-            jobset = JobSet(user = request.user,
+            submission = Submission(user = request.user,
                             filetype = 'image',
                             datasrc = 'file',
                             uploaded = form.cleaned_data['upload_id'],
                             )
-            jobset.save()
-            submit_jobset(request, jobset)
-            return HttpResponseRedirect(get_status_url(jobset.jobid))
+            submission.save()
+            submit_submission(request, submission)
+            return HttpResponseRedirect(get_status_url(submission.jobid))
         else:
             log('form not valid.')
     else:
@@ -320,7 +320,7 @@ def newlong(request):
         elif form.getclean('datasrc') == 'file':
             url = None
 
-        jobset = JobSet(
+        submission = Submission(
             user = request.user,
             datasrc = form.getclean('datasrc'),
             filetype = form.getclean('filetype'),
@@ -338,9 +338,9 @@ def newlong(request):
             tweak = form.getclean('tweak'),
             tweakorder = form.getclean('tweakorder'),
             )
-        jobset.save()
-        submit_jobset(request, jobset)
-        return HttpResponseRedirect(get_status_url(jobset.jobid))
+        submission.save()
+        submit_submission(request, submission)
+        return HttpResponseRedirect(get_status_url(submission.jobid))
 
     if 'jobid' in request.session:
         del request.session['jobid']

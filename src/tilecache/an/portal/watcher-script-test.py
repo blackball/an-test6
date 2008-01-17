@@ -24,7 +24,7 @@ import urllib
 
 from django.db import models
 
-from an.portal.models import Job, JobSet, AstroField
+from an.portal.models import Job, Submission, AstroField
 from an.upload.models import UploadedFile
 from an.portal.log import log
 from an.portal.convert import convert, is_tarball, FileConversionError
@@ -74,7 +74,7 @@ def real_handle_job(job, sshconfig):
     field = job.field
     log('field file is %s' % field.filename())
 
-    jobset = job.jobset
+    submission = job.submission
     jobid = job.jobid
 
     # go to the job directory.
@@ -91,7 +91,7 @@ def real_handle_job(job, sshconfig):
     axy = 'job.axy'
     axypath = job.get_filename(axy)
 
-    filetype = job.jobset.filetype
+    filetype = job.submission.filetype
 
     axyargs = {}
 
@@ -306,37 +306,37 @@ def main(sshconfig, joblink):
     if len(jobs):
         return handle_job(jobs[0], sshconfig)
 
-    # else it's a JobSet...
-    jobsets = JobSet.objects.all().filter(jobid=jobid)
-    if len(jobsets) != 1:
-        log('Found %i jobsets, not 1' % len(jobsets))
+    # else it's a Submission...
+    submissions = Submission.objects.all().filter(jobid=jobid)
+    if len(submissions) != 1:
+        log('Found %i submissions, not 1' % len(submissions))
         sys.exit(-1)
-    jobset = jobsets[0]
-    log('Running jobset: ' + str(jobset))
+    submission = submissions[0]
+    log('Running submission: ' + str(submission))
 
-    field = AstroField(user = jobset.user)
+    field = AstroField(user = submission.user)
     # save() so the "id" field gets a unique value
     field.save()
     origfile = field.filename()
     basename = None
 
-    if jobset.datasrc == 'url':
+    if submission.datasrc == 'url':
         # download the URL.
         userlog('Retrieving URL...')
-        log('Retrieving URL ' + jobset.url + ' to file ' + origfile)
-        f = urllib.urlretrieve(jobset.url, origfile)
-        p = urlparse(jobset.url)
+        log('Retrieving URL ' + submission.url + ' to file ' + origfile)
+        f = urllib.urlretrieve(submission.url, origfile)
+        p = urlparse(submission.url)
         p = p[2]
         if p:
             s = p.split('/')
             basename = s[-1]
-    elif jobset.datasrc == 'file':
+    elif submission.datasrc == 'file':
         # move the uploaded file.
-        temp = jobset.uploaded.get_filename()
+        temp = submission.uploaded.get_filename()
         log('uploaded tempfile is ' + temp)
         log('rename(%s, %s)' % (temp, origfile))
         os.rename(temp, origfile)
-        basename = jobset.uploaded.userfilename
+        basename = submission.uploaded.userfilename
     else:
         bailout(job, 'no datasrc')
         return -1
@@ -345,9 +345,9 @@ def main(sshconfig, joblink):
     field.save()
 
     # Handle compressed files.
-    uncomp = convert(jobset, field, 'uncomp-js')
+    uncomp = convert(submission, field, 'uncomp-js')
 
-    # Handle tar files: add a JobSet, create new Jobs.
+    # Handle tar files: add a Submission, create new Jobs.
     job = None
     if is_tarball(uncomp):
         log('file is tarball.')
@@ -358,7 +358,7 @@ def main(sshconfig, joblink):
         (rtn, out, err) = run_command(cmd)
         if rtn:
             userlog('Failed to un-tar file:\n' + err)
-            bailout(jobset, 'failed to extract tar file')
+            bailout(submission, 'failed to extract tar file')
             return -1
         fns = out.strip('\n').split('\n')
         validpaths = []
@@ -378,13 +378,13 @@ def main(sshconfig, joblink):
 
         if len(validpaths) == 0:
             userlog('Tar file contains no regular files.')
-            bailout(jobset, "tar file contains no regular files.")
+            bailout(submission, "tar file contains no regular files.")
             return -1
 
         log('Got %i paths.' % len(validpaths))
 
         for p in validpaths:
-            field = AstroField(user = jobset.user,
+            field = AstroField(user = submission.user,
                                origname = os.path.basename(p),
                                )
             field.save()
@@ -395,12 +395,12 @@ def main(sshconfig, joblink):
 
             if len(validpaths) == 1:
                 job = Job(
-                    jobid = jobset.jobid,
-                    jobset = jobset,
+                    jobid = submission.jobid,
+                    submission = submission,
                     field = field,
                     )
                 job.save()
-                jobset.save()
+                submission.save()
                 # One file in tarball: convert straight to a Job.
                 log('Single-file tarball.')
                 rtn = handle_job(job, sshconfig)
@@ -408,25 +408,25 @@ def main(sshconfig, joblink):
                     return rtn
                 break
 
-            job = Job(jobset = jobset,
+            job = Job(submission = submission,
                       field = field,
                       jobid = Job.generate_jobid(),
                       )
             job.status = 'Queued'
             job.save()
-            jobset.save()
+            submission.save()
             log('Enqueuing Job: ' + str(job))
-            Job.submit_job_or_jobset(job)
+            Job.submit_job_or_submission(job)
 
     else:
         # Not a tarball.
         job = Job(
-            jobid = jobset.jobid,
-            jobset = jobset,
+            jobid = submission.jobid,
+            submission = submission,
             field = field,
             )
         job.save()
-        jobset.save()
+        submission.save()
         rtn = handle_job(job, sshconfig)
         if rtn:
             return rtn
