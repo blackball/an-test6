@@ -27,25 +27,26 @@ Astrometry.net Login
 
 <table id="logintable" border="0">
 
-{% if usererr or passerr %}
+{% if form.username.errors %}
 <tr><td colspan="2">
 <div class="myerrors">
-{% if usererr %}
-{{ usererr }}
-{% endif %}
-{% if passerr %}
-{{ passerr }}
-{% endif %}
+{{ form.username.errors|join:", " }}
 </div>
 </td></tr>
 {% endif %}
-
-
 
 <tr>
 <td class="r">Username:</td>
 <td> {{ form.username }} </td>
 </tr>
+
+{% if form.password.errors %}
+<tr><td colspan="2">
+<div class="myerrors">
+{{ form.password.errors|join:", " }}
+</div>
+</td></tr>
+{% endif %}
 
 <tr>
 <td class="r" style="padding-top:0px;">Password:</td>
@@ -54,6 +55,7 @@ Astrometry.net Login
 
 <tr>
 <td colspan="2" class="c">
+<input type="hidden" name="next" value="{{ next }}" />
 <input type="submit" name="login" value="Login" id="loginbutton" />
 </td>
 

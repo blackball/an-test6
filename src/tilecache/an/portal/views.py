@@ -9,6 +9,7 @@ import tempfile
 import time
 
 import django.contrib.auth as auth
+from django.contrib.auth.decorators import login_required
 
 from django import newforms as forms
 from django.db import models
@@ -428,11 +429,8 @@ def userprefs(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
-
+@login_required
 def summary(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(login))
-
     prefs = UserPreferences.for_user(request.user)
 
     submissions = Submission.objects.all().filter(user=request.user)

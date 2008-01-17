@@ -22,7 +22,8 @@ class LoginTestCases(TestCase):
                   ('test2@astrometry.net', 'password2'), ]
         for (e, p) in accts:
             User.objects.create_user(e, e, p).save()
-        self.loginurl = reverse('an.portal.views.login')
+        #self.loginurl = reverse('an.portal.views.login')
+        self.loginurl = reverse('django.contrib.auth.views.login')
 
     def login1(self):
         self.client.login(username=self.u1, password=self.p1)
