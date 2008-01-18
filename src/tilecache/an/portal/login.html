@@ -27,6 +27,14 @@ Astrometry.net Login
 
 <table id="logintable" border="0">
 
+{% if form.non_field_errors %}
+<tr><td colspan="2">
+<div class="myerrors">
+{{ form.non_field_errors|join:", " }}
+</div>
+</td></tr>
+{% endif %}
+
 {% if form.username.errors %}
 <tr><td colspan="2">
 <div class="myerrors">

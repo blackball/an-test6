@@ -55,7 +55,8 @@ class LoginTestCases(TestCase):
     def testJobSummaryRedirects(self):
         url = reverse('an.portal.views.summary')
         resp = self.client.get(url)
-        self.assertRedirects(resp, self.urlprefix + self.loginurl)
+        redirurl = self.urlprefix + self.loginurl + '?next=' + url
+        self.assertRedirects(resp, redirurl)
 
     # FIXME - add other redirect tests.
 
@@ -68,25 +69,32 @@ class LoginTestCases(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def testLoginWorks(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': self.u1, 'password': self.p1 })
+        resp = self.client.post(self.loginurl, { 'username': self.u1, 'password': self.p1 })
         url = reverse('an.portal.newjob.newurl')
         self.assertRedirects(resp, self.urlprefix + url)
+
+    def assertBadUsernamePasswordPair(self, resp):
+        self.assertFormError(resp, 'form', '__all__',
+                             'Please enter a correct username and password. Note that both fields are case-sensitive.')
 
     def testBadUsername(self):
         resp = self.client.post(self.loginurl,
                                 { 'username': 'u', 'password': 'smeg' })
-        self.assertFormError(resp, 'form', 'username', 'Enter a valid e-mail address.')
+        self.assertBadUsernamePasswordPair(resp)
 
     def testBadPassword(self):
         resp = self.client.post(self.loginurl,
                                 { 'username': self.u1, 'password': 'smeg' })
-        self.assertFormError(resp, 'form', 'password', 'Incorrect password.')
+        self.assertBadUsernamePasswordPair(resp)
+        #for c in resp.context:
+        #    errs = c['form'].errors
+        #    for f,e in errs.items():
+        #        print 'Field "%s": error "%s"' % (f, e)
 
     def testNoSuchUser(self):
         resp = self.client.post(self.loginurl,
                                 { 'username': 'nobody@nowhere.com', 'password': 'smeg' })
-        self.assertFormError(resp, 'form', 'password', 'Incorrect password.')
+        self.assertBadUsernamePasswordPair(resp)
 
     def testNoAccessAfterLogout(self):
         pass
