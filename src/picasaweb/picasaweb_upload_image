@@ -1,0 +1,9 @@
+#!/bin/bash
+curl --silent \\
+  --request POST \\
+  --data-binary "@sweeping_the_rock.png" \\
+  --header "Slug: Sweeping the rock" \\
+  --header "Content-Type: image/png" \\
+  --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \\
+  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/albumid/5113621341847124417" \\
+  | tidy -xml -indent -quiet
