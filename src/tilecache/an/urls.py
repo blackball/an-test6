@@ -7,8 +7,11 @@ urlpatterns = patterns('',
 					   (r'^login/', 'django.contrib.auth.views.login',
                         {'template_name': 'portal/login.html'}),
                        (r'^logout/', 'django.contrib.auth.views.logout_then_login'),
-					   (r'^job/', include('an.portal.urls')),
 					   (r'^userprefs/', 'an.portal.views.userprefs'),
+                       (r'^changepassword/',  'django.contrib.auth.views.password_change'),
+                       (r'^changedpassword/', 'django.contrib.auth.views.password_change_done'),
+                       (r'^resetpassword/',   'django.contrib.auth.views.password_reset'),
+                       (r'^job/', include('an.portal.urls')),
 					   (r'^vo/', include('an.vo.urls')),
                        (r'^testbed/', include('an.testbed.urls')),
                        # This is a fake placeholder to allow {% url %} and reverse() to resolve an.media to /anmedia.
@@ -16,6 +19,9 @@ urlpatterns = patterns('',
                        (r'^anmedia/', 'an.media'),
                        (r'^logout/', 'an.logout'),
                        (r'^login/', 'an.login'),
+                       (r'^changepassword/',  'an.changepassword'),
+                       (r'^changedpassword/', 'an.changedpassword'),
+                       (r'^resetpassword/',   'an.resetpassword'),
 					   )
 
 

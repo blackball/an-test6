@@ -10,3 +10,11 @@ def logout():
 def login():
     pass
 
+def changepassword():
+    pass
+
+def changedpassword():
+    pass
+
+def resetpassword():
+    pass

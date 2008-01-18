@@ -5,6 +5,12 @@
 <h3 style="text-align:center;">{{ msg }}</h3>
 {% endif %}
 
+<p style="text-align:center;">
+<a href="{% url an.changepassword %}">Change Password</a>
+</p>
+
+<hr />
+
 <form method="post">
 <table style="margin-left:auto; margin-right:auto;">
 <tr><td> {{ form.autoredistributable }} </td>
@@ -18,6 +24,8 @@ I submit.</td></tr>
 </td></tr>
 </table>
 </form>
+
+
 
 {% endblock content %}
 

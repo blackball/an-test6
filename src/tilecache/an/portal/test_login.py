@@ -103,4 +103,6 @@ class LoginTestCases(TestCase):
         resp = self.client.post(self.logouturl)
         # logged out.
         self.assertRedirects(resp, self.urlprefix + self.loginurl)
+        # after logout, attempts to access regular pages should
+        # redirect to the login page.
         self.testJobSummaryRedirects()
