@@ -1,10 +1,14 @@
 #!/bin/bash
-FILETYPE=[code here]
+#
+# usage:
+#  picasaweb_upload_image $ALBUMID $FILENAME
+#
+PICASAWEB_ALBUMID=$1
 curl --silent \\
   --request POST \\
-  --data-binary "@$1" \\
-  --header "Slug: Sweeping the rock" \\
-  --header "Content-Type: image/$FILETYPE" \\
+  --data-binary "@$2" \\
+#  --header "Slug: Sweeping the rock" \\
+#  --header "Content-Type: image/$FILETYPE" \\
   --header "Authorization: GoogleLogin aupth=$PICASAWEB_Auth" \\
-  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/albumid/5113621341847124417" \\
-  | tidy -xml -indent -quiet
+  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/albumid/$PICASAWEB_ALBUMID" #\\
+#  | tidy -xml -indent -quiet

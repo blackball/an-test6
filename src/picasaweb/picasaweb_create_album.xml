@@ -2,7 +2,7 @@
 xmlns:gphoto='http://schemas.google.com/photos/2007'>
   <category scheme='http://schemas.google.com/g/2005#kind'
   term='http://schemas.google.com/photos/2007#album' />
-  <title type='text'>$PICASAWEB_ALBUM_NAME</title>
+  <title type='text'>ASTROMETRY ALBUM</title>
   <summary type='text'>created by picasaweb bash tools</summary>
   <gphoto:access>public</gphoto:access>
   <gphoto:commentingEnabled>true</gphoto:commentingEnabled>

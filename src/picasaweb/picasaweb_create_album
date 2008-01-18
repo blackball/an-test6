@@ -4,5 +4,5 @@ curl --silent \
   --data "@$1" \
   --header "Content-Type: application/atom+xml" \
   --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
-  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER" \
-  | tidy -xml -indent -quiet
+  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER" # \
+#  | tidy -xml -indent -quiet
