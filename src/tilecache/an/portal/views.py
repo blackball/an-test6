@@ -44,49 +44,6 @@ import sip
 # >>> user = User.objects.create_user(email, email, passwd)
 # >>> user.save()
 
-class LoginForm(forms.Form):
-    username = forms.EmailField()
-    password = forms.CharField(max_length=100, widget=forms.PasswordInput)
-
-def login(request, redirect_to=None):
-    form = LoginForm(request.POST)
-    authfailed = False
-    usererr = None
-    passerr = None
-    if form.is_valid():
-        username = form.cleaned_data['username']
-        password = form.cleaned_data['password']
-
-        user = auth.authenticate(username=username, password=password)
-        if user is not None:
-            if user.is_active:
-                auth.login(request, user)
-                # Success - go to '/job/newurl'
-                import an.portal.newjob
-                return HttpResponseRedirect(reverse(an.portal.newjob.newurl))
-            else:
-                authfailed = True
-                passerr = 'Your account is not active.'
-                #<br />Please contact ' + settings.ACCOUNT_ADMIN + ' for help.'
-        else:
-            # Failure
-            authfailed = True
-            passerr = 'Incorrect password.'
-            #<br />Please contact ' + settings.ACCOUNT_ADMIN + ' if you have forgotten your password.'
-            
-    else:
-        if len(request.POST):
-            usererr = len(form['username'].errors) and form['username'].errors[0] or None
-            passerr = len(form['password'].errors) and form['password'].errors[0] or None
-
-    t = loader.get_template('portal/login.html')
-    c = Context({
-        'form' : form,
-        'usererr' : usererr,
-        'passerr' : passerr,
-        })
-    return HttpResponse(t.render(c))
-
 def logout(request):
     if not request.user.is_authenticated():
         return HttpResponseForbidden("piss off.")
