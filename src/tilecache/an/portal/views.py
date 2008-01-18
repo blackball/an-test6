@@ -65,10 +65,8 @@ def getsessionjob(request):
     jobid = request.session['jobid']
     return get_job(jobid)
 
+@login_required
 def submission_status(request, submission):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(login))
-
     jobs = submission.jobs.all().order_by('starttime', 'jobid')
     ctxt = {
         'submission' : submission,
@@ -105,18 +103,15 @@ def jobstatus(request):
                 return submission_status(request, submission)
         else:
             return HttpResponse('no job with jobid ' + jobid)
-
     log('job found.')
 
     jobowner = (job.submission.user == request.user)
     anonymous = job.allowanonymous()
-
     if not (jobowner or anonymous):
         return HttpResponse('The owner of this job (' + job.submission.user.username + ') has not granted public access.')
 
     field = job.field
     submission = job.submission
-
     log('jobstatus: Job is: ' + str(job))
 
     ctxt = {
@@ -163,8 +158,6 @@ def jobstatus(request):
                      'wcsurl' : get_url(job, 'wcs.fits'),
                      })
 
-
-
         objsfn = convert(job, job.field, 'objsinfield')
         f = open(objsfn)
         objtxt = f.read()
@@ -187,9 +180,7 @@ def jobstatus(request):
                   {'limit':18,   'gain':-0.5, 'dashbox':0.01,  'center':True, 'dm':0.05 },
                   {'limit':1.8,  'gain':0.25,                   'center':True, 'dm':0.005 },
                   ]
-
         zlist = []
-
         for last_s in range(len(steps)):
             s = steps[last_s]
             if 'limit' in s and fldsz > s['limit']:
@@ -286,7 +277,6 @@ def getfile(request):
     job = get_job(jobid)
     if not job:
         return HttpResponse('no such job')
-
     if not 'f' in request.GET:
         return HttpResponse('no f=')
 
@@ -349,12 +339,9 @@ def printvals(request):
         for k,v in request.FILES.items():
             log('  %s = %s' % (str(k), str(v)))
 
+@login_required
 def userprefs(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(login))
-
     prefs = UserPreferences.for_user(request.user)
-
     PrefsForm = form_for_model(UserPreferences)
     if request.POST:
         form = PrefsForm(request.POST)
@@ -383,7 +370,6 @@ def userprefs(request):
 @login_required
 def summary(request):
     prefs = UserPreferences.for_user(request.user)
-
     submissions = Submission.objects.all().filter(user=request.user)
     jobs = []
     for sub in submissions:
@@ -410,13 +396,10 @@ def summary(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
     
-
+@login_required
 def changeperms(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(login))
     if not request.POST:
         return HttpResponse('no POST')
-
     prefs = UserPreferences.for_user(request.user)
 
     if 'fieldid' in request.POST:
@@ -473,10 +456,8 @@ def changeperms(request):
 
         return HttpResponse('no action.')
 
-
+@login_required
 def publishtovo(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(login))
     if not 'jobid' in request.POST:
         return HttpResponse('no jobid')
     job = get_job(request.POST['jobid'])

@@ -271,10 +271,8 @@ def newurl(request):
         })
     return HttpResponse(t.render(c))
 
+@login_required
 def newfile(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(an.portal.views.login))
-
     if len(request.POST):
         form = SimpleFancyFileForm(request.POST)
         if form.is_valid():
@@ -304,10 +302,8 @@ def newfile(request):
 # Note, if there are *ANY* errors in the form, it will have no
 # 'cleaned_data' array.
 
+@login_required
 def newlong(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect('/login')
-
     if request.POST:
         form = FullForm(request.POST, request.FILES)
     else:

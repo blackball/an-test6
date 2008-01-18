@@ -1,4 +1,5 @@
 import django.contrib.auth as auth
+from django.contrib.auth.decorators import login_required
 
 from django.db import models
 from django.http import HttpResponse, HttpResponseRedirect
@@ -7,10 +8,8 @@ from django.template import Context, RequestContext, loader
 
 from an.testbed.models import *
 
+@login_required
 def oldjobs(request):
-    if not request.user.is_authenticated():
-        return HttpResponse("piss off.")
-
     ojs = OldJob.objects.all()
 
     ctxt = {
