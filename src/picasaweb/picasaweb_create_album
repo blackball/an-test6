@@ -1,0 +1,8 @@
+#!/bin/bash
+curl --silent \
+  --request POST \
+  --data "@template_entry.xml" \
+  --header "Content-Type: application/atom+xml" \
+  --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
+  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER" \
+  | tidy -xml -indent -quiet
