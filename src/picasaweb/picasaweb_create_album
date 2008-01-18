@@ -10,13 +10,13 @@
 #   you must edit "picasaweb_create_album.xml" by hand to "album.xml"
 #   The "source foo" line sets environment variable:
 #     PICASAWEB_ALBUMID
-#     PICASAWEB_ALBUMNAME
 #
 uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER"
-data="<entry xmlns='http://www.w3.org/2005/Atom' xmlns:gphoto='http://schemas.google.com/photos/2007'><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#album' /><title type='text'>$1/title><summary type='text'>created by Hogg Picasaweb bash tools</summary><gphoto:access>public</gphoto:access><gphoto:commentingEnabled>true</gphoto:commentingEnabled></entry>"
+data="<entry xmlns='http://www.w3.org/2005/Atom' xmlns:gphoto='http://schemas.google.com/photos/2007'><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#album' /><title type='text'>$1</title><summary type='text'>created by Hogg Picasaweb bash tools</summary><gphoto:access>public</gphoto:access><gphoto:commentingEnabled>true</gphoto:commentingEnabled></entry>"
 curl --silent \
   --request POST \
-  --data $data \
+  --data "$data" \
   --header "Content-Type: application/atom+xml" \
   --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
-  $uri
+  "$uri" \
+  | sed 's/^.*albumid\//export PICASAWEB_ALBUMID=/' | sed 's/\/.*$/\n/'
