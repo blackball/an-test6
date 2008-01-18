@@ -1,4 +1,13 @@
 #!/bin/bash
+#
+# usage:
+#   ./picasaweb username password > foo
+#   source foo
+# comments:
+#   The "source foo" line sets environment variables:
+#     PICASAWEB_USER
+#     PICASAWEB_Auth
+#
 PICASAWEB_USER=$1
 echo "export PICASAWEB_USER=\"$PICASAWEB_USER\""
 curl --silent \
