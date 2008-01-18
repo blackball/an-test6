@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 		int a;
 		int w, h;
         int bitpix;
-        int fullW, fullH;
+        int fullW=-1, fullH=-1;
         float *thedata = NULL;
         unsigned char* theu8data = NULL;
         float *x;

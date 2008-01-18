@@ -191,6 +191,7 @@ class Submission(models.Model):
 
     filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
+    # ???
     status = models.CharField(max_length=16)
 
     failurereason = models.CharField(max_length=256)

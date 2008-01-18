@@ -221,7 +221,7 @@ int fitsbin_write_item(fitsbin_t* fb, int chunk, void* data) {
 fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 									char** errstr) {
 	fitsbin_t* fb;
-    fitsbin_chunk_t* chunk = fb->chunks;
+    fitsbin_chunk_t* chunk;
 
 	fb = fitsbin_new(1);
 	if (!fb)
@@ -232,6 +232,7 @@ fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
         goto bailout;
     }
 
+    chunk = fb->chunks;
 	chunk->tablename = strdup(tablename);
 	chunk->header = qfits_header_default();
 
@@ -251,16 +252,16 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
 						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
 						void* userdata) {
     fitsbin_t* fb;
-    fitsbin_chunk_t* chunk = fb->chunks;
+    fitsbin_chunk_t* chunk;
     int rtn;
 
     fb = fitsbin_new(1);
-    if (!fb) {
+    if (!fb)
         return fb;
-    }
     fb->filename = strdup(fn);
     fb->errstr = errstr;
 
+    chunk = fb->chunks;
     chunk->tablename = strdup(tablename);
     chunk->callback_read_header = callback_read_header;
     chunk->userdata = userdata;

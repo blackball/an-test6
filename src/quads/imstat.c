@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
     fitsfile *fptr;  /* FITS file pointer */
     int status = 0;  /* CFITSIO status value MUST be initialized to zero! */
     int hdutype, naxis, ii;
-    long naxes[2], totpix, fpixel[2];
+    long naxes[2], totpix=0, fpixel[2];
     double *pix, sum = 0., meanval = 0., minval = 1.E33, maxval = -1.E33;
 
     if (argc != 2) { 
