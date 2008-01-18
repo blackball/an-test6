@@ -23,10 +23,15 @@ class LoginTestCases(TestCase):
         for (e, p) in accts:
             User.objects.create_user(e, e, p).save()
         #self.loginurl = reverse('an.portal.views.login')
-        self.loginurl = reverse('django.contrib.auth.views.login')
+        self.loginurl = reverse('an.login')
+        self.logouturl = reverse('an.logout')
 
     def login1(self):
         self.client.login(username=self.u1, password=self.p1)
+
+    def login_with(self, username, password):
+        resp = self.client.post(self.loginurl, { 'username': username, 'password': password })
+        return resp
 
     def testLoginForm(self):
         print 'Login url is %s' % self.loginurl
@@ -36,20 +41,37 @@ class LoginTestCases(TestCase):
         # print 'Got: %s' % resp.content
 
     def testEmptyUsername(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': '', 'password': 'pass' })
+        resp = self.login_with('', 'pass')
         self.assertFormError(resp, 'form', 'username', 'This field is required.')
 
     def testEmptyPassword(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': 'bob', 'password': '' })
+        resp = self.login_with('bob', '')
         self.assertFormError(resp, 'form', 'password', 'This field is required.')
 
     def testEmptyBoth(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': '', 'password': '' })
+        resp = self.login_with('', '')
         self.assertFormError(resp, 'form', 'username', 'This field is required.')
         self.assertFormError(resp, 'form', 'password', 'This field is required.')
+
+    def assertBadUsernamePasswordPair(self, resp):
+        self.assertFormError(resp, 'form', '__all__',
+                             'Please enter a correct username and password. Note that both fields are case-sensitive.')
+
+    def testBadUsername(self):
+        resp = self.login_with('u', 'smeg')
+        self.assertBadUsernamePasswordPair(resp)
+
+    def testBadPassword(self):
+        resp = self.login_with(self.u1, 'smeg')
+        self.assertBadUsernamePasswordPair(resp)
+        #for c in resp.context:
+        #    errs = c['form'].errors
+        #    for f,e in errs.items():
+        #        print 'Field "%s": error "%s"' % (f, e)
+
+    def testNoSuchUser(self):
+        resp = self.login_with('nobody@nowhere.com', 'smeg')
+        self.assertBadUsernamePasswordPair(resp)
 
     # FIXME - this should maybe move to test_job_summary:
     def testJobSummaryRedirects(self):
@@ -69,33 +91,16 @@ class LoginTestCases(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def testLoginWorks(self):
-        resp = self.client.post(self.loginurl, { 'username': self.u1, 'password': self.p1 })
+        resp = self.login_with(self.u1, self.p1)
         url = reverse('an.portal.newjob.newurl')
         self.assertRedirects(resp, self.urlprefix + url)
 
-    def assertBadUsernamePasswordPair(self, resp):
-        self.assertFormError(resp, 'form', '__all__',
-                             'Please enter a correct username and password. Note that both fields are case-sensitive.')
-
-    def testBadUsername(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': 'u', 'password': 'smeg' })
-        self.assertBadUsernamePasswordPair(resp)
-
-    def testBadPassword(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': self.u1, 'password': 'smeg' })
-        self.assertBadUsernamePasswordPair(resp)
-        #for c in resp.context:
-        #    errs = c['form'].errors
-        #    for f,e in errs.items():
-        #        print 'Field "%s": error "%s"' % (f, e)
-
-    def testNoSuchUser(self):
-        resp = self.client.post(self.loginurl,
-                                { 'username': 'nobody@nowhere.com', 'password': 'smeg' })
-        self.assertBadUsernamePasswordPair(resp)
-
-    def testNoAccessAfterLogout(self):
-        pass
-    
+    def testLogoutRedirectsToLogin(self):
+        resp = self.login_with(self.u1, self.p1)
+        url = reverse('an.portal.newjob.newurl')
+        # logged in.
+        self.assertRedirects(resp, self.urlprefix + url)
+        resp = self.client.post(self.logouturl)
+        # logged out.
+        self.assertRedirects(resp, self.urlprefix + self.loginurl)
+        self.testJobSummaryRedirects()

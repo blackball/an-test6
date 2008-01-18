@@ -8,6 +8,8 @@ from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 from django.core.urlresolvers import reverse
 
+from django.contrib.auth.decorators import login_required
+
 import an
 
 from an.upload.models import UploadedFile
@@ -241,9 +243,8 @@ def submit_submission(request, submission):
     request.session['jobid'] = submission.jobid
     Job.submit_job_or_submission(submission)
 
+@login_required
 def newurl(request):
-    if not request.user.is_authenticated():
-        return HttpResponseRedirect(reverse(an.portal.views.login))
     urlerr = None
     if len(request.POST):
         form = SimpleURLForm(request.POST)

@@ -3,3 +3,10 @@
 def media():
     pass
 
+# likewise "logout"
+def logout():
+    pass
+
+def login():
+    pass
+
