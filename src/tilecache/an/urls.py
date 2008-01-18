@@ -22,7 +22,6 @@ urlpatterns = patterns('',
                        (r'^logout/', 'an.logout'),
                        (r'^login/', 'an.login'),
                        (r'^changepassword/',  'an.changepassword'),
-                       (r'^changedpassword/', 'an.changedpassword'),
                        (r'^resetpassword/',   'an.resetpassword'),
 					   )
 
