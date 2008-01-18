@@ -1,10 +1,9 @@
 #!/bin/bash
 #
 # usage:
-#   ./picasaweb_create_album album.xml > foo
+#   ./picasaweb_create_album "Album name" > foo
 #   source foo
 # comments:
-#   DOESN'T WORK!!
 #   requires environment variables:
 #     PICASAWEB_Auth
 #     PICASAWEB_USER
@@ -13,10 +12,11 @@
 #     PICASAWEB_ALBUMID
 #     PICASAWEB_ALBUMNAME
 #
+uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER"
+data="<entry xmlns='http://www.w3.org/2005/Atom' xmlns:gphoto='http://schemas.google.com/photos/2007'><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#album' /><title type='text'>$1/title><summary type='text'>created by Hogg Picasaweb bash tools</summary><gphoto:access>public</gphoto:access><gphoto:commentingEnabled>true</gphoto:commentingEnabled></entry>"
 curl --silent \
   --request POST \
-  --data "@$1" \
+  --data $data \
   --header "Content-Type: application/atom+xml" \
   --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
-  "http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER" \
-  | sed 's/^.*albumid\//export PICASAWEB_ALBUMID=/' | sed 's/\/.*$/\n/'
+  $uri
