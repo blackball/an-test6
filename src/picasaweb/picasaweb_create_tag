@@ -10,8 +10,8 @@
 #     PICASAWEB_PHOTOID
 #
 FILETYPE=jpeg
-uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/albumid/$PICASAWEB_ALBUMID/photo/$PICASAWEB_PHOTOID"
-uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/album/$PICASAWEB_ALBUMNAME/photo/$PICASAWEB_PHOTOID"
+# uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/albumid/$PICASAWEB_ALBUMID/photo/$PICASAWEB_PHOTOID"
+uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/album/$PICASAWEB_ALBUMNAME/photoid/$PICASAWEB_PHOTOID"
 echo $uri
 data="<entry xmlns='http://www.w3.org/2005/Atom'><title>$1</title><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#tag' /></entry>"
 echo $data
