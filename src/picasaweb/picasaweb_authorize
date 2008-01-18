@@ -1,9 +1,10 @@
 #!/bin/bash
 PICASAWEB_USER=$1
 echo "export PICASAWEB_USER=\"$PICASAWEB_USER\""
-PICASAWEB_AUTH="$(curl https://www.google.com/accounts/ClientLogin \
-                    -d Email=$PICASAWEB_USER@gmail.com -d Passwd=$2 \
-                    -d accountType=GOOGLE \
-                    -d source=$0 \
-                    -d service=lh2)"
-echo "export PICASAWEB_AUTH=\"$PICASAWEB_AUTH\""
+curl --silent \
+  "https://www.google.com/accounts/ClientLogin" \
+  -d Email=$PICASAWEB_USER@gmail.com -d Passwd=$2 \
+  -d accountType=GOOGLE \
+  -d source=$0 \
+  -d service=lh2 \
+  | sed 's/^/export PICASAWEB_/'
