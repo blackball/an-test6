@@ -44,12 +44,6 @@ import sip
 # >>> user = User.objects.create_user(email, email, passwd)
 # >>> user.save()
 
-def logout(request):
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden("piss off.")
-    auth.logout(request)
-    return HttpResponseRedirect(reverse(login))
-
 def get_status_url(jobid):
     return reverse(jobstatus) + '?jobid=' + jobid
 
