@@ -17,7 +17,7 @@ class Image(models.Model):
     # a short (usually one line) description of the image
     # identifying the image source (e.g., survey name), object name or field coordinates,
     # bandpass/filter, and so forth.
-    image_title = models.CharField(maxlength=256)
+    image_title = models.CharField(max_length=256)
 
     # the MIME-type of the object associated with the image acref, e.g., "image/fits", "text/html", and so forth.
     #image_format = models.CharField(maxlength=32)
@@ -30,7 +30,7 @@ class Image(models.Model):
     #image_filesize = models.PositiveIntegerField()
 
     # the instrument or instruments used to make the observation, e.g., STScI.HST.WFPC2.
-    instrument = models.CharField(maxlength=256, null=True)
+    instrument = models.CharField(max_length=256, null=True)
 
     # the mean modified Julian date of the observation.
     # By "mean" we mean the midpoint of the observation in terms of normalized exposure times:

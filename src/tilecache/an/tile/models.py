@@ -7,11 +7,11 @@ class Image(models.Model):
 	objects = orderby.OrderByManager()
 	
 	# The original image filename.
-	origfilename = models.CharField(maxlength=1024)
+	origfilename = models.CharField(max_length=1024)
 	# The original image file format.
-	origformat = models.CharField(maxlength=30)
+	origformat = models.CharField(max_length=30)
 	# The JPEG base filename.
-	filename = models.CharField(maxlength=1024)
+	filename = models.CharField(max_length=1024)
 	ramin =	 models.FloatField()
 	ramax =	 models.FloatField()
 	decmin = models.FloatField()
