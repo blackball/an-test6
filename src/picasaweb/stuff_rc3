@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# DO NOT TRY THIS AT HOME!
+#
+for filepath in $(ls ~/public_html/rc3/*irg.jpg); do
+  echo ./picasaweb_upload_image $filepath
+  ./picasaweb_upload_image $filepath > foo
+  source foo
+  file=$(basename $filepath)
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^A_\([0-9\+\-]*\)_.*$/A\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^_A_\([0-9\+\-]*\)_.*$/A\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*ARP_\([0-9]*\)_.*$/ARP\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*DDO_\([0-9]*\)_.*$/DDO\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*IC_\([0-9A-Z]*\)_.*$/IC\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*IRAS_\([0-9\+\-]*\)_.*$/IRAS\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*KUG_\([0-9]*\)_.*$/KUG\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*MCG_\([0-9_\+\-]*\)_.*$/MCG\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*NGC_\([0-9]*\)_.*$/NGC\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*UGC_\([0-9]*\)_.*$/UGC\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*UGCA_\([0-9]*\)_.*$/UGCA\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*VCC_\([0-9]*\)_.*$/VCC\1/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^.*\([1-9]\)ZW_\([0-9]*\)_.*$/\1Zw\2/p')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+  tag=""
+  tag=$(echo $file | sed -n 's/^\(.*\)_UGC.*$/\1/p' | sed 's/_//')
+  if [ $(expr length "$tag") != 0 ]; then
+    echo ./picasaweb_create_tag $tag
+    ./picasaweb_create_tag $tag
+  fi
+
+done
