@@ -1,9 +1,0 @@
-<entry xmlns='http://www.w3.org/2005/Atom' 
-xmlns:gphoto='http://schemas.google.com/photos/2007'>
-  <category scheme='http://schemas.google.com/g/2005#kind'
-  term='http://schemas.google.com/photos/2007#album' />
-  <title type='text'>ASTROMETRY ALBUM</title>
-  <summary type='text'>created by picasaweb bash tools</summary>
-  <gphoto:access>public</gphoto:access>
-  <gphoto:commentingEnabled>true</gphoto:commentingEnabled>
-</entry>
