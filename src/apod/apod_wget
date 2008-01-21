@@ -1,0 +1,8 @@
+#!/bin/bash
+wget \
+  --recursive \
+  --convert-links \
+  --page-requisites \
+  --no-parent \
+  -L \
+  "http://apod.nasa.gov/apod/archivepix.html"
