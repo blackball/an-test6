@@ -121,8 +121,15 @@ qfits_table* fits_get_table_column(const char* fn, const char* colname, int* pco
 int fits_add_column(qfits_table* table, int column, tfits_type type,
 					int ncopies, const char* units, const char* label);
 
-int fits_convert_data(void* dest, tfits_type desttype,
-                      const void* src, tfits_type srctype,
+/**
+ Converts data between different FITS types.
+
+ Does NO checking, rounding, or anything smart - just uses C casts.
+
+ ASSUMES the data has already been flipped to the local host's endianness.
+ */
+int fits_convert_data(void* dest, int deststride, tfits_type desttype,
+                      const void* src, int srcstride, tfits_type srctype,
                       int N);
 
 // write single column fields:
