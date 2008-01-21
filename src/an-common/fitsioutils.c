@@ -34,135 +34,101 @@ int fits_convert_data(void* vdest, tfits_type desttype,
                       const void* vsrc, tfits_type srctype,
                       int N) {
     int i;
+    bool src_is_int = TRUE;
+
+    uint8_t* src_u8 = NULL;
+    int16_t* src_i16 = NULL;
+    int32_t* src_i32 = NULL;
+    int64_t* src_i64 = NULL;
+    float*   src_f = NULL;
+    double*  src_d = NULL;
+
+    uint8_t* dest_u8 = NULL;
+    int16_t* dest_i16 = NULL;
+    int32_t* dest_i32 = NULL;
+    int64_t* dest_i64 = NULL;
+    float*   dest_f = NULL;
+    double*  dest_d = NULL;
+
+    switch (srctype) {
+    case TFITS_BIN_TYPE_A:
+    case TFITS_BIN_TYPE_X:
+    case TFITS_BIN_TYPE_L:
+    case TFITS_BIN_TYPE_B:
+        src_u8 = vsrc;
+        break;
+    case TFITS_BIN_TYPE_I:
+        src_i16 = vsrc;
+        break;
+    case TFITS_BIN_TYPE_J:
+        src_i32 = vsrc;
+        break;
+    case TFITS_BIN_TYPE_K:
+        src_i64 = vsrc;
+        break;
+    case TFITS_BIN_TYPE_E:
+        src_f = vsrc;
+        src_is_int = FALSE;
+        break;
+    case TFITS_BIN_TYPE_D:
+        src_d = vsrc;
+        src_is_int = FALSE;
+        break;
+    default:
+        assert(0);
+    }
+
+    switch (desttype) {
+    case TFITS_BIN_TYPE_A:
+    case TFITS_BIN_TYPE_X:
+    case TFITS_BIN_TYPE_L:
+    case TFITS_BIN_TYPE_B:
+        dest_u8 = vdest;
+        break;
+    case TFITS_BIN_TYPE_I:
+        dest_i16 = vdest;
+        break;
+    case TFITS_BIN_TYPE_J:
+        dest_i32 = vdest;
+        break;
+    case TFITS_BIN_TYPE_K:
+        dest_i64 = vdest;
+        break;
+    case TFITS_BIN_TYPE_E:
+        dest_f = vdest;
+        break;
+    case TFITS_BIN_TYPE_D:
+        dest_d = vdest;
+        break;
+    default:
+        assert(0);
+    }
 
     for (i=0; i<N; i++) {
         int64_t ival;
         double  dval;
-        int isint = FALSE;
-        int isdbl = FALSE;
 
-        switch (srctype) {
-        case TFITS_BIN_TYPE_A:
-        case TFITS_BIN_TYPE_X:
-        case TFITS_BIN_TYPE_L:
-        case TFITS_BIN_TYPE_B:
-            {
-                uint8_t* src = vsrc;
-                ival = (int64_t)(*vsrc);
-                isint = TRUE;
-            }
-            break;
+        if (src_u8) ival = src_u8[i];
+        else if (src_i16) ival = src_i16[i];
+        else if (src_i32) ival = src_i32[i];
+        else if (src_i64) ival = src_i64[i];
+        else if (src_f) dval = src_f[i];
+        else if (src_d) dval = src_d[i];
 
-        case TFITS_BIN_TYPE_I:
-            {
-                int16_t* src = vsrc;
-                ival = (int64_t)(*src);
-                isint = TRUE;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_J:
-            {
-                int32_t* src = vsrc;
-                ival = (int64_t)(*src);
-                isint = TRUE;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_K:
-            {
-                int64_t* src = vsrc;
-                ival = *src;
-                isint = TRUE;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_E:
-            {
-                float* src = vsrc;
-                dval = (double)(*src);
-                isdbl = TRUE;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_D:
-            {
-                double* src = vsrc;
-                dval = (*src);
-                isdbl = TRUE;
-            }
-            break;
-
-        default:
-            assert(0);
-        }
-        assert(isint || isdbl);
-
-        switch (desttype) {
-        case TFITS_BIN_TYPE_A:
-        case TFITS_BIN_TYPE_X:
-        case TFITS_BIN_TYPE_L:
-        case TFITS_BIN_TYPE_B:
-            {
-                uint8_t* dest = vdest;
-                if (isint)
-                    *dest = ival;
-                else
-                    *dest = dval;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_I:
-            {
-                int16_t* dest = vdest;
-                if (isint)
-                    *dest = ival;
-                else
-                    *dest = dval;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_J:
-            {
-                int32_t* dest = vdest;
-                if (isint)
-                    *dest = ival;
-                else
-                    *dest = dval;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_K:
-            {
-                int64_t* dest = vdest;
-                if (isint)
-                    *dest = ival;
-                else
-                    *dest = dval;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_E:
-            {
-                float* dest = vdest;
-                if (isint)
-                    *dest = ival;
-                else
-                    *dest = dval;
-            }
-            break;
-
-        case TFITS_BIN_TYPE_D:
-            {
-                double* dest = vdest;
-                if (isint)
-                    *dest = ival;
-                else
-                    *dest = dval;
-            }
-            break;
-        default:
-            assert(0);
+        if (src_is_int) {
+            if (dest_u8) dest_u8[i] = ival;
+            else if (dest_i16) dest_i16[i] = ival;
+            else if (dest_i32) dest_i32[i] = ival;
+            else if (dest_i64) dest_i64[i] = ival;
+            else if (dest_f) dest_f[i] = ival;
+            else if (dest_d) dest_d[i] = ival;
+        } else {
+            if (dest_u8) dest_u8[i] = dval;
+            else if (dest_i16) dest_i16[i] = dval;
+            else if (dest_i32) dest_i32[i] = dval;
+            else if (dest_i64) dest_i64[i] = dval;
+            else if (dest_f) dest_f[i] = dval;
+            else if (dest_d) dest_d[i] = dval;
         }
     }
 }
