@@ -30,6 +30,143 @@
 #include "an-endian.h"
 
 
+int fits_convert_data(void* vdest, tfits_type desttype,
+                      const void* vsrc, tfits_type srctype,
+                      int N) {
+    int i;
+
+    for (i=0; i<N; i++) {
+        int64_t ival;
+        double  dval;
+        int isint = FALSE;
+        int isdbl = FALSE;
+
+        switch (srctype) {
+        case TFITS_BIN_TYPE_A:
+        case TFITS_BIN_TYPE_X:
+        case TFITS_BIN_TYPE_L:
+        case TFITS_BIN_TYPE_B:
+            {
+                uint8_t* src = vsrc;
+                ival = (int64_t)(*vsrc);
+                isint = TRUE;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_I:
+            {
+                int16_t* src = vsrc;
+                ival = (int64_t)(*src);
+                isint = TRUE;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_J:
+            {
+                int32_t* src = vsrc;
+                ival = (int64_t)(*src);
+                isint = TRUE;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_K:
+            {
+                int64_t* src = vsrc;
+                ival = *src;
+                isint = TRUE;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_E:
+            {
+                float* src = vsrc;
+                dval = (double)(*src);
+                isdbl = TRUE;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_D:
+            {
+                double* src = vsrc;
+                dval = (*src);
+                isdbl = TRUE;
+            }
+            break;
+
+        default:
+            assert(0);
+        }
+        assert(isint || isdbl);
+
+        switch (desttype) {
+        case TFITS_BIN_TYPE_A:
+        case TFITS_BIN_TYPE_X:
+        case TFITS_BIN_TYPE_L:
+        case TFITS_BIN_TYPE_B:
+            {
+                uint8_t* dest = vdest;
+                if (isint)
+                    *dest = ival;
+                else
+                    *dest = dval;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_I:
+            {
+                int16_t* dest = vdest;
+                if (isint)
+                    *dest = ival;
+                else
+                    *dest = dval;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_J:
+            {
+                int32_t* dest = vdest;
+                if (isint)
+                    *dest = ival;
+                else
+                    *dest = dval;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_K:
+            {
+                int64_t* dest = vdest;
+                if (isint)
+                    *dest = ival;
+                else
+                    *dest = dval;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_E:
+            {
+                float* dest = vdest;
+                if (isint)
+                    *dest = ival;
+                else
+                    *dest = dval;
+            }
+            break;
+
+        case TFITS_BIN_TYPE_D:
+            {
+                double* dest = vdest;
+                if (isint)
+                    *dest = ival;
+                else
+                    *dest = dval;
+            }
+            break;
+        default:
+            assert(0);
+        }
+    }
+}
+
 double fits_get_double_val(const qfits_table* table, int column,
                            const void* rowdata) {
     const unsigned char* cdata = rowdata;

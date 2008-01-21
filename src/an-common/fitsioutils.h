@@ -121,6 +121,10 @@ qfits_table* fits_get_table_column(const char* fn, const char* colname, int* pco
 int fits_add_column(qfits_table* table, int column, tfits_type type,
 					int ncopies, const char* units, const char* label);
 
+int fits_convert_data(void* dest, tfits_type desttype,
+                      const void* src, tfits_type srctype,
+                      int N);
+
 // write single column fields:
 int fits_write_data_A(FILE* fid, unsigned char value);
 int fits_write_data_B(FILE* fid, unsigned char value);
