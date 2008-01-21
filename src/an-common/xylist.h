@@ -25,6 +25,7 @@
 #include "starutil.h"
 #include "qfits.h"
 #include "bl.h"
+#include "fitscolumn.h"
 
 typedef dl xy;
 #define mk_xy(n) dl_new((n)*2)
@@ -47,23 +48,13 @@ struct xylist {
 	char* fn;
 	int nfields;
 	int parity;
-	tfits_type xtype;
-	tfits_type ytype;
-	const char* xname; // default "X"
-	const char* yname; // default "Y"
-	const char* xunits; // default null
-	const char* yunits; // default null
+
+    fitstable_t* table;
 
 	const char* antype; // Astrometry.net filetype string.
 
 	// field we're currently reading/writing
 	unsigned int field;
-	qfits_table* table;
-    qfits_header* fieldheader;
-
-	// reading
-	int xcol;
-	int ycol;
 
 	// writing:
 	qfits_header* header;
