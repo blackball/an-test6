@@ -28,67 +28,48 @@
 #define X_INDEX 0
 #define Y_INDEX 1
 
+static void add_cols(fitstable_t* t, int parity, tfits_type type) {
+    fitscol_t col;
+
+    memset(&col, 0, sizeof(fitscol_t));
+    col.target_fitstype = type;
+    col.target_arraysize = 1;
+    col.ctype = fitscolumn_double_type();
+    col.required = TRUE;
+    col.in_struct = TRUE;
+
+    col.colname = "X";
+    col.coffset = (parity ? sizeof(double) : 0);
+    fitstable_add_column(t, &col);
+    col.colname = "Y";
+    col.coffset = (parity ? 0 : sizeof(double));
+    fitstable_add_column(t, &col);
+}
+
 // Is the given filename an xylist?
 int xylist_is_file_xylist(const char* fn,
                           const char* xcolumn, const char* ycolumn,
                           const char** reason) {
-    /* FIXME - switch this to use fitstable. */
-	qfits_header* header;
-	qfits_table* table;
-	qfits_col *xcol, *ycol;
-    int ix, iy;
-
-    // Is it FITS?
-	if (!qfits_is_fits(fn)) {
-        if (reason) *reason = "File is not in FITS format.";
-        return 0;
+    fitstable_t* t;
+    int rtn = 0;
+    t = fitstable_open(fn);
+    if (!t) {
+        if (reason) *reason = "Not a FITS table?";
+        return rtn;
     }
-
-    // Read the primary header.
-	header = qfits_header_read(fn);
-	if (!header) {
-        if (reason) *reason = "Failed to read FITS header.";
-        return 0;
+    add_cols(t, 0, fitscolumn_any_type());
+    if (xcolumn)
+        fitstable_get_column(t, X_INDEX)->colname = xcolumn;
+    if (ycolumn)
+        fitstable_get_column(t, Y_INDEX)->colname = ycolumn;
+    if (fitstable_read_extension(t, 1)) {
+        if (reason) *reason = "Failed to find matching columns.";
+    } else {
+        // Got it!
+        rtn = 1;
     }
-    qfits_header_destroy(header);
-
-    // Read the first extension - it should be a BINTABLE.
-	table = qfits_table_open(fn, 1);
-	if (!table) {
-        if (reason) *reason = "Failed to find a FITS BINTABLE in the first extension.";
-        return 0;
-    }
-
-	// Find columns.
-    if (!xcolumn)
-        xcolumn = "X";
-    if (!ycolumn)
-        ycolumn = "Y";
-    ix = fits_find_column(table, xcolumn);
-    iy = fits_find_column(table, ycolumn);
-    // Columns exist?
-    if ((ix == -1) || (iy == -1)) {
-        if (reason) *reason = "Failed to find FITS table columns with the expected names.";
-        qfits_table_close(table);
-        return 0;
-    }
-    xcol = table->col + ix;
-    ycol = table->col + iy;
-
-    // Columns have right data types?
-    if (!(((xcol->atom_type == TFITS_BIN_TYPE_D) ||
-           (xcol->atom_type == TFITS_BIN_TYPE_E)) &&
-          (xcol->atom_nb == 1) &&
-          (((ycol->atom_type == TFITS_BIN_TYPE_D) ||
-            (ycol->atom_type == TFITS_BIN_TYPE_E)) &&
-           (ycol->atom_nb == 1)))) {
-        if (reason) *reason = "Failed to find FITS table columns with the right data type (D or E).";
-        qfits_table_close(table);
-        return 0;
-    }
-    qfits_table_close(table);
-
-    return 1;
+    fitstable_close(t);
+    return rtn;
 }
 
 static fitscol_t* xcolumn(xylist* ls) {
@@ -133,24 +114,6 @@ static xylist* xylist_new() {
 	return ls;
 }
 
-static void add_cols(xylist* ls, tfits_type type) {
-    fitscol_t col;
-
-    memset(&col, 0, sizeof(fitscol_t));
-    col.target_fitstype = type;
-    col.target_arraysize = 1;
-    col.ctype = fitscolumn_double_type();
-    col.required = TRUE;
-    col.in_struct = TRUE;
-
-    col.colname = "X";
-    col.coffset = (ls->parity ? sizeof(double) : 0);
-    fitstable_add_column(ls->table, &col);
-    col.colname = "Y";
-    col.coffset = (ls->parity ? 0 : sizeof(double));
-    fitstable_add_column(ls->table, &col);
-}
-
 xylist* xylist_open(const char* fn) {
 	xylist* ls = NULL;
 	ls = xylist_new();
@@ -161,7 +124,7 @@ xylist* xylist_open(const char* fn) {
         free(ls);
         return NULL;
     }
-    add_cols(ls, fitscolumn_any_type());
+    add_cols(ls->table, ls->parity, fitscolumn_any_type());
 	ls->antype = qfits_pretty_string(qfits_header_getstr(ls->table->primheader, "AN_FILE"));
 	ls->nfields = qfits_query_n_ext(fn);
     ls->field = -1;
@@ -178,7 +141,7 @@ xylist* xylist_open_for_writing(char* fn) {
         free(ls);
         return NULL;
     }
-    add_cols(ls, fitscolumn_double_type());
+    add_cols(ls->table, ls->parity, fitscolumn_double_type());
 	ls->antype = AN_FILETYPE_XYLS;
 	//qfits_header_add(ls->table->primheader, "NFIELDS", "0", NULL, NULL);
 	qfits_header_add(ls->table->primheader, "AN_FILE", ls->antype, NULL, NULL);
