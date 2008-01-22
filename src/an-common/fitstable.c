@@ -4,6 +4,8 @@
 #include "fitstable.h"
 #include "fitsioutils.h"
 
+static void fitstable_create_table(fitstable_t* tab);
+
 static int ncols(const fitstable_t* t) {
     return bl_size(t->cols);
 }
@@ -184,7 +186,7 @@ int fitstable_fix_header(fitstable_t* t) {
     off_t old_end;
     off_t new_end;
 	assert(t->fid);
-	assert(t->header);
+	assert(t->primheader);
 	offset = ftello(t->fid);
 	fseeko(t->fid, 0, SEEK_SET);
     old_end = t->end_header_offset;
@@ -199,12 +201,62 @@ int fitstable_fix_header(fitstable_t* t) {
 	return 0;
 }
 
-void fitstable_reset_table(fitstable_t* tab) {
+// Called just before starting to write a new field.
+int fitstable_new_table(fitstable_t* t) {
     if (tab->table) {
         qfits_table_close(tab->table);
     }
     fitstable_create_table(tab);
+    if (tab->header) {
+        qfits_header_destroy(tab->header);
+    }
+    tab->header = qfits_table_ext_header_default(tab->table);
 }
+
+int fitstable_write_table_header(fitstable_t* t) {
+	assert(t->fid);
+	assert(t->header);
+    // add padding.
+    fits_pad_file(t->fid);
+	t->table_offset = ftello(t->fid);
+	qfits_header_dump(t->header, t->fid);
+    t->end_table_offset = ftello(t->fid);
+	return 0;
+}
+
+int fitstable_fix_table_header(fitstable_t* t) {
+	off_t offset;
+    off_t old_end;
+    off_t new_end;
+	assert(t->fid);
+	assert(t->header);
+	offset = ftello(t->fid);
+	fseeko(t->fid, t->table_offset, SEEK_SET);
+    old_end = t->end_table_offset;
+    // update NAXIS2 to reflect the number of rows written.
+    fits_header_mod_int(tab->header, "NAXIS2", t->table->nr, NULL);
+    fitstable_write_table_header(t);
+    new_end = t->end_table_offset;
+	if (old_end != new_end) {
+		fprintf(stderr, "Error: fitstable table header size changed: was %u, but is now %u.  Corruption is likely!\n",
+				(uint)old_end, (uint)new_end);
+		return -1;
+	}
+    // go back to where we were (ie, probably the end of the data array)...
+	fseeko(t->fid, offset, SEEK_SET);
+    // add padding.
+    fits_pad_file(ls->fid);
+	return 0;
+}
+
+/*
+ void fitstable_reset_table(fitstable_t* tab) {
+ if (tab->table) {
+ qfits_table_close(tab->table);
+ }
+ fitstable_create_table(tab);
+ }
+ */
 
 void fitstable_close_table(fitstable_t* tab) {
     int i;
@@ -351,7 +403,7 @@ int fitstable_write_array(const fitstable_t* tab,
     return 0;
 }
 
-void fitstable_create_table(fitstable_t* tab) {
+static void fitstable_create_table(fitstable_t* tab) {
     qfits_table* qt;
     int i;
 

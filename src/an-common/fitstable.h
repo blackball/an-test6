@@ -114,6 +114,14 @@ int fitstable_write_header(fitstable_t* t);
 // Rewrite (fix) primary header.
 int fitstable_fix_header(fitstable_t* t);
 
+// Called just before starting to write a new table (extension).
+int fitstable_new_table(fitstable_t* t);
+
+int fitstable_write_table_header(fitstable_t* t);
+
+int fitstable_fix_table_header(fitstable_t* t);
+
+
 //int fitstable_read(fitstable_t* tab, qfits_table* qtab);
 
 // = new() + add_columns() + read().
@@ -124,7 +132,7 @@ void fitstable_close_table(fitstable_t* tab);
 
 // When writing: close the existing table, reset everything, and create a
 // new table.
-void fitstable_reset_table(fitstable_t* tab);
+//void fitstable_reset_table(fitstable_t* tab);
 
 int fitstable_nrows(fitstable_t* t);
 
@@ -145,5 +153,5 @@ int fitstable_write_array(const fitstable_t* tab,
 //int fitscolumn_find_extra(fitstable_t* tab, fitscol_t* col, bool claim);
 
 // for writing...
-void fitstable_create_table(fitstable_t* tab);
+//void fitstable_create_table(fitstable_t* tab);
 
