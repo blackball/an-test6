@@ -1,3 +1,6 @@
+#include <string.h>
+#include <errno.h>
+
 #include "fitstable.h"
 #include "fitsioutils.h"
 
@@ -29,7 +32,7 @@ tfits_type fitscolumn_any_type() {
     return (tfits_type)-1;
 }
 
-fitstable_t* fitstable_new() {
+static fitstable_t* fitstable_new() {
     fitstable_t* tab;
     tab = calloc(1, sizeof(fitstable_t));
     if (!tab)
@@ -37,6 +40,24 @@ fitstable_t* fitstable_new() {
     tab->cols = bl_new(8, sizeof(fitscol_t));
     tab->extra_cols = il_new(8);
     return tab;
+}
+
+fitstable_t* fitstable_open(const char* fn) {
+    fitstable_t* tab;
+    tab = fitstable_new();
+    if (!tab)
+        goto bailout;
+    tab->fn = strdup(fn);
+    tab->primheader = qfits_header_read(fn);
+    if (!tab->primheader) {
+        fprintf(stderr, "Failed to read primary FITS header from %s.\n", fn);
+        goto bailout;
+    }
+ bailout:
+    if (tab) {
+        fitstable_close(tab);
+    }
+    return NULL;
 }
 
 fitstable_t* fitstable_open_for_writing(const char* fn) {
@@ -55,17 +76,20 @@ fitstable_t* fitstable_open_for_writing(const char* fn) {
 
  bailout:
     if (tab) {
-        fitstable_free(tab);
+        fitstable_close(tab);
     }
     return NULL;
 }
 
-void fitstable_free(fitstable_t* tab) {
+void fitstable_close(fitstable_t* tab) {
     if (!tab) return;
     if (tab->fid) {
         if (fclose(tab->fid)) {
             fprintf(stderr, "Failed to close output file %s: %s\n", tab->fn, strerror(errno));
         }
+    }
+    if (tab->primheader) {
+        qfits_header_destroy(tab->primheader);
     }
     free(tab->fn);
     bl_free(tab->cols);
@@ -83,13 +107,31 @@ void fitstable_add_column(fitstable_t* tab, fitscol_t* col) {
     fitstable_add_columns(tab, col, 1);
 }
 
-int fitstable_read(fitstable_t* tab, qfits_table* qtab) {
+int fitstable_read_extension(fitstable_t* tab, int ext) {
     int i;
     int ok = 1;
-    tab->table = qtab;
+
+    if (tab->table) {
+        qfits_table_close(tab->table);
+    }
+	tab->table = qfits_table_open(tab->fn, ext);
+	if (!tab->table) {
+		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n", ext, tab->fn);
+		return -1;
+	}
+    if (tab->header) {
+        qfits_header_destroy(tab->header);
+    }
+    tab->header = qfits_header_readext(tab->fn, ext);
+	if (!tab->header) {
+		fprintf(stderr, "Couldn't get header for FITS extension %i in file %s.\n", ext, tab->fn);
+		return -1;
+	}
     for (i=0; i<ncols(tab); i++) {
         fitscol_t* col = getcol(tab, i);
         qfits_col* qcol;
+
+        // FIXME - target?
 
         // ? set this here?
         col->csize = fits_get_atom_size(col->ctype) * col->arraysize;
@@ -128,11 +170,40 @@ int fitstable_read(fitstable_t* tab, qfits_table* qtab) {
     return ok;
 }
 
+int fitstable_write_header(fitstable_t* t) {
+	assert(t->fid);
+	assert(t->primheader);
+    // note, qfits_header_dump pads the file to the next FITS block.
+	qfits_header_dump(t->primheader, t->fid);
+	t->end_header_offset = ftello(t->fid);
+	return 0;
+}
+
+int fitstable_fix_header(fitstable_t* t) {
+	off_t offset;
+    off_t old_end;
+    off_t new_end;
+	assert(t->fid);
+	assert(t->header);
+	offset = ftello(t->fid);
+	fseeko(t->fid, 0, SEEK_SET);
+    old_end = t->end_header_offset;
+    fitstable_write_header(t);
+    new_end = t->end_header_offset;
+	if (old_end != new_end) {
+		fprintf(stderr, "Error: fitstable header size changed: was %u, but is now %u.  Corruption is likely!\n",
+				(uint)old_end, (uint)new_end);
+		return -1;
+	}
+	fseeko(t->fid, offset, SEEK_SET);
+	return 0;
+}
+
 void fitstable_reset_table(fitstable_t* tab) {
     if (tab->table) {
         qfits_table_close(tab->table);
     }
-    tab->table = qfits_create_table();
+    fitstable_create_table(tab);
 }
 
 void fitstable_close_table(fitstable_t* tab) {

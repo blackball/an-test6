@@ -73,7 +73,7 @@ struct fitstable_t {
     il* extra_cols;
 
     // When writing:
-	const char* fn;
+	char* fn;
     FILE* fid;
     // the end of the primary header (including FITS padding)
     off_t end_header_offset;
@@ -92,17 +92,29 @@ tfits_type fitscolumn_double_type();
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type();
 
-fitstable_t* fitstable_new();
+//fitstable_t* fitstable_new();
+
+fitstable_t* fitstable_open(const char* fn);
 
 fitstable_t* fitstable_open_for_writing(const char* fn);
 
-void fitstable_free(fitstable_t*);
+//void fitstable_free(fitstable_t*);
+
+void fitstable_close(fitstable_t*);
 
 void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols);
 
 void fitstable_add_column(fitstable_t* tab, fitscol_t* col);
 
-int fitstable_read(fitstable_t* tab, qfits_table* qtab);
+int fitstable_read_extension(fitstable_t* tab, int ext);
+
+// Write primary header.
+int fitstable_write_header(fitstable_t* t);
+
+// Rewrite (fix) primary header.
+int fitstable_fix_header(fitstable_t* t);
+
+//int fitstable_read(fitstable_t* tab, qfits_table* qtab);
 
 // = new() + add_columns() + read().
 //int fitstable_find(const qfits_table* tab, fitscol_t* cols, int Ncols);
