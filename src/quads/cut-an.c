@@ -252,7 +252,7 @@ int main(int argc, char** args) {
 	int mi = 0;
 	double jitter = 1.0;
     qfits_header* catheader;
-    qfits_header* idheader;
+    qfits_header* idheader = NULL;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
