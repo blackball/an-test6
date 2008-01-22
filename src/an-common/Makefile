@@ -63,7 +63,7 @@ ANUTILS_DEPS :=
 ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o \
 	sip.o sip-utils.o md5.o constellations.o gnu-specific.o an-endian.o
 ifndef NO_QFITS
-ANUTILS_OBJ += fitsbin.o fitsioutils.o sip_qfits.o
+ANUTILS_OBJ += fitsbin.o fitstable.o fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
 endif
 ifndef NO_KDTREE

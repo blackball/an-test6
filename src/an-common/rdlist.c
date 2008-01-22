@@ -18,11 +18,30 @@
 
 #include "rdlist.h"
 
+void rdlist_set_rname(rdlist* ls, const char* name) {
+    xylist_set_xname(ls, name);
+}
+void rdlist_set_dname(rdlist* ls, const char* name) {
+    xylist_set_yname(ls, name);
+}
+void rdlist_set_rtype(rdlist* ls, tfits_type type) {
+    xylist_set_xtype(ls, type);
+}
+void rdlist_set_dtype(rdlist* ls, tfits_type type) {
+    xylist_set_ytype(ls, type);
+}
+void rdlist_set_runits(rdlist* ls, const char* units) {
+    xylist_set_xunits(ls, units);
+}
+void rdlist_set_dunits(rdlist* ls, const char* units) {
+    xylist_set_yunits(ls, units);
+}
+
 Inline rdlist* rdlist_open(char* fn) {
 	rdlist* rtn = xylist_open(fn);
 	if (!rtn) return NULL;
-	rtn->xname = "RA";
-	rtn->yname = "DEC";
+    rdlist_set_rname(rtn, "RA");
+    rdlist_set_dname(rtn, "DEC");
 	return rtn;
 }
 
@@ -43,12 +62,12 @@ Inline int rdlist_read_entries(rdlist* ls, uint field,
 Inline rdlist* rdlist_open_for_writing(char* fn) {
 	rdlist* rtn = xylist_open_for_writing(fn);
 	rtn->antype = AN_FILETYPE_RDLS;
-	rtn->xname = "RA";
-	rtn->yname = "DEC";
-	rtn->xunits = "degrees";
-	rtn->yunits = "degrees";
-	rtn->xtype = TFITS_BIN_TYPE_D;
-	rtn->ytype = TFITS_BIN_TYPE_D;
+    rdlist_set_rname(rtn, "RA");
+    rdlist_set_dname(rtn, "DEC");
+    rdlist_set_runits(rtn, "degrees");
+    rdlist_set_dunits(rtn, "degrees");
+    rdlist_set_rtype(rtn, TFITS_BIN_TYPE_D);
+    rdlist_set_dtype(rtn, TFITS_BIN_TYPE_D);
 	return rtn;
 }
 

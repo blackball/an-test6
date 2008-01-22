@@ -35,6 +35,13 @@ typedef xy rd;
 #define rd_setra(x,i,v) dl_set(x,2*(i),v)
 #define rd_setdec(x,i,v) dl_set(x,2*(i)+1,v)
 
+void rdlist_set_rname(rdlist* ls, const char* name);
+void rdlist_set_dname(rdlist* ls, const char* name);
+void rdlist_set_rtype(rdlist* ls, tfits_type type);
+void rdlist_set_dtype(rdlist* ls, tfits_type type);
+void rdlist_set_runits(rdlist* ls, const char* units);
+void rdlist_set_dunits(rdlist* ls, const char* units);
+
 inline rdlist* rdlist_open(char* fn);
 
 inline int rdlist_n_fields(rdlist* ls);

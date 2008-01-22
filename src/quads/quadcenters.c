@@ -91,6 +91,8 @@ int main(int argc, char** args) {
     }
 
     if (addradius) {
+        assert(0);
+        /* temporarily disabled while tinkering with rdlist/xylist internals
         // HACK!
         uint ncols, nrows, tablesize;
         qfits_table* table;
@@ -104,6 +106,7 @@ int main(int argc, char** args) {
         fits_add_column(table, 2, TFITS_BIN_TYPE_D, 1, "deg", "QUADRADIUS");
         table->tab_w = qfits_compute_table_width(table);
         rdls->table = table;
+         */
     }
 
 	for (; optind<argc; optind++) {

@@ -35,11 +35,11 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
                       int N) {
     int i;
     char* dest = vdest;
-    char* src = vsrc;
+    const char* src = vsrc;
 
     for (i=0; i<N; i++) {
-        int64_t ival;
-        double  dval;
+        int64_t ival = 0;
+        double  dval = 0;
         bool src_is_int = TRUE;
         
         switch (srctype) {
@@ -68,6 +68,7 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
             break;
         default:
             assert(0);
+            return -1;
         }
 
         switch (desttype) {
@@ -94,11 +95,13 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
             break;
         default:
             assert(0);
+            return -1;
         }
 
         dest += deststride;
         src  +=  srcstride;
     }
+    return 0;
 }
 
 double fits_get_double_val(const qfits_table* table, int column,

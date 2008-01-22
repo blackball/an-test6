@@ -25,7 +25,7 @@
 #include "starutil.h"
 #include "qfits.h"
 #include "bl.h"
-#include "fitscolumn.h"
+#include "fitstable.h"
 
 typedef dl xy;
 #define mk_xy(n) dl_new((n)*2)
@@ -56,6 +56,8 @@ struct xylist {
 	// field we're currently reading/writing
 	unsigned int field;
 
+	qfits_header* fieldheader;
+
 	// writing:
 	qfits_header* header;
 	FILE* fid;
@@ -65,9 +67,26 @@ struct xylist {
 };
 typedef struct xylist xylist;
 
+
+// add a FITS column that will piggy-back with the X,Y data.
+// returns the index of the column.
+int xylist_add_column(xylist* ls, fitscol_t* col);
+
+// retrieves an extra column previously added to this xylist.
+fitscol_t* xylist_get_column(const xylist* ls, int col);
+
+
+
 // Is the given filename an xylist?
 int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
                           const char** reason);
+
+void xylist_set_xname(xylist* ls, const char* name);
+void xylist_set_yname(xylist* ls, const char* name);
+void xylist_set_xtype(xylist* ls, tfits_type type);
+void xylist_set_ytype(xylist* ls, tfits_type type);
+void xylist_set_xunits(xylist* ls, const char* units);
+void xylist_set_yunits(xylist* ls, const char* units);
 
 // you can change the parameters (ie, xname, yname) 
 // after opening but before calling xylist_get_field.

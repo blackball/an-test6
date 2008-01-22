@@ -208,8 +208,6 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "Couldn't read rdls file.\n");
                 exit(-1);
             }
-            rdls->xname = "RA";
-            rdls->yname = "DEC";
 
             nfields = rdlist_n_fields(rdls);
             //printf("Read %i fields from rdls file.\n", nfields);

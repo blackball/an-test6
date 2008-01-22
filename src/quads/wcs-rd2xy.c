@@ -30,7 +30,7 @@
 #include "rdlist.h"
 #include "boilerplate.h"
 
-const char* OPTIONS = "hi:o:w:f:X:Y:tq";
+const char* OPTIONS = "hi:o:w:f:R:D:tq";
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
@@ -39,7 +39,7 @@ void print_help(char* progname) {
 		   "   -i <rdls input file>\n"
 		   "   -o <xyls output file>\n"
 		   "  [-f <rdls field index>] (default: all)\n"
-		   "  [-X <x-column-name> -Y <y-column-name>]\n"
+		   "  [-R <RA-column-name> -D <Dec-column-name>]\n"
 		   "  [-t]: just use TAN projection, even if SIP extension exists.\n"
            "  [-q]: quiet\n"
 		   "\n", progname);
@@ -53,8 +53,8 @@ int main(int argc, char** args) {
 	char* rdlsfn = NULL;
 	char* wcsfn = NULL;
 	char* xylsfn = NULL;
-	char* xcol = NULL;
-	char* ycol = NULL;
+	char* rcol = NULL;
+	char* dcol = NULL;
 	bool forcetan = FALSE;
     bool verbose = TRUE;
 
@@ -90,11 +90,11 @@ int main(int argc, char** args) {
 		case 'f':
 			il_append(fields, atoi(optarg));
 			break;
-		case 'X':
-			xcol = optarg;
+		case 'R':
+			rcol = optarg;
 			break;
-		case 'Y':
-			ycol = optarg;
+		case 'D':
+			dcol = optarg;
 			break;
 		}
 	}
@@ -129,10 +129,10 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to read an rdlist from file %s.\n", rdlsfn);
 		exit(-1);
 	}
-	if (xcol)
-		rdls->xname = xcol;
-	if (ycol)
-		rdls->yname = ycol;
+	if (rcol)
+        rdlist_set_rname(rdls, rcol);
+	if (dcol)
+		rdlist_set_dname(rdls, dcol);
 
 	// write XYLS.
 	xyls = xylist_open_for_writing(xylsfn);

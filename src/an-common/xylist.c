@@ -25,9 +25,14 @@
 #include "xylist.h"
 #include "fitsioutils.h"
 
+#define X_INDEX 0
+#define Y_INDEX 1
+
 // Is the given filename an xylist?
-int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
+int xylist_is_file_xylist(const char* fn,
+                          const char* xcolumn, const char* ycolumn,
                           const char** reason) {
+    /* FIXME - switch this to use fitstable. */
 	qfits_header* header;
 	qfits_table* table;
 	qfits_col *xcol, *ycol;
@@ -82,21 +87,73 @@ int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolu
         return 0;
     }
     qfits_table_close(table);
+
     return 1;
+}
+
+static fitscol_t* xcolumn(xylist* ls) {
+    return fitstable_get_column(ls->table, X_INDEX);
+}
+static fitscol_t* ycolumn(xylist* ls) {
+    return fitstable_get_column(ls->table, Y_INDEX);
+}
+
+void xylist_set_xname(xylist* ls, const char* name) {
+    fitscol_t* col = xcolumn(ls);
+    col->colname = name;
+}
+void xylist_set_yname(xylist* ls, const char* name) {
+    fitscol_t* col = ycolumn(ls);
+    col->colname = name;
+}
+void xylist_set_xtype(xylist* ls, tfits_type type) {
+    fitscol_t* col = xcolumn(ls);
+    col->fitstype = type;
+}
+void xylist_set_ytype(xylist* ls, tfits_type type) {
+    fitscol_t* col = ycolumn(ls);
+    // target?
+    col->fitstype = type;
+}
+void xylist_set_xunits(xylist* ls, const char* units) {
+    fitscol_t* col = xcolumn(ls);
+    col->units = units;
+}
+void xylist_set_yunits(xylist* ls, const char* units) {
+    fitscol_t* col = ycolumn(ls);
+    col->units = units;
 }
 
 static xylist* xylist_new() {
 	xylist* ls;
+
 	ls = calloc(1, sizeof(xylist));
 	if (!ls) {
 		fprintf(stderr, "Couldn't allocate an xylist.\n");
 		return NULL;
 	}
-	ls->xtype = ls->ytype = TFITS_BIN_TYPE_E;
-	ls->xname = "X";
-	ls->yname = "Y";
+
     ls->field = 1;
 	return ls;
+}
+
+static void init_table(xylist* ls, tfits_type type) {
+    fitscol_t col;
+
+    ls->table = fitstable_new();
+    memset(&col, 0, sizeof(fitscol_t));
+    col.target_fitstype = type;
+    col.ctype = fitscolumn_double_type();
+    col.target_arraysize = 1;
+    col.required = TRUE;
+    col.in_struct = TRUE;
+
+    col.colname = "X";
+    col.coffset = (ls->parity ? sizeof(double) : 0);
+    fitstable_add_column(ls->table, &col);
+    col.colname = "Y";
+    col.coffset = (ls->parity ? 0 : sizeof(double));
+    fitstable_add_column(ls->table, &col);
 }
 
 xylist* xylist_open(const char* fn) {
@@ -123,6 +180,8 @@ xylist* xylist_open(const char* fn) {
 	ls->header = header;
 	ls->nfields = qfits_query_n_ext(fn);
 
+    init_table(ls, fitscolumn_any_type());
+
 	return ls;
 
  bailout:
@@ -138,50 +197,25 @@ int xylist_n_fields(xylist* ls) {
 }
 
 static int xylist_find_field(xylist* ls, uint field) {
-	qfits_col* col;
+    qfits_table* tab;
+
     assert(field > 0);
 	if (ls->table && ls->field == field)
 		return 0;
-	if (ls->table) {
-		qfits_table_close(ls->table);
-		ls->table = NULL;
-	}
+
+    fitstable_close_table(ls->table);
 	// the main FITS header is extension 0
 	// the first FITS table is extension 1
-	ls->table = qfits_table_open(ls->fn, field);
-	if (!ls->table) {
-		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n",
-				field, ls->fn);
+	tab = qfits_table_open(ls->fn, field);
+	if (!tab) {
+		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n", field, ls->fn);
 		return -1;
 	}
-	// find the right columns.
-	ls->xcol = fits_find_column(ls->table, ls->xname);
-	if (ls->xcol == -1) {
-		fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->xname);
-		return -1;
-	}
-	col = ls->table->col + ls->xcol;
-	if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
-		   (col->atom_type == TFITS_BIN_TYPE_E)) &&
-		  (col->atom_nb == 1))) {
-		fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->xname);
-		return -1;
-	}
-	ls->xtype = col->atom_type;
-	ls->ycol = fits_find_column(ls->table, ls->yname);
-	if (ls->ycol == -1) {
-		fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->yname);
-		return -1;
-	}
-	col = ls->table->col + ls->ycol;
-	if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
-		   (col->atom_type == TFITS_BIN_TYPE_E)) &&
-		  (col->atom_nb == 1))) {
-		fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->yname);
-		return -1;
-	}
-	ls->ytype = col->atom_type;
-
+    if (fitstable_read(ls->table, tab)) {
+        fitstable_print_missing(ls->table, stderr);
+        fitstable_close_table(ls->table);
+        return -1;
+    }
 	ls->field = field;
 	return 0;
 }
@@ -221,62 +255,21 @@ int xylist_n_entries(xylist* ls, uint field) {
 	if (xylist_find_field(ls, field)) {
 		return -1;
 	}
-	return ls->table->nr;
+	return fitstable_nrows(ls->table);
 }
 
 int xylist_read_entries(xylist* ls, uint field, uint offset, uint n,
 						double* vals) {
-	double* ddata;
-	float* fdata = NULL;
-	uint i;
     assert(field > 0);
 	if (xylist_find_field(ls, field)) {
 		return -1;
 	}
-	ddata = vals + (ls->parity ? 1 : 0);
-	if (ls->xtype == TFITS_BIN_TYPE_D) {
-		qfits_query_column_seq_to_array(ls->table, ls->xcol, offset, n,
-										(unsigned char*)ddata,
-										2 * sizeof(double));
-	} else if (ls->xtype == TFITS_BIN_TYPE_E) {
-		fdata = malloc(n * sizeof(float));
-		qfits_query_column_seq_to_array(ls->table, ls->xcol, offset, n,
-										(unsigned char*)fdata,
-										sizeof(float));
-		for (i=0; i<n; i++)
-			ddata[i*2] = fdata[i];
-	}
 
-	ddata = vals + (ls->parity ? 0 : 1);
-	if (ls->ytype == TFITS_BIN_TYPE_D) {
-		qfits_query_column_seq_to_array(ls->table, ls->ycol, offset, n,
-										(unsigned char*)ddata,
-										2 * sizeof(double));
-	} else if (ls->ytype == TFITS_BIN_TYPE_E) {
-		fdata = realloc(fdata, n * sizeof(float));
-		qfits_query_column_seq_to_array(ls->table, ls->ycol, offset, n,
-										(unsigned char*)fdata,
-										sizeof(float));
-		for (i=0; i<n; i++)
-			ddata[i*2] = fdata[i];
-	}
-
-	free(fdata);
+    if (fitstable_read_array(ls->table, offset, n, vals, 2 * sizeof(double))) {
+        fprintf(stderr, "Failed to read XY data: field %i, offset %i, N %i.\n", field, offset, n);
+        return -1;
+    }
 	return 0;
-}
-
-static qfits_table* xylist_get_table(xylist* ls) {
-	uint ncols, nrows, tablesize;
-	qfits_table* table;
-	const char* nil = " ";
-	ncols = 2;
-	nrows = 0;
-	tablesize = 0;
-	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	fits_add_column(table, 0, ls->xtype, 1, (ls->xunits ? ls->xunits : nil), ls->xname);
-	fits_add_column(table, 1, ls->ytype, 1, (ls->yunits ? ls->yunits : nil), ls->yname);
-	table->tab_w = qfits_compute_table_width(table);
-	return table;
 }
 
 xylist* xylist_open_for_writing(char* fn) {
@@ -296,6 +289,9 @@ xylist* xylist_open_for_writing(char* fn) {
 	ls->header = qfits_table_prim_header_default();
 	qfits_header_add(ls->header, "NFIELDS", "0", NULL, NULL);
 	qfits_header_add(ls->header, "AN_FILE", ls->antype, NULL, NULL);
+
+    init_table(ls, fitscolumn_double_type());
+
 	return ls;
  bailout:
 	if (ls)
@@ -309,7 +305,6 @@ int xylist_write_header(xylist* ls) {
     // note, qfits_header_dump pads the file to the next FITS block.
 	qfits_header_dump(ls->header, ls->fid);
 	ls->data_offset = ftello(ls->fid);
-	ls->table = xylist_get_table(ls);
 	return 0;
 }
 
@@ -333,10 +328,13 @@ int xylist_fix_header(xylist* ls) {
 }
 
 int xylist_new_field(xylist* ls) {
-	ls->table->nr = 0;
     if (ls->fieldheader)
         qfits_header_destroy(ls->fieldheader);
-    ls->fieldheader = qfits_table_ext_header_default(ls->table);
+    if (ls->table->table) {
+        qfits_table_close(ls->table->table);
+    }
+    fitstable_create_table(ls->table);
+    ls->fieldheader = qfits_table_ext_header_default(ls->table->table);
 	fits_header_add_int(ls->fieldheader, "FIELDNUM", ls->field, "This table is field number...");
 	ls->nfields++;
 	return 0;
@@ -358,24 +356,7 @@ int xylist_write_new_field(xylist* ls) {
 }
 
 int xylist_write_entries(xylist* ls, double* vals, uint nvals) {
-	uint i;
-	for (i=0; i<nvals; i++) {
-		if (ls->xtype == TFITS_BIN_TYPE_D) {
-			if (fits_write_data_D(ls->fid, vals[i*2+0]))
-				return -1;
-		} else {
-			if (fits_write_data_E(ls->fid, vals[i*2+0]))
-				return -1;
-		}
-		if (ls->ytype == TFITS_BIN_TYPE_D) {
-			if (fits_write_data_D(ls->fid, vals[i*2+1]))
-				return -1;
-		} else {
-			if (fits_write_data_E(ls->fid, vals[i*2+1]))
-				return -1;
-		}
-	}
-	ls->table->nr += nvals;
+    fitstable_write_array(ls->table, 0, nvals, vals, 2*sizeof(double), ls->fid);
 	return 0;
 }
 
@@ -385,7 +366,7 @@ int xylist_fix_field(xylist* ls) {
 	offset = ftello(ls->fid);
 	fseeko(ls->fid, ls->table_offset, SEEK_SET);
     // update NAXIS2 to reflect the number of rows written.
-    fits_header_mod_int(ls->fieldheader, "NAXIS2", ls->table->nr, NULL);
+    fits_header_mod_int(ls->fieldheader, "NAXIS2", fitstable_nrows(ls->table), NULL);
 	qfits_header_dump(ls->fieldheader, ls->fid);
 	new_end = ftello(ls->fid);
     if (new_end != ls->end_table_offset) {
@@ -408,9 +389,9 @@ int xylist_close(xylist* ls) {
 		}
 	}
 	if (ls->table)
-		qfits_table_close(ls->table);
-        if (ls->fieldheader)
-          qfits_header_destroy(ls->fieldheader);
+        fitstable_free(ls->table);
+    if (ls->fieldheader)
+        qfits_header_destroy(ls->fieldheader);
 	if (ls->header)
 		qfits_header_destroy(ls->header);
 	free(ls->fn);

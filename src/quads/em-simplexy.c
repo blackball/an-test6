@@ -6,6 +6,8 @@
 
 #include "xylist.h"
 
+#include "fitstable.h"
+
 static const char* OPTIONS = "h";
 
 void printHelp() {
@@ -18,6 +20,19 @@ void printHelp() {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+static void get_flux(void* vdest, int offset, int N, fitscol_t* col, void* vuser) {
+    double** fluxptr = vuser;
+    double* flux = *fluxptr;
+    double* dest = vdest;
+    memcpy(dest, flux + offset, N * sizeof(double));
+}
+static void put_flux(void* vsrc, int offset, int N, fitscol_t* col, void* vuser) {
+    double** fluxptr = vuser;
+    double* flux = *fluxptr;
+    double* src = vsrc;
+    memcpy(flux + offset, src, N * sizeof(double));
+}
+
 int main(int argc, char** args) {
     int argchar;
     char* infn;
@@ -26,10 +41,12 @@ int main(int argc, char** args) {
     xylist* inxy;
     xylist* outxy;
     double* xy;
+    double* flux;
     int i, N;
     double psfw;
     qfitsloader qimg;
     int W, H;
+    int fluxcol_in, fluxcol_out;
 
     qimg.filename = imgfn;
     qimg.xtnum = 0;
@@ -83,12 +100,46 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
+    {
+        fitscol_t col;
+        col.colname = "FLUX";
+        col.fitstype = fitscolumn_any_type();
+        col.ctype = fitscolumn_double_type();
+        col.arraysize = 1;
+        col.required = TRUE;
+        col.cdata_stride = sizeof(double);
+
+        /*
+         col.put_data_callback = put_flux;
+         col.put_data_user = &flux;
+         */
+
+        fluxcol_in = xylist_add_column(inxy, &col);
+
+        /*
+         col.put_data_callback = NULL;
+         col.put_data_user = NULL;
+         col.get_data_callback = get_flux;
+         col.get_data_callback = &flux;
+         */
+        col.fitstype = fitscolumn_double_type();
+
+        fluxcol_out = xylist_add_column(outxy, &col);
+    }
+
     N = xylist_n_entries(inxy, 1);
     if (N == -1) {
         fprintf(stderr, "Couldn't find number of entries in field 1.\n");
         exit(-1);
     }
     xy = malloc(N * 2 * sizeof(double));
+    flux = malloc(N * sizeof(double));
+
+    {
+        fitscol_t* fluxcol = xylist_get_column(inxy, fluxcol_in);
+        fluxcol->cdata = flux;
+    }
+
     if (xylist_read_entries(inxy, 1, 0, N, xy)) {
         fprintf(stderr, "Failed to read entries.\n");
         exit(-1);
@@ -122,19 +173,27 @@ int main(int argc, char** args) {
 
 
 
+    // write output...
+    {
+        fitscol_t* fluxcol = xylist_get_column(outxy, fluxcol_out);
+        fluxcol->cdata = flux;
+    }
 
+    // FIXME - copy primary header and field header extras...
 
-
-
-
+    if (xylist_write_header(outxy) ||
+        xylist_write_field_header(outxy) ||
+        xylist_write_entries(outxy, xy, N) ||
+        xylist_fix_field(outxy) ||
+        xylist_fix_header(outxy) ||
+        xylist_close(outxy)) {
+        fprintf(stderr, "Failed to write output xylist.\n");
+        exit(-1);
+    }
 
 
     free(xy);
     xylist_close(inxy);
-    if (xylist_close(outxy)) {
-        fprintf(stderr, "Failed to close output xylist.\n");
-        exit(-1);
-    }
     qfitsloader_free_buffers(&qimg);
 
     return 0;

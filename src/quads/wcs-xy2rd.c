@@ -125,9 +125,9 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 	if (xcol)
-		xyls->xname = xcol;
+		xylist_set_xname(xyls, xcol);
 	if (ycol)
-		xyls->yname = ycol;
+		xylist_set_yname(xyls, ycol);
 
 	// write RDLS.
 	rdls = rdlist_open_for_writing(rdlsfn);

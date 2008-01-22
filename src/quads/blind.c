@@ -148,8 +148,8 @@ void blind_run(blind_t* bp) {
 		logerr("Failed to read xylist.\n");
 		exit( -1);
 	}
-	bp->xyls->xname = bp->xcolname;
-	bp->xyls->yname = bp->ycolname;
+	xylist_set_xname(bp->xyls, bp->xcolname);
+	xylist_set_yname(bp->xyls, bp->ycolname);
 	logmsg("got %u fields.\n", xylist_n_fields(bp->xyls));
 
     remove_invalid_fields(bp->fieldlist, xylist_n_fields(bp->xyls));

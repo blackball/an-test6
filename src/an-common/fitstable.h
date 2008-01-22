@@ -9,11 +9,19 @@
  For quick-n-easy access to a column of data in a FITS BINTABLE.
  */
 
+struct fitscol_t;
+typedef struct fitscol_t fitscol_t;
+
 struct fitscol_t {
     const char* colname;
+
+    // ??? ARGH
+    tfits_type target_fitstype;
+    tfits_type target_arraysize;
+
     tfits_type fitstype;
     tfits_type ctype;
-    char* units;
+    const char* units;
     int arraysize;
 
     bool required;
@@ -24,22 +32,37 @@ struct fitscol_t {
     int csize;
 
     // When being used to write to a C struct, the offset in the struct.
+    // ???
+    bool in_struct;
     int coffset;
 
+    // ??? Called to retrieve data to be written to the output file.
+    //void (*get_data_callback)(void* data, int offset, int N, fitscol_t* col, void* user);
+    //void* get_data_user;
+    // ??? Called when data has been read from the input file.
+    //void (*put_data_callback)(void* data, int offset, int N, fitscol_t* col, void* user);
+    //void* put_data_user;
+
+    // Where to read/write data from/to.
+    void* cdata;
+    int cdata_stride;
+
     // Internals
-    qfits_table* table;
+    //qfits_table* table;
+
     // column number of the FITS table.
     int col;
-    // offset in the file of the first data element.
-    off_t fileoffset;
+    // ??? offset in the file of the first data element.
+    //off_t fileoffset;
 };
-typedef struct fitscol_t fitscol_t;
 
 
 // ????
 struct fitstable_t {
     qfits_table* table;
-    pl* cols;
+    //qfits_header* header;
+    //pl* cols;
+    bl* cols;
     il* extra_cols;
 };
 typedef struct fitstable_t fitstable_t;
@@ -47,11 +70,45 @@ typedef struct fitstable_t fitstable_t;
 
 // Returns the FITS type of "int" on this machine.
 tfits_type fitscolumn_int_type();
+tfits_type fitscolumn_double_type();
 
-int fitscolumn_find(const qfits_table* tab, fitscolumn_t* cols, int Ncols);
+// When reading: allow this column to match to any FITS type.
+tfits_type fitscolumn_any_type();
 
-int fitscolumn_read_array(const fitscolumn_t* cols, int Ncols,
+fitstable_t* fitstable_new();
+
+void fitstable_free(fitstable_t*);
+
+void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols);
+
+void fitstable_add_column(fitstable_t* tab, fitscol_t* col);
+
+int fitstable_read(fitstable_t* tab, qfits_table* qtab);
+
+// = new() + add_columns() + read().
+//int fitstable_find(const qfits_table* tab, fitscol_t* cols, int Ncols);
+
+// Close the current table and reset all fields that refer to it.
+void fitstable_close_table(fitstable_t* tab);
+
+int fitstable_nrows(fitstable_t* t);
+
+void fitstable_print_missing(fitstable_t* tab, FILE* f);
+
+fitscol_t* fitstable_get_column(fitstable_t* table, int col);
+
+int fitstable_read_array(const fitstable_t* tab,
+                         //const fitscol_t* cols, int Ncols,
+                         int offset, int N,
+                         void* data, int stride);
+
+int fitstable_write_array(const fitstable_t* tab,
                           int offset, int N,
-                          void* data, int stride);
+                          const void* data, int stride,
+                          FILE* fid);
 
-int fitscolumn_find_extra(fitstable_t* tab, fitscol_t* col, bool claim);
+//int fitscolumn_find_extra(fitstable_t* tab, fitscol_t* col, bool claim);
+
+// for writing...
+void fitstable_create_table(fitstable_t* tab);
+

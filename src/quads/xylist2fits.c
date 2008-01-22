@@ -113,8 +113,10 @@ int main(int argc, char** args) {
     ls = xylist_open_for_writing(outfn);
     if (!ls)
         exit(-1);
-    if (doubleformat)
-        ls->xtype = ls->ytype = TFITS_BIN_TYPE_D;
+    if (doubleformat) {
+        xylist_set_xtype(ls, TFITS_BIN_TYPE_D);
+        xylist_set_ytype(ls, TFITS_BIN_TYPE_D);
+    }
     qfits_header_add(ls->header, "WRITER", basename(args[0]), "This file was written by the program...", NULL);
     boilerplate_add_fits_headers(ls->header);
     fits_add_long_comment(ls->header, "Command line that produced this file:");
@@ -122,9 +124,9 @@ int main(int argc, char** args) {
     fits_add_long_comment(ls->header, "(end of command line)");
 
     if (xname)
-        ls->xname = xname;
+        xylist_set_xname(ls, xname);
     if (yname)
-        ls->yname = yname;
+        xylist_set_yname(ls, yname);
     if (xylist_write_header(ls))
         exit(-1);
 
