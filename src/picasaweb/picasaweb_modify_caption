@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # usage:
-#   ./picasaweb_create_tag "tag" > foo
+#   ./picasaweb_modify_caption "title" "explanatory caption" > foo
 # comments:
 #   requires environment variables:
 #     PICASAWEB_Auth
@@ -11,9 +11,9 @@
 #
 FILETYPE=jpeg
 uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/album/$PICASAWEB_ALBUMNAME/photoid/$PICASAWEB_PHOTOID"
-data="<entry xmlns='http://www.w3.org/2005/Atom'><title>$1</title><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#tag' /></entry>"
+data="<entry xmlns='http://www.w3.org/2005/Atom'><title>$1</title><summary>$2</summary><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#photo'/></entry>"
 curl --silent \
-  --request POST \
+  --request PUT \
   --data "$data" \
   --header "Content-Type: application/atom+xml" \
   --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
