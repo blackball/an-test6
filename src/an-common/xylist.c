@@ -108,12 +108,11 @@ void xylist_set_yname(xylist* ls, const char* name) {
 }
 void xylist_set_xtype(xylist* ls, tfits_type type) {
     fitscol_t* col = xcolumn(ls);
-    col->fitstype = type;
+    col->target_fitstype = col->fitstype = type;
 }
 void xylist_set_ytype(xylist* ls, tfits_type type) {
     fitscol_t* col = ycolumn(ls);
-    // target?
-    col->fitstype = type;
+    col->target_fitstype = col->fitstype = type;
 }
 void xylist_set_xunits(xylist* ls, const char* units) {
     fitscol_t* col = xcolumn(ls);
@@ -143,8 +142,8 @@ static void init_table(xylist* ls, tfits_type type) {
     ls->table = fitstable_new();
     memset(&col, 0, sizeof(fitscol_t));
     col.target_fitstype = type;
-    col.ctype = fitscolumn_double_type();
     col.target_arraysize = 1;
+    col.ctype = fitscolumn_double_type();
     col.required = TRUE;
     col.in_struct = TRUE;
 
@@ -192,10 +191,52 @@ xylist* xylist_open(const char* fn) {
 	return NULL;
 }
 
-int xylist_n_fields(xylist* ls) {
-	return ls->nfields;
+xylist* xylist_open_for_writing(char* fn) {
+	xylist* ls;
+
+	ls = xylist_new();
+	if (!ls)
+		goto bailout;
+
+	ls->fn = strdup(fn);
+	ls->fid = fopen(fn, "wb");
+	if (!ls->fid) {
+		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+		goto bailout;
+	}
+	ls->antype = AN_FILETYPE_XYLS;
+	ls->header = qfits_table_prim_header_default();
+	qfits_header_add(ls->header, "NFIELDS", "0", NULL, NULL);
+	qfits_header_add(ls->header, "AN_FILE", ls->antype, NULL, NULL);
+
+    init_table(ls, fitscolumn_double_type());
+
+	return ls;
+ bailout:
+	if (ls)
+		free(ls);
+	return NULL;
 }
 
+int xylist_close(xylist* ls) {
+	if (ls->fid) {
+		if (fclose(ls->fid)) {
+			fprintf(stderr, "Failed to fclose xylist file %s: %s\n", ls->fn, strerror(errno));
+			return -1;
+		}
+	}
+	if (ls->table)
+        fitstable_free(ls->table);
+    if (ls->fieldheader)
+        qfits_header_destroy(ls->fieldheader);
+	if (ls->header)
+		qfits_header_destroy(ls->header);
+	free(ls->fn);
+	free(ls);
+	return 0;
+}
+
+// Used when reading.  Opens a new field, if necessary.
 static int xylist_find_field(xylist* ls, uint field) {
     qfits_table* tab;
 
@@ -218,6 +259,54 @@ static int xylist_find_field(xylist* ls, uint field) {
     }
 	ls->field = field;
 	return 0;
+}
+
+// Used when writing: start a new field.  Set up the table and header
+// structures so that they can be added to before writing the field header.
+int xylist_new_field(xylist* ls) {
+    if (ls->fieldheader)
+        qfits_header_destroy(ls->fieldheader);
+    fitstable_reset_table(ls->table);
+    ls->fieldheader = qfits_table_ext_header_default(ls->table->table);
+	fits_header_add_int(ls->fieldheader, "FIELDNUM", ls->field, "This table is field number...");
+	ls->nfields++;
+	return 0;
+}
+
+int xylist_write_field_header(xylist* ls) {
+	assert(ls->fid);
+	assert(ls->fieldheader);
+    // add padding.
+    fits_pad_file(ls->fid);
+	ls->table_offset = ftello(ls->fid);
+	qfits_header_dump(ls->fieldheader, ls->fid);
+    ls->end_table_offset = ftello(ls->fid);
+	return 0;
+}
+
+int xylist_fix_field(xylist* ls) {
+	off_t offset;
+    off_t new_end;
+	offset = ftello(ls->fid);
+	fseeko(ls->fid, ls->table_offset, SEEK_SET);
+    // update NAXIS2 to reflect the number of rows written.
+    fits_header_mod_int(ls->fieldheader, "NAXIS2", fitstable_nrows(ls->table), NULL);
+	qfits_header_dump(ls->fieldheader, ls->fid);
+	new_end = ftello(ls->fid);
+    if (new_end != ls->end_table_offset) {
+        fprintf(stderr, "xylist_fix_field: file %s: table header used to end at %i, now it ends at %i.  Table data may have been overwritten!\n",
+                ls->fn, (int)ls->end_table_offset, (int)new_end);
+        return -1;
+    }
+    // go back to where we were (ie, probably the end of the data array)...
+	fseeko(ls->fid, offset, SEEK_SET);
+    // add padding.
+    fits_pad_file(ls->fid);
+	return 0;
+}
+
+int xylist_n_fields(xylist* ls) {
+	return ls->nfields;
 }
 
 xy* xylist_get_field(xylist* ls, uint field) {
@@ -272,33 +361,6 @@ int xylist_read_entries(xylist* ls, uint field, uint offset, uint n,
 	return 0;
 }
 
-xylist* xylist_open_for_writing(char* fn) {
-	xylist* ls;
-
-	ls = xylist_new();
-	if (!ls)
-		goto bailout;
-
-	ls->fn = strdup(fn);
-	ls->fid = fopen(fn, "wb");
-	if (!ls->fid) {
-		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
-	ls->antype = AN_FILETYPE_XYLS;
-	ls->header = qfits_table_prim_header_default();
-	qfits_header_add(ls->header, "NFIELDS", "0", NULL, NULL);
-	qfits_header_add(ls->header, "AN_FILE", ls->antype, NULL, NULL);
-
-    init_table(ls, fitscolumn_double_type());
-
-	return ls;
- bailout:
-	if (ls)
-		free(ls);
-	return NULL;
-}
-
 int xylist_write_header(xylist* ls) {
 	assert(ls->fid);
 	assert(ls->header);
@@ -327,30 +389,6 @@ int xylist_fix_header(xylist* ls) {
 	return 0;
 }
 
-int xylist_new_field(xylist* ls) {
-    if (ls->fieldheader)
-        qfits_header_destroy(ls->fieldheader);
-    if (ls->table->table) {
-        qfits_table_close(ls->table->table);
-    }
-    fitstable_create_table(ls->table);
-    ls->fieldheader = qfits_table_ext_header_default(ls->table->table);
-	fits_header_add_int(ls->fieldheader, "FIELDNUM", ls->field, "This table is field number...");
-	ls->nfields++;
-	return 0;
-}
-
-int xylist_write_field_header(xylist* ls) {
-	assert(ls->fid);
-	assert(ls->fieldheader);
-    // add padding.
-    fits_pad_file(ls->fid);
-	ls->table_offset = ftello(ls->fid);
-	qfits_header_dump(ls->fieldheader, ls->fid);
-    ls->end_table_offset = ftello(ls->fid);
-	return 0;
-}
-
 int xylist_write_new_field(xylist* ls) {
   return xylist_new_field(ls) || xylist_write_field_header(ls);
 }
@@ -360,41 +398,3 @@ int xylist_write_entries(xylist* ls, double* vals, uint nvals) {
 	return 0;
 }
 
-int xylist_fix_field(xylist* ls) {
-	off_t offset;
-    off_t new_end;
-	offset = ftello(ls->fid);
-	fseeko(ls->fid, ls->table_offset, SEEK_SET);
-    // update NAXIS2 to reflect the number of rows written.
-    fits_header_mod_int(ls->fieldheader, "NAXIS2", fitstable_nrows(ls->table), NULL);
-	qfits_header_dump(ls->fieldheader, ls->fid);
-	new_end = ftello(ls->fid);
-    if (new_end != ls->end_table_offset) {
-        fprintf(stderr, "xylist_fix_field: file %s: table header used to end at %i, now it ends at %i.  Table data may have been overwritten!\n",
-                ls->fn, (int)ls->end_table_offset, (int)new_end);
-        return -1;
-    }
-    // go back to where we were (ie, probably the end of the data array)...
-	fseeko(ls->fid, offset, SEEK_SET);
-    // add padding.
-    fits_pad_file(ls->fid);
-	return 0;
-}
-
-int xylist_close(xylist* ls) {
-	if (ls->fid) {
-		if (fclose(ls->fid)) {
-			fprintf(stderr, "Failed to fclose xylist file %s: %s\n", ls->fn, strerror(errno));
-			return -1;
-		}
-	}
-	if (ls->table)
-        fitstable_free(ls->table);
-    if (ls->fieldheader)
-        qfits_header_destroy(ls->fieldheader);
-	if (ls->header)
-		qfits_header_destroy(ls->header);
-	free(ls->fn);
-	free(ls);
-	return 0;
-}
