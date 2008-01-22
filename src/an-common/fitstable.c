@@ -39,8 +39,35 @@ fitstable_t* fitstable_new() {
     return tab;
 }
 
+fitstable_t* fitstable_open_for_writing(const char* fn) {
+    fitstable_t* tab;
+    tab = fitstable_new();
+    if (!tab)
+        goto bailout;
+    tab->fn = strdup(fn);
+    tab->fid = fopen(fn, "wb");
+	if (!tab->fid) {
+		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+		goto bailout;
+	}
+	tab->primheader = qfits_table_prim_header_default();
+    return tab;
+
+ bailout:
+    if (tab) {
+        fitstable_free(tab);
+    }
+    return NULL;
+}
+
 void fitstable_free(fitstable_t* tab) {
     if (!tab) return;
+    if (tab->fid) {
+        if (fclose(tab->fid)) {
+            fprintf(stderr, "Failed to close output file %s: %s\n", tab->fn, strerror(errno));
+        }
+    }
+    free(tab->fn);
     bl_free(tab->cols);
     il_free(tab->extra_cols);
     free(tab);
@@ -99,6 +126,13 @@ int fitstable_read(fitstable_t* tab, qfits_table* qtab) {
         }
     }
     return ok;
+}
+
+void fitstable_reset_table(fitstable_t* tab) {
+    if (tab->table) {
+        qfits_table_close(tab->table);
+    }
+    tab->table = qfits_create_table();
 }
 
 void fitstable_close_table(fitstable_t* tab) {

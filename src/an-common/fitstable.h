@@ -1,5 +1,6 @@
 
 #include <sys/types.h>
+#include <stdio.h>
 
 #include "qfits_table.h"
 #include "an-bool.h"
@@ -60,10 +61,26 @@ struct fitscol_t {
 // ????
 struct fitstable_t {
     qfits_table* table;
-    //qfits_header* header;
+    // header for this extension's table
+    qfits_header* header;
+
+    // primary header
+    qfits_header* primheader;
+
     //pl* cols;
     bl* cols;
+    // ???
     il* extra_cols;
+
+    // When writing:
+	const char* fn;
+    FILE* fid;
+    // the end of the primary header (including FITS padding)
+    off_t end_header_offset;
+    // beginning of the current table
+    off_t table_offset;
+    // end of the current table (including FITS padding)
+    off_t end_table_offset;
 };
 typedef struct fitstable_t fitstable_t;
 
@@ -77,6 +94,8 @@ tfits_type fitscolumn_any_type();
 
 fitstable_t* fitstable_new();
 
+fitstable_t* fitstable_open_for_writing(const char* fn);
+
 void fitstable_free(fitstable_t*);
 
 void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols);
@@ -88,8 +107,12 @@ int fitstable_read(fitstable_t* tab, qfits_table* qtab);
 // = new() + add_columns() + read().
 //int fitstable_find(const qfits_table* tab, fitscol_t* cols, int Ncols);
 
-// Close the current table and reset all fields that refer to it.
+// When reading: close the current table and reset all fields that refer to it.
 void fitstable_close_table(fitstable_t* tab);
+
+// When writing: close the existing table, reset everything, and create a
+// new table.
+void fitstable_reset_table(fitstable_t* tab);
 
 int fitstable_nrows(fitstable_t* t);
 
