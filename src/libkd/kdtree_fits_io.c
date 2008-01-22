@@ -100,7 +100,7 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
 	unsigned int tt;
 	kdtree_t* kdtree = NULL;
     int found = 0;
-    int rtn;
+    int rtn = -1;
 
 	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
