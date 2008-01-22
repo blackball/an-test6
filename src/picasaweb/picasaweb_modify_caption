@@ -7,14 +7,12 @@
 #     PICASAWEB_Auth
 #     PICASAWEB_USER
 #     PICASAWEB_ALBUMNAME
-#     PICASAWEB_PHOTOID
+#     PICASAWEB_PHOTOEDITURI
 #
-FILETYPE=jpeg
-uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/album/$PICASAWEB_ALBUMNAME/photoid/$PICASAWEB_PHOTOID"
-data="<entry xmlns='http://www.w3.org/2005/Atom'><title>$1</title><summary>$2</summary><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#photo'/></entry>"
+data="<entry xmlns='http://www.w3.org/2005/Atom'><title>darcy-beach.jpg</title><summary>Darcy on the beach</summary><category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/photos/2007#photo'/></entry>"
 curl --silent \
   --request PUT \
   --data "$data" \
   --header "Content-Type: application/atom+xml" \
   --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
-  "$uri"
+  "$PICASAWEB_PHOTOEDITURI"

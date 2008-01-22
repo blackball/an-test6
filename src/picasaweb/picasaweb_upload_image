@@ -12,14 +12,16 @@
 #   caption not yet implemented
 #   The "source foo" line sets environment variable:
 #     PICASAWEB_PHOTOID
+#     PICASAWEB_PHOTOEDITURI
 #
 FILETYPE=jpeg
 uri="http://picasaweb.google.com/data/feed/api/user/$PICASAWEB_USER/albumid/$PICASAWEB_ALBUMID"
-curl --silent \
+xmloutput=$(curl --silent \
   --request POST \
   --data-binary "@$1" \
   --header "Content-Type: image/$FILETYPE" \
   --header "Authorization: GoogleLogin auth=$PICASAWEB_Auth" \
-  "$uri" \
-  | sed 's/^.*photoid\//export PICASAWEB_PHOTOID=/' | sed 's/\/.*$/\n/'
-caption=$2
+  "$uri")
+echo "# $xmloutput"
+echo $xmloutput | sed 's/^.*photoid\/\([0-9]*\)\/.*$/export PICASAWEB_PHOTOID=\1/'
+echo $xmloutput | sed "s/^.*<link[^>]rel='edit-media'[^>]*href='\([^']*\)'.*/export PICASAWEB_PHOTOEDITURI=\1/"
