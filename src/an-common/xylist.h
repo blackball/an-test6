@@ -45,25 +45,17 @@ typedef dl xy;
   One row per star.
 */
 struct xylist {
-	char* fn;
-	int nfields;
 	int parity;
 
     fitstable_t* table;
 
 	const char* antype; // Astrometry.net filetype string.
 
+    // When reading: total number of fields in this file.
+    int nfields;
+
 	// field we're currently reading/writing
 	unsigned int field;
-
-	qfits_header* fieldheader;
-
-	// writing:
-	qfits_header* header;
-	FILE* fid;
-	off_t data_offset;
-	off_t table_offset;
-    off_t end_table_offset;
 };
 typedef struct xylist xylist;
 

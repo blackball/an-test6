@@ -1,5 +1,6 @@
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "fitstable.h"
 #include "fitsioutils.h"
@@ -83,11 +84,13 @@ fitstable_t* fitstable_open_for_writing(const char* fn) {
     return NULL;
 }
 
-void fitstable_close(fitstable_t* tab) {
-    if (!tab) return;
+int fitstable_close(fitstable_t* tab) {
+    int rtn = 0;
+    if (!tab) return 0;
     if (tab->fid) {
         if (fclose(tab->fid)) {
             fprintf(stderr, "Failed to close output file %s: %s\n", tab->fn, strerror(errno));
+            rtn = -1;
         }
     }
     if (tab->primheader) {
@@ -97,6 +100,7 @@ void fitstable_close(fitstable_t* tab) {
     bl_free(tab->cols);
     il_free(tab->extra_cols);
     free(tab);
+    return rtn;
 }
 
 void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols) {
@@ -139,10 +143,10 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
         col->csize = fits_get_atom_size(col->ctype) * col->arraysize;
 
         // Column found?
-        col->col = fits_find_column(qtab, col->colname);
+        col->col = fits_find_column(tab->table, col->colname);
         if (col->col == -1)
             continue;
-        qcol = qtab->col + col->col;
+        qcol = tab->table->col + col->col;
         // save params
         col->fitstype = qcol->atom_type;
         col->arraysize = qcol->atom_nb;
@@ -203,14 +207,15 @@ int fitstable_fix_header(fitstable_t* t) {
 
 // Called just before starting to write a new field.
 int fitstable_new_table(fitstable_t* t) {
-    if (tab->table) {
-        qfits_table_close(tab->table);
+    if (t->table) {
+        qfits_table_close(t->table);
     }
-    fitstable_create_table(tab);
-    if (tab->header) {
-        qfits_header_destroy(tab->header);
+    fitstable_create_table(t);
+    if (t->header) {
+        qfits_header_destroy(t->header);
     }
-    tab->header = qfits_table_ext_header_default(tab->table);
+    t->header = qfits_table_ext_header_default(t->table);
+    return 0;
 }
 
 int fitstable_write_table_header(fitstable_t* t) {
@@ -234,7 +239,7 @@ int fitstable_fix_table_header(fitstable_t* t) {
 	fseeko(t->fid, t->table_offset, SEEK_SET);
     old_end = t->end_table_offset;
     // update NAXIS2 to reflect the number of rows written.
-    fits_header_mod_int(tab->header, "NAXIS2", t->table->nr, NULL);
+    fits_header_mod_int(t->header, "NAXIS2", t->table->nr, NULL);
     fitstable_write_table_header(t);
     new_end = t->end_table_offset;
 	if (old_end != new_end) {
@@ -245,7 +250,7 @@ int fitstable_fix_table_header(fitstable_t* t) {
     // go back to where we were (ie, probably the end of the data array)...
 	fseeko(t->fid, offset, SEEK_SET);
     // add padding.
-    fits_pad_file(ls->fid);
+    fits_pad_file(t->fid);
 	return 0;
 }
 
@@ -352,8 +357,7 @@ int fitstable_read_array(const fitstable_t* tab,
 
 int fitstable_write_array(const fitstable_t* tab,
                           int offset, int N,
-                          const void* maindata, int mainstride,
-                          FILE* fid) {
+                          const void* maindata, int mainstride) {
     int i, j;
     void* tempdata = NULL;
     int highwater = 0;
@@ -393,7 +397,7 @@ int fitstable_write_array(const fitstable_t* tab,
             }
 
             for (k=0; k<col->arraysize; k++)
-                fits_write_data(fid, src + fits_get_atom_size(col->fitstype) * k, col->fitstype);
+                fits_write_data(tab->fid, src + fits_get_atom_size(col->fitstype) * k, col->fitstype);
         }
     }
     free(tempdata);
