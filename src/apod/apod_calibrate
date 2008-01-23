@@ -19,7 +19,9 @@ for days in $(seq 0 5000); do
     for filename in $(ls *.jpg *.png *.gif *.tif); do
       echo "working on $filename"
       prefix=$(expr $filename : '\(.*\)\.[A-z]*')
-      if [ ! -e "$prefix.solved" ]; then
+      if [ -e "$prefix.solved" ]; then
+	echo "previously solved $filename, I think"
+      else
         solve-field \
           --scale-units "degwidth" \
 	  --scale-low "$1" \
