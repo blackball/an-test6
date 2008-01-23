@@ -48,14 +48,17 @@ static fitstable_t* fitstable_new() {
 fitstable_t* fitstable_open(const char* fn) {
     fitstable_t* tab;
     tab = fitstable_new();
-    if (!tab)
+    if (!tab) {
+		fprintf(stderr, "Failed to allocate new FITS table structure.\n");
         goto bailout;
+	}
     tab->fn = strdup(fn);
     tab->primheader = qfits_header_read(fn);
     if (!tab->primheader) {
         fprintf(stderr, "Failed to read primary FITS header from %s.\n", fn);
         goto bailout;
     }
+	return tab;
  bailout:
     if (tab) {
         fitstable_close(tab);
@@ -173,7 +176,8 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
             break;
         }
     }
-    return ok;
+	if (ok) return 0;
+	return -1;
 }
 
 int fitstable_write_header(fitstable_t* t) {

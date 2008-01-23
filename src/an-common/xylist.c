@@ -126,6 +126,7 @@ xylist* xylist_open(const char* fn) {
 		return NULL;
     ls->table = fitstable_open(fn);
     if (!ls->table) {
+		fprintf(stderr, "Failed to open FITS table %s.\n", fn);
         free(ls);
         return NULL;
     }
