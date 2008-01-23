@@ -230,7 +230,10 @@ xy* xylist_get_field(xylist* ls, uint field) {
 }
 
 qfits_header* xylist_get_field_header(xylist* ls, uint field) {
-    xylist_open_field(ls, field);
+    if (xylist_open_field(ls, field)) {
+        fprintf(stderr, "Failed to open extension (field) %i\n", field);
+        return NULL;
+    }
     return ls->table->header;
 }
 
