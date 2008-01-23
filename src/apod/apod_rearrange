@@ -1,0 +1,15 @@
+#!/bin/bash
+#
+# usage:
+#   ./apod_rearrange
+# purpose:
+#   move all the APOD data into a sensible directory structure
+# comments:
+#   requires environment variables
+#     APOD_ROOT
+#   read the source---of apod_rearrange_one---luke
+#
+for days in $(seq 0 5000); do
+  date=$(\date --date "now - $days day" +%F)
+  apod_rearrange_one $date
+done
