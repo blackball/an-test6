@@ -944,7 +944,6 @@ static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
 			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, bp->fieldid_key));
 			if (idstr)
 				strncpy(template.fieldname, idstr, sizeof(template.fieldname) - 1);
-			qfits_header_destroy(fieldhdr);
 		}
 
 		// Has the field already been solved?
