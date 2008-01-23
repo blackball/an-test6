@@ -66,10 +66,15 @@ int xylist_is_file_xylist(const char* fn,
         if (reason) *reason = "Failed to find matching columns.";
     } else {
         // Got it!
+
         rtn = 1;
     }
     fitstable_close(t);
     return rtn;
+}
+
+qfits_header* xylist_get_header(xylist* ls) {
+    return ls->table->primheader;
 }
 
 static fitscol_t* xcolumn(xylist* ls) {

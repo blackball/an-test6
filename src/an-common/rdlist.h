@@ -42,6 +42,10 @@ void rdlist_set_dtype(rdlist* ls, tfits_type type);
 void rdlist_set_runits(rdlist* ls, const char* units);
 void rdlist_set_dunits(rdlist* ls, const char* units);
 
+qfits_header* rdlist_get_header(rdlist* ls);
+
+qfits_header* rdlist_get_field_header(rdlist* ls);
+
 inline rdlist* rdlist_open(char* fn);
 
 inline int rdlist_n_fields(rdlist* ls);

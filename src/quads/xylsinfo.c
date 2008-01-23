@@ -78,6 +78,7 @@ int main(int argc, char** args) {
 	}
 
 	{
+        qfits_header* hdr;
 		double xmax, xmin, ymax, ymin;
 		double diag;
 		int imw, imh;
@@ -94,9 +95,9 @@ int main(int argc, char** args) {
 		}
  
 		diag = hypot(xmax-xmin, ymax-ymin);
-
-		imw = qfits_header_getint(xyls->header, "IMAGEW", -1);
-		imh = qfits_header_getint(xyls->header, "IMAGEH", -1);
+        hdr = xylist_get_header(xyls);
+		imw = qfits_header_getint(hdr, "IMAGEW", -1);
+		imh = qfits_header_getint(hdr, "IMAGEH", -1);
 		if (imw > -1)
 			printf("imagew %i\n", imw);
 		if (imh > -1)

@@ -182,8 +182,11 @@ void blind_run(blind_t* bp) {
 			if (wcs->wcstan.imageh == 0.0 && sp->field_maxy > 0.0)
 				wcs->wcstan.imageh = sp->field_maxy;
 
-			assert(wcs->wcstan.imagew > 0.0);
-			assert(wcs->wcstan.imageh > 0.0);
+            if ((wcs->wcstan.imagew == 0) ||
+                (wcs->wcstan.imageh == 0)) {
+                logmsg("Verifying WCS: image width or height is zero / unknown.\n");
+                continue;
+            }
 			quadlo = 0.1 * MIN(wcs->wcstan.imagew, wcs->wcstan.imageh) * sip_pixel_scale(wcs);
 			quadhi = 1.0 * MAX(wcs->wcstan.imagew, wcs->wcstan.imageh) * sip_pixel_scale(wcs);
 			logmsg("Verifying WCS using indices with quads of size [%g, %g] arcmin\n",
@@ -1190,18 +1193,20 @@ static int write_solutions(blind_t* bp) {
 	}
 
 	if (bp->indexrdlsfname) {
+        qfits_header* h;
 		bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
 		if (!bp->indexrdls) {
 			logerr("Failed to open index RDLS file %s for writing.\n",
 				   bp->indexrdlsfname);
             return -1;
 		}
+        h = rdlist_get_header(bp->indexrdls);
 
-        boilerplate_add_fits_headers(bp->indexrdls->header);
-        fits_add_long_history(bp->indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
+        boilerplate_add_fits_headers(h);
+        fits_add_long_history(h, "This \"indexrdls\" file was created by the program \"blind\"."
                               "  It contains the RA/DEC of index objects that were found inside a solved field.");
-        qfits_header_add(bp->indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
-        add_blind_params(bp, bp->indexrdls->header);
+        qfits_header_add(h, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+        add_blind_params(bp, h);
         if (rdlist_write_header(bp->indexrdls)) {
             logerr("Failed to write index RDLS header.\n");
             return -1;
@@ -1213,8 +1218,10 @@ static int write_solutions(blind_t* bp) {
                 logerr("Failed to write index RDLS field header.\n");
                 return -1;
             }
-            if (strlen(mo->fieldname))
-                qfits_header_add(bp->indexrdls->fieldheader, "FIELDID", mo->fieldname, "Name of this field", NULL);
+            if (strlen(mo->fieldname)) {
+                qfits_header* hdr = rdlist_get_field_header(bp->indexrdls);
+                qfits_header_add(hdr, "FIELDID", mo->fieldname, "Name of this field", NULL);
+            }
             if (rdlist_write_field_header(bp->indexrdls)) {
                 logerr("Failed to write index RDLS field header.\n");
                 return -1;

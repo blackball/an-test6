@@ -68,7 +68,6 @@ int xylist_add_column(xylist* ls, fitscol_t* col);
 fitscol_t* xylist_get_column(const xylist* ls, int col);
 
 
-
 // Is the given filename an xylist?
 int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
                           const char** reason);
@@ -79,6 +78,8 @@ void xylist_set_xtype(xylist* ls, tfits_type type);
 void xylist_set_ytype(xylist* ls, tfits_type type);
 void xylist_set_xunits(xylist* ls, const char* units);
 void xylist_set_yunits(xylist* ls, const char* units);
+
+qfits_header* xylist_get_header(xylist* ls);
 
 // you can change the parameters (ie, xname, yname) 
 // after opening but before calling xylist_get_field.

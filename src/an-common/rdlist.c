@@ -37,6 +37,14 @@ void rdlist_set_dunits(rdlist* ls, const char* units) {
     xylist_set_yunits(ls, units);
 }
 
+qfits_header* rdlist_get_header(rdlist* ls) {
+    return xylist_get_header(ls);
+}
+
+qfits_header* rdlist_get_field_header(rdlist* ls) {
+    return xylist_get_field_header(ls, ls->field);
+}
+
 Inline rdlist* rdlist_open(char* fn) {
 	rdlist* rtn = xylist_open(fn);
 	if (!rtn) return NULL;

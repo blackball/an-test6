@@ -67,6 +67,7 @@ int main(int argc, char** args) {
     char* xname = NULL;
     char* yname = NULL;
     char* antype = NULL;
+    qfits_header* hdr;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -117,11 +118,12 @@ int main(int argc, char** args) {
         xylist_set_xtype(ls, TFITS_BIN_TYPE_D);
         xylist_set_ytype(ls, TFITS_BIN_TYPE_D);
     }
-    qfits_header_add(ls->header, "WRITER", basename(args[0]), "This file was written by the program...", NULL);
-    boilerplate_add_fits_headers(ls->header);
-    fits_add_long_comment(ls->header, "Command line that produced this file:");
-    fits_add_args(ls->header, args, argc);
-    fits_add_long_comment(ls->header, "(end of command line)");
+    hdr = xylist_get_header(ls);
+    qfits_header_add(hdr, "WRITER", basename(args[0]), "This file was written by the program...", NULL);
+    boilerplate_add_fits_headers(hdr);
+    fits_add_long_comment(hdr, "Command line that produced this file:");
+    fits_add_args(hdr, args, argc);
+    fits_add_long_comment(hdr, "(end of command line)");
 
     if (xname)
         xylist_set_xname(ls, xname);

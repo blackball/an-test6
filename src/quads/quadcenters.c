@@ -161,11 +161,15 @@ int main(int argc, char** args) {
             }
 
             if (addradius) {
-                double rad = arcsec2deg(distsq2arcsec(distsq(midab, axyz, 3)));
-                if (fits_write_data_D(rdls->fid, rad)) {
-                    fprintf(stderr, "Failed to write quad radius.\n");
-                    exit(-1);
-                }
+                assert(0);
+                // FIXME - fitstable.
+                /*
+                 double rad = arcsec2deg(distsq2arcsec(distsq(midab, axyz, 3)));
+                 if (fits_write_data_D(rdls->fid, rad)) {
+                 fprintf(stderr, "Failed to write quad radius.\n");
+                 exit(-1);
+                 }
+                 */
             }
 		}
 		printf("\n");

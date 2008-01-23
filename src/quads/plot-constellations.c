@@ -94,8 +94,8 @@ int main(int argc, char** args) {
     double scale = 1.0;
     bool pngformat = TRUE;
 
-    cairo_t* cairo;
-    cairo_surface_t* target;
+    cairo_t* cairo = NULL;
+    cairo_surface_t* target = NULL;
     double lw = 2.0;
     // circle linewidth.
     double cw = 2.0;
@@ -113,7 +113,7 @@ int main(int argc, char** args) {
     double label_offset = 15.0;
 
     int W = 0, H = 0;
-    unsigned char* img;
+    unsigned char* img = NULL;
 
     bool NGC = FALSE, constell = FALSE;
 	bool bright = FALSE;
@@ -419,7 +419,7 @@ int main(int argc, char** args) {
     if (NGC) {
         double imscale;
         double imsize;
-        double dy;
+        double dy = 0;
         cairo_font_extents_t extents;
 
 		if (!justlist) {
@@ -494,7 +494,7 @@ int main(int argc, char** args) {
     }
 
 	if (bright) {
-        double dy;
+        double dy = 0;
         cairo_font_extents_t extents;
 		pl* brightstars = pl_new(16);
 

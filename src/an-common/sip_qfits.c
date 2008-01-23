@@ -266,6 +266,13 @@ tan_t* tan_read_header(const qfits_header* hdr, tan_t* dest) {
     tan.imagew = qfits_header_getint(hdr, "IMAGEW", 0);
     tan.imageh = qfits_header_getint(hdr, "IMAGEH", 0);
 
+    if (!tan.imagew) {
+        tan.imagew = qfits_header_getint(hdr, "NAXIS1", 0);
+    }
+    if (!tan.imageh) {
+        tan.imageh = qfits_header_getint(hdr, "NAXIS2", 0);
+    }
+
 	{
 		const char* keys[] = { "CRVAL1", "CRVAL2", "CRPIX1", "CRPIX2",
 						 "CD1_1", "CD1_2", "CD2_1", "CD2_2" };
