@@ -55,6 +55,7 @@
 #include "index.h"
 #include "log.h"
 #include "tic.h"
+#include "qfits_table.h"
 
 static bool record_match_callback(MatchObj* mo, void* userdata);
 static time_t timer_callback(void* user_data);
@@ -158,7 +159,7 @@ void blind_run(blind_t* bp) {
         index_options |= INDEX_USE_IDFILE;
 
 	// Verify any WCS estimates we have.
-	if (pl_size(bp->verify_wcs_list)) {
+	if (bl_size(bp->verify_wcs_list)) {
         int i;
 		int w;
 
@@ -173,6 +174,10 @@ void blind_run(blind_t* bp) {
 			sip_t* wcs = bl_access(bp->verify_wcs_list, w);
 			//logmsg("Verifying WCS with index %i of %i\n",  I + 1, sl_size(bp->indexnames));
 
+            /*
+             fprintf(stderr, "Verifying using WCS:\n");
+             sip_print(wcs);
+             */
 			// We don't want to try to verify a wide-field image using a narrow-
 			// field index, because it will contain a TON of index stars in the
 			// field.  We therefore only try to verify using indices that contain
@@ -509,11 +514,16 @@ static void load_and_parse_wcsfiles(blind_t* bp) {
 		sip_t wcs;
 		char* fn = sl_get(bp->verify_wcsfiles, i);
 		logmsg("Reading WCS header to verify from file %s\n", fn);
+        memset(&wcs, 0, sizeof(sip_t));
 		if (!sip_read_header_file(fn, &wcs)) {
 			logerr("Failed to parse WCS header from file %s\n", fn);
 			continue;
 		}
-		pl_append(bp->verify_wcs_list, &wcs);
+        /*
+         fprintf(stderr, "Read WCS header:\n");
+         sip_print(&wcs);
+         */
+		bl_append(bp->verify_wcs_list, &wcs);
 	}
 }
 
@@ -583,6 +593,7 @@ void blind_cleanup(blind_t* bp) {
 	free(bp->fieldfname);
 	free(bp->fieldid_key);
 	free(bp->indexrdlsfname);
+	free(bp->corr_fname);
 	free(bp->logfname);
 	free(bp->matchfname);
 	free(bp->solvedserver);
@@ -727,6 +738,9 @@ static void print_match(blind_t* bp, MatchObj* mo)
 static bool record_match_callback(MatchObj* mo, void* userdata) {
 	blind_t* bp = userdata;
 	solver_t* sp = &(bp->solver);
+    MatchObj* ourmo;
+    int ind;
+    int j;
 
 	check_time_limits(bp);
 
@@ -749,7 +763,45 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 	  assert(sp->index->indexname);
 	  mo->indexname = sp->index->indexname;
 	*/
-    bl_insert_sorted(bp->solutions, mo, compare_matchobjs);
+
+    ind = bl_insert_sorted(bp->solutions, mo, compare_matchobjs);
+    ourmo = bl_access(bp->solutions, ind);
+
+    // Ugh!!  Make our own copy of these lists...
+    /*
+     ourmo->corr_field = il_dupe(mo->corr_field);
+     ourmo->corr_index = il_dupe(mo->corr_index);
+     */
+    
+    ourmo->corr_field = NULL;
+    ourmo->corr_index = NULL;
+    ourmo->corr_field_xy = dl_new(16);
+    ourmo->corr_index_rd = dl_new(16);
+
+    for (j=0; j<il_size(mo->corr_field); j++) {
+        double fxy[2];
+        double ixyz[3];
+        double iradec[2];
+        int iindex, ifield;
+
+        ifield = il_get(mo->corr_field, j);
+        iindex = il_get(mo->corr_index, j);
+        //printf("  field %i -> star %i.\n", ifield, iindex);
+        assert(ifield >= 0);
+        assert(ifield < sp->nfield);
+
+        fxy[0] = sp->field[2*ifield + 0];
+        fxy[1] = sp->field[2*ifield + 1];
+
+        dl_append(ourmo->corr_field_xy, fxy[0]);
+        dl_append(ourmo->corr_field_xy, fxy[1]);
+
+        startree_get(sp->index->starkd, iindex, ixyz);
+        xyzarr2radecdegarr(ixyz, iradec);
+
+        dl_append(ourmo->corr_index_rd, iradec[0]);
+        dl_append(ourmo->corr_index_rd, iradec[1]);
+    }
 
 	if (mo->logodds < bp->logratio_tosolve)
 		return FALSE;
@@ -960,6 +1012,10 @@ static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
 			if (mo.logodds < bp->logratio_toprint)
 				print_match(bp, &mo);
 
+            // HACK
+            il_free(mo.corr_field);
+            il_free(mo.corr_index);
+
 		} else {
 			logmsg("Solving field %i.\n", fieldnum);
 
@@ -1105,6 +1161,18 @@ static void free_matchobj(MatchObj* mo) {
     if (mo->sip) {
         sip_free(mo->sip);
         mo->sip = NULL;
+    }
+    if (mo->corr_field) {
+        il_free(mo->corr_field);
+    }
+    if (mo->corr_index) {
+        il_free(mo->corr_index);
+    }
+    if (mo->corr_index_rd) {
+        dl_free(mo->corr_index_rd);
+    }
+    if (mo->corr_field_xy) {
+        dl_free(mo->corr_field_xy);
     }
     if (mo->indexrdls) {
         free(mo->indexrdls);
@@ -1305,6 +1373,138 @@ static int write_solutions(blind_t* bp) {
 			fclose(fout);
         }
     }
+
+    // Note that this follows the WCS output, so we've eliminated all but the best solution.
+    if (bp->corr_fname) {
+        qfits_header* hdr;
+        FILE* fid = fopen(bp->corr_fname, "wb");
+        if (!fid) {
+            logerr("Failed to open file %s to write correspondences.\n", bp->corr_fname);
+            return -1;
+        }
+
+        hdr = qfits_table_prim_header_default();
+        // FIXME boilerplate
+        if (qfits_header_dump(hdr, fid)) {
+            logerr("Failed to write FITS header to correspondence file %s\n", bp->corr_fname);
+            return -1;
+        }
+        qfits_header_destroy(hdr);
+
+        for (i=0; i<bl_size(bp->solutions); i++) {
+            MatchObj* mo;
+            int j;
+            qfits_table* table;
+            uint datasize;
+            uint ncols, nrows, tablesize;
+            int NC;
+            int col;
+            int corrs;
+
+            mo = bl_access(bp->solutions, i);
+
+            if (!(mo->corr_field_xy && mo->corr_index_rd)) {
+                logerr("Match has no list of correspondences.\n");
+                continue;
+            }
+
+            corrs = dl_size(mo->corr_field_xy) / 2;
+
+            // field ra, dec, x, y
+            // index ra, dec, x, y
+            NC = 8;
+
+            datasize = sizeof(double);
+            ncols = NC;
+            nrows = corrs;
+            tablesize = datasize * nrows * ncols;
+            table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+            table->tab_w = 0;
+
+            col = 0;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "degrees", "field_ra");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "degrees", "field_dec");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "pixels", "field_x");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "pixels", "field_y");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "degrees", "index_ra");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "degrees", "index_dec");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "pixels", "index_x");
+            col++;
+            fits_add_column(table, col, TFITS_BIN_TYPE_D, 1, "pixels", "index_y");
+            col++;
+
+            assert(col == NC);
+
+            table->tab_w = qfits_compute_table_width(table);
+
+            hdr = qfits_table_ext_header_default(table);
+            if (qfits_header_dump(hdr, fid)) {
+                logerr("Failed to write FITS table header to correspondence file %s\n", bp->corr_fname);
+                return -1;
+            }
+            qfits_header_destroy(hdr);
+            qfits_table_close(table);
+
+            //printf("Have %i field xy and %i index radecs.\n", dl_size(mo->corr_field_xy)/2, dl_size(mo->corr_index_rd)/2);
+             
+            for (j=0; j<corrs; j++) {
+                double fxy[2];
+                double fradec[2];
+                double iradec[2];
+                double ixy[2];
+                bool ok;
+
+                fxy[0] = dl_get(mo->corr_field_xy, j*2 + 0);
+                fxy[1] = dl_get(mo->corr_field_xy, j*2 + 1);
+
+                iradec[0] = dl_get(mo->corr_index_rd, j*2 + 0);
+                iradec[1] = dl_get(mo->corr_index_rd, j*2 + 1);
+                
+                if (mo->sip)
+                    sip_pixelxy2radec(mo->sip, fxy[0], fxy[1], fradec+0, fradec+1);
+                else
+                    tan_pixelxy2radec(&(mo->wcstan), fxy[0], fxy[1], fradec+0, fradec+1);
+
+                if (mo->sip)
+                    ok = sip_radec2pixelxy(mo->sip, iradec[0], iradec[1], ixy+0, ixy+1);
+                else
+                    ok = tan_radec2pixelxy(&(mo->wcstan), iradec[0], iradec[1], ixy+0, ixy+1);
+                assert(ok);
+
+                if (fits_write_data_D(fid, fradec[0]) ||
+                    fits_write_data_D(fid, fradec[1]) ||
+                    fits_write_data_D(fid, fxy[0]) ||
+                    fits_write_data_D(fid, fxy[1]) ||
+                    fits_write_data_D(fid, iradec[0]) ||
+                    fits_write_data_D(fid, iradec[1]) ||
+                    fits_write_data_D(fid, ixy[0]) ||
+                    fits_write_data_D(fid, ixy[1])) {
+                    logerr("Failed to write row %i to correspondence table %s.\n", j, bp->corr_fname);
+                    return -1;
+                }
+                /*
+                 printf("  pixels: (%g, %g) -- (%g, %g)\n",
+                 fxy[0], fxy[1], ixy[0], ixy[1]);
+                 printf("  RA/Dec: (%g, %g) -- (%g, %g)\n",
+                 fradec[0], fradec[1], iradec[0], iradec[1]);
+                 */
+            }
+
+            if (fits_pad_file(fid) ||
+                fclose(fid)) {
+                logerr("Failed to pad and close correspondence table %s: %s\n", bp->corr_fname, strerror(errno));
+                return -1;
+            }
+            break;
+        }
+    }
+
     return 0;
 }
 

@@ -24,6 +24,7 @@
 #include "bl.h"
 #include "starkd.h"
 #include "sip.h"
+#include "bl.h"
 
 struct verify_field_t {
     double* field;
@@ -43,7 +44,8 @@ void verify_hit(startree* skdt,
                 double fieldH,
                 double logratio_tobail,
                 bool distance_from_quad_bonus,
-				int dimquads);
+				int dimquads,
+                bool fake_match);
 
 verify_field_t* verify_field_preprocess(double* field, int NF);
 

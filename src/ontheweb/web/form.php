@@ -305,6 +305,7 @@ function process_data ($vals) {
 	global $indexrdls_fn;
 	global $indexrdls_pat;
 	global $solved_fn;
+	global $corr_fn;
 	global $cancel_fn;
 	global $wcs_fn;
 	global $start_fn;
@@ -877,6 +878,7 @@ function process_data ($vals) {
                 #"nsolves 2\n" .
                 ##
 				"solved " . $solved_fn . "\n" .
+				"correspondences " . $corr_fn . "\n" .
 				"cancel " . $cancel_fn . "\n" .
 				"wcs " . $wcs_fn . "\n" .
 				"fields 1\n" .

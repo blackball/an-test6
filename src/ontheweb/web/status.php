@@ -54,6 +54,7 @@ $indexxylist = $mydir . $indexxyls_fn;
 $indexrdlist = $mydir . $indexrdls_fn;
 $blindlogfile = $mydir . $log_fn;
 $solvedfile = $mydir . $solved_fn;
+$corrfile = $mydir . $corr_fn;
 $cancelfile = $mydir . $cancel_fn;
 $wcsfile = $mydir . $wcs_fn;
 $matchfile = $mydir . $match_fn;
@@ -141,7 +142,7 @@ if ($getfile) {
 		}
 	}
 	$sz = filesize($fn);
-	$attachments = array($wcs_fn, $newheader_fn,
+	$attachments = array($wcs_fn, $newheader_fn, $corr_fn,
 						 );
 	if (in_array($getfile, $attachments)) {
 		$mimetype = 'application/octet-stream';
@@ -926,6 +927,12 @@ if ($job_done) {
 		echo '<tr><td>Image x, y for index sources:</td><td>';
 		print_link($indexxylist);
 		echo "</td></tr>\n";
+
+        if (file_exists($corrfile)) {
+            echo '<tr><td>Table of correspondences:</td><td>';
+            print_link($corrfile);
+            echo "</td></tr>\n";
+        }
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";

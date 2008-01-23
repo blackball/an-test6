@@ -44,6 +44,7 @@ $match_fn = "match.fits";
 
 $log_fn   = "log";
 $solved_fn= "solved";
+$corr_fn = "correspondences.fits";
 $cancel_fn= "cancel";
 $wcs_fn   = "wcs.fits";
 $newheader_fn   = "newheader.fits";

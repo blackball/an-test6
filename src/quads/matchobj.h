@@ -98,6 +98,10 @@ struct match_struct {
     double* indexrdls;
     int nindexrdls;
 	//const char* indexname;
+    il* corr_field;
+    il* corr_index;
+    dl* corr_field_xy;
+    dl* corr_index_rd;
 };
 typedef struct match_struct MatchObj;
 

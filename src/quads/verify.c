@@ -97,7 +97,8 @@ void verify_hit(startree* skdt,
                 double fieldH,
                 double logratio_tobail,
                 bool do_gamma,
-				int dimquads) {
+				int dimquads,
+                bool fake_match) {
 	int i;
 	double* fieldcenter;
 	double fieldr2;
@@ -129,6 +130,11 @@ void verify_hit(startree* skdt,
 	double fieldr, fieldarcsec;
 
     int options = 0;
+
+    il* corr_field;
+    il* corr_index;
+    il* best_corr_field = NULL;
+    il* best_corr_index = NULL;
 
 	assert(mo->wcs_valid || sip);
 	assert(startree);
@@ -243,11 +249,16 @@ void verify_hit(startree* skdt,
 	bestprob = malloc(vf->NF * sizeof(double));
 	for (i=0; i<vf->NF; i++)
 		bestprob[i] = -HUGE_VAL;
-	for (i=0; i<dimquads; i++) {
-		assert(mo->field[i] >= 0);
-		assert(mo->field[i] < vf->NF);
-		bestprob[mo->field[i]] = HUGE_VAL;
-	}
+    if (!fake_match) {
+        for (i=0; i<dimquads; i++) {
+            assert(mo->field[i] >= 0);
+            assert(mo->field[i] < vf->NF);
+            bestprob[mo->field[i]] = HUGE_VAL;
+        }
+    }
+
+    if (fake_match)
+        do_gamma = FALSE;
 
     // If we're modelling the expected noise as a Gaussian whose variance grows
     // away from the quad center, compute the required quantities...
@@ -269,6 +280,16 @@ void verify_hit(startree* skdt,
 	debug("log(p(background)) = %g\n", logprob_background);
 	debug("log(p(distractor)) = %g\n", logprob_distractor);
 
+    corr_field = il_new(16);
+    corr_index = il_new(16);
+    // add correspondences for the matched quad.
+    if (!fake_match) {
+        for (i=0; i<dimquads; i++) {
+            il_append(corr_field, mo->field[i]);
+            il_append(corr_index, mo->star[i]);
+        }
+    }
+
 	bestlogodds = -HUGE_VAL;
 	bestnmatch = bestnnomatch = bestnconflict = -1;
 	nmatch = nnomatch = nconflict = 0;
@@ -282,6 +303,7 @@ void verify_hit(startree* skdt,
 			double R2 = 0.0;
 			double logprob = -HUGE_VAL;
 			int ind;
+            int starid;
 			int fldind;
 			int j;
 			bool cont;
@@ -290,15 +312,17 @@ void verify_hit(startree* skdt,
 				continue;
 
 			// Skip stars that are part of the quad:
-			ind = res->inds[i];
-			cont = FALSE;
-			for (j=0; j<dimquads; j++)
-				if (ind == mo->star[j]) {
-					cont = TRUE;
-					break;
-				}
-			if (cont)
-				continue;
+            starid = res->inds[i];
+            if (!fake_match) {
+                cont = FALSE;
+                for (j=0; j<dimquads; j++)
+                    if (starid == mo->star[j]) {
+                        cont = TRUE;
+                        break;
+                    }
+                if (cont)
+                    continue;
+            }
 
 			// Distance from the quad center of this index star:
 			// (we just use this to estimate sigma2 to estimate the cutoff
@@ -377,13 +401,23 @@ void verify_hit(startree* skdt,
 					}
 					// Allow an improved match (except to the stars composing the quad, because they are initialized to HUGE_VAL)
 					if (logprob > oldprob) {
+                        int ind;
 						oldprob = logprob;
 						logodds += (logprob - oldprob);
+
+                        bestprob[fldind] = logprob;
+
+                        // Replace the correspondence.
+                        ind = il_index_of(corr_field, fldind);
+                        il_set(corr_index, ind, starid);
 					}
 					continue;
 				} else {
 					bestprob[fldind] = logprob;
 					nmatch++;
+
+                    il_append(corr_field, fldind);
+                    il_append(corr_index, starid);
 				}
 			}
 
@@ -401,6 +435,13 @@ void verify_hit(startree* skdt,
 			bestnmatch = nmatch;
 			bestnnomatch = nnomatch;
 			bestnconflict = nconflict;
+
+            if (best_corr_field)
+                il_free(best_corr_field);
+            if (best_corr_index)
+                il_free(best_corr_index);
+            best_corr_field = il_dupe(corr_field);
+            best_corr_index = il_dupe(corr_index);
 		}
 	}
 
@@ -408,6 +449,12 @@ void verify_hit(startree* skdt,
 	free(bestprob);
 	free(sweeps);
 	free(indexpix);
+
+    mo->corr_field = best_corr_field;
+    mo->corr_index = best_corr_index;
+
+    il_free(corr_field);
+    il_free(corr_index);
 
 	mo->logodds = bestlogodds;
 	mo->noverlap = bestnmatch;

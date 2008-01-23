@@ -94,7 +94,19 @@ static void update_timeused(solver_t* sp) {
 		sp->timeused = 0.0;
 }
 
+/*
+ void free_best_match_extras(solver_t* sp) {
+ if (sp->best_match.corr_field)
+ il_free(sp->best_match.corr_field);
+ if (sp->best_match.corr_index)
+ il_free(sp->best_match.corr_index);
+ sp->best_match.corr_field = NULL;
+ sp->best_match.corr_index = NULL;
+ }
+ */
+
 void solver_reset_best_match(solver_t* sp) {
+    //free_best_match_extras(sp);
     // we don't really care about very bad best matches...
 	sp->best_logodds = 0;
 	memset(&(sp->best_match), 0, sizeof(MatchObj));
@@ -287,7 +299,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
                             uint* fstars, int dimquads,
                             solver_t* solver, bool current_parity);
 
-static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip);
+static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip, bool fake_match);
 
 static void check_scale(pquad* pq, solver_t* solver)
 {
@@ -949,8 +961,13 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		solver_transform_corners(solver, &mo);
 
-		if (solver_handle_hit(solver, &mo, NULL))
+		if (solver_handle_hit(solver, &mo, NULL, FALSE))
 			solver->quit_now = TRUE;
+
+        if (mo.corr_field)
+            il_free(mo.corr_field);
+        if (mo.corr_index)
+            il_free(mo.corr_index);
 
 		if (unlikely(solver->quit_now))
 			return;
@@ -958,10 +975,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 }
 
 void solver_inject_match(solver_t* solver, MatchObj* mo, sip_t* sip) {
-	solver_handle_hit(solver, mo, sip);
+	solver_handle_hit(solver, mo, sip, TRUE);
 }
 
-static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip)
+static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip, bool fake_match)
 {
 	double match_distance_in_pixels2;
     bool solved;
@@ -980,7 +997,7 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip)
 	verify_hit(sp->index->starkd, mo, sip, sp->vf, match_distance_in_pixels2,
 	           sp->distractor_ratio, sp->field_maxx, sp->field_maxy,
 	           sp->logratio_bail_threshold, sp->distance_from_quad_bonus,
-			   dimquads);
+			   dimquads, fake_match);
 	mo->nverified = sp->num_verified++;
 
 	if (mo->logodds >= sp->best_logodds)
@@ -988,6 +1005,9 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo, sip_t* sip)
 
 	if (!sp->have_best_match || (mo->logodds > sp->best_match.logodds)) {
 		logmsg("Got a new best match: logodds %g.\n", mo->logodds);
+
+        //free_best_match_extras(sp);
+
 		//print_match(bp, mo);
 		memcpy(&(sp->best_match), mo, sizeof(MatchObj));
 		sp->have_best_match = TRUE;
