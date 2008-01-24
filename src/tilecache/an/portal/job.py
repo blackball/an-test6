@@ -178,7 +178,7 @@ class Submission(models.Model):
         )
 
     filetype_CHOICES = (
-        ('image', 'Image (jpeg, png, gif, tiff, or FITS)'),
+        ('image', 'Image (jpeg, png, gif, tiff, raw, or FITS)'),
         ('fits', 'FITS table of source locations'),
         ('text', 'Text list of source locations'),
         )
