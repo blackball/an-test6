@@ -34,6 +34,8 @@ static void add_cols(fitstable_t* t, int parity, tfits_type type) {
     memset(&col, 0, sizeof(fitscol_t));
     col.target_fitstype = type;
     col.target_arraysize = 1;
+    col.arraysize = 1;
+    col.fitstype = type;
     col.ctype = fitscolumn_double_type();
     col.required = TRUE;
     col.in_struct = TRUE;
@@ -215,7 +217,7 @@ xy* xylist_get_field(xylist* ls, uint field) {
     assert(field > 0);
 	nobjs = xylist_n_entries(ls, field);
 	if (nobjs == -1) {
-		fprintf(stderr, "Field %i couldn't be read.\n", field);
+		fprintf(stderr, "Couldn't find number of entries in field %i.\n", field);
 		return NULL;
 	}
 	rtn = mk_xy(nobjs);
