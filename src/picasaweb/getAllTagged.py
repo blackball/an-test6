@@ -7,8 +7,8 @@ try:
   from xml.etree import ElementTree
 except ImportError:
   from elementtree import ElementTree
-import gdata.photos.service
-#import gdata.service
+import gdata.photos, gdata.photos.service
+import gdata.service
 #import atom.service
 #import atom
 import getopt
@@ -21,7 +21,8 @@ HELPSTRING = 'getAllTagged.py --tag DesiredTag --commentUser userid'
 pws = gdata.photos.service.PhotosService()
 #pws.ClientLogin(username, password)
 
-
+# to update caption, change the "summary" field of the PhotoEntry object you get from ?kind=photo uri
+# and then call pws.UpdatePhotoMetadata
 
 
 def getAllTagEntries(tag):
