@@ -20,7 +20,7 @@ for days in $(seq 0 5000); do
       echo "working on $filename"
       prefix=$(expr $filename : '\(.*\)\.[A-z]*')
       if [ -e "$prefix.solved" ]; then
-	echo "previously solved $filename, I think"
+	echo "I have already calibrated $filename, I think"
       else
         solve-field \
           --scale-units "degwidth" \
