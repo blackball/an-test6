@@ -36,6 +36,9 @@ Now, some miscellaneous files:
   "You may freely modify, reuse, and redistribute these programs as you wish."
   (fitstomatlab.c is just a modified version of tablist.c)
 
+-tilecache/web/map.js includes code borrowed from wms236.js by John Deck,
+  UC Berkeley.
+
 Data files:
 
 -quads/ngc2000{,names}.dat
