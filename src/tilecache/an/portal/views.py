@@ -250,9 +250,9 @@ def getfield(request):
     field = fields[0]
 
     owner = (field.user == request.user)
-    anonymous = field.allowredist
+    anonymous = field.redistributable()
     if not (owner or anonymous):
-        return HttpResponse('The owner of this job (' + field.user.username + ') has not granted public access.')
+        return HttpResponse('The owner of this field (' + field.user.username + ') has not granted public access.')
 
     res = HttpResponse()
     ct = field.content_type()

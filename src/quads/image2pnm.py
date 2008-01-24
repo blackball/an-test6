@@ -23,7 +23,7 @@ imgcmds = {fitstype : (fitsext, "an-fitstopnm -i %s > %s"),
            "TIFF image data"  : ("tiff",  "tifftopnm %s > %s"),
            }
 
-rawcmd = ('raw', 'dcraw -c "%s" > "%s"')
+rawcmd = ('raw', 'dcraw -4 -c "%s" > "%s"')
 
 compcmds = {"gzip compressed data"    : ("gz",  "gunzip -c %s > %s"),
             "bzip2 compressed data"   : ("bz2", "bunzip2 -k -c %s > %s")

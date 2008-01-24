@@ -295,7 +295,7 @@ def newfile(request):
     c = RequestContext(request, {
         'form' : form,
         'uploadform' : reverse(an.upload.views.uploadform),
-        'progressform' : reverse(an.upload.views.progress_ajax) + '/?upload_id='
+        'progressform' : reverse(an.upload.views.progress_ajax) + '?upload_id='
         })
     return HttpResponse(t.render(c))
 

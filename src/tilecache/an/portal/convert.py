@@ -44,7 +44,7 @@ def run_pnmfile(fn):
     w = int(match.group('width'))
     h = int(match.group('height'))
     pnmtype = match.group('pnmtype')
-    maxval = match.group('maxval')
+    maxval = int(match.group('maxval'))
     log('Type %s, w %i, h %i, maxval %i' % (pnmtype, w, h, maxval))
     return (w, h, pnmtype, maxval)
 
