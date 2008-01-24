@@ -49,17 +49,15 @@ def log(x):
 #                    a file.
 
 class StreamParser(object):
-    fin = None
-    # unparsed data
-    data = ''
-    blocksize = 4096
-    error = False
-    errorstring = None
-    needmore = False
-    bytes_parsed = 0
-
     def __init__(self, fin=None):
         self.fin = fin
+        # unparsed data
+        self.data = ''
+        self.blocksize = 4096
+        self.error = False
+        self.errorstring = None
+        self.needmore = False
+        self.bytes_parsed = 0
 
     # Returns False if EOF is reached or an error occurs
     def readmore(self):
@@ -91,10 +89,9 @@ class StreamParser(object):
 
 
 class StateMachine(StreamParser):
-    state = None
-
     def __init__(self, fin=None):
         super(StateMachine, self).__init__(fin)
+        self.state = None
         self.state_transition('start')
 
     def initial_state(self):
@@ -122,9 +119,6 @@ class StateMachine(StreamParser):
 
 
 class StateMachineState(object):
-    # the StateMachine to which this state belongs.
-    machine = None
-
     def __init__(self, machine=None):
         self.machine = machine
 
@@ -133,20 +127,15 @@ class StateMachineState(object):
 
 
 class MessageParser(StateMachine):
-    # the state (a HeaderState object) that will parse the message header
-    header_state = None
-
-    # dictionary of headers from the header parser.
-    headers = None
-
-    # the state (a StateMachineState object) that will parse the message body
-    body_state = None
-
-    # how many bytes had been parsed when the body was reached.
-    body_offset = 0
-
     def __init__(self, fin=None):
+        # the state (a HeaderState object) that will parse the message header
         self.header_state = HeaderState(self)
+        # dictionary of headers from the header parser.
+        self.headers = None
+        # the state (a StateMachineState object) that will parse the message body
+        self.body_state = None
+        # how many bytes had been parsed when the body was reached.
+        self.body_offset = 0
         super(MessageParser, self).__init__(fin)
 
     def initial_state(self):
@@ -182,13 +171,14 @@ LWSP = ' \t'
 ALPHANUM = r'A-Za-z0-9_\-'
 
 class Multipart(MessageParser):
-    # the parts of this multi-part message.
-    # each part is a dictionary.
-    parts = []
+    def __init__(self, fin=None):
+        super(Multipart, self).__init__(fin)
+        # the parts of this multi-part message.
+        # each part is a dictionary.
+        self.parts = []
+        self.currentpart = None
+        self.boundary = None
 
-    currentpart = None
-
-    boundary = None
 
     # returns a dictionary that maps normal form elements to
     # their data values.
@@ -333,8 +323,6 @@ class Multipart(MessageParser):
 
 
 class HeaderState(StateMachineState):
-    headers = None
-
     def __init__(self, machine=None):
         super(HeaderState, self).__init__(machine)
         self.headers = {}
@@ -397,11 +385,10 @@ class PartHeaderState(HeaderState):
         self.headers = {}
 
 class PartBodyState(StateMachineState):
-    data = None
-    boundary = None
     def __init__(self, machine, boundary):
         super(PartBodyState, self).__init__(machine)
         self.boundary = boundary
+        self.data = None
         self.reset_data()
     def process(self):
         stream = self.machine
@@ -465,7 +452,9 @@ class PartBodyState(StateMachineState):
 
 
 class FileMultipart(Multipart):
-    writefields = {}
+    def __init__(self, fin=None):
+        super(FileMultipart, self).__init__(fin)
+        self.writefields = {}
 
     # Overrides Multipart.get_part_body_state().
     #
@@ -477,25 +466,24 @@ class FileMultipart(Multipart):
     def get_part_body_state(self, boundary):
         #log('FileMultipart: get_part_body_state')
         superme = super(FileMultipart, self)
-        currentpart = self.currentpart
-        if not currentpart:
+        if not self.currentpart:
             #log('no current part.')
             return superme.get_part_body_state(boundary)
 
         key = 'field'
         fnkey = 'filename'
-        if not ((key in currentpart) and \
-                (fnkey in currentpart)):
+        if not ((key in self.currentpart) and \
+                (fnkey in self.currentpart)):
             log('SaveToFile: no field and filename keys.')
             return superme.get_part_body_state(boundary)
 
-        fn = currentpart[fnkey]
-        field = currentpart[key]
-        filename = self.get_filename(field, fn, currentpart)
+        fn = self.currentpart[fnkey]
+        field = self.currentpart[key]
+        filename = self.get_filename(field, fn, self.currentpart)
         if not filename:
             #log('filename is not in writefields.')
             return superme.get_part_body_state(boundary)
-        currentpart['local-filename'] = filename
+        self.currentpart['local-filename'] = filename
         log('writing this part to file %s' % filename)
         return FileBodyState(self, boundary, filename)
 

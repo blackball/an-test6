@@ -1,7 +1,7 @@
-from django.http import HttpResponse
-from django.http import HttpResponseRedirect
+from django.http import *
 from django.template import Context, RequestContext, loader
 from django import newforms as forms
+from django.core.urlresolvers import reverse
 from django.newforms import ValidationError
 
 from models import UploadedFile
@@ -36,8 +36,6 @@ class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(
         attrs={'size':'40'}))
 
-xmlurl = '/upload/xml/?upload_id='
-
 def get_ajax_html(name=''):
     ctxt = {
         'name' : name,
@@ -48,7 +46,7 @@ def get_ajax_html(name=''):
 def get_ajax_javascript(name=''):
     ctxt = {
         'name' : name,
-        'xmlurl' : xmlurl,
+        'xmlurl' : reverse(progress_xml) + '?upload_id='
         }
     t = loader.get_template('upload/progress-ajax-meter.js')
     return t.render(Context(ctxt))
@@ -103,16 +101,16 @@ def uploadform(request):
 def progress_xml(request):
     logging.debug('XML request')
     if not request.user.is_authenticated():
-        return HttpResponse('not authenticated')
+        return HttpResponseForbidden('not authenticated')
     if not request.GET:
-        return HttpResponse('no GET')
+        return HttpResponseBadRequest('no GET')
     if not 'upload_id' in request.GET:
-        return HttpResponse('no upload_id')
+        return HttpResponseBadRequest('no upload_id')
     id = request.GET['upload_id']
     logging.debug('XML request for id ' + id)
     ups = UploadedFile.objects.all().filter(uploadid=id)
     if not len(ups):
-        return HttpResponse('no such id')
+        return HttpResponseNotFound('no such id')
     up = ups[0]
     tag = up.xml()
     if not len(tag):

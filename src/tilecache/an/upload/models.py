@@ -18,33 +18,30 @@ logging.basicConfig(level=logging.DEBUG,
                     )
 
 
-uploadid_re = re.compile('[A-Za-z0-9]{%i}$' % (sha.digest_size*2))
-try:
-    upload_base_dir = os.environ['UPLOAD_DIR']
-except KeyError:
-    upload_base_dir = '/tmp'
-
 class UploadedFile(models.Model):
-    def isValidId(id):
-        return uploadid_re.match(id)
-    isValidId = staticmethod(isValidId)
+    uploadid_re = re.compile('[A-Za-z0-9]{%i}$' % (sha.digest_size*2))
+    try:
+        default_base_dir = os.environ['UPLOAD_DIR']
+    except KeyError:
+        default_base_dir = '/tmp'
 
+    @staticmethod
+    def isValidId(uid):
+        logging.debug("IsValidId: " + str(uid))
+        return UploadedFile.uploadid_re.match(uid)
+
+    @staticmethod
     def generateId():
         h = sha.new()
         h.update(str(time.time()) + str(random.random()))
         uid = h.hexdigest()
         return uid
-    generateId = staticmethod(generateId)
 
-    def getFilenameForId(uid):
-        return upload_base_dir + '/' + uid
-    getFilenameForId = staticmethod(getFilenameForId)
+    @classmethod
+    def set_default_base_dir(self,  basedir):
+        self.default_base_dir = basedir
 
-    #def __init__(self, ):
-
-    def __str__(self):
-        return self.uploadid
-
+    # (this has to be defined before the "uploadid" member variable)
     def validateId(self, field_data, all_data):
         if not self.isValidId(field_data):
             raise validators.ValidationError('Invalid upload ID')
@@ -64,6 +61,33 @@ class UploadedFile(models.Model):
     byteswritten = models.PositiveIntegerField(default=0)
     filesize = models.PositiveIntegerField(default=0)
     errorstring = models.CharField(max_length=256, null=True, default='')
+
+    def __init__(self, *args, **kwargs):
+        for (x,y) in kwargs.items():
+            logging.debug("kwarg[%s] = %s" % (str(x), str(y)))
+        super(UploadedFile, self).__init__(*args, **kwargs)
+        if 'upload_base_dir' in kwargs:
+            self.upload_base_dir = kwargs['upload_base_dir']
+        else:
+            self.upload_base_dir = UploadedFile.default_base_dir
+        logging.debug("UploadedFile (init): setting base dir to %s" % self.upload_base_dir)
+        #logging.debug("Set upload id to " + str(self.uploadid))
+        #logging.debug("
+
+    def __str__(self):
+        return self.uploadid
+
+    #def save(self):
+    #    logging.debug("Save(): uploadid is " + str(self.uploadid))
+    #    super(UploadedFile, self).save()
+
+    #def set_upload_id(self, uid):
+    #    self.uploadid = uid
+    #    self.save()
+
+    def set_base_dir(self, bdir):
+        logging.debug("UploadedFile: setting base dir to %s" % bdir)
+        self.upload_base_dir = bdir
 
     def xml(self):
         err = self.errorstring
@@ -97,10 +121,12 @@ class UploadedFile(models.Model):
         return tag
 
     def get_filename(self):
-        return UploadedFile.getFilenameForId(self.uploadid)
+        logging.debug("UploadedFile: base dir " + str(self.upload_base_dir))
+        #logging.debug("upload id " + str(self.uploadid))
+        return self.upload_base_dir + '/upload-' + self.uploadid
 
     def fileExists(self):
-        path = upload_base_dir + '/' + self.uploadid
+        path = self.get_filename()
         return os.path.exists(path)
 
         

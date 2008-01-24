@@ -47,22 +47,26 @@ def log(x):
     print >> sys.stderr, x
 
 class Upload(multipart.FileMultipart):
-    basedir = None
-    id_field = None
-
-    # an UploadedFile object
-    upload = None
-
-    id = None
-    filename = None
-    bytes_written = 0
-
-    def __init__(self, fin=sys.stdin):
+    def __init__(self, fin=None):
+        if not fin:
+            fin = sys.stdin
         super(Upload, self).__init__(fin)
+        self.basedir = None
+        self.id_field = None
+        # an UploadedFile object
+        self.upload = None
+        self.uid = None
+        self.filename = None
+        self.bytes_written = 0
         self.starttime = int(time.time())
 
-    def set_basedir(self, dir):
-        self.basedir = dir
+    def set_basedir(self, bdir):
+        from an.upload.models import UploadedFile
+        log('Upload: setting base dir to %s' % bdir)
+        self.basedir = bdir
+        UploadedFile.set_default_base_dir(self.basedir)
+        if self.upload:
+            self.upload.set_base_dir(self.basedir)
 
     def set_id_field(self, field):
         self.id_field = field
@@ -107,15 +111,15 @@ class Upload(multipart.FileMultipart):
     def id_part(self, part):
         from an.upload.models import UploadedFile
 
-        id = part['data']
-        if not UploadedFile.isValidId(id):
-            log('Invalid id "%s"' % id)
+        uid = part['data']
+        if not UploadedFile.isValidId(uid):
+            log('Invalid id "%s"' % uid)
             self.error = True
             self.errorstring = 'Invalid upload ID'
             return
 
-        log('Setting ID to %s' % id)
-        self.id = id
+        log('Setting ID to %s' % uid)
+        self.uid = uid
         
         # We will have read the Content-Length header by now...
         key = 'Content-Length'
@@ -131,14 +135,16 @@ class Upload(multipart.FileMultipart):
                         - (len(self.boundary) + 6)
         # magic number 6: the ending boundary token is CRLF "--" BOUNDARY CRLF
         log('Predicted file size: %d' % predictedsize)
+        log('ID is %s' % self.uid)
 
         now = int(time.time())
-        self.upload = UploadedFile(uploadid=id,
+        self.upload = UploadedFile(uploadid=self.uid, ### HACK - this doesn't seem to work??
                                    starttime=now,
                                    nowtime=now,
                                    predictedsize=predictedsize,
                                    )
-
+        self.upload.uploadid = self.uid
+        
         self.filename = self.upload.get_filename()
         if os.path.exists(self.filename):
             log('File for upload ID "%s" already exists.' % id)
@@ -163,7 +169,7 @@ class Upload(multipart.FileMultipart):
 
     # Computes the filename to write the data of this "part body" to.
     def get_filename(self, field, filename, currentpart):
-        if not self.id:
+        if not self.uid:
             log('Upload ID is not known.')
             return None
         if not self.filename:
@@ -177,8 +183,8 @@ class Upload(multipart.FileMultipart):
 
 
 
-#def fail(req, up, 
-
+# This method gets called when run from Apache with the
+# "SetHandler python-program" directive.
 def handler(req):
     from mod_python import apache
 

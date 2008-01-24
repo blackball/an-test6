@@ -17,10 +17,13 @@ import an.gmaps_config as config
 
 os.environ['LD_LIBRARY_PATH'] = '/home/gmaps/test/an-common'
 os.environ['PATH'] = '/bin:/usr/bin:/home/gmaps/test/quads'
+# This must match the Apache setting UPLOAD_DIR
+os.environ['UPLOAD_DIR'] = '/data2/TEMP-test'
 
 import logging
 import os.path
 import urllib
+import shutil
 
 from django.db import models
 
@@ -335,7 +338,7 @@ def main(sshconfig, joblink):
         temp = submission.uploaded.get_filename()
         log('uploaded tempfile is ' + temp)
         log('rename(%s, %s)' % (temp, origfile))
-        os.rename(temp, origfile)
+        shutil.move(temp, origfile)
         basename = submission.uploaded.userfilename
     else:
         bailout(job, 'no datasrc')
@@ -390,8 +393,8 @@ def main(sshconfig, joblink):
             field.save()
             log('New field ' + str(field.id))
             destfile = field.filename()
-            os.rename(p, destfile)
             log('Moving %s to %s' % (p, destfile))
+            shutil.move(p, destfile)
 
             if len(validpaths) == 1:
                 job = Job(

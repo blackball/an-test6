@@ -39,7 +39,7 @@ class FtpOrHttpURLField(forms.URLField):
             pass
         if ftpurl_re.match(value):
             return value
-        raise ValidationError(self.error_message)
+        raise ValidationError(self.error_messages['invalid'])
 
 class ForgivingURLField(FtpOrHttpURLField):
     def clean(self, value):
@@ -258,7 +258,7 @@ def newurl(request):
             submit_submission(request, submission)
             return HttpResponseRedirect(get_status_url(submission.jobid))
         else:
-            urlerr = form['url'].errors[0]
+            urlerr = form['url'].erroros[0]
     else:
         if 'jobid' in request.session:
             del request.session['jobid']
@@ -381,7 +381,7 @@ def newlong(request):
     else:
         progress_meter_html = ''
         progress_meter_js   = ''
-        progressform = reverse(an.upload.views.progress_ajax) + '/?upload_id='
+        progressform = reverse(an.upload.views.progress_ajax) + '?upload_id='
 
     ctxt = {
         'form' : form,
