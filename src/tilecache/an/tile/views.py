@@ -48,7 +48,7 @@ def getbb(request):
 	(ramin,  ramax ) = (-longmax, -longmin)
 	(decmin, decmax) = ( latmin,   latmax )
 	# The Google Maps client treats RA as going from -180 to +180; we prefer
-	# to think of it as going from 0 to 360.  In the low value is negative,
+	# to think of it as going from 0 to 360.  If the low value is negative,
 	# wrap it around...
 	if (ramin < 0.0):
 		ramin += 360
