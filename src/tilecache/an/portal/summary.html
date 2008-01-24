@@ -12,6 +12,31 @@ tr.odd td {}
 
 {% block content %}
 
+{% if subs %}
+<h3 style="text-align:center;">Multi-File Submissions</h3>
+<table id="summarytable">
+<tr>
+<th>Submission Id</th>
+<th>Submitted</th>
+<th>Number of Jobs</th>
+</tr>
+{% for s in subs %}
+<tr class="{% cycle even,odd %}">
+<td>
+<a href="{{ statusurl }}{{ s.jobid }}">{{ s.jobid }}</a>
+</td>
+<td>
+{{ s.format_submittime_brief }}
+</td>
+<td class="c">
+{{ s.jobs.all|length }}
+</td>
+</tr>
+{% endfor %}
+</table>
+
+{% endif %}
+
 {% if jobs %}
 <h3 style="text-align:center;">Jobs</h3>
 <table id="summarytable">

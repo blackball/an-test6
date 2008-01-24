@@ -390,8 +390,12 @@ def summary(request):
     prefs = UserPreferences.for_user(request.user)
     submissions = Submission.objects.all().filter(user=request.user)
     jobs = []
+    subs = []
     for sub in submissions:
         jobs += sub.jobs.all()
+        # keep track of multi-Job Submissions
+        if len(sub.jobs.all()) > 1:
+            subs.append(sub)
 
     for job in jobs:
         log('Job ', job, 'allow anon?', job.allowanonymous(prefs))
@@ -403,6 +407,7 @@ def summary(request):
     voimgs = voImage.objects.all().filter(user=request.user)
 
     ctxt = {
+        'subs' : subs,
         'jobs' : jobs,
         'voimgs' : voimgs,
         'prefs' : prefs,
