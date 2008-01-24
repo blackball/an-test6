@@ -39,6 +39,10 @@ Now, some miscellaneous files:
 -tilecache/web/map.js includes code borrowed from wms236.js by John Deck,
   UC Berkeley.
 
+-tilecache/web/map.js includes code borrowed from:
+  http://www.scottandrew.com/weblog/jsjunk#inpoly
+  Copyright 2001 scott andrew lepera
+
 Data files:
 
 -quads/ngc2000{,names}.dat
