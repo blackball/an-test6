@@ -10,8 +10,9 @@ import tempfile
 from fits2fits import fits2fits as fits2fits
 
 fitstype = "FITS image data"
+fitsext = 'fits'
 
-imgcmds = {fitstype : ("fits", "an-fitstopnm -i %s > %s"),
+imgcmds = {fitstype : (fitsext, "an-fitstopnm -i %s > %s"),
            "JPEG image data"  : ("jpg",  "jpegtopnm %s > %s"),
            "PNG image data"   : ("png",  "pngtopnm %s > %s"),
            "GIF image data"   : ("gif",  "giftopnm %s > %s"),
@@ -21,6 +22,8 @@ imgcmds = {fitstype : ("fits", "an-fitstopnm -i %s > %s"),
            "Netpbm PGM \"rawbits\" image data" : ("pnm",  "pgmtoppm %s > %s"),
            "TIFF image data"  : ("tiff",  "tifftopnm %s > %s"),
            }
+
+rawcmd = ('raw', 'dcraw -c "%s" > "%s"')
 
 compcmds = {"gzip compressed data"    : ("gz",  "gunzip -c %s > %s"),
             "bzip2 compressed data"   : ("bz2", "bunzip2 -k -c %s > %s")
@@ -72,12 +75,21 @@ def uncompress_file(infile, uncompressed, outdir=None, typeinfo=None, quiet=True
     do_command(cmd % (shell_escape(infile), shell_escape(uncompressed)))
     return ext
 
+# Returns (extension, command, error)
 def get_image_type(infile):
     typeinfo = run_file(infile)
     if not typeinfo in imgcmds:
-        return (None, 'Unknown image type "%s"' % typeinfo)
+        #tmpf = tempfile.mkstemp()
+        #dcrawcmd = 'dcraw -i "%s" > %s 2> /dev/null' % (infile, tmpf)
+        dcrawcmd = 'dcraw -i "%s" > /dev/null 2> /dev/null' % (infile)
+        rtn = os.system(dcrawcmd)
+        if os.WIFEXITED(rtn) and (os.WEXITSTATUS(rtn) == 0):
+            # it's a RAW image.
+            (ext, cmd) = rawcmd
+            return (ext, cmd, None)
+        return (None, None, 'Unknown image type "%s"' % typeinfo)
     (ext, cmd) = imgcmds[typeinfo]
-    return (ext, None)
+    return (ext, cmd, None)
 
 def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
               mydir, quiet):
@@ -94,15 +106,15 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
 
     - error: (string): error string, or None
     """
-    typeinfo = run_file(infile)
-    if not typeinfo in imgcmds:
-        return (None, 'Image type not recognized: "%s"' % typeinfo)
+    (ext, cmd, err) = get_image_type(infile)
+    if ext is None:
+        return (None, 'Image type not recognized: ' + err)
 
     tempfiles = []
 
     # If it's a FITS file we want to filter it first because of the many
     # misbehaved FITS files. fits2fits is a sanitizer.
-    if (typeinfo == fitstype) and (not no_fits2fits):
+    if (ext == fitsext) and (not no_fits2fits):
         if not sanitized:
             (outfile_dir, outfile_file) = os.path.split(outfile)
             (f, sanitized) = tempfile.mkstemp('sanitized', outfile_file, outfile_dir)
@@ -124,9 +136,8 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
             log('temporary output file: ', outfile)
 
     # Do the actual conversion
-    ext, cmd = imgcmds[typeinfo]
     # an-fitstopnm: add path...
-    if (typeinfo == fitstype) and mydir:
+    if (ext == fitsext) and mydir:
         cmd = mydir + cmd
     if quiet:
         cmd = cmd + " 2>/dev/null"

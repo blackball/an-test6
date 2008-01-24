@@ -141,7 +141,7 @@ def convert(job, field, fn):
     elif fn == 'fitsimg':
         # check the uncompressed input image type...
         infn = convert(job, field, 'uncomp')
-        (field.filetype, errmsg) = image2pnm.get_image_type(infn)
+        (field.filetype, cmd, errmsg) = image2pnm.get_image_type(infn)
         if errmsg:
             log(errmsg)
             raise FileConversionError(errmsg)
