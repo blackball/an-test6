@@ -143,6 +143,8 @@ if ($getfile) {
 	}
 	$sz = filesize($fn);
 	$attachments = array($wcs_fn, $newheader_fn, $corr_fn,
+						 $indexxyls_fn, $indexrdls_fn,
+						 $xyls_fn, $rdls_fn,
 						 );
 	if (in_array($getfile, $attachments)) {
 		$mimetype = 'application/octet-stream';
