@@ -36,7 +36,7 @@ def run_pnmfile(fn):
     filein.close()
     out = fileout.read().strip()
     log('pnmfile output: ' + out)
-    pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval \d*')
+    pat = re.compile(r'P(?P<pnmtype>[BGP])M .*, (?P<width>\d*) by (?P<height>\d*) *maxval (?P<maxval>\d*)')
     match = pat.search(out)
     if not match:
         log('No match.')
@@ -44,8 +44,9 @@ def run_pnmfile(fn):
     w = int(match.group('width'))
     h = int(match.group('height'))
     pnmtype = match.group('pnmtype')
-    log('Type %s, w %i, h %i' % (pnmtype, w, h))
-    return (w, h, pnmtype)
+    maxval = match.group('maxval')
+    log('Type %s, w %i, h %i, maxval %i' % (pnmtype, w, h, maxval))
+    return (w, h, pnmtype, maxval)
 
 def is_tarball(fn):
     typeinfo = image2pnm.run_file(fn)
@@ -87,7 +88,7 @@ def convert(job, field, fn):
         x = run_pnmfile(infn)
         if x is None:
             raise FileConversionError('couldn\'t find file size')
-        (w, h, pnmtype) = x
+        (w, h, pnmtype, maxval) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
         field.imagew = w
         field.imageh = h
@@ -99,7 +100,7 @@ def convert(job, field, fn):
         x = run_pnmfile(infn)
         if x is None:
             raise FileConversionError('couldn\'t find file size')
-        (w, h, pnmtype) = x
+        (w, h, pnmtype, maxval) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
         field.imagew = w
         field.imageh = h
@@ -109,7 +110,8 @@ def convert(job, field, fn):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'ppm':
+    elif (fn == 'ppm') or (fn == 'ppm-8bit'):
+        eightbit = (fn == 'ppm-8bit')
         if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
             xylist = job.get_filename('job.axy')
@@ -122,10 +124,17 @@ def convert(job, field, fn):
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
-        (w, h, pnmtype) = x
+        (w, h, pnmtype, maxval) = x
         if pnmtype == 'P':
+            if eightbit and (maxval != 255):
+                cmd = 'pnmdepth 255 "%s" > "%s"' % (imgfn, fullfn)
+                run_convert_command(cmd)
+                return fullfn
             return imgfn
-        cmd = 'pgmtoppm white %s > %s' % (imgfn, fullfn)
+        if eightbit and (maxval != 255):
+            cmd = 'pnmdepth 255 "%s" | pgmtoppm white > "%s"' % (imgfn, fullfn)
+        else:
+            cmd = 'pgmtoppm white "%s" > "%s"' % (imgfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
@@ -237,12 +246,18 @@ def convert(job, field, fn):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'ppm-small':
+    elif (fn == 'ppm-small') or (fn == 'ppm-small-8bit'):
+        eightbit = (fn == 'ppm-small-8bit')
+
+        # what the heck is this??
         if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
             (scale, dw, dh) = field.get_display_scale()
             if scale == 1:
-                return convert(job, field, 'ppm')
+                if eightbit:
+                    return convert(job, field, 'ppm-8bit')
+                else:
+                    return convert(job, field, 'ppm')
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -s %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
                    (xylist, dw, dh, scale, fullfn))
@@ -253,16 +268,23 @@ def convert(job, field, fn):
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
-        (w, h, pnmtype) = x
+        (w, h, pnmtype, maxval) = x
         if pnmtype == 'P':
+            if eightbit and (maxval != 255):
+                cmd = 'pnmdepth 255 "%s" > "%s"' % (imgfn, fullfn)
+                run_convert_command(cmd)
+                return fullfn
             return imgfn
-        cmd = 'pgmtoppm white %s > %s' % (imgfn, fullfn)
+        if eightbit and (maxval != 255):
+            cmd = 'pnmdepth 255 "%s" | pgmtoppm white > "%s"' % (imgfn, fullfn)
+        else:
+            cmd = 'pgmtoppm white %s > %s' % (imgfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'annotation':
         wcsfn = job.get_filename('wcs.fits')
-        imgfn = convert(job, field, 'ppm-small')
+        imgfn = convert(job, field, 'ppm-small-8bit')
         (scale, dw, dh) = field.get_display_scale()
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/float(scale), imgfn))
@@ -270,7 +292,7 @@ def convert(job, field, fn):
         return fullfn
 
     elif fn == 'annotation-big':
-        imgfn = convert(job, field, 'ppm')
+        imgfn = convert(job, field, 'ppm-8bit')
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s' %
                (wcsfn, fullfn, imgfn))
@@ -279,11 +301,11 @@ def convert(job, field, fn):
 
     elif fn == 'redgreen' or fn == 'redgreen-big':
         if fn == 'redgreen':
-            imgfn = convert(job, field, 'ppm-small')
+            imgfn = convert(job, field, 'ppm-small-8bit')
             (dscale, dw, dh) = field.get_display_scale()
             scale = 1.0 / float(dscale)
         else:
-            imgfn = convert(job, field, 'ppm')
+            imgfn = convert(job, field, 'ppm-8bit')
             scale = 1.0
         fxy = job.get_filename('job.axy')
         ixy = convert(job, field, 'index-xy')
@@ -304,7 +326,7 @@ def convert(job, field, fn):
         return fullfn
 
     elif fn == 'sources':
-        imgfn = convert(job, field, 'ppm-small')
+        imgfn = convert(job, field, 'ppm-small-8bit')
         xyls = job.get_filename('job.axy')
         (dscale, dw, dh) = field.get_display_scale()
         scale = 1.0 / float(dscale)
@@ -318,7 +340,7 @@ def convert(job, field, fn):
         return fullfn
 
     elif fn == 'sources-big':
-        imgfn = convert(job, field, 'ppm')
+        imgfn = convert(job, field, 'ppm-8bit')
         xyls = job.get_filename('job.axy')
         commonargs = ('-i %s -x %g -y %g -w 2 -C red' %
                       (xyls, 1, 1))
