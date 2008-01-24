@@ -7,6 +7,7 @@
 td.c { text-align:center; }
 tr.even td { background-color:#EEE; }
 tr.odd td {}
+p.c { text-align:center; }
 {% endblock inlinecss %}
 
 {% block content %}
@@ -35,6 +36,18 @@ tr.odd td {}
 {% endfor %}
 
 </table>
+
+{% if somesolved %}
+<br />
+
+<p class="c">
+<a href="{{ gmaps_view_submission }}">
+View this set of jobs in the Google Maps viewer
+</a>
+</p>
+
+{% endif %}
+
 {% else %}
 <table id="summarytable">
 
@@ -44,6 +57,7 @@ tr.odd td {}
 </tr>
 
 </table>
+
 {% endif %}
 
 {% endblock content %}

@@ -1,7 +1,9 @@
-from django.http import HttpResponse
-from django.template import Context, loader
-from an.tile.models import Image
+from django.http import *
+from django.template import Context, RequestContext, loader
+from django.core.urlresolvers import reverse
 from django.db.models import Q
+
+from an.tile.models import Image
 import re
 import os.path
 import os
@@ -32,6 +34,21 @@ logging.basicConfig(level=logging.DEBUG,
                     filename=logfile,
 					)
 
+def index(request):
+    ctxt = {
+        'gmaps_key' : ('http://maps.google.com/maps?file=api&v=2&key=' +
+                       gmaps_config.gmaps_api_key),
+        'map_js_url' : reverse('an.media') + 'map.js',
+        #'gmaps_base_url' : reverse(get_tile),
+        'gmaps_tile_url' : reverse(get_tile) + '?',
+        'gmaps_image_url' : reverse(get_image)+ '?',
+        'gmaps_image_list_url' : reverse(get_image_list) + '?',
+        'gmaps_black_url' : reverse('an.media') + 'black.png',
+        }
+    t = loader.get_template('tile/index.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
 def getbb(request):
 	try:
 		bb = request.GET['bb']
@@ -55,8 +72,8 @@ def getbb(request):
 		ramax += 360
 	return (ramin, ramax, decmin, decmax)
 
-def getimage(request):
-	logging.debug("getimage() starting")
+def get_image(request):
+	logging.debug("get_image() starting")
 	try:
 		fn = request.GET['filename']
 	except KeyError:
@@ -101,7 +118,7 @@ def filename_ok(fn):
 		return False
 	return True
 
-def imagelist(request):
+def get_image_list(request):
 	logging.debug("imagelist() starting")
 	try:
 		(ramin, ramax, decmin, decmax) = getbb(request)
@@ -216,8 +233,8 @@ def imagelist(request):
 	logging.debug("Returning %i files." % len(query))
 	return res
 
-def query(request):
-	logging.debug('query() starting')
+def get_tile(request):
+	#logging.debug('query() starting')
 	try:
 		(ramin, ramax, decmin, decmax) = getbb(request)
 	except KeyError, x:
@@ -369,7 +386,7 @@ def query(request):
 					logging.debug('command did not exit.')
 				try:
 					os.remove(fn)
-				except (os.OSError):
+				except (OSError):
 					pass
 				return HttpResponse('tilerender command failed.')
 		else:

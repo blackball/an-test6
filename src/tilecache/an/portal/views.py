@@ -68,10 +68,28 @@ def getsessionjob(request):
 @login_required
 def submission_status(request, submission):
     jobs = submission.jobs.all().order_by('starttime', 'jobid')
+
+    somesolved = False
+    for job in jobs:
+        log("job: " + str(job))
+        if job.solved:
+            somesolved = True
+            log("somesolved = true.")
+            break
+
+    #gmaps = (gmaps_config.gmaps_url + ('?submission=%s' % submission.jobid) +
+    #         '&layers=tycho,grid,userboundary&arcsinh')
+
+    gmaps = (reverse('an.tile.views.index') +
+             '?submission=%s' % submission.jobid +
+             '&layers=tycho,grid,userboundary&arcsinh')
+
     ctxt = {
         'submission' : submission,
         'jobs' : jobs,
         'statusurl' : get_status_url(''),
+        'somesolved' : somesolved,
+        'gmaps_view_submission' : gmaps,
         }
     t = loader.get_template('portal/submission_status.html')
     c = RequestContext(request, ctxt)

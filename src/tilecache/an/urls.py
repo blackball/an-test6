@@ -16,6 +16,7 @@ urlpatterns = patterns('',
                        (r'^job/', include('an.portal.urls')),
 					   (r'^vo/', include('an.vo.urls')),
                        (r'^testbed/', include('an.testbed.urls')),
+                       (r'^gmaps/$', 'an.tile.views.index'),
                        # This is a fake placeholder to allow {% url %} and reverse() to resolve an.media to /anmedia.
                        # (see also media() in an/__init__.py)
                        (r'^anmedia/', 'an.media'),

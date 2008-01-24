@@ -80,8 +80,9 @@ function debug(txt) {
 var map;
 
 // URLs of tileserver.  These are defined in the HTML (map.php)
-var BASE_URL  = CONFIG_BASE_URL;
 var TILE_URL  = CONFIG_TILE_URL;
+var IMAGE_URL  = CONFIG_IMAGE_URL;
+var IMAGE_LIST_URL  = CONFIG_IMAGE_LIST_URL;
 var BLACK_URL = CONFIG_BLACK_URL;
 
 // The arguments in the HTTP request
@@ -659,7 +660,7 @@ function imageListLoaded(txt) {
 		imglist.appendChild(document.createTextNode(" "));
 
 		link = document.createElement("a");
-		link.setAttribute('href', BASE_URL + "tile/image/?filename=" + img);
+		link.setAttribute('href', IMAGE_URL + "?filename=" + img);
 		link.setAttribute('id', 'imagename-' + img);
 		link.appendChild(document.createTextNode(img));
 		imglist.appendChild(link);
@@ -688,7 +689,7 @@ function moveended() {
 	visImages = [];
 
 	if (imagesShowing || imageOutlinesShowing) {
-		url = BASE_URL + "tile/list/?";
+		url = IMAGE_LIST_URL + "?";
 		bounds = map.getBounds();
 		sw = bounds.getSouthWest();
 		ne = bounds.getNorthEast();

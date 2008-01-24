@@ -1,3 +1,5 @@
+gmaps_api_key = 'ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRTpFHQyuc9zMeXV0wfLqFiAr83b_xQ02hHbHnV4CjuIf4L-3WI_XATmBQ'
+
 basedir = "/home/gmaps/test/"
 tcdir = basedir + "tilecache/"
 
