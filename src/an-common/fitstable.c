@@ -420,7 +420,10 @@ static void fitstable_create_table(fitstable_t* tab) {
 
     for (i=0; i<ncols(tab); i++) {
         fitscol_t* col = getcol(tab, i);
-        fits_add_column(qt, i, col->fitstype, col->arraysize, col->units, col->colname);
+		char* nil = "";
+		assert(col->colname);
+ fits_add_column(qt, i, col->fitstype, col->arraysize,
+						col->units ? col->units : nil, col->colname);
     }
 }
 
