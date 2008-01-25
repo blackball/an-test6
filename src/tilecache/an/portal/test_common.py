@@ -3,6 +3,7 @@ import unittest
 from django.test.client import Client
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 
 from an.util.w3c_validator import W3CValidator
 
@@ -19,6 +20,8 @@ class PortalTestCase(TestCase):
                   ('test2@astrometry.net', 'password2'), ]
         for (e, p) in accts:
             User.objects.create_user(e, e, p).save()
+        self.loginurl = reverse('an.login')
+        self.logouturl = reverse('an.logout')
 
     def login1(self):
         self.client.login(username=self.u1, password=self.p1)

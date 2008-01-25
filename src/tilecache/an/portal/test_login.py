@@ -12,8 +12,6 @@ from an.portal.test_common import PortalTestCase
 class LoginTestCases(PortalTestCase):
     def setUp(self):
         super(LoginTestCases, self).setUp()
-        self.loginurl = reverse('an.login')
-        self.logouturl = reverse('an.logout')
 
     def login_with(self, username, password):
         resp = self.client.post(self.loginurl, { 'username': username, 'password': password })

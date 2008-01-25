@@ -16,21 +16,14 @@ class NewJobTestCases(PortalTestCase):
         self.joburlurl  = reverse('an.portal.newjob.newurl')
         self.jobfileurl = reverse('an.portal.newjob.newfile')
 
-        #self.loginurl = reverse('an.portal.views.login')
-        #self.loginurl = reverse('an.login')
-        #self.logouturl = reverse('an.logout')
-
     def assertRedirectsToLogin(self, url):
         # When not logged in, it should redirect to the login page.
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 302)
-        #self.assertTemplateUsed(resp, 'portal/login.html')
-        #print 'Response:'
-        #print resp.content
-        #print
-        #print 'Response Headers:'
-        #for (k,v) in resp.headers.items():
-        #    print '  ', k, '=', v
+        redir = self.urlprefix + self.loginurl + '?next=' + url
+        self.assertEqual(resp['Location'], redir)
+        #print 'Redirect to', resp['Location']
+        #print '(' + redir + ')'
 
     def testLongFormRedirects(self):
         self.assertRedirectsToLogin(self.joblongurl)
