@@ -1,5 +1,7 @@
 gmaps_api_key = 'ABQIAAAA7dWWcc9pB-GTzZE7CvT6SRTpFHQyuc9zMeXV0wfLqFiAr83b_xQ02hHbHnV4CjuIf4L-3WI_XATmBQ'
 
+w3c_validator_url = 'http://oven.cosmo.fas.nyu.edu:8888/w3c-markup-validator/check'
+
 basedir = "/home/gmaps/test/"
 tcdir = basedir + "tilecache/"
 

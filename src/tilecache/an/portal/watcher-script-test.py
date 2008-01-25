@@ -414,7 +414,7 @@ def main(sshconfig, joblink):
     if is_tarball(uncomp):
         log('file is tarball.')
         # create temp dir to extract tarfile.
-        tempdir = tempfile.mkdtemp('', 'tarball')
+        tempdir = tempfile.mkdtemp('', 'tarball-')
         cmd = 'tar xvf %s -C %s' % (uncomp, tempdir)
         userlog('Extracting tarball...')
         (rtn, out, err) = run_command(cmd)

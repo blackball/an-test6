@@ -7,6 +7,10 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from an.portal import views
 
+from an.util.w3c_validator import W3CValidator
+
+import an.gmaps_config as config
+
 class LoginTestCases(TestCase):
     # assertContains(response, text, count=None, status_code=200)
     # assertFormError(response, form, field, errors)
@@ -32,6 +36,12 @@ class LoginTestCases(TestCase):
     def login_with(self, username, password):
         resp = self.client.post(self.loginurl, { 'username': username, 'password': password })
         return resp
+
+    def testLoginFormValid(self):
+        resp = self.client.get(self.loginurl)
+        self.assertEqual(resp.status_code, 200)
+        v = W3CValidator(config.w3c_validator_url)
+        self.assert_(v.validateText(resp.content))
 
     def testLoginForm(self):
         print 'Login url is %s' % self.loginurl

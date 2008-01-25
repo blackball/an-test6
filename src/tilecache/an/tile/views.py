@@ -315,24 +315,27 @@ def get_tile(request):
                 sip.loadlibrary('/home/gmaps/test/an-common/_sip.so')
 
             for job in jobs:
-                tanwcs = job.tanwcs
-                if not tanwcs:
-                    continue
-                # convert to an_common.sip.Tan
-                tanwcs = tanwcs.to_tanwcs()
-                # in bounds?
-                # write to .wcs file.
                 fn = tempdir + '/' + 'gmaps-' + job.jobid
                 wcsfn = fn + '.wcs'
-                tanwcs.write_to_file(wcsfn)
-                logging.debug('Writing WCS file ' + wcsfn)
-                filenames.append(fn)
-
                 jpegfn = fn + '.jpg'
-                logging.debug('Writing JPEG file ' + wcsfn)
-                field = job.field
-                tmpjpeg = convert(job, field, 'jpeg-norm')
-                shutil.copy(tmpjpeg, jpegfn)
+
+                if not os.path.exists(wcsfn):
+                    tanwcs = job.tanwcs
+                    if not tanwcs:
+                        continue
+                    # convert to an_common.sip.Tan
+                    tanwcs = tanwcs.to_tanwcs()
+                    # write to .wcs file.
+                    tanwcs.write_to_file(wcsfn)
+                    logging.debug('Writing WCS file ' + wcsfn)
+
+                if not os.path.exists(jpegfn):
+                    logging.debug('Writing JPEG file ' + jpegfn)
+                    field = job.field
+                    tmpjpeg = convert(job, field, 'jpeg-norm')
+                    shutil.copy(tmpjpeg, jpegfn)
+
+                filenames.append(fn)
 
         else:
             # Compute list of files via DB query
