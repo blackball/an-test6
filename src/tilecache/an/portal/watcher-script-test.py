@@ -290,6 +290,65 @@ def real_handle_job(job, sshconfig):
     job.save()
 
 
+def handle_tarball(basedir, filenames, submission):
+    validpaths = []
+    for fn in filenames:
+        path = os.path.join(basedir, fn)
+        log('Path "%s"' % path)
+        if not os.path.exists(path):
+            log('Path "%s" does not exist.' % path)
+            continue
+        if os.path.islink(path):
+            log('Path "%s" is a symlink.' % path)
+            continue
+        if os.path.isfile(path):
+            validpaths.append(path)
+        else:
+            log('Path "%s" is not a file.' % path)
+
+    if len(validpaths) == 0:
+        userlog('Tar file contains no regular files.')
+        bailout(submission, "tar file contains no regular files.")
+        return -1
+
+    log('Got %i paths.' % len(validpaths))
+
+    for p in validpaths:
+        field = AstroField(user = submission.user,
+                           origname = os.path.basename(p),
+                           )
+        field.save()
+        log('New field ' + str(field.id))
+        destfile = field.filename()
+        log('Moving %s to %s' % (p, destfile))
+        shutil.move(p, destfile)
+
+        if len(validpaths) == 1:
+            job = Job(
+                jobid = submission.jobid,
+                submission = submission,
+                field = field,
+                )
+            job.save()
+            submission.save()
+            # One file in tarball: convert straight to a Job.
+            log('Single-file tarball.')
+            rtn = handle_job(job, sshconfig)
+            if rtn:
+                return rtn
+            break
+
+        job = Job(submission = submission,
+                  field = field,
+                  jobid = Job.generate_jobid(),
+                  )
+        job.status = 'Queued'
+        job.save()
+        submission.save()
+        log('Enqueuing Job: ' + str(job))
+        Job.submit_job_or_submission(job)
+
+
 def main(sshconfig, joblink):
     if not os.path.islink(joblink):
         log('Expected second argument to be a symlink; "%s" isn\'t.' % joblink)
@@ -355,7 +414,7 @@ def main(sshconfig, joblink):
     if is_tarball(uncomp):
         log('file is tarball.')
         # create temp dir to extract tarfile.
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp('', 'tarball')
         cmd = 'tar xvf %s -C %s' % (uncomp, tempdir)
         userlog('Extracting tarball...')
         (rtn, out, err) = run_command(cmd)
@@ -364,62 +423,8 @@ def main(sshconfig, joblink):
             bailout(submission, 'failed to extract tar file')
             return -1
         fns = out.strip('\n').split('\n')
-        validpaths = []
-        for fn in fns:
-            path = os.path.join(tempdir, fn)
-            log('Path "%s"' % path)
-            if not os.path.exists(path):
-                log('Path "%s" does not exist.' % path)
-                continue
-            if os.path.islink(path):
-                log('Path "%s" is a symlink.' % path)
-                continue
-            if os.path.isfile(path):
-                validpaths.append(path)
-            else:
-                log('Path "%s" is not a file.' % path)
-
-        if len(validpaths) == 0:
-            userlog('Tar file contains no regular files.')
-            bailout(submission, "tar file contains no regular files.")
-            return -1
-
-        log('Got %i paths.' % len(validpaths))
-
-        for p in validpaths:
-            field = AstroField(user = submission.user,
-                               origname = os.path.basename(p),
-                               )
-            field.save()
-            log('New field ' + str(field.id))
-            destfile = field.filename()
-            log('Moving %s to %s' % (p, destfile))
-            shutil.move(p, destfile)
-
-            if len(validpaths) == 1:
-                job = Job(
-                    jobid = submission.jobid,
-                    submission = submission,
-                    field = field,
-                    )
-                job.save()
-                submission.save()
-                # One file in tarball: convert straight to a Job.
-                log('Single-file tarball.')
-                rtn = handle_job(job, sshconfig)
-                if rtn:
-                    return rtn
-                break
-
-            job = Job(submission = submission,
-                      field = field,
-                      jobid = Job.generate_jobid(),
-                      )
-            job.status = 'Queued'
-            job.save()
-            submission.save()
-            log('Enqueuing Job: ' + str(job))
-            Job.submit_job_or_submission(job)
+        handle_tarball(tempdir, fns, submission)
+        shutil.rmtree(tempdir)
 
     else:
         # Not a tarball.

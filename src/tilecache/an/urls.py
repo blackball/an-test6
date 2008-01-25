@@ -12,11 +12,14 @@ urlpatterns = patterns('',
                         {'template_name': 'portal/changepassword.html'}),
                        (r'^changepassword/done/', 'django.contrib.auth.views.password_change_done',
                         {'template_name': 'portal/changedpassword.html'}),
-                       (r'^resetpassword/',   'django.contrib.auth.views.password_reset'),
+                       (r'^resetpassword/',   'django.contrib.auth.views.password_reset',
+                        {'template_name': 'portal/resetpassword.html'}),
                        (r'^job/', include('an.portal.urls')),
 					   (r'^vo/', include('an.vo.urls')),
                        (r'^testbed/', include('an.testbed.urls')),
                        (r'^gmaps/$', 'an.tile.views.index'),
+                       #
+                       (r'^$', 'an.portal.newjob.newlong'),
                        # This is a fake placeholder to allow {% url %} and reverse() to resolve an.media to /anmedia.
                        # (see also media() in an/__init__.py)
                        (r'^anmedia/', 'an.media'),

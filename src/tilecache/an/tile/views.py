@@ -331,7 +331,7 @@ def get_tile(request):
                 jpegfn = fn + '.jpg'
                 logging.debug('Writing JPEG file ' + wcsfn)
                 field = job.field
-                tmpjpeg = convert(job, field, 'jpeg')
+                tmpjpeg = convert(job, field, 'jpeg-norm')
                 shutil.copy(tmpjpeg, jpegfn)
 
         else:

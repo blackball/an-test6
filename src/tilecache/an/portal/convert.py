@@ -227,9 +227,10 @@ def convert(job, field, fn):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'jpeg':
+    elif fn == 'jpeg-norm':
         infn = convert(job, field, 'pnm')
-        cmd = 'pnmtojpeg %s > %s' % (infn, fullfn)
+        #cmd = 'pnmtojpeg %s > %s' % (infn, fullfn)
+        cmd = 'pnmnorm %s | pnmtojpeg > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
