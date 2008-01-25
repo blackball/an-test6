@@ -117,7 +117,7 @@ static void print_help(const char* progname) {
            "  [--y-column <name>]: for xyls inputs: the name of the FITS column containing the Y coordinate of the sources.  (-Y)\n"
            "  [--sort-column <name>]: for xyls inputs: the name of the FITS column that should be used to sort the sources  (-s)\n"
            "  [--sort-ascending]: when sorting, sort in ascending (smallest first) order   (-a)\n"
-		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
+		   "  [--depth <number1>-<number2>]: consider hypotheses generated from field objects num1-num2   (-D)\n"
 	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections.  (-t <#>)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
 	       "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
