@@ -7,39 +7,20 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from an.portal import views
 
-from an.util.w3c_validator import W3CValidator
+from an.portal.test_common import PortalTestCase
 
-import an.gmaps_config as config
-
-class LoginTestCases(TestCase):
+class LoginTestCases(PortalTestCase):
     def setUp(self):
-        self.urlprefix = 'http://testserver'
-        # create some dummy accounts
-        self.u1 = 'test1@astrometry.net'
-        self.p1 = 'password1'
-        accts = [ (self.u1, self.p1),
-                  ('test2@astrometry.net', 'password2'), ]
-        for (e, p) in accts:
-            User.objects.create_user(e, e, p).save()
-        #self.loginurl = reverse('an.portal.views.login')
+        super(LoginTestCases, self).setUp()
         self.loginurl = reverse('an.login')
         self.logouturl = reverse('an.logout')
-
-    def login1(self):
-        self.client.login(username=self.u1, password=self.p1)
 
     def login_with(self, username, password):
         resp = self.client.post(self.loginurl, { 'username': username, 'password': password })
         return resp
 
-    def validatePage(self, url):
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 200)
-        v = W3CValidator(config.w3c_validator_url)
-        self.assert_(v.validateText(resp.content))
-
     def testLoginFormValid(self):
-        validatePage(self.loginurl)
+        self.validatePage(self.loginurl)
 
     def testLoginForm(self):
         print 'Login url is %s' % self.loginurl

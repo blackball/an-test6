@@ -13,7 +13,7 @@ class W3CValidator:
         postdata = urllib.urlencode({ 'fragment' : text })
         (f, filename) = tempfile.mkstemp('.html', 'w3cvalid-')
         os.close(f)
-        (filename, headers) = urllib.urlretrieve(self.url, filename, None, postdata)
+        (fn, headers) = urllib.urlretrieve(self.url, filename, None, postdata)
         print 'Headers:'
         for (k,v) in headers.items():
             print '  ', k, '=', v
