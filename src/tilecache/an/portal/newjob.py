@@ -7,7 +7,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 from django.core.urlresolvers import reverse
-
+from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 
 import an
@@ -263,13 +263,21 @@ def newurl(request):
         if 'jobid' in request.session:
             del request.session['jobid']
         form = SimpleURLForm()
-        
-    t = loader.get_template('portal/newjoburl.html')
-    c = RequestContext(request, {
+
+    return render_to_response(
+        'portal/newjoburl.html',
+        {
         'form' : form,
         'urlerr' : urlerr,
-        })
-    return HttpResponse(t.render(c))
+        },
+        context_instance = RequestContext(request))
+        
+    #t = loader.get_template('portal/newjoburl.html')
+    #c = RequestContext(request, {
+    #    'form' : form,
+    #    'urlerr' : urlerr,
+    #    })
+    #return HttpResponse(t.render(c))
 
 @login_required
 def newfile(request):

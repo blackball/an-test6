@@ -14,17 +14,20 @@ class W3CValidator:
         (f, filename) = tempfile.mkstemp('.html', 'w3cvalid-')
         os.close(f)
         (fn, headers) = urllib.urlretrieve(self.url, filename, None, postdata)
-        print 'Headers:'
-        for (k,v) in headers.items():
-            print '  ', k, '=', v
         key = 'X-W3C-Validator-Status'
         if not (key in headers):
             print 'W3CValidator: no key "%s" in response headers.  Results saved in file %s' % (key, filename)
+            print 'Headers:'
+            for (k,v) in headers.items():
+                print '  ', k, '=', v
             return False
         if headers[key] == 'Valid':
             os.remove(filename)
             return True
         print 'W3CValidator: %s = %s.  Results saved in file %s' % (key, headers[key], filename)
+        print 'Headers:'
+        for (k,v) in headers.items():
+            print '  ', k, '=', v
         return False
 
 

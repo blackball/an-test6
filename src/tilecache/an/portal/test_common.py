@@ -10,6 +10,7 @@ import an.gmaps_config as config
 
 class PortalTestCase(TestCase):
     def setUp(self):
+        super(PortalTestCase, self).setUp()
         self.urlprefix = 'http://testserver'
         # create some dummy accounts
         self.u1 = 'test1@astrometry.net'
