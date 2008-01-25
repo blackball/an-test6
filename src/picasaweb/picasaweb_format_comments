@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# usage:
+#   ./picasaweb_format_comments fitsfile
+# comments:
+#   brittle!
+#
+fitsfile="$1"
+
+# human-readable comment
+commentfile0=$fitsfile.tag0
+echo "<content>" > $commentfile0
+# wcsinfo "$fitsfile" >> $commentfile0
+echo "</content>" >> $commentfile0
+
+# machine-readable comments
+commentfile1=$fitsfile.tag1
+echo "<content>" > $commentfile1
+echo "machine-readable TAN WCS:" >> $commentfile1
+commentfile2=$fitsfile.tag2
+fitsline=""
+lastbyte=0
+sip=0
+while [[ ${fitsline:0:4} != "END " ]]; do
+    ((lastbyte=$lastbyte + 80))
+    fitsline="$(head --bytes=$lastbyte $fitsfile | tail --bytes=80)"
+
+# TAN part
+    echo "$fitsline" | sed -n 's/^\(EQUINOX\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile1
+    echo "$fitsline" | sed -n 's/^\(CRPIX[12]\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile1
+    echo "$fitsline" | sed -n 's/^\(CRVAL[12]\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile1
+    echo "$fitsline" | sed -n 's/^\(CD[12]\_[12]\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile1
+
+# SIP part
+    if [[ ${fitsline:0:7} == "A_ORDER" ]]; then
+	echo "<content>" > $commentfile2
+	echo "machine-readable SIP WCS:" >> $commentfile2
+	sip=1
+    fi
+    echo "$fitsline" | sed -n 's/^\(A_ORDER\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile2
+    echo "$fitsline" | sed -n 's/^\(A_[0-9]_[0-9]\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile2
+    echo "$fitsline" | sed -n 's/^\(B_ORDER\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile2
+    echo "$fitsline" | sed -n 's/^\(B_[0-9]_[0-9]\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile2
+done
+
+# close up
+echo "</content>" >> $commentfile1
+if [ $sip ]; then
+    echo "</content>" >> $commentfile2
+fi
