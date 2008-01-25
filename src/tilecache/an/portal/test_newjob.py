@@ -22,8 +22,6 @@ class NewJobTestCases(PortalTestCase):
         self.assertEqual(resp.status_code, 302)
         redir = self.urlprefix + self.loginurl + '?next=' + url
         self.assertEqual(resp['Location'], redir)
-        #print 'Redirect to', resp['Location']
-        #print '(' + redir + ')'
 
     def testLongFormRedirects(self):
         self.assertRedirectsToLogin(self.joblongurl)
