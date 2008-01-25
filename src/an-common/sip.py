@@ -96,6 +96,13 @@ class Tan(ctypes.Structure):
             )
         return (ramin.value, ramax.value, decmin.value, decmax.value)
 
+    def write_to_file(self, fn):
+        if fn is None:
+            raise Exception, "Can't have None filename."
+        cfn = c_char_p(fn)
+        rtn = _sip.tan_write_to_file(ctypes.pointer(self), cfn)
+        return rtn
+    
     def __str__(self):
         return '<Tan: crval=(%g, %g), crpix=(%g, %g), cd=(%g, %g; %g, %g), imagew=%d, imageh=%d>' % \
                (self.crval[0], self.crval[1], self.crpix[0], self.crpix[1], self.cd[0], self.cd[1],
@@ -137,7 +144,6 @@ class Sip(ctypes.Structure):
                 ctypes.pointer(ra),
                 ctypes.pointer(dec))
         return ra.value, dec.value
-
 
 if __name__ == '__main__':
     t= Tan()

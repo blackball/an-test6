@@ -458,22 +458,23 @@ class Job(models.Model):
     def get_relative_filename(self, fn):
         return os.path.join(self.get_relative_job_dir(), fn)
 
+    @staticmethod
     def timenow():
         return datetime.datetime.utcnow()
-    timenow = staticmethod(timenow)
 
+    @staticmethod
     def format_time(t):
         if not t:
             return None
         return t.strftime('%Y-%m-%d %H:%M:%S+Z')
-    format_time = staticmethod(format_time)
     
+    @staticmethod
     def format_time_brief(t):
         if not t:
             return None
         return t.strftime('%Y-%m-%d %H:%M')
-    format_time_brief = staticmethod(format_time_brief)
 
+    @staticmethod
     def create_dir_for_jobid(jobid):
         d = Job.s_get_job_dir(jobid)
         # HACK - more careful here...
@@ -481,28 +482,27 @@ class Job(models.Model):
             return
         mode = 0770
         os.makedirs(d, mode)
-    create_dir_for_jobid = staticmethod(create_dir_for_jobid)
 
+    @staticmethod
     def s_get_job_dir(jobid):
         return os.path.join(config.jobdir, Job.s_get_relative_job_dir(jobid))
-    s_get_job_dir = staticmethod(s_get_job_dir)
     
+    @staticmethod
     def get_job_filename(jobid, fn):
         return os.path.join(Job.s_get_job_dir(jobid), fn)
-    get_job_filename = staticmethod(get_job_filename)
 
+    @staticmethod
     def s_get_relative_job_dir(jobid):
         return os.path.join(*jobid.split('-'))
-    s_get_relative_job_dir = staticmethod(s_get_relative_job_dir)
 
+    @staticmethod
     def generate_jobid():
         today = datetime.date.today()
         jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
                                     today.month, random.randint(0, 99999999))
         return jobid
-    generate_jobid = staticmethod(generate_jobid)
 
-
+    @staticmethod
     def submit_job_or_submission(j):
         os.umask(07)
         j.create_job_dir()
@@ -510,4 +510,4 @@ class Job(models.Model):
         jobdir = j.get_job_dir()
         link = config.jobqueuedir + j.jobid
         os.symlink(jobdir, link)
-    submit_job_or_submission = staticmethod(submit_job_or_submission)
+

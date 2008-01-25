@@ -17,10 +17,39 @@
 */
 
 #include <math.h>
+#include <errno.h>
+#include <string.h>
 
 #include "sip_qfits.h"
 #include "an-bool.h"
 #include "fitsioutils.h"
+
+int tan_write_to_file(const tan_t* tan, const char* fn) {
+	FILE* fid;
+	qfits_header* hdr;
+	int res;
+	fid = fopen(fn, "wb");
+	if (!fid) {
+		fprintf(stderr, "Failed to open file %s to write WCS header: %s\n", fn, strerror(errno));
+		return -1;
+	}
+	hdr = tan_create_header(tan);
+	if (!hdr) {
+		fprintf(stderr, "Failed to create FITS header from WCS.\n");
+		return -1;
+	}
+	res = qfits_header_dump(hdr, fid);
+	qfits_header_destroy(hdr);
+	if (res) {
+		fprintf(stderr, "Failed to write FITS header to file %s: %s\n", fn, strerror(errno));
+		return -1;
+	}
+	if (fclose(fid)) {
+		fprintf(stderr, "Failed to close file %s after writing WCS header: %s\n", fn, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
 
 static void wcs_hdr_common(qfits_header* hdr, const tan_t* tan) {
 	qfits_header_add(hdr, "WCSAXES", "2", NULL, NULL);
