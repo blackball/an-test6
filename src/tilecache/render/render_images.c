@@ -30,6 +30,12 @@
 #include "md5.h"
 
 char* image_dir = "/home/gmaps/apod-solves";
+/*
+  char* image_dirs[] = {
+  "/home/gmaps/apod-solves",
+  "/data2/test/userimages",
+  }
+*/
 
 char* user_image_dirs[] = {
 	"/home/gmaps/ontheweb-data/",
@@ -183,7 +189,12 @@ int render_images(unsigned char* img, render_args_t* args) {
 		logmsg("Base filename: \"%s\"\n", basefn);
 
 		if (args->filelist) {
-			asprintf_safe(&basepath, "%s/%s", image_dir, basefn);
+			// absolute path?
+			if (basefn[0] == '/') {
+				basepath = strdup(basefn);
+			} else {
+				asprintf_safe(&basepath, "%s/%s", image_dir, basefn);
+			}
 			basefn = basepath;
 			logmsg("Base path: \"%s\"\n", basefn);
 		}

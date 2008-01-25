@@ -6,6 +6,7 @@ from django.db.models import Q
 from an.tile.models import Image
 
 from an.portal.job import Submission, Job, AstroField
+from an.portal.convert import convert
 
 import re
 import os.path
@@ -19,6 +20,7 @@ import popen2
 import sha
 import logging
 import commands
+import shutil
 
 import sip
 
@@ -320,11 +322,17 @@ def get_tile(request):
                 tanwcs = tanwcs.to_tanwcs()
                 # in bounds?
                 # write to .wcs file.
-                fn = tempdir + '/' + 'job-' + job.jobid
+                fn = tempdir + '/' + 'gmaps-' + job.jobid
                 wcsfn = fn + '.wcs'
                 tanwcs.write_to_file(wcsfn)
                 logging.debug('Writing WCS file ' + wcsfn)
                 filenames.append(fn)
+
+                jpegfn = fn + '.jpg'
+                logging.debug('Writing JPEG file ' + wcsfn)
+                field = job.field
+                tmpjpeg = convert(job, field, 'jpeg')
+                shutil.copy(tmpjpeg, jpegfn)
 
         else:
             # Compute list of files via DB query

@@ -227,6 +227,12 @@ def convert(job, field, fn):
         run_convert_command(cmd)
         return fullfn
 
+    elif fn == 'jpeg':
+        infn = convert(job, field, 'pnm')
+        cmd = 'pnmtojpeg %s > %s' % (infn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
     elif fn == 'indexxyls':
         wcsfn = job.get_filename('wcs.fits')
         indexrdfn = job.get_filename('index.rd.fits')

@@ -98,20 +98,29 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		logmsg("Base filename: \"%s\"\n", basefn);
 
 		triedwcs = sl_new(4);
-		for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
-			wcsfn = sl_appendf(triedwcs, "%s/%s%s", wcs_dirs[i], basefn, (fullfilename ? "" : ".wcs"));
-			if (file_readable(wcsfn))
-				break;
-			wcsfn = NULL;
-		}
-		if (!wcsfn) {
-			logmsg("Failed to find WCS file with basename \"%s\".\n", basefn);
-			logmsg("Tried:\n");
-			for (i=0; i<sl_size(triedwcs); i++) {
-				logmsg("  %s\n", sl_get(triedwcs, i));
+		if (basefn[0] == '/') {
+			wcsfn = sl_appendf(triedwcs, "%s.wcs", basefn);
+			if (!file_readable(wcsfn)) {
+				logmsg("Failed to read WCS file \"%s\".\n", basefn);
+				sl_free2(triedwcs);
+				goto nextfile;
 			}
-			sl_free2(triedwcs);
-			goto nextfile;
+		} else {
+			for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
+				wcsfn = sl_appendf(triedwcs, "%s/%s%s", wcs_dirs[i], basefn, (fullfilename ? "" : ".wcs"));
+				if (file_readable(wcsfn))
+					break;
+				wcsfn = NULL;
+			}
+			if (!wcsfn) {
+				logmsg("Failed to find WCS file with basename \"%s\".\n", basefn);
+				logmsg("Tried:\n");
+				for (i=0; i<sl_size(triedwcs); i++) {
+					logmsg("  %s\n", sl_get(triedwcs, i));
+				}
+				sl_free2(triedwcs);
+				goto nextfile;
+			}
 		}
 
         res = sip_read_header_file(wcsfn, &wcs);
