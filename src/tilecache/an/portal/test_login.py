@@ -12,11 +12,6 @@ from an.util.w3c_validator import W3CValidator
 import an.gmaps_config as config
 
 class LoginTestCases(TestCase):
-    # assertContains(response, text, count=None, status_code=200)
-    # assertFormError(response, form, field, errors)
-    # assertRedirects(response, expected_url, status_code=302, target_status_code=200)
-    # assertTemplateUsed(response, template_name)
-    
     def setUp(self):
         self.urlprefix = 'http://testserver'
         # create some dummy accounts
@@ -37,11 +32,14 @@ class LoginTestCases(TestCase):
         resp = self.client.post(self.loginurl, { 'username': username, 'password': password })
         return resp
 
-    def testLoginFormValid(self):
-        resp = self.client.get(self.loginurl)
+    def validatePage(self, url):
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         v = W3CValidator(config.w3c_validator_url)
         self.assert_(v.validateText(resp.content))
+
+    def testLoginFormValid(self):
+        validatePage(self.loginurl)
 
     def testLoginForm(self):
         print 'Login url is %s' % self.loginurl
