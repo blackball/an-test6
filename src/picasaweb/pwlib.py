@@ -9,9 +9,87 @@ except ImportError:
   from elementtree import ElementTree
 import gdata.photos, gdata.photos.service
 import gdata.service
+import sys
+import getopt
 
-#import atom.service
-#import atom
+AUTH_ENV = "GDATA_PW_AUTHTOKEN"
+HELPSTRING_BASE = ' --user=photo_user --album=album_id [--auth="auth token"]'
+
+def pwInit():
+  try:
+    pws = gdata.photos.service.PhotosService()
+  except:
+    print "Error creating GData service. Are all the relevant python libraries installed?"
+    sys.exit(1)
+  return pws
+
+
+def pwAuth(pws,gdata_authtoken):
+  from os import environ
+  if gdata_authtoken=='' and AUTH_ENV in environ:
+    gdata_authtoken=environ[AUTH_ENV]
+
+  if gdata_authtoken=='':
+    print "Must authenticate and export auth token to environment variable "+AUTH_ENV
+    sys.exit(3)
+  else:
+    pws.auth_token=gdata_authtoken
+    pws._GDataService__auth_token=gdata_authtoken
+
+
+
+def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
+  baseopts = ["authtoken=","auth=","user=","album="]
+  baseopts=extraOpts+baseopts
+
+  # parse command line options
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], "", baseopts)
+  except getopt.error, msg:
+    print   HELPSTRING+HELPSTRING_BASE
+    sys.exit(2)
+
+  gdata_authtoken=''
+  puser=''
+  palbum=''
+
+  # Process options
+  for o, a in opts:
+    if o == "--auth" or o == "--authtoken":
+      gdata_authtoken=a
+    elif o == "--user":
+      puser=a.lower()
+    elif o == "--album":
+      palbum=a
+    else:
+      for i in range(len(extraOpts)):
+        if o == '--'+extraOpts[i][:-1]:
+          extraDefaults[i]=a
+  if puser=='' or palbum=='':
+    print HELPSTRING+HELPSTRING_BASE
+    sys.exit(2)
+
+  return extraDefaults+[puser,palbum,gdata_authtoken]
+
+
+def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
+  rez=pwParseBasicOpts(extraOpts+["photoid="],extraDefaults+[""],HELPSTRING+" --photoid=photo_id")
+  if rez[len(extraOpts)]=="":
+    print "PhotoID cannot be missing."
+    print HELPSTRING+" --photoid=photo_id"+HELPSTRING_BASE
+    sys.exit(2)
+  return rez
+
+
+
+def GetPhotoEntry(pws,puser,palbum,pphotoid):
+  albumfeed='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/?kind=photo'
+  af=pws.GetFeed(albumfeed)
+  for e in af.entry:
+    ll=e.GetFeedLink().href
+    if ll[ll.rfind('/photoid/')+9:]==pphotoid:
+      return e
+  return None
 
 
 def getAllTagEntries(tag,pws):
