@@ -1,23 +1,46 @@
 #!/bin/bash
 #
 # usage:
-#   ./picasaweb_format_comments fitsfile
+#   ./picasaweb_format_comments file.wcs
 # comments:
+#   relies on .wcs and image in same directory with same file prefix
 #   brittle!
 #
-fitsfile="$1"
+fitsfile=$1
+prefix=$(echo $fitsfile | sed 's/^\(.*\)\.wcs/\1/')
+inputimage=$(ls $prefix.jpg $prefix.gif $prefix.tif $prefix.png 2> /dev/null | head -1)
 
 # human-readable comment
-commentfile0=$fitsfile.tag0
+commentfile0=$prefix\_tag0.txt
 echo "<content>" > $commentfile0
-# wcsinfo "$fitsfile" >> $commentfile0
+infofile=$(basename $inputimage).txt
+wcsinfo "$fitsfile" > $infofile
+echo "Your field is centered at (RA, Dec)" >> $commentfile0
+sed -n -e 's/ra_center \([0-9\.]*\)/= \(\1,/p' -e 's/dec_center \([0-9\.+-]*\)/\1\)/p' $infofile >> $commentfile0
+sed -n -e 's/ra_center_hms \([0-9\.:]*\)/= \(\1,/p' -e 's/dec_center_dms \([0-9\.:+-]*\)/\1\)/p' $infofile >> $commentfile0
+echo "and spans solid angle" >> $commentfile0
+sed -n -e 's/fieldw \([0-9\.]*\)/\1 x/p' -e 's/fieldh \([0-9\.]*\)/\1/p' -e 's/fieldunits \([a-z]*\)/\1./p' $infofile >> $commentfile0
 echo "</content>" >> $commentfile0
 
+# human-readable comment about sources
+ppmfile=$(basename $inputimage).ppm
+plotfile=$(basename $inputimage)\_out.png
+convert $inputimage $ppmfile
+plot-constellations -w $fitsfile -i $ppmfile -o $plotfile -N -C -B > $infofile
+\rm -fv $ppmfile $plotfile
+if [ -s $infofile ]; then
+    commentfile3=$prefix\_tag3.txt
+    echo "<content>" > $commentfile3
+    echo "Your image contains the following:" >> $commentfile3
+    cat $infofile >> $commentfile3
+    echo "</content>" >> $commentfile3
+fi
+
 # machine-readable comments
-commentfile1=$fitsfile.tag1
+commentfile1=$prefix\_tag1.txt
 echo "<content>" > $commentfile1
-echo "machine-readable TAN WCS:" >> $commentfile1
-commentfile2=$fitsfile.tag2
+echo "(please do not delete) TAN:" >> $commentfile1
+commentfile2=$prefix\_tag2.txt
 fitsline=""
 lastbyte=0
 sip=0
@@ -34,7 +57,7 @@ while [[ ${fitsline:0:4} != "END " ]]; do
 # SIP part
     if [[ ${fitsline:0:7} == "A_ORDER" ]]; then
 	echo "<content>" > $commentfile2
-	echo "machine-readable SIP WCS:" >> $commentfile2
+	echo "(please do not delete) SIP:" >> $commentfile2
 	sip=1
     fi
     echo "$fitsline" | sed -n 's/^\(A_ORDER\)\ *=\ *\([0-9\.-]*\).*$/\1=\2/p' >> $commentfile2
