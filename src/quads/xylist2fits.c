@@ -32,7 +32,7 @@
 #include "boilerplate.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "hdx:y:t:"
+#define OPTIONS "qhdx:y:t:"
 
 void print_help(char* progname) {
     printf("usage:\n"
@@ -40,7 +40,8 @@ void print_help(char* progname) {
            "    [-d]: write double format (float format is default).\n"
            "    [-x <name-of-x-column-to-write>] (default: X)\n"
            "    [-y <name-of-y-column-to-write>] (default: Y)\n"
-           "    [-t <Astrometry.net filetype>] (default: %s)\n\n",
+           "    [-t <Astrometry.net filetype>] (default: %s)\n"
+           "    [-q]: quiet\n\n",
            progname, AN_FILETYPE_XYLS);
 }
 
@@ -68,6 +69,7 @@ int main(int argc, char** args) {
     char* yname = NULL;
     char* antype = NULL;
     qfits_header* hdr;
+    bool verbose = TRUE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -75,6 +77,9 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+        case 'q':
+            verbose = FALSE;
+            break;
         case 'd':
             doubleformat = 1;
             break;
@@ -103,9 +108,10 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
-    printf("input %s, output %s.\n", infn, outfn);
-
-    printf("reading input...\n");
+	if (verbose){
+    	printf("input %s, output %s.\n", infn, outfn);
+    	printf("reading input...\n");
+	}
 
 	xya = readxysimple(infn);
     if (!xya)
@@ -137,7 +143,9 @@ int main(int argc, char** args) {
     }
 
     N = xya_size(xya);
-    printf("writing %i fields...\n", N);
+	if (verbose){
+    	printf("writing %i fields...\n", N);
+	}
     for (i=0; i<N; i++) {
         int j, M;
         xy* list = xya_ref(xya, i);
