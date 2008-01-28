@@ -166,68 +166,37 @@ solver_test.o: solver.c
 	$(CC) $(CFLAGS) -DTESTING=1 -o $@ -c $<
 
 #######################################
-# KEIR'S SUPER SIMPLE TESTING FRAMEWORK
-# 1. Add your file's test_blah.c and corresponding files needed to compile it
-#    to the all tests executable 'test' by editing the three variables below:
-ALL_TEST_FILES := test_dfind test_ctmf test_simplexy test_dsmooth \
-		test_libkd test_libkd_io
-ALL_TEST_FILES_C := $(addsuffix .c, $(ALL_TEST_FILES))
-ALL_TEST_FILES_O := $(addsuffix .o, $(ALL_TEST_FILES))
-ALL_TEST_FILES_MAIN_C := $(addsuffix -main.c, $(ALL_TEST_FILES))
-ALL_TEST_FILES_MAIN_O := $(addsuffix -main.o, $(ALL_TEST_FILES))
 
-TESTED_OBJS :=
+# Add the basename of your test sources here...
+ALL_TEST_FILES = test_dfind test_ctmf test_simplexy test_dsmooth
 
-$(ALL_TEST_FILES_MAIN_C): %-main.c: make-tests.sh
-$(ALL_TEST_FILES_MAIN_C): %-main.c: %.c
-	$(AN_SHELL) ./make-tests.sh $^ > $@
+ALL_TEST_EXTRA_OBJS :=
+ALL_TEST_LIBS :=
 
-$(ALL_TEST_FILES): %: %-main.o %.o cutest.o
-
-# 2. Add the files you're testing (and their dependencies) here:
+# Add the dependencies here...
 TEST_DFIND_OBJS := dfind.o
-TESTED_OBJS += $(TEST_DFIND_OBJS)
+ALL_TEST_EXTRA_OBJS += $(TEST_DFIND_OBJS)
+ALL_TEST_LIBS += $(ANUTILS_LIB)
 test_dfind: $(TEST_DFIND_OBJS) $(ANUTILS_LIB)
 
-test_anfits_table: $(REMAKE_ANUTILS) 
-	$(CC) -o $@ test_anfits_table-main.o test_anfits_table.o cutest.o ../an-common/libanutils.a  ../qfits-an/stage/lib/libqfits.a
-
-TEST_BL_OBJS := 
-TESTED_OBJS += $(TEST_BL_OBJS)
-test_bl: $(TEST_BL_OBJS) $(ANUTILS_LIB)
-
 TEST_CTMF_OBJS := ctmf.o
-TESTED_OBJS += $(TEST_CTMF_OBJS)
+ALL_TEST_EXTRA_OBJS += $(TEST_CTMF_OBJS)
 test_ctmf: $(TEST_CTMF_OBJS)
 
 TEST_SIMPLEXY_OBJS := simplexy.o ctmf.o dsigma.o dobjects.o dselip.o \
 		dallpeaks.o qsort_reentrant.o radix.o dsmooth.o dfind.o \
 		dmedsmooth.o dpeaks.o dcen3x3.o
-TESTED_OBJS += $(TEST_SIMPLEXY_OBJS)
-test_simplexy: $(TEST_SIMPLEXY_OBJS)
+ALL_TEST_EXTRA_OBJS += $(TEST_SIMPLEXY_OBJS)
+test_simplexy: $(TEST_SIMPLEXY_OBJS) $(ANUTILS_LIB)
 
 TEST_DSMOOTH_OBJS := dsmooth.o
-TESTED_OBJS += $(TEST_DSMOOTH_OBJS)
+ALL_TEST_EXTRA_OBJS += $(TEST_DSMOOTH_OBJS)
 test_dsmooth: $(TEST_DSMOOTH_OBJS)
 
-TEST_LIBKD_OBJS := 
-TESTED_OBJS += $(TEST_LIBKD_OBJS)
-test_libkd: $(TEST_LIBKD_OBJS) $(LIBKD_NOIO_LIB) $(ANUTILS_LIB)
+include $(COMMON)/makefile.tests
 
-TEST_LIBKD_IO_OBJS := 
-TESTED_OBJS += $(TEST_LIBKD_IO_OBJS)
-test_libkd_io: $(TEST_LIBKD_IO_OBJS) $(LIBKD_LIB) $(QFITS_LIB) \
-		$(ANUTILS_LIB)
-
-# You shouldn't need to edit this.
-TEST_SOURCES := $(ALL_TEST_FILES_C)
-test.c: make-tests.sh $(TEST_SOURCES)
-	$(AN_SHELL) ./make-tests.sh $(TEST_SOURCES) > $@
-
-test: test.o cutest.o $(ALL_TEST_FILES_O) $(sort $(TESTED_OBJS)) $(LIBKD_LIB) $(QFITS_LIB) $(ANUTILS_LIB)
-
-ALL_OBJ += $(ALL_TEST_FILES_O) $(ALL_TEST_FILES_MAIN_O) cutest.o
-ALL_OBJ += $(TESTED_OBJS) test.o
+ALL_OBJ += $(ALL_TEST_FILES_O) $(ALL_TEST_FILES_MAIN_O)
+ALL_OBJ += $(ALL_TEST_EXTRA_OBJS) test.o
 
 GENERATED_FILES += $(ALL_TEST_FILES_MAIN_C)
 
