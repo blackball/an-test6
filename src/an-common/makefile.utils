@@ -21,8 +21,12 @@ ANUTILS_LIB := $(ANUTILS_DIR)/libanutils.a
 $(ANUTILS_LIB):
 	cd $(ANUTILS_DIR) && $(MAKE) libanutils.a
 
-REMAKE_ANUTILS := remake-anutils
+#REMAKE_ANUTILS := remake-anutils
+#.PHONY: $(REMAKE_ANUTILS)
+#$(REMAKE_ANUTILS):
+#	cd $(ANUTILS_DIR) && $(MAKE) libanutils.a
+
+REMAKE_ANUTILS := $(ANUTILS_DIR)/remake-anutils
 .PHONY: $(REMAKE_ANUTILS)
 $(REMAKE_ANUTILS):
 	cd $(ANUTILS_DIR) && $(MAKE) libanutils.a
-

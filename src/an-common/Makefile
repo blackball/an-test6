@@ -107,12 +107,6 @@ ALL_OBJ += gnu-specific.o
 ALL_TARGETS := gnu-specific-test.o gnu-specific-test-canonicalize \
 	gnu-specific-config.h
 
-#gnu-specific-test-canonicalize
-#	(./gnu-specific-test-canonicalize) > $@
-#gnu-specific-test-canonicalize: gnu-specific-config.c
-#	$(CC) -o $@ $(CFLAGS) -DTEST_CANONICALIZE_FILE_NAME $(LDFLAGS) $^ || \
-#		echo "#define NEED_CANONICALIZE_FILE_NAME 1"
-
 DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)
 ifndef NO_QFITS
 DEP_PREREQS := $(QFITS_LIB)
@@ -127,6 +121,17 @@ stellarium-constellations.c:
 grab-stellarium-constellations: grab-stellarium-constellations.o \
 		starutil.o mathutil.o bl.o an-endian.o
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ -lm
+
+### TESTS
+
+ALL_TEST_FILES = test_anfits_table
+ALL_TEST_EXTRA_OBJS = 
+ALL_TEST_LIBS = $(ANUTILS_LIB) $(QFITS_LIB)
+include $(COMMON)/makefile.tests
+
+test_anfits_table: $(ANUTILS_LIB) $(QFITS_LIB)
+
+### /TESTS
 
 # we'll just tack this on here... It depends on cairo, libjpeg, etc, so it's not part
 # of the anX.a libraries.
