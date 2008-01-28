@@ -1,3 +1,6 @@
+#ifndef ANFITS_H
+#define ANFITS_H
+
 #include "qfits_table.h"
 
 enum anfits_type_e {
@@ -21,3 +24,4 @@ int             anfits_table_ncols(const anfits_table_t* table);
 void            anfits_table_read_column(anfits_table_t* table, const char* name, anfits_type_t, void **out);
 
 
+#endif
