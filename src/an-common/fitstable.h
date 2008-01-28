@@ -6,6 +6,53 @@
 #include "an-bool.h"
 #include "bl.h"
 
+//
+// Multi-extension fits tables???jjj
+
+/*
+ * 0. struct mystar {
+ *    double ra;
+ *    double dec;
+ *    double flux[3];
+ *    }
+ *    FOR READING
+ *
+ * struct anfits_table_column_struct_map_t {
+ *     int   c_struct_offset;
+ *     int   c_struct_size;
+ *     ctype c_struct_type;
+ *     int   ndim;
+ *     char* fieldname;
+ *     anfits_column_t *column;
+ * }
+ * struct anfits_table_column_t {
+ *     int   ndim;
+ *     char* fieldname;
+ *     char* units;
+ *
+ * }
+ *
+ * struct anfits_table_descr_t {
+ * 	int ncols;
+ * 	anfits_table_column_t *columns;
+ * 	}
+ * 	
+ *
+ * anfits_table_descr_t *descr = anfits_table_descriptor(2);
+ * anfits_add_column_reader(descr, "RA",  mystar, ANFITS_TYPE_DOUBLE, ra);
+ * anfits_add_column_reader(descr, "Dec", mystar, ANFITS_TYPE_DOUBLE, dec);
+ * anfits_add_column_reader_ndim(descr, "Flux", mystar, ANFITS_TYPE_DOUBLE, flux, 3);
+ *
+ * anfits_table_t *table = anfits_open_table(descr, "myfile");
+ * anfits_table_t *table = anfits_open_table_extension(descr, "myfile", 1);
+ *
+struct anfits_table_t {
+	const anfits_column_t *columns;
+	qfits *qfits_crap;
+};
+
+*/
+
 /**
  For quick-n-easy access to a column of data in a FITS BINTABLE.
  */
@@ -100,13 +147,10 @@ fitstable_t* fitstable_open_for_writing(const char* fn);
 
 //void fitstable_free(fitstable_t*);
 
-int fitstable_close(fitstable_t*);
-
+int  fitstable_close(fitstable_t*);
 void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols);
-
 void fitstable_add_column(fitstable_t* tab, fitscol_t* col);
-
-int fitstable_read_extension(fitstable_t* tab, int ext);
+int  fitstable_read_extension(fitstable_t* tab, int ext);
 
 // Write primary header.
 int fitstable_write_header(fitstable_t* t);
@@ -141,17 +185,21 @@ void fitstable_print_missing(fitstable_t* tab, FILE* f);
 
 fitscol_t* fitstable_get_column(fitstable_t* table, int col);
 
+// FIXME read_array from a table into a void* data??
 int fitstable_read_array(const fitstable_t* tab,
                          //const fitscol_t* cols, int Ncols,
                          int offset, int N,
                          void* data, int stride);
 
+// FIXME from data to array???
 int fitstable_write_array(const fitstable_t* tab,
                           int offset, int N,
                           const void* data, int stride);
 
+// FIXME what's extra? find extra what?
 //int fitscolumn_find_extra(fitstable_t* tab, fitscol_t* col, bool claim);
 
+// FIXME why not return a fitstable*?
 // for writing...
 //void fitstable_create_table(fitstable_t* tab);
 

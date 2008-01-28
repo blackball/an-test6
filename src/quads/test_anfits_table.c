@@ -16,7 +16,7 @@ void test_one_column_write_read(CuTest* ct) {
     char* colname = "X";
 
     fn = get_tmpfile();
-    outtab = anfits_table_new_for_writing(fn);
+    outtab = anfits_table_open_for_writing(fn);
     CuAssertPtrNotNull(ct, outtab);
     
     anfits_table_add_column(outtab, colname, ANTYPE_DOUBLE);
@@ -27,20 +27,15 @@ void test_one_column_write_read(CuTest* ct) {
     }
 
     for (i=0; i<N; i++) {
-        CuAssertIntEquals(anfits_table_write_row(outtab, outdata+i), 0);
+        CuAssertIntEquals(ct, anfits_table_write_row(outtab, outdata+i), 0);
     }
-
     CuAssertIntEquals(ct, anfits_table_close(outtab), 0);
 
     tab = anfits_table_open(fn);
     CuAssertPtrNotNull(ct, tab);
-
     CuAssertIntEquals(ct, anfits_table_nrows(tab), N);
 
     anfits_table_read_column(tab, colname, ANTYPE_DOUBLE, &indata);
     CuAssertPtrNotNull(ct, indata);
-
     CuAssertIntEquals(ct, memcmp(outdata, indata, sizeof(outdata)), 0);
 }
-
-
