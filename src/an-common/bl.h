@@ -70,6 +70,9 @@ void* bl_push(bl* list, const void* data);
 // Pops a data item into the given "into" memory.
 void  bl_pop(bl* list, void* into);
 
+// allocates space for a new object and returns a pointer to it
+void* bl_extend(bl* list);
+
 /**
    Removes elements from \c split
    to the end of the list from \c src and appends them to \c dest.

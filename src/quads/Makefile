@@ -189,6 +189,9 @@ TEST_DFIND_OBJS := dfind.o
 TESTED_OBJS += $(TEST_DFIND_OBJS)
 test_dfind: $(TEST_DFIND_OBJS) $(ANUTILS_LIB)
 
+test_anfits_table: $(REMAKE_ANUTILS) 
+	$(CC) -o $@ test_anfits_table-main.o test_anfits_table.o cutest.o ../an-common/libanutils.a  ../qfits-an/stage/lib/libqfits.a
+
 TEST_BL_OBJS := 
 TESTED_OBJS += $(TEST_BL_OBJS)
 test_bl: $(TEST_BL_OBJS) $(ANUTILS_LIB)

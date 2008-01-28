@@ -480,7 +480,8 @@ void* bl_node_append(bl* list, bl_node* node, const void* data) {
 	}
 	// space remains at this node.  add item.
 	dest = NODE_CHARDATA(node) + node->N * list->datasize;
-	memcpy(dest, data, list->datasize);
+	if (data)
+		memcpy(dest, data, list->datasize);
 	node->N++;
 	list->N++;
 	return dest;
@@ -1713,4 +1714,8 @@ char* sl_insert_sorted(sl* list, const char* string) {
     char* copy = strdup(string);
     pl_insert_sorted(list, copy, bl_compare_strings_ascending);
     return copy;
+}
+
+void* bl_extend(bl* list) {
+	return bl_append(list, NULL);
 }

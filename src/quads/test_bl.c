@@ -365,3 +365,15 @@ void test_dl_push(CuTest* tc) {
 	CuAssert(tc, "dl", 2.0 == dl_get(bl, 2));
 	CuAssertIntEquals(tc, dl_check_consistency(bl), 0);
 }
+
+void test_bl_extend(CuTest *tc) {
+	bl* list = bl_new(10, sizeof(int));
+	CuAssertIntEquals(tc, bl_size(list), 0);
+	int *new1 = bl_extend(list);
+	CuAssertPtrNotNull(tc, new1);
+	CuAssertIntEquals(tc, bl_size(list), 1);
+	*new1 = 10;
+	int *new2 = bl_access(list, 0);
+	CuAssertPtrEquals(tc, new2, new1);
+}
+

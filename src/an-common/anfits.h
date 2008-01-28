@@ -14,8 +14,11 @@ struct anfits_table_t;
 typedef struct anfits_table_t anfits_table_t;
 
 anfits_table_t* anfits_table_open_for_writing(const char* fn);
-void            anfits_table_add_column(anfits_table_t* table, const char* name, anfits_type_t type);
+void  anfits_table_add_column(
+					anfits_table_t* table,
+					anfits_type_t type, const char* name, const char* units);
 int             anfits_table_write_row(anfits_table_t* table, ...);
+int anfits_table_write_header(anfits_table_t* table);
 int             anfits_table_close(anfits_table_t* table);
 
 anfits_table_t* anfits_table_open(const char* fn);
