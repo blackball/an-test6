@@ -8,7 +8,7 @@ char* get_tmpfile() {
 
 void test_one_column_write_read(CuTest* ct) {
     anfits_table_t* tab, *outtab;
-    int i, N2;
+    int i;
     int N = 6;
     double outdata[6];
     double* indata;
@@ -35,7 +35,7 @@ void test_one_column_write_read(CuTest* ct) {
     CuAssertPtrNotNull(ct, tab);
     CuAssertIntEquals(ct, anfits_table_nrows(tab), N);
 
-    anfits_table_read_column(tab, colname, ANTYPE_DOUBLE, &indata);
+    indata = anfits_table_read_column(tab, colname, ANTYPE_DOUBLE);
     CuAssertPtrNotNull(ct, indata);
     CuAssertIntEquals(ct, memcmp(outdata, indata, sizeof(outdata)), 0);
 }

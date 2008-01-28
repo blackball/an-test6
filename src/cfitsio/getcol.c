@@ -741,7 +741,7 @@ int ffgcv(  fitsfile *fptr,   /* I - FITS file pointer                       */
 
     if (datatype == TBIT)
     {
-      ffgcx(fptr, colnum, firstrow, firstelem, nelem, (char *) array, status);
+        ffgcx(fptr, colnum, firstrow, firstelem, nelem, (char *) array, status);
     }
     else if (datatype == TBYTE)
     {

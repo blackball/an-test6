@@ -28,6 +28,6 @@ int             anfits_table_ncols(const anfits_table_t* table) {
     return -1;
 }
 
-void            anfits_table_read_column(anfits_table_t* table, const char* name, anfits_type_t, void **out) {
+void            anfits_table_read_column(anfits_table_t* table, const char* name, anfits_type_t type, void **out) {
 }
 

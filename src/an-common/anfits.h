@@ -21,7 +21,7 @@ int             anfits_table_close(anfits_table_t* table);
 anfits_table_t* anfits_table_open(const char* fn);
 int             anfits_table_nrows(const anfits_table_t* table);
 int             anfits_table_ncols(const anfits_table_t* table);
-void            anfits_table_read_column(anfits_table_t* table, const char* name, anfits_type_t, void **out);
+void*           anfits_table_read_column(anfits_table_t* table, const char* name, anfits_type_t type);
 
 
 #endif
