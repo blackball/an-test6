@@ -78,6 +78,20 @@ checktree: checktree.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 fix-bb: fix-bb.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
+### TESTS are great
+
+ALL_TEST_FILES = test_libkd test_libkd_io
+ALL_TEST_EXTRA_OBJS =
+ALL_TEST_LIBS = $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
+
+include $(COMMON)/makefile.tests
+
+test_libkd: $(LIBKD_NOIO) $(ANUTILS_LIB)
+
+test_libkd_io: $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
+
+### /TESTS
+
 .PHONY: realclean clean
 clean:
 	-rm $(LIBKD) $(KD) $(KD_FITS) deps $(DEPS) \
