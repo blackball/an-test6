@@ -170,7 +170,7 @@ solver_test.o: solver.c
 # 1. Add your file's test_blah.c and corresponding files needed to compile it
 #    to the all tests executable 'test' by editing the three variables below:
 ALL_TEST_FILES := test_dfind test_bl test_ctmf test_simplexy test_dsmooth \
-		test_libkd test_libkd_io
+		test_libkd test_libkd_io test_anfits_table
 ALL_TEST_FILES_C := $(addsuffix .c, $(ALL_TEST_FILES))
 ALL_TEST_FILES_O := $(addsuffix .o, $(ALL_TEST_FILES))
 ALL_TEST_FILES_MAIN_C := $(addsuffix -main.c, $(ALL_TEST_FILES))
