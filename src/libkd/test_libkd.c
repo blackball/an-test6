@@ -260,7 +260,7 @@ static void run_test_rs(CuTest* tc, int treetype, int treeopts,
             CuAssert(tc, "inrange", trued2 <= rad2);
             CuAssert(tc, "d2pos", d2 >= 0.0);
             CuAssert(tc, "trued2pos", trued2 >= 0.0);
-            CuAssertDblEquals(tc, sqrt(d2), sqrt(trued2), eps);
+            CuAssertDblEquals(tc, sqrt(d2), sqrt(trued2), sqrt(eps));
         }
         /*
          printf("Naive : ind %i, dist %g.\n", trueind, sqrt(trued2));
