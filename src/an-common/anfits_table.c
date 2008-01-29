@@ -158,9 +158,20 @@ void* anfits_table_read_column(anfits_table_t* table,
     qfits_query_column_seq_to_array(table->qtable, colnum, 0, N, data, fitssize);
 
     if (fitstype != ctype) {
-        fits_convert_data(data, csize, ctype,
-                          data, fitssize, fitstype, N);
-        data = realloc(data, csize * N);
+      if (csize < fitssize) {
+	fits_convert_data(data, csize, ctype,
+			  data, fitssize, fitstype, N);
+	data = realloc(data, csize * N);
+      } else if (csize == fitssize) {
+	fits_convert_data(data, csize, ctype,
+			  data, fitssize, fitstype, N);
+      } else if (csize > fitssize) {
+	// HACK!
+	fits_convert_data(((char*)data) + (N-1) * csize,
+			  -csize, ctype,
+			  ((char*)data) + (N-1) * fitssize,
+			  -fitssize, fitstype, N);
+      }
     }
 
 	return data;

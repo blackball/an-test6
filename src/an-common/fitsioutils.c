@@ -37,8 +37,7 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
     char* dest = vdest;
     const char* src = vsrc;
 
-    //for (i=0; i<N; i++) {
-    for (i=N-1; i>=0; i--) {
+    for (i=0; i<N; i++) {
         int64_t ival = 0;
         double  dval = 0;
         bool src_is_int = TRUE;
