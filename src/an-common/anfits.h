@@ -4,7 +4,8 @@
 #include "qfits_table.h"
 
 enum anfits_type_e {
-	ANTYPE_DOUBLE = TFITS_BIN_TYPE_D
+	ANTYPE_DOUBLE = TFITS_BIN_TYPE_D,
+    ANTYPE_INT32  = TFITS_BIN_TYPE_J,
 };
 typedef enum anfits_type_e anfits_type_t;
 

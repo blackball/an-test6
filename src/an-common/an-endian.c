@@ -18,6 +18,14 @@
 
 #include "an-endian.h"
 
+/*
+ #if IS_BIG_ENDIAN
+ #warning "Big endian"
+ #else
+ #warning "Little endian"
+ #endif
+ */
+
 // convert a u32 from little-endian to local.
 inline uint32_t u32_letoh(uint32_t i) {
 #if IS_BIG_ENDIAN

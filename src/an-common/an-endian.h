@@ -19,6 +19,7 @@
 #define AN_ENDIAN_H
 
 #include <stdint.h>
+#include <endian.h>
 
 #if \
   (defined(__BYTE_ORDER) && (__BYTE_ORDER == __BIG_ENDIAN)) || \
