@@ -12,28 +12,28 @@
 date --iso=seconds
 topdir=$(pwd)
 for days in $(seq 0 5000); do
-  dir=$(\date --date "now - $days day" +%Y/%m/%d)
-  if [ -d "$dir" ]; then
-    \cd "$dir"
-    pwd
-    for filename in $(ls *.jpg *.png *.gif *.tif); do
-      echo "working on $filename"
-      prefix=$(expr $filename : '\(.*\)\.[A-z]*')
-      if [ -e "$prefix.solved" ]; then
-	echo "I have already calibrated $filename, I think"
-      else
-        solve-field \
-          --scale-units "degwidth" \
-	  --scale-low "$1" \
-          --scale-high "$2" \
-	  --depth "0-$3" \
-	  --no-plots \
-	  --no-fits2fits \
-	  --overwrite \
-	  "$filename"
-      fi
-    done
-  fi
-\cd "$topdir"
-date --iso=seconds
+    dir=$(\date --date "now - $days day" +%Y/%m/%d)
+    if [ -d "$dir" ]; then
+	\cd "$dir"
+	pwd
+	filename=$(ls *.xyls *.jpg *.png *.gif *.tif | head -1)
+	echo "working on $filename"
+	prefix=$(expr $filename : '\(.*\)\.[A-z]*')
+	if [ -e "$prefix.solved" ]; then
+	    echo "I have already calibrated $filename, I think"
+	else
+	    solve-field \
+		--scale-units "degwidth" \
+		--scale-low "$1" \
+		--scale-high "$2" \
+		--depth "$3" \
+		--no-plots \
+		--no-fits2fits \
+		--overwrite \
+		--keep-xylist "$prefix.xyls" \
+		"$filename"
+	fi
+    fi
+    \cd "$topdir"
+    date --iso=seconds
 done
