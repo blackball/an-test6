@@ -106,7 +106,7 @@ LDFLAGS_DEF := $(FLAGS_DEF)
 
 # MacOSX shared libraries...
 TEST_OPTION := -shared
-TEST_FAIL_OPTION := -dynamic
+TEST_FAIL_OPTION := -dynamic -dynamiclib
 SHAREDLIBFLAGS_DEF += $(shell ($(CC) $(TEST_OPTION) -x c -o /dev/null - < /dev/null > /dev/null 2>&1 && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
 
 # sh shell

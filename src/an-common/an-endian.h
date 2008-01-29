@@ -19,7 +19,13 @@
 #define AN_ENDIAN_H
 
 #include <stdint.h>
-#include <endian.h>
+
+// MacOSX doesn't have endian.h
+#if __APPLE__
+# include <sys/types.h>
+#else
+# include <endian.h>
+#endif
 
 #if \
   (defined(__BYTE_ORDER) && (__BYTE_ORDER == __BIG_ENDIAN)) || \

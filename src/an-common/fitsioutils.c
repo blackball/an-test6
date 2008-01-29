@@ -507,8 +507,8 @@ int fits_blocks_needed(int size) {
 	return (size + FITS_BLOCK_SIZE - 1) / FITS_BLOCK_SIZE;
 }
 
-char fits_endian_string[16];
-int  fits_endian_string_inited = 0;
+static char fits_endian_string[16];
+static int  fits_endian_string_inited = 0;
 
 static void fits_init_endian_string() {
     if (!fits_endian_string_inited) {

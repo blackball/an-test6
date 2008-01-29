@@ -93,9 +93,11 @@ $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
 	$(AR) rc $@ $(ANFILES_OBJ)
 	$(RANLIB) $@
 
+SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
+
 _sip.so: sip-utils.o sip.o starutil.o mathutil.o sip_qfits.o \
 		fitsioutils.o ioutils.o bl.o gnu-specific.o an-endian.o $(QFITS_LIB)
-	$(CC) -shared -o $@ $^
+	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
 
 gnu-specific-config.h: gnu-specific-test.c
 	(($(CC) -o gnu-specific-test-canonicalize \
