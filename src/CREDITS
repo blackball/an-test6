@@ -15,6 +15,9 @@ First, the obvious ones:
 
 Now, some miscellaneous files:
 
+-quads/qsort_reentrant.{c,h}
+  Yoinked from FreeBSD.  Distributed under the BSD license, big surprise.
+
 -quads/svd.c
   (C) 2000, C. Bond.  http://www.crbond.com/download/misc/svd.c
 
@@ -42,6 +45,9 @@ Now, some miscellaneous files:
 -tilecache/web/map.js includes code borrowed from:
   http://www.scottandrew.com/weblog/jsjunk#inpoly
   Copyright 2001 scott andrew lepera
+
+-quads/pnpoly.c
+  From http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
 
 Data files:
 
