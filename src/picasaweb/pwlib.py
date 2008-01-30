@@ -92,28 +92,35 @@ def GetPhotoEntry(pws,puser,palbum,pphotoid):
   return None
 
 
-def getAllTagEntries(tag,pws):
-  print "Querying for images having tag="+tag+"..."
+def getAllTagEntries(tag,pws,verbose=False):
+  if verbose:
+    print "Querying for images having tag="+tag+"..."
   allE=[]
   theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag)
   numToGet = int(theserez.total_results.text)
-  #print "...trying to get %d results" % numToGet
+  #if verbose:
+  #  print "...trying to get %d results" % numToGet
   if(len(theserez.entry)==0 or numToGet==0):
-    print "No matching images found. Sorry."
+    if verbose:
+      print "No matching images found. Sorry."
     return None
   else:
     while(len(allE)<numToGet):
-      #print "...now have %d results, doing append" % len(allE)
+      #if verbose:
+      #  print "...now have %d results, doing append" % len(allE)
       allE.extend(theserez.entry)
-      #print "...did append now have %d results, getting feed again" % len(allE)
+      #if verbose:
+      #  print "...did append now have %d results, getting feed again" % len(allE)
       try:
         theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag, 
                              start_index=len(allE)+1) # check the +1
       except:
         #print "Warning: only got %d of %d results" % (len(allE),numToGet)
         break
-      #print "...got feed, looping back in while"
-    print "Retrieved data for %d (of %d) matching images." % (len(allE),numToGet)
+      #if verbose:
+      #  print "...got feed, looping back in while"
+    if verbose:
+      print "Retrieved data for %d (of %d) matching images." % (len(allE),numToGet)
     return allE
 
 def getUniqueAlbumFeedURIs(entrylist):
