@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
             // Gaussian smooth in-place.
             dsmooth2(thedata, naxisn[0], naxisn[1], sigma, thedata);
 
-            // Average in-place.
+            // Average 2x2 blocks, placing the result in the bottom (newW * newH) first pixels.
             for (j=0; j<newH; j++) {
                 for (i=0; i<newW; i++) {
                     float sum = 0.0;
