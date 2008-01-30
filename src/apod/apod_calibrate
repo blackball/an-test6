@@ -16,12 +16,19 @@ for days in $(seq 0 5000); do
     if [ -d "$dir" ]; then
 	\cd "$dir"
 	pwd
-	filename=$(ls *.xyls *.jpg *.png *.gif *.tif | head -1)
-	echo "working on $filename"
+	filename=$(ls *.jpg *.png *.gif *.tif | head -1)
 	prefix=$(expr $filename : '\(.*\)\.[A-z]*')
 	if [ -e "$prefix.solved" ]; then
 	    echo "I have already calibrated $filename, I think"
 	else
+	    xylsname="$prefix.xyls"
+	    if [ -e "$xylsname" ]; then
+		filename="$xylsname"
+		xylsoption=""
+	    else
+		xylsoption="--keep-xylist $xylsname"
+	    fi
+	    echo "working on $filename"
 	    solve-field \
 		--scale-units "degwidth" \
 		--scale-low "$1" \
@@ -30,7 +37,7 @@ for days in $(seq 0 5000); do
 		--no-plots \
 		--no-fits2fits \
 		--overwrite \
-		--keep-xylist "$prefix.xyls" \
+		$xylsoption \
 		"$filename"
 	fi
     fi
