@@ -10,7 +10,7 @@ for filepath in $(ls ~/public_html/rc3/*irg.jpg); do
     albumname="SDSS RC3 $aa"
     ./picasaweb_create_album "$albumname" > foo
     source foo
-    export PICASAWEB_ALBUMNAME=SDSSRC3Album$aa
+    export PICASAWEB_ALBUMNAME=SDSSRC3$aa
     echo $ii
     echo $aa
     echo $albumname
