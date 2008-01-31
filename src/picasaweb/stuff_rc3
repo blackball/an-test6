@@ -5,7 +5,7 @@
 ii=0
 aa=0
 for filepath in $(ls ~/public_html/rc3/*irg.jpg); do
-  if [ $(expr $ii % 500) == 0 ]; then
+  if [ $(expr $ii % 100) == 0 ]; then
     aa=$(expr $aa + 1)
     albumname="SDSS RC3 $aa"
     ./picasaweb_create_album "$albumname" > foo
