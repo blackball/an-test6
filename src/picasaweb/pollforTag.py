@@ -48,6 +48,7 @@ def main():
       if e.id.text not in masterDict:
         masterDict[e.id.text] = 0
         print e.id.text
+        print e.content.src
 
 
 if __name__ == '__main__':

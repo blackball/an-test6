@@ -123,6 +123,37 @@ def getAllTagEntries(tag,pws,verbose=False):
       print "Retrieved data for %d (of %d) matching images." % (len(allE),numToGet)
     return allE
 
+def getAllAlbums(username,pws,verbose=False):
+  if verbose:
+    print "Querying for albums from user="+username+"..."
+  allA=[]
+  try:
+    thisfeed=pws.GetFeed("http://picasaweb.google.com/data/feed/api/user/"+username+"?kind=album")
+    return thisfeed.entry
+  except:
+    if verbose:
+      print "Unable to find albums for user="+username+"..."
+    return None
+
+def insertAlbumNonDuplicate(username,albumtitle,pws,alist=None,verbose=False):
+  if alist==None:
+    alist = getAllAlbums(username,pws,verbose=verbose)
+  albumtitles=[e.title.text for e in alist]
+  if albumtitle not in albumtitles:
+    if verbose:
+      print "Inserting album="+albumtitle+" for user="+username+"..."
+    try:
+      return pws.InsertAlbum(username,albumtitle)
+    except:
+      if verbose:
+        print "Error inserting album="+albumtitle+" for user="+username+"..."
+      return None
+  else:
+    if verbose:
+      print "Album="+albumtitle+" already exists for user="+username+"."
+    return alist[albumtitles.index(albumtitle)]
+  
+
 def getUniqueAlbumFeedURIs(entrylist):
   albumFeeds = {}
   for e in entrylist:
