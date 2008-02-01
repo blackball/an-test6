@@ -13,7 +13,8 @@ import sys
 import getopt
 
 AUTH_ENV = "GDATA_PW_AUTHTOKEN"
-HELPSTRING_BASE = ' --user=photo_user --album=album_id [--auth="auth token"]'
+AUTH_USR = "GDATA_PW_AUTHUSER"
+HELPSTRING_BASE = ' [--user=photo_user] [--auth="auth token"]'
 
 def pwInit():
   try:
@@ -24,22 +25,27 @@ def pwInit():
   return pws
 
 
-def pwAuth(pws,gdata_authtoken):
+def pwAuth(pws,gdata_authtoken=None,gdata_user=None):
   from os import environ
-  if gdata_authtoken=='' and AUTH_ENV in environ:
+  if gdata_authtoken==None and AUTH_ENV in environ:
     gdata_authtoken=environ[AUTH_ENV]
+  if gdata_user==None and AUTH_USR in environ:
+    gdata_user=environ[AUTH_USR]
 
-  if gdata_authtoken=='':
+  if gdata_authtoken==None:
     print "Must authenticate and export auth token to environment variable "+AUTH_ENV
+    sys.exit(3)
+  if gdata_user==None:
+    print "Must authenticate and export username to environment variable "+AUTH_USR
     sys.exit(3)
   else:
     pws.auth_token=gdata_authtoken
     pws._GDataService__auth_token=gdata_authtoken
-
+    pws.email=gdata_user
 
 
 def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
-  baseopts = ["authtoken=","auth=","user=","album="]
+  baseopts = ["user=","authtoken=","auth="]
   baseopts=extraOpts+baseopts
 
   # parse command line options
@@ -49,9 +55,8 @@ def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
     print   HELPSTRING+HELPSTRING_BASE
     sys.exit(2)
 
-  gdata_authtoken=''
-  puser=''
-  palbum=''
+  puser=None
+  gdata_authtoken=None
 
   # Process options
   for o, a in opts:
@@ -59,30 +64,32 @@ def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
       gdata_authtoken=a
     elif o == "--user":
       puser=a.lower()
-    elif o == "--album":
-      palbum=a
     else:
       for i in range(len(extraOpts)):
         if o == '--'+extraOpts[i][:-1]:
           extraDefaults[i]=a
-  if puser=='' or palbum=='':
-    print HELPSTRING+HELPSTRING_BASE
-    sys.exit(2)
 
-  return extraDefaults+[puser,palbum,gdata_authtoken]
+  return extraDefaults+[puser,gdata_authtoken]
 
 
 def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
-  rez=pwParseBasicOpts(extraOpts+["photoid="],extraDefaults+[""],HELPSTRING+" --photoid=photo_id")
-  if rez[len(extraOpts)]=="":
+  THISHELP=" --album=albumid --photoid=photo_id"
+  rez=pwParseBasicOpts(extraOpts+["photoid=","album="],extraDefaults+[None,None],HELPSTRING+THISHELP)
+  if rez[len(extraOpts)-1]==None:
     print "PhotoID cannot be missing."
-    print HELPSTRING+" --photoid=photo_id"+HELPSTRING_BASE
+    print HELPSTRING+THISHELP+HELPSTRING_BASE
+    sys.exit(2)
+  if rez[len(extraOpts)]==None:
+    print "AlbumID cannot be missing."
+    print HELPSTRING+THISHELP+HELPSTRING_BASE
     sys.exit(2)
   return rez
 
 
 
-def GetPhotoEntry(pws,puser,palbum,pphotoid):
+def GetPhotoEntry(pws,palbum,pphotoid,puser=None):
+  if puser==None:
+    puser=pws.email
   albumfeed='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/?kind=photo'
   af=pws.GetFeed(albumfeed)
   for e in af.entry:
@@ -92,11 +99,14 @@ def GetPhotoEntry(pws,puser,palbum,pphotoid):
   return None
 
 
-def getAllTagEntries(tag,pws,verbose=False):
+def getAllTagEntries(tag,pws,puser=None,verbose=False):
   if verbose:
     print "Querying for images having tag="+tag+"..."
   allE=[]
-  theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag)
+  if puser==None:
+    theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag)
+  else:
+    theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/user/"+puser+"?q="+tag)
   numToGet = int(theserez.total_results.text)
   #if verbose:
   #  print "...trying to get %d results" % numToGet
@@ -141,9 +151,10 @@ def insertAlbumNonDuplicate(username,albumtitle,pws,alist=None,verbose=False):
   albumtitles=[e.title.text for e in alist]
   if albumtitle not in albumtitles:
     if verbose:
-      print "Inserting album="+albumtitle+" for user="+username+"..."
+      print "Existing albums for user="+username+": "+str(albumtitles)
+      print "Inserting album="+albumtitle
     try:
-      return pws.InsertAlbum(username,albumtitle)
+      return pws.InsertAlbum(albumtitle,"album summary")
     except:
       if verbose:
         print "Error inserting album="+albumtitle+" for user="+username+"..."

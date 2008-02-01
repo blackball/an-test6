@@ -11,29 +11,22 @@ def main():
   """Add a comment to an image"""
 
   HELPSTRING = 'addComment.py --comment "Desired Comment Text"'
-  [comment,pphotoid,puser,palbum,gdata_authtoken]=pwParsePhotoOpts(["comment="],[''],HELPSTRING)
-  if comment=='':
+  [comment,pphotoid,palbum,puser,atoken]=pwParsePhotoOpts(["comment="],[None],HELPSTRING)
+  if comment==None:
     print "Comment cannot be empty!"
     sys.exit(4)
   pws = pwInit()
-  pwAuth(pws,gdata_authtoken)
+  pwAuth(pws,gdata_authtoken=atoken,gdata_user=puser)
 
 
-  e=GetPhotoEntry(pws,puser,palbum,pphotoid)
+  e=GetPhotoEntry(pws,palbum,pphotoid,puser=puser)
   if e:
-    print e.commentingEnabled.text
-    print e.commentCount.text
     try:
       print comment
       pws.InsertComment(e,comment)
     except:
       print "Error inserting comment. Make sure auth token is not expired?"
 
-  #photoURI='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/photoid/'+pphotoid+"?kind=comment"
-  #try:
-  #  pws.InsertComment(photoURI,comment)
-  #except:
-  #  print "Error inserting comment. Make sure auth token is not expired?"
 
 if __name__ == '__main__':
   main()

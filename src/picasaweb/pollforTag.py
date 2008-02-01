@@ -19,8 +19,8 @@ def main():
     print HELPSTRING
     sys.exit(2)
 
-  tag = ''
-  uname = ''
+  tag = None
+  uname = None
 
   # Process options
   for o, a in opts:
@@ -28,7 +28,7 @@ def main():
       tag = a.replace(' ','%20')
     if o == "--user":
       uname = a.lower()
-  if tag=='':
+  if tag==None:
     print HELPSTRING
     sys.exit(2)
 
@@ -39,7 +39,7 @@ def main():
   masterDict = {}
 
   while True:
-    allE = getAllTagEntries(tag,pws)
+    allE = getAllTagEntries(tag,pws,puser=user)
     if(allE==None):
       print "Error -- no images with tag=%s found" % tag
       sys.exit(3)

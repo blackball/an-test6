@@ -10,15 +10,15 @@ def main():
   """Set an image caption"""
 
   HELPSTRING = 'setImageCaption.py --caption="Desired Caption Text"'
-  [caption,pphotoid,puser,palbum,gdata_authtoken]=pwParsePhotoOpts(["caption="],[''],HELPSTRING)
-  if caption=='':
+  [caption,pphotoid,puser,palbum,gdata_authtoken]=pwParsePhotoOpts(["caption="],[None],HELPSTRING)
+  if caption==None:
     print "Caption cannot be empty!"
     sys.exit(4)
 
   pws = pwInit()
   pwAuth(pws,gdata_authtoken)
 
-  e=GetPhotoEntry(pws,puser,palbum,pphotoid)
+  e=GetPhotoEntry(pws,palbum,pphotoid,puser=puser)
   if e:
     e.summary.text=caption
     try:

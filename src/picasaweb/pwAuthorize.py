@@ -33,8 +33,8 @@ def main():
     print "Error creating GData service. Are all the relevant python libraries installed?"
     sys.exit(1)
 
-  uname = ''
-  pwrd = ''
+  uname = None
+  pwrd = None
 
   # Process options
   for o, a in opts:
@@ -42,9 +42,9 @@ def main():
       uname = a.lower()
     if o == "--password" or o == "--pass":
       pwrd = a
-  if uname=='':
+  if uname==None:
     uname=str(raw_input("Picasaweb Username:")).lower()
-  if pwrd == '':
+  if pwrd ==None:
     pwrd=getpass.getpass("password for user "+uname+":")
 
   try:
@@ -60,8 +60,10 @@ def main():
 
   if shell=='csh':
     print 'setenv GDATA_PW_AUTHTOKEN "'+pws.auth_token+'"'
+    print 'setenv GDATA_PW_AUTHUSER "'+pws.email+'"'
   else:
     print 'export GDATA_PW_AUTHTOKEN="'+pws.auth_token+'"'
+    print 'export GDATA_PW_AUTHUSER="'+pws.email+'"'
 
 if __name__ == '__main__':
   main()

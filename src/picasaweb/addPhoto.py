@@ -9,22 +9,28 @@ import sys
 def main():
   """Adds a photo to an album using GData Picasaweb API"""
 
-  HELPSTRING = 'addPhoto.py --photo=photo.{jpg,png,gif,bmp} [--tag=DesiredTag] [--caption="Caption for Photo"] '
-  [tag,pphotoid,puser,palbum,gdata_authtoken]=pwParsePhotoOpts(["photo="],[''],HELPSTRING)
-  print [tag,pphotoid,puser,palbum,gdata_authtoken]
+  HELPSTRING = 'addPhoto.py --photo=photofile.{jpg,png,gif,bmp} --album=albumid [--tag=DesiredTag] [--caption="Caption for Photo"] '
+  [photo,palbum,tag,caption,puser,atoken]=pwParseBasicOpts(["photo=","album=","tag=","caption="],[None,None,None,None],HELPSTRING)
   
-  if tag=='':
-    print "Tag cannot be empty!"
+  if photo==None or palbum==None:
+    print "Photo/Album cannot be empty!"
     sys.exit(4)
 
   pws = pwInit()
-  pwAuth(pws,gdata_authtoken)
+  pwAuth(pws,gdata_authtoken=atoken,gdata_user=puser)
 
-  photoURI='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/photoid/'+pphotoid
-  try:
-    pws.InsertTag(photoURI,tag)
-  except:
-    print "Error inserting tag. Make sure auth token is not expired?"
+  albumURI='http://picasaweb.google.com/data/feed/api/user/'+pws.email+'/albumid/'+palbum
+  #try:
+  print "Adding photo in file %s to album %s of user %s" % (photo,palbum,pws.email)
+  if(caption):
+    print "...setting caption to %s" % caption
+  if(tag):
+    print "...tagging with tags %s" % tag
+
+  #p=pws.InsertPhotoSimple(palbum,photo.split('/')[-1],"photo title",photo,summary=caption,keywords=tag)
+  p=pws.InsertPhotoSimple(palbum,photo.split('/')[-1],"photo title",photo)
+  #except:
+  #  print "Error inserting photo. Make sure file exists and auth token is not expired?"
 
 if __name__ == '__main__':
   main()

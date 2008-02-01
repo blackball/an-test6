@@ -1,6 +1,7 @@
 from pwlib import *
 pws = pwInit()
-pwAuth(pws,"")
+pwAuth(pws)
 
-insertAlbumNonDuplicate("astrometrynet","testalbum",pws,verbose=True)
-insertAlbumNonDuplicate("astrometrynet","testalbum",pws,verbose=True)
+print pws.email
+
+a=insertAlbumNonDuplicate("astrometrynet","testalbum",pws,verbose=True)

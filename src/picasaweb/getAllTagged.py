@@ -26,7 +26,7 @@ def main():
     print HELPSTRING
     sys.exit(2)
 
-  tag = ''
+  tag = None
   serviceuser = SERVICEUSER.lower()
 
   # Process options
@@ -35,7 +35,7 @@ def main():
       tag = a.replace(' ','%20')
     if o == "--serviceuser":
       serviceuser = a.lower()
-  if tag=='':
+  if tag==None:
     print HELPSTRING
     sys.exit(2)
 
