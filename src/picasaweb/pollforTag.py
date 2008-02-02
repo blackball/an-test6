@@ -3,6 +3,8 @@
 __author__ = 'Sam Roweis'
 
 from pwlib import *
+from urllib import urlretrieve,urlcleanup
+from time import time,ctime
 
 import getopt
 import sys
@@ -40,15 +42,17 @@ def main():
 
   while True:
     allE = getAllTagEntries(tag,puser=uname)
-    if(allE==None):
-      print "Error -- no images with tag=%s found" % tag
-      sys.exit(3)
-    # add all new ones to dictionary
+    # get new urls as local files
     for e in allE:
       if e.id.text not in masterDict:
-        masterDict[e.id.text] = 0
-        print e.id.text
-        print e.content.src
+        pwuseremail=e.id.text[e.id.text.find('/user/')+6:].split('/')[0]
+        pwalbumid=e.id.text[e.id.text.find('/albumid/')+9:].split('/')[0]
+        pwphotoid=e.id.text[e.id.text.find('/photoid/')+9:].split('/')[0]
+        masterDict[e.id.text] = time()
+        print ctime()
+        print "  "+e.id.text
+        print "  "+e.content.src
+        print "  -->"+pwuseremail+"_"+pwalbumid+"_"+pwphotoid
 
 
 if __name__ == '__main__':
