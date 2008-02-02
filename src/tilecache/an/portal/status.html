@@ -27,6 +27,8 @@ td {border-width: 0;}
 #sources > a:visited { color:white; }
 #sources > a:hover { color:gray; }
 #sources > a:active { color:yellow; }
+#currentxylist { margin-left:auto; margin-right:auto; text-align:center; }
+#otherxylists { margin-left:auto; margin-right:auto; text-align:center; }
 #gmapslink { margin-left:auto; margin-right:auto; text-align:center; }
 
 #objs2 {width:40%; margin-left:auto; margin-right:auto; }
@@ -81,7 +83,7 @@ Job owner: {{ job.user.username }}
 <hr />
 
 {% if jobsolved %}
-<h3 class="c">Your field is at RA,Dec = ( {{ racenter }}, {{ deccenter }} ) degrees
+<h3 class="c">Your field is at (RA, Dec) = ( {{ racenter }}, {{ deccenter }} ) degrees
 <br />
 and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
 </h3>
@@ -108,6 +110,7 @@ Your field contains:
 <hr />
 
 {% endif %}
+{# (endif objsinfield) #}
 
 <div id="onsky">
 <p>Your field on the sky:</p>
@@ -122,7 +125,27 @@ Your field contains:
 
 <hr />
 
+{% else %}
+
+<div id="currentxylist">
+<p>Source extraction we're using: (<a href="{{ sources_big }}">big version</a>)</p>
+{#<a href="{{ sources_small }}">click me</a>#}
+<img src="{{ sources_small }}" />
+</div>
+
+{% if otherxylists %}
+<div id="otherxylists">
+<p>Other source extraction options:  If you click on one of these images we will
+switch to solving using that list of sources.</p>
+{% for otherxyimg, otherxylink  in otherxylists %}
+<a href="{{ otherxylink }}"><img src="{{ otherxyimg }}" /></a>
+{% endfor %}
+</div>
 {% endif %}
+
+{% endif %}
+{# (endif jobsolved) #}
+
 
 <br />
 
@@ -155,18 +178,6 @@ Your field contains:
 {% endif %}
 </table>
 
-<hr />
-
-{% if not jobsolved and jobfinishtime %}
-
-<div id="sources">
-<p>Source extraction:</p>
-<a href="{{ sources_big }}"><img src="{{ sources }}" alt="source extraction for your images" /></a>
-</div>
-
-<hr />
-{% endif %}
-
 {% if jobsolved %}
 {% else %}
 <br />
@@ -176,8 +187,8 @@ Your field contains:
 <tr><td><pre>{{ logfile_tail }}</pre></td></tr>
 </table>
 
-<hr />
 {% endif %}
+<br />
 
 <table cellpadding="3" border="1" class="c">
 

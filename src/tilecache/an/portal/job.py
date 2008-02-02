@@ -138,15 +138,29 @@ class AstroField(models.Model):
             self.choose_new_fileid()
         return AstroField.get_filename_for_fileid(self.fileid)
 
-    def get_display_scale(self):
+    def get_medium_scale(self):
         w = self.imagew
         h = self.imageh
-        scale = float(max(1.0,
-                          math.pow(2, math.ceil(
-            math.log(max(w, h) / float(800)) / math.log(2)))))
+        #log('w=%s, h=%s' % (str(w), str(h)))
+        #log('max(w,h) = %s' % (str(max(w,h))))
+        scale = max(1.0,
+                    math.pow(2.0, math.ceil(
+            math.log(max(w, h) / 800.) / math.log(2.0))))
+        scale = max(1.0,
+                    math.pow(2.0, math.ceil(
+            math.log(max(w, h) / 800.) / math.log(2.0))))
         displayw = int(round(w / scale))
         displayh = int(round(h / scale))
         return (scale, displayw, displayh)
+
+    def get_small_scale(self):
+        w = self.imagew
+        h = self.imageh
+        scale = float(max(1.0, max(w, h) / 300.))
+        displayw = int(round(w / scale))
+        displayh = int(round(h / scale))
+        return (scale, displayw, displayh)
+    
 
     def get_filename_for_fileid(fileid):
         return os.path.join(config.fielddir, str(fileid))

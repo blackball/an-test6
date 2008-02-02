@@ -132,6 +132,17 @@ def jobstatus(request):
     submission = job.submission
     log('jobstatus: Job is: ' + str(job))
 
+    otherxylists = []
+    # (image url, link url)
+    #otherxylists.append(('test-image-url', 'test-link-url'))
+    for n in (1,2,3,4,5):
+        fn = convert(job, job.field, 'xyls-exists?', { 'variant': n })
+        if fn is None:
+            break
+        otherxylists.append((get_url(job, 'sources-small-%i' % n),
+                             'run-xyls-variant-%i' % n))
+
+
     ctxt = {
         'jobid' : job.jobid,
         'jobstatus' : job.status,
@@ -146,8 +157,10 @@ def jobstatus(request):
         'jobfile' : (submission.datasrc == 'file') and submission.uploaded.userfilename or None,
         'jobscale' : job.friendly_scale(),
         'jobparity' : job.friendly_parity(),
-        'sources' : get_url(job, 'sources'),
+        'sources' : get_url(job, 'sources-medium'),
         'sources_big' : get_url(job, 'sources-big'),
+        'sources_small' : get_url(job, 'sources-small'),
+        'otherxylists' : otherxylists,
         'jobowner' : jobowner,
         'allowanon' : anonymous,
         }
@@ -190,7 +203,8 @@ def jobstatus(request):
         # deg
         fldsz = math.sqrt(field.imagew * field.imageh) * float(wcsinfo['pixscale']) / 3600.0
 
-        url = (gmaps_config.tileurl + '?layers=tycho,grid,userboundary' +
+        url = (reverse('an.tile.views.get_tile') +
+               '?layers=tycho,grid,userboundary' +
                '&arcsinh&wcsfn=%s' % job.get_relative_filename('wcs.fits'))
         smallstyle = '&w=300&h=300&lw=3'
         largestyle = '&w=1024&h=1024&lw=5'
@@ -228,7 +242,7 @@ def jobstatus(request):
 
         # HACK
         fn = convert(job, job.field, 'fullsizepng')
-        url = (gmaps_config.gmaps_url +
+        url = (reverse('an.tile.views.index') +
                ('?zoom=%i&ra=%.3f&dec=%.3f&userimage=%s' %
                 (int(wcsinfo['merczoom']), float(wcsinfo['ra_center']),
                  float(wcsinfo['dec_center']), job.get_relative_job_dir())))
@@ -308,7 +322,7 @@ def getfile(request):
     res = HttpResponse()
 
     pngimages = [ 'annotation', 'annotation-big',
-                  'sources', 'sources-big',
+                  'sources-small', 'sources-medium', 'sources-big',
                   'redgreen', 'redgreen-big' ]
     if f in pngimages:
         fn = convert(job, job.field, f)

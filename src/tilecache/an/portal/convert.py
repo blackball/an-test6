@@ -53,7 +53,9 @@ def is_tarball(fn):
     log('file type: "%s"' % typeinfo)
     return typeinfo == 'POSIX tar archive'
 
-def convert(job, field, fn):
+def convert(job, field, fn, args=None):
+    if args is None:
+        args = {}
     log('convert(%s)' % fn)
     tempdir = gmaps_config.tempdir
     basename = os.path.join(tempdir, job.jobid + '-')
@@ -160,7 +162,16 @@ def convert(job, field, fn):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'xyls':
+    elif fn == 'xyls' or fn == 'xyls-exists?':
+        if 'variant' in args:
+            fn = 'xyls-%i' % int(args['variant'])
+            fullfn = basename + fn
+
+        if fn == 'xyls-exists?':
+            if os.path.exists(fullfn):
+                return fullfn
+            return None
+
         if job.is_input_text():
             infn = convert(job, field, 'uncomp')
             cmd = 'xylist2fits %s %s' % (infn, fullfn)
@@ -176,9 +187,21 @@ def convert(job, field, fn):
                 raise FileConversionError(errmsg)
             return fullfn
 
-        infn = convert(job, field, 'fitsimg')
         sxylog = 'blind.log'
-        cmd = 'image2xy -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
+
+        extraargs = ''
+        if 'variant' in args:
+            n = args['variant']
+            altargs = {
+                1: '',
+                }
+            if n in altargs:
+                extraargs = altargs[n]
+            # HACK
+            sxylog = '/tmp/alternate-xylist-%s.log' % n
+
+        infn = convert(job, field, 'fitsimg')
+        cmd = 'image2xy %s-o %s %s >> %s 2>&1' % (extraargs, fullfn, infn, sxylog)
         run_convert_command(cmd)
         return fullfn
 
@@ -245,22 +268,32 @@ def convert(job, field, fn):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'pnm-small':
+    elif (fn == 'pnm-small') or (fn == 'pnm-medium'):
+        small = (fn == 'pnm-small')
         imgfn = convert(job, field, 'pnm')
-        (scale, dx, dy) = field.get_display_scale()
+        if small:
+            (scale, w, h) = field.get_small_scale()
+        else:
+            (scale, w, h) = field.get_medium_scale()
         if scale == 1:
             return imgfn
-        cmd = 'pnmscale -reduce %g %s > %s' % (float(scale), imgfn, fullfn)
+        #cmd = 'pnmscale -reduce %g %s > %s' % (float(scale), imgfn, fullfn)
+        cmd = 'pnmscale -width=%g -height=%g %s > %s' % (w, h, imgfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
-    elif (fn == 'ppm-small') or (fn == 'ppm-small-8bit'):
-        eightbit = (fn == 'ppm-small-8bit')
+    elif ((fn == 'ppm-small') or (fn == 'ppm-small-8bit') or
+          (fn == 'ppm-medium') or (fn == 'ppm-medium-8bit')):
+        eightbit = (fn == 'ppm-small-8bit') or (fn == 'ppm-medium-8bit')
+        small = (fn == 'ppm-small-8bit') or (fn == 'ppm-small')
 
         # what the heck is this??
         if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
-            (scale, dw, dh) = field.get_display_scale()
+            if small:
+                (scale, dw, dh) = field.get_small_scale()
+            else:
+                (scale, dw, dh) = field.get_medium_scale()
             if scale == 1:
                 if eightbit:
                     return convert(job, field, 'ppm-8bit')
@@ -272,7 +305,10 @@ def convert(job, field, fn):
             run_convert_command(cmd)
             return fullfn
 
-        imgfn = convert(job, field, 'pnm-small')
+        if small:
+            imgfn = convert(job, field, 'pnm-small')
+        else:
+            imgfn = convert(job, field, 'pnm-medium')
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
@@ -292,8 +328,8 @@ def convert(job, field, fn):
 
     elif fn == 'annotation':
         wcsfn = job.get_filename('wcs.fits')
-        imgfn = convert(job, field, 'ppm-small-8bit')
-        (scale, dw, dh) = field.get_display_scale()
+        imgfn = convert(job, field, 'ppm-medium-8bit')
+        (scale, dw, dh) = field.get_medium_scale()
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/float(scale), imgfn))
         run_convert_command(cmd)
@@ -309,8 +345,8 @@ def convert(job, field, fn):
 
     elif fn == 'redgreen' or fn == 'redgreen-big':
         if fn == 'redgreen':
-            imgfn = convert(job, field, 'ppm-small-8bit')
-            (dscale, dw, dh) = field.get_display_scale()
+            imgfn = convert(job, field, 'ppm-medium-8bit')
+            (dscale, dw, dh) = field.get_medium_scale()
             scale = 1.0 / float(dscale)
         else:
             imgfn = convert(job, field, 'ppm-8bit')
@@ -333,10 +369,24 @@ def convert(job, field, fn):
         run_convert_command(cmd, fullfn)
         return fullfn
 
-    elif fn == 'sources':
+    elif fn == 'sources-small':
         imgfn = convert(job, field, 'ppm-small-8bit')
         xyls = job.get_filename('job.axy')
-        (dscale, dw, dh) = field.get_display_scale()
+        (dscale, dw, dh) = field.get_small_scale()
+        scale = 1.0 / float(dscale)
+        commonargs = ('-i %s -x %g -y %g -w 1 -S %g -C red' %
+                      (xyls, scale, scale, scale))
+        cmd = (('plotxy %s -I %s -N 100 -r 5 -P' %
+                (commonargs, imgfn)) +
+               (' | plotxy -I - %s -n 100 -N 500 -r 4 > %s' %
+                (commonargs, fullfn)))
+        run_convert_command(cmd, fullfn)
+        return fullfn
+
+    elif fn == 'sources-medium':
+        imgfn = convert(job, field, 'ppm-medium-8bit')
+        xyls = job.get_filename('job.axy')
+        (dscale, dw, dh) = field.get_medium_scale()
         scale = 1.0 / float(dscale)
         commonargs = ('-i %s -x %g -y %g -w 2 -S %g -C red' %
                       (xyls, scale, scale, scale))

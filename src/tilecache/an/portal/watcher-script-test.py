@@ -67,6 +67,16 @@ def handle_job(job, sshconfig):
         log('--------------')
         log(traceback.format_exc())
         log('--------------')
+
+def produce_alternate_xylists(job):
+    log("I'm producing alternate xylists like nobody's bidness.")
+    field = job.field
+
+    for n in range(1, 2, 3, 4, 5):
+        log('Producing xyls variant %i...' % n)
+        convert(job, field, 'xyls', { 'variant': n })
+
+
    
 def real_handle_job(job, sshconfig):
     log('handle_job: ' + str(job))
@@ -189,6 +199,20 @@ def real_handle_job(job, sshconfig):
         bailout(job, 'no filetype')
         return -1
 
+
+    rtnval = os.fork()
+    if rtnval == 0:
+        # I'm the child process
+        rtnval = os.EX_OK
+        try:
+            produce_alternate_xylists(job)
+        except:
+            log('Something bad happened at produce_alternate_xylists.')
+            rtnval = os.EX_SOFTWARE
+        os._exit(rtnval)
+    else:
+        # I'm the parent - carry on.
+        pass
 
     (lower, upper) = job.get_scale_bounds()
     units = job.get_scaleunits()
