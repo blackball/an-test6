@@ -14,19 +14,25 @@ import getopt
 
 AUTH_ENV = "GDATA_PW_AUTHTOKEN"
 AUTH_USR = "GDATA_PW_AUTHUSER"
-HELPSTRING_BASE = ' [--user=photo_user] [--auth="auth token"]'
+
+globalPWService = None
 
 def pwInit():
+  global globalPWService
+  if globalPWService:
+    return globalPWService
   try:
-    pws = gdata.photos.service.PhotosService()
+    globalPWService=gdata.photos.service.PhotosService()
+    return globalPWService
   except:
     print "Error creating GData service. Are all the relevant python libraries installed?"
     sys.exit(1)
-  return pws
 
 
-def pwAuth(pws,gdata_authtoken=None,gdata_user=None):
+def pwAuth(pws=None,gdata_authtoken=None,gdata_user=None):
   from os import environ
+  if pws==None:
+    pws=pwInit()
   if gdata_authtoken==None and AUTH_ENV in environ:
     gdata_authtoken=environ[AUTH_ENV]
   if gdata_user==None and AUTH_USR in environ:
@@ -45,6 +51,8 @@ def pwAuth(pws,gdata_authtoken=None,gdata_user=None):
 
 
 def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
+  HELPSTRING_BASE = ' [--user=photo_user] [--auth="auth token"]'
+
   baseopts = ["user=","authtoken=","auth="]
   baseopts=extraOpts+baseopts
 
@@ -73,13 +81,15 @@ def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
 
 
 def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
+  HELPSTRING_BASE = ' [--user=photo_user] [--auth="auth token"]'
   THISHELP=" --album=albumid --photoid=photo_id"
+
   rez=pwParseBasicOpts(extraOpts+["photoid=","album="],extraDefaults+[None,None],HELPSTRING+THISHELP)
-  if rez[len(extraOpts)-1]==None:
+  if rez[len(extraOpts)]==None:
     print "PhotoID cannot be missing."
     print HELPSTRING+THISHELP+HELPSTRING_BASE
     sys.exit(2)
-  if rez[len(extraOpts)]==None:
+  if rez[len(extraOpts)+1]==None:
     print "AlbumID cannot be missing."
     print HELPSTRING+THISHELP+HELPSTRING_BASE
     sys.exit(2)
@@ -87,7 +97,9 @@ def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
 
 
 
-def GetPhotoEntry(pws,palbum,pphotoid,puser=None):
+def getPhotoEntry(palbum,pphotoid,puser=None,pws=None):
+  if pws==None:
+    pws=pwInit()
   if puser==None:
     puser=pws.email
   albumfeed='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/?kind=photo'
@@ -99,7 +111,9 @@ def GetPhotoEntry(pws,palbum,pphotoid,puser=None):
   return None
 
 
-def getAllTagEntries(tag,pws,puser=None,verbose=False):
+def getAllTagEntries(tag,puser=None,verbose=False,pws=None):
+  if pws==None:
+    pws=pwInit()
   if verbose:
     print "Querying for images having tag="+tag+"..."
   allE=[]
@@ -133,6 +147,8 @@ def getAllTagEntries(tag,pws,puser=None,verbose=False):
       print "Retrieved data for %d (of %d) matching images." % (len(allE),numToGet)
     return allE
 
+
+
 def getAllAlbums(username,pws,verbose=False):
   if verbose:
     print "Querying for albums from user="+username+"..."
@@ -144,6 +160,8 @@ def getAllAlbums(username,pws,verbose=False):
     if verbose:
       print "Unable to find albums for user="+username+"..."
     return None
+
+
 
 def insertAlbumNonDuplicate(username,albumtitle,pws,alist=None,verbose=False):
   if alist==None:
@@ -176,11 +194,13 @@ def getUniqueAlbumFeedURIs(entrylist):
       albumFeeds[albumFeed]=1
   return albumFeeds
 
+
 def getAlbumTitle(e):
   for el in e.extension_elements:
     if el.tag=='albumtitle':
       return el.text
   return None
+
 
 def getPhotoPageHref(e):
   for el in e.link:
@@ -188,5 +208,8 @@ def getPhotoPageHref(e):
       return el.href
   return None
 
+
 def getPhotoComments(e,pws):
   return int(pws.GetFeed(e.GetCommentsUri()).commentCount.text)
+
+

@@ -39,7 +39,7 @@ def main():
   masterDict = {}
 
   while True:
-    allE = getAllTagEntries(tag,pws,puser=user)
+    allE = getAllTagEntries(tag,puser=uname)
     if(allE==None):
       print "Error -- no images with tag=%s found" % tag
       sys.exit(3)

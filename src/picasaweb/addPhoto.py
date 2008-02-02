@@ -12,12 +12,15 @@ def main():
   HELPSTRING = 'addPhoto.py --photo=photofile.{jpg,png,gif,bmp} --album=albumid [--tag=DesiredTag] [--caption="Caption for Photo"] '
   [photo,palbum,tag,caption,puser,atoken]=pwParseBasicOpts(["photo=","album=","tag=","caption="],[None,None,None,None],HELPSTRING)
   
-  if photo==None or palbum==None:
-    print "Photo/Album cannot be empty!"
+  if photo==None:
+    print "Photo File cannot be empty!"
+    sys.exit(4)
+  if palbum==None:
+    print "albumid cannot be empty!"
     sys.exit(4)
 
   pws = pwInit()
-  pwAuth(pws,gdata_authtoken=atoken,gdata_user=puser)
+  pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
   albumURI='http://picasaweb.google.com/data/feed/api/user/'+pws.email+'/albumid/'+palbum
   #try:

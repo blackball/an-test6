@@ -42,7 +42,7 @@ def main():
 
   pws=pwInit()
 
-  allE = getAllTagEntries(tag,pws,verbose=True)
+  allE = getAllTagEntries(tag,verbose=True)
   if(allE==None):
     sys.exit(3)
 

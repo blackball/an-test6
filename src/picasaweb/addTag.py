@@ -10,14 +10,16 @@ def main():
   """Adds a tag value to a photo using GData Picasaweb API"""
 
   HELPSTRING = 'addTag.py --tag=DesiredTag'
-  [tag,pphotoid,puser,palbum,gdata_authtoken]=pwParsePhotoOpts(["tag="],[None],HELPSTRING)
+  [tag,pphotoid,palbum,puser,atoken]=pwParsePhotoOpts(["tag="],[None],HELPSTRING)
   if tag==None:
     print "Tag cannot be empty!"
     sys.exit(4)
 
   pws = pwInit()
-  pwAuth(pws,gdata_authtoken)
+  pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
+  if puser==None:
+    puser=pws.email
   photoURI='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/photoid/'+pphotoid
   # CHECK IF TAG IS ALREADY THERE?
   try:

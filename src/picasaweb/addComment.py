@@ -16,13 +16,12 @@ def main():
     print "Comment cannot be empty!"
     sys.exit(4)
   pws = pwInit()
-  pwAuth(pws,gdata_authtoken=atoken,gdata_user=puser)
+  pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
 
-  e=GetPhotoEntry(pws,palbum,pphotoid,puser=puser)
+  e=getPhotoEntry(palbum,pphotoid,puser=puser)
   if e:
     try:
-      print comment
       pws.InsertComment(e,comment)
     except:
       print "Error inserting comment. Make sure auth token is not expired?"
