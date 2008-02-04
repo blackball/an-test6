@@ -25,6 +25,7 @@ def main():
 
   while True:
     allE = getAllTagEntries(tag)
+    print allE
     # get new urls as local files
     for e in allE:
       if e.id.text not in masterDict:
@@ -39,7 +40,10 @@ def main():
         #uploadPhoto(localfilename,palbum,caption=captionText,tag=tags,verbose=True)
         p=uploadPhoto(localfilename,palbum,verbose=True)
         insertTag(tag,p.gphoto_id.text,palbum)
-        setCaption(captionText,None,None,pentry=p)
+        for kk in dir(p):
+            print kk
+        #setCaption(captionText,None,None,pentry=p)
+        setCaption(captionText,p.gphoto_id.text,palbum)
 
 if __name__ == '__main__':
   main()

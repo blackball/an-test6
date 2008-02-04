@@ -135,6 +135,8 @@ def setCaption(caption,pphotoid,palbum,pentry=None,puser=None,verbose=False,pws=
     if puser==None:
       puser=pws.email
     pentry=getPhotoEntry(palbum,pphotoid,puser=puser,pws=pws)
+    for kk in dir(pentry):
+      print kk
   if pentry:
     pentry.summary.text=caption
     try:
