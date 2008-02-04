@@ -182,6 +182,7 @@ def downloadEntry(e,verbose=False,skipdownload=False):
     print ctime()
     print "  "+e.id.text
     print "  "+e.content.src
+    print "  "+e.GetHtmlLink().href
     print "  -->"+localfilename
   if skipdownload:
     return (None,None)

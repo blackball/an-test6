@@ -3,7 +3,7 @@
 __author__ = 'Sam Roweis'
 
 from pwlib import *
-from time import time
+from time import time,ctime
 import sys
 
 
@@ -37,11 +37,14 @@ def main():
           thisphotouser=e.id.text[e.id.text.find('/user/')+6:].split('/')[0]
           thiscaptiontext="%s from %s" % (e.content.src.split('/')[-1],thisphotouser)
           thisalbumentry=insertAlbumNonDuplicate(pws.email,thisalbumname,verbose=True)
-          palbum=thisalbumentry.gphoto_id.text
+          thispalbum=thisalbumentry.gphoto_id.text
           thistag="SkyPhotoLocator:User:"+thisphotouser
-          ##p=uploadPhoto(localfilename,palbum,caption=thiscaptiontext,tag=thistag,verbose=True)
-          thisphotoentry=uploadPhoto(localfilename,palbum,caption=thiscaptiontext,verbose=True)
-          insertTag(thistag,thisphotoentry.gphoto_id.text,palbum)
+          thiscomment="Copied from "+e.GetHtmlLink().href+\
+			   " on "+ctime()+" with md5sum="+md5sum
+          ##p=uploadPhoto(localfilename,thispalbum,caption=thiscaptiontext,tag=thistag,verbose=True)
+          thisphotoentry=uploadPhoto(localfilename,thispalbum,caption=thiscaptiontext,verbose=True)
+          insertTag(thistag,thisphotoentry.gphoto_id.text,thispalbum)
+          insertComment(thiscomment,thisphotoentry.gphoto_id.text,thispalbum,verbose=True)
     else:
       print "No images found with tag="+tag
 
