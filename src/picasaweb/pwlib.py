@@ -82,9 +82,9 @@ def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
 
 def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
   HELPSTRING_BASE = ' [--user=photo_user] [--auth="auth token"]'
-  THISHELP=" --album=albumid --photoid=photo_id"
+  THISHELP=" --albumid=albumid --photoid=photo_id"
 
-  rez=pwParseBasicOpts(extraOpts+["photoid=","album="],extraDefaults+[None,None],HELPSTRING+THISHELP)
+  rez=pwParseBasicOpts(extraOpts+["photoid=","albumid="],extraDefaults+[None,None],HELPSTRING+THISHELP)
   if rez[len(extraOpts)]==None:
     print "PhotoID cannot be missing."
     print HELPSTRING+THISHELP+HELPSTRING_BASE
@@ -95,6 +95,59 @@ def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
     sys.exit(2)
   return rez
 
+
+def uploadPhoto(photofile,palbum,tag=None,caption=None,verbose=False):
+  pws=pwInit()
+  if verbose:
+    print "Adding photo in file %s to album %s of user %s" % (photofile,palbum,pws.email)
+  if verbose and caption:
+    print "...setting caption to %s" % caption
+  if verbose and tag:
+    print "...tagging with tags %s" % tag
+  try:
+    albumURI='http://picasaweb.google.com/data/feed/api/user/'+pws.email+'/albumid/'+palbum
+    pEntry=pws.InsertPhotoSimple(albumURI,photofile.split('/')[-1],caption,photofile,keywords=tag)
+    if verbose:
+      print "New photoid=%s [%sx%s pixels, %s bytes]" % \
+            (pEntry.gphoto_id.text,pEntry.width.text,pEntry.height.text,pEntry.size.text)
+    return pEntry
+  except:
+    print "Error inserting photo. Make sure file exists and auth token is not expired?"
+    return None
+
+
+
+def makeEntryFilename(e):
+  pwuseremail=e.id.text[e.id.text.find('/user/')+6:].split('/')[0]
+  pwalbumid=e.id.text[e.id.text.find('/albumid/')+9:].split('/')[0]
+  pwphotoid=e.id.text[e.id.text.find('/photoid/')+9:].split('/')[0]
+  localfilename=pwuseremail.lower()+"_"+pwalbumid+"_"+pwphotoid+"@"+e.content.src.split('/')[-1]
+  return localfilename
+
+def makeAlbumnameFromMD5(md5sum):
+  return "%03d" % int(int(md5sum,16)%498+1)
+  
+def downloadEntry(e,verbose=False,skipdownload=False):
+  from urllib import urlretrieve,urlcleanup
+  from os import popen
+  from time import ctime
+  localfilename=makeEntryFilename(e)
+  if verbose:
+    print ctime()
+    print "  "+e.id.text
+    print "  "+e.content.src
+    print "  -->"+localfilename
+  if skipdownload:
+    return (None,None)
+  else:
+    urlcleanup()
+    urlretrieve(e.content.src,filename=localfilename)
+    md5pipe=popen('md5sum '+localfilename)
+    md5out=md5pipe.read()
+    md5sum=md5out.split()[0]
+    md5pipe.close()
+    print "  md5sum=%s" % md5sum
+    return (localfilename,md5sum)
 
 
 def getPhotoEntry(palbum,pphotoid,puser=None,pws=None):
@@ -122,34 +175,36 @@ def getAllTagEntries(tag,puser=None,verbose=False,pws=None):
   else:
     theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/user/"+puser+"?q="+tag)
   numToGet = int(theserez.total_results.text)
-  #if verbose:
-  #  print "...trying to get %d results" % numToGet
+  if verbose:
+    print "...trying to get %d results" % numToGet
   if(len(theserez.entry)==0 or numToGet==0):
     if verbose:
       print "No matching images found. Sorry."
     return None
   else:
     while(len(allE)<numToGet):
-      #if verbose:
-      #  print "...now have %d results, doing append" % len(allE)
+      if verbose:
+        print "...now have %d results, doing append" % len(allE)
       allE.extend(theserez.entry)
-      #if verbose:
-      #  print "...did append now have %d results, getting feed again" % len(allE)
+      if verbose:
+        print "...did append now have %d results, getting feed again" % len(allE)
       try:
         theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag, 
                              start_index=len(allE)+1) # check the +1
       except:
-        #print "Warning: only got %d of %d results" % (len(allE),numToGet)
+        print "Warning: only got %d of %d results" % (len(allE),numToGet)
         break
-      #if verbose:
-      #  print "...got feed, looping back in while"
+      if verbose:
+        print "...got feed, looping back in while"
     if verbose:
       print "Retrieved data for %d (of %d) matching images." % (len(allE),numToGet)
     return allE
 
 
 
-def getAllAlbums(username,pws,verbose=False):
+def getAllAlbums(username,verbose=False,pws=None):
+  if pws==None:
+    pws=pwInit()
   if verbose:
     print "Querying for albums from user="+username+"..."
   allA=[]
@@ -163,9 +218,11 @@ def getAllAlbums(username,pws,verbose=False):
 
 
 
-def insertAlbumNonDuplicate(username,albumtitle,pws,alist=None,verbose=False):
+def insertAlbumNonDuplicate(username,albumtitle,alist=None,verbose=False,pws=None):
+  if pws==None:
+    pws=pwInit()
   if alist==None:
-    alist = getAllAlbums(username,pws,verbose=verbose)
+    alist = getAllAlbums(username,verbose=verbose,pws=pws)
   albumtitles=[e.title.text for e in alist]
   if albumtitle not in albumtitles:
     if verbose:
@@ -209,7 +266,9 @@ def getPhotoPageHref(e):
   return None
 
 
-def getPhotoComments(e,pws):
+def getPhotoComments(e,pws=None):
+  if pws==None:
+    pws=pwInit()
   return int(pws.GetFeed(e.GetCommentsUri()).commentCount.text)
 
 
