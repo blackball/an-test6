@@ -13,19 +13,13 @@ def main():
   [caption,pphotoid,palbum,puser,atoken]=pwParsePhotoOpts(["caption="],[None],HELPSTRING)
   if caption==None:
     print "Caption cannot be empty!"
+    print HELPSTRING
     sys.exit(4)
 
   pws = pwInit()
   pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
-  e=getPhotoEntry(palbum,pphotoid,puser=puser)
-  if e:
-    e.summary.text=caption
-    try:
-      pws.UpdatePhotoMetadata(e)
-    except:
-      print "Could not update photo metadata."
-
+  setCaption(caption,pphotoid,palbum,puser=puser)
 
 if __name__ == '__main__':
   main()

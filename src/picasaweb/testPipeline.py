@@ -35,10 +35,11 @@ def main():
         captionText="%s from %s" % (e.content.src.split('/')[-1],photouser)
         aa=insertAlbumNonDuplicate(pws.email,albumname,verbose=True)
         palbum=aa.gphoto_id.text
-        tags=["SkyPhotoLocatorUser:"+photouser]
+        tag="SkyPhotoLocator:User:"+photouser
         #uploadPhoto(localfilename,palbum,caption=captionText,tag=tags,verbose=True)
-        uploadPhoto(localfilename,palbum,verbose=True)
-
+        p=uploadPhoto(localfilename,palbum,verbose=True)
+        insertTag(tag,p.gphoto_id.text,palbum)
+        setCaption(captionText,None,None,pentry=p)
 
 if __name__ == '__main__':
   main()

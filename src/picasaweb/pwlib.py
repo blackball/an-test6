@@ -96,8 +96,9 @@ def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
   return rez
 
 
-def uploadPhoto(photofile,palbum,tag=None,caption=None,verbose=False):
-  pws=pwInit()
+def uploadPhoto(photofile,palbum,tag=None,caption=None,verbose=False,pws=None):
+  if pws==None:
+    pws=pwInit()
   if verbose:
     print "Adding photo in file %s to album %s of user %s" % (photofile,palbum,pws.email)
   if verbose and caption:
@@ -115,6 +116,33 @@ def uploadPhoto(photofile,palbum,tag=None,caption=None,verbose=False):
     print "Error inserting photo. Make sure file exists and auth token is not expired?"
     return None
 
+def insertTag(tag,pphotoid,palbum,puser=None,verbose=False,pws=None):
+  if pws==None:
+    pws=pwInit()
+  if puser==None:
+    puser=pws.email
+  photoURI='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/photoid/'+pphotoid
+  # CHECK IF TAG IS ALREADY THERE?
+  try:
+    pws.InsertTag(photoURI,tag)
+  except:
+    "Error adding tag to "+photoURI
+
+def setCaption(caption,pphotoid,palbum,pentry=None,puser=None,verbose=False,pws=None):
+  if pws==None:
+    pws=pwInit()
+  if pentry==None:
+    if puser==None:
+      puser=pws.email
+    pentry=getPhotoEntry(palbum,pphotoid,puser=puser,pws=pws)
+  if pentry:
+    pentry.summary.text=caption
+    try:
+      pws.UpdatePhotoMetadata(pentry)
+    except:
+      print "Could not update metadata for photoid %s" % pentry.gphoto_id.text
+  else:
+    print "Could not get photo entry for photoid %s, album %s, user %s" % (pphotoid,palbum,puser)
 
 
 def makeEntryFilename(e):

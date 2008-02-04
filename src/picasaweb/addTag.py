@@ -18,14 +18,7 @@ def main():
   pws = pwInit()
   pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
-  if puser==None:
-    puser=pws.email
-  photoURI='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/photoid/'+pphotoid
-  # CHECK IF TAG IS ALREADY THERE?
-  try:
-    pws.InsertTag(photoURI,tag)
-  except:
-    print "Error inserting tag. Make sure auth token is not expired?"
+  insertTag(tag,pphotoid,palbum)
 
 if __name__ == '__main__':
   main()
