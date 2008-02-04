@@ -40,8 +40,6 @@ def main():
         #uploadPhoto(localfilename,palbum,caption=captionText,tag=tags,verbose=True)
         p=uploadPhoto(localfilename,palbum,verbose=True)
         insertTag(tag,p.gphoto_id.text,palbum)
-        for kk in dir(p):
-            print kk
         #setCaption(captionText,None,None,pentry=p)
         setCaption(captionText,p.gphoto_id.text,palbum)
 
