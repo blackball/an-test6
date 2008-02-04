@@ -21,5 +21,6 @@ def main():
 
   uploadPhoto(photofile,palbum,tag=tag,caption=caption,verbose=True)
 
+
 if __name__ == '__main__':
   main()

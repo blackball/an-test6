@@ -25,23 +25,25 @@ def main():
 
   while True:
     allE = getAllTagEntries(tag)
-    print allE
-    # get new urls as local files
-    for e in allE:
-      if e.id.text not in masterDict:
-        masterDict[e.id.text] = time()
-        (localfilename,md5sum)=downloadEntry(e,verbose=True)
-        albumname=makeAlbumnameFromMD5(md5sum)
-        photouser=e.id.text[e.id.text.find('/user/')+6:].split('/')[0]
-        captionText="%s from %s" % (e.content.src.split('/')[-1],photouser)
-        aa=insertAlbumNonDuplicate(pws.email,albumname,verbose=True)
-        palbum=aa.gphoto_id.text
-        tag="SkyPhotoLocator:User:"+photouser
-        #uploadPhoto(localfilename,palbum,caption=captionText,tag=tags,verbose=True)
-        p=uploadPhoto(localfilename,palbum,verbose=True)
-        insertTag(tag,p.gphoto_id.text,palbum)
-        #setCaption(captionText,None,None,pentry=p)
-        setCaption(captionText,p.gphoto_id.text,palbum)
+    if allE:
+      for e in allE:
+        if pws.email in [a.email.text for a in e.author]:
+          print "WARNING: tag found on image %s for user %s" % (e.id.text,pws.email)
+        elif e.id.text not in masterDict:
+          # get new urls as local files
+          masterDict[e.id.text] = time()
+          (localfilename,md5sum)=downloadEntry(e,verbose=True)
+          thisalbumname=makeAlbumnameFromMD5(md5sum)
+          thisphotouser=e.id.text[e.id.text.find('/user/')+6:].split('/')[0]
+          thiscaptiontext="%s from %s" % (e.content.src.split('/')[-1],thisphotouser)
+          thisalbumentry=insertAlbumNonDuplicate(pws.email,thisalbumname,verbose=True)
+          palbum=thisalbumentry.gphoto_id.text
+          thistag="SkyPhotoLocator:User:"+thisphotouser
+          ##p=uploadPhoto(localfilename,palbum,caption=thiscaptiontext,tag=thistag,verbose=True)
+          thisphotoentry=uploadPhoto(localfilename,palbum,caption=thiscaptiontext,verbose=True)
+          insertTag(thistag,thisphotoentry.gphoto_id.text,palbum)
+    else:
+      print "No images found with tag="+tag
 
 if __name__ == '__main__':
   main()

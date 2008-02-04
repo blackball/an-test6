@@ -25,11 +25,11 @@ def main():
 
   while True:
     allE = getAllTagEntries(tag)
-    # get new urls as local files
-    for e in allE:
-      if e.id.text not in masterDict:
-        masterDict[e.id.text] = time()
-        downloadEntry(e,verbose=True,skipdownload=True)
+    if allE:
+      for e in allE:
+        if e.id.text not in masterDict:
+          masterDict[e.id.text] = time()
+          downloadEntry(e,verbose=True,skipdownload=True)
 
 if __name__ == '__main__':
   main()
