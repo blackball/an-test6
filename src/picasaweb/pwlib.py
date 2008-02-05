@@ -96,18 +96,20 @@ def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
   return rez
 
 
-def uploadPhoto(photofile,palbum,tag=None,caption=None,verbose=False,pws=None):
+def uploadPhoto(photofile,palbum,caption=None,verbose=False,pws=None):
   if pws==None:
     pws=pwInit()
   if verbose:
     print "  Adding photo in file %s to album %s of user %s" % (photofile,palbum,pws.email)
   if verbose and caption:
     print "  ...setting caption to %s" % caption
-  if verbose and tag:
-    print "  ...tagging with tags %s" % tag
+  #if verbose and tag:
+  #  print "  ...tagging with tags %s" % tag
   try:
     albumURI='http://picasaweb.google.com/data/feed/api/user/'+pws.email+'/albumid/'+palbum
-    pEntry=pws.InsertPhotoSimple(albumURI,photofile.split('/')[-1],caption,photofile,keywords=tag)
+    #somehow adding tags is not supported at insert time
+    #pEntry=pws.InsertPhotoSimple(albumURI,photofile.split('/')[-1],caption,photofile,keywords=tags)
+    pEntry=pws.InsertPhotoSimple(albumURI,photofile.split('/')[-1],caption,photofile)
     if verbose:
       print "  New photoid=%s [%sx%s pixels, %s bytes]" % \
             (pEntry.gphoto_id.text,pEntry.width.text,pEntry.height.text,pEntry.size.text)
