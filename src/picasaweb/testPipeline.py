@@ -40,8 +40,6 @@ def main():
         thislink=e.GetHtmlLink().href
         if pws.email in [a.email.text for a in e.author]:
           print "WARNING: tag found on image %s for user %s" % (e.id.text,pws.email)
-        elif thislink in masterDict:
-          print "  skipping photo %s (already loaded)" % thislink
         elif thislink not in masterDict:
           # get new urls as local files
           (localfilename,md5sum)=downloadEntry(e,verbose=True)
@@ -58,8 +56,8 @@ def main():
           thisphotoentry=uploadPhoto(localfilename,thispalbum,caption=thiscaptiontext,verbose=True)
           insertTag(thistag,thisphotoentry.gphoto_id.text,thispalbum)
           insertComment(thiscomment,thisphotoentry.gphoto_id.text,thispalbum,verbose=True)
-        else:
-          print "  UNKNOWN error in entry"
+        #elif thislink in masterDict:
+        #  print "  skipping photo %s (already loaded)" % thislink
     else:
       print "No images found with tag="+tag
 
