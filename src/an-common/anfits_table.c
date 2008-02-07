@@ -9,13 +9,15 @@
 #include "fitsioutils.h"
 
 anfits_table_t* anfits_table_open_for_writing(const char* fn) {
-	anfits_table_t* table = malloc(sizeof(anfits_table_t));
+	anfits_table_t* table = calloc(1, sizeof(anfits_table_t));
+    table->writing = TRUE;
 	table->fid = fopen(fn, "wb");
 	if (!table->fid) {
 		fprintf(stderr, "Failed to open FITS table %s for writing: %s\n", table->filename, strerror(errno));
 		free(table);
 		return NULL;
 	}
+	table->primheader = qfits_table_prim_header_default();
 	table->columns = bl_new(10, sizeof(column_t));
 	table->filename = strdup(fn);
 	table->qtable = NULL;
@@ -30,29 +32,55 @@ void anfits_table_add_column(anfits_table_t* table, anfits_type_t type, const ch
 	col->units = strdup(units);
 }
 
-int anfits_table_write_header(anfits_table_t* table) {
-	int ncols = anfits_table_ncols(table);
-	table->qtable = qfits_table_new(table->filename,
-			QFITS_BINTABLE, 0, ncols, table->written_rows);
-
-	int i;
-	for (i=0; i<ncols; i++) {
-		column_t *col = bl_access(table->columns, i);
-		fits_add_column(table->qtable, i,
-				col->type, 1, col->units, col->name);
-	}
-	table->qtable->tab_w = qfits_compute_table_width(table->qtable);
-
-	qfits_header* primary_hdr = qfits_table_prim_header_default();
-	int ret = qfits_header_dump(primary_hdr, table->fid);
-	qfits_header_destroy(primary_hdr);
-	if (ret == -1)
+int anfits_table_write_primary_header(anfits_table_t* table) {
+    int ret;
+    ret = qfits_header_dump(table->primheader, table->fid);
+    if (ret)
 		return -1;
+    return 0;
+}
 
-	qfits_header* ext_hdr = qfits_table_ext_header_default(table->qtable);
-	ret = qfits_header_dump(ext_hdr, table->fid);
-	qfits_header_destroy(ext_hdr);
-    return ret;
+int anfits_table_fix_header(anfits_table_t* table) {
+
+}
+
+int anfits_table_write_header(anfits_table_t* table) {
+    int ret;
+    anfits_table_get_header(table);
+	ret = qfits_header_dump(table->header, table->fid);
+    if (ret)
+		return -1;
+    return 0;
+}
+
+qfits_header*   anfits_table_get_primary_header(anfits_table_t* table) {
+    return table->primheader;
+}
+
+qfits_header* anfits_table_get_header(anfits_table_t* table) {
+    if (table->writing) {
+        if (!table->qtable) {
+            int i, ncols;
+            ncols = anfits_table_ncols(table);
+            table->qtable =
+                qfits_table_new(table->filename, QFITS_BINTABLE, 0,
+                                ncols, table->written_rows);
+            for (i=0; i<ncols; i++) {
+                column_t *col = bl_access(table->columns, i);
+                fits_add_column(table->qtable, i,
+                                col->type, 1, col->units, col->name);
+            }
+            table->qtable->tab_w = qfits_compute_table_width(table->qtable);
+        }
+        if (!table->header) {
+            table->header = qfits_table_ext_header_default(table->qtable);
+        } else {
+            //
+            // update NAXIS2 to reflect the number of rows written.
+            fits_header_mod_int(table->header, "NAXIS2", table->qtable->nr, NULL);
+        }
+    }
+    return table->header;
 }
 
 int anfits_table_write_row(anfits_table_t* table, ...) {
@@ -75,28 +103,39 @@ int anfits_table_write_row(anfits_table_t* table, ...) {
 }
 
 int anfits_table_close(anfits_table_t* table) {
-	fits_pad_file(table->fid);
-	rewind(table->fid);
-	anfits_table_write_header(table);
-	int ncols = anfits_table_ncols(table);
-	int i;
-	for (i=0; i<ncols; i++) {
-		column_t *col = bl_access(table->columns, i);
-		free(col->name);
-		free(col->units);
-	}
+    int ret = 0;
+
+    if (table->writing) {
+        fits_pad_file(table->fid);
+        rewind(table->fid);
+        anfits_table_write_header(table);
+
+        int ncols = anfits_table_ncols(table);
+        int i;
+        for (i=0; i<ncols; i++) {
+            column_t *col = bl_access(table->columns, i);
+            free(col->name);
+            free(col->units);
+        }
+        ret = fclose(table->fid);
+        if (ret) {
+            fprintf(stderr, "Failed to close FITS table %s: %s\n", table->filename, strerror(errno));
+        }
+    }
+    if (table->primheader)
+        qfits_header_destroy(table->primheader);
+    if (table->header)
+        qfits_header_destroy(table->header);
+
 	bl_free(table->columns);
 	free(table->filename);
-	int ret = fclose(table->fid);
-	if (ret) {
-		fprintf(stderr, "Failed to close FITS table %s: %s\n", table->filename, strerror(errno));
-	}
 	free(table);
     return ret;
 }
 
-anfits_table_t* anfits_table_open(const char* fn) {
-	anfits_table_t* table = malloc(sizeof(anfits_table_t));
+anfits_table_t* anfits_table_open_extension(const char* fn, int ext) {
+	anfits_table_t* table = calloc(1, sizeof(anfits_table_t));
+    table->writing = FALSE;
     /*
      table->fid = fopen(fn, "rb");
      if (!table->fid) {
@@ -106,16 +145,33 @@ anfits_table_t* anfits_table_open(const char* fn) {
      }
      */
     table->fid = NULL;
-	table->qtable = qfits_table_open(fn, 1);
+	table->qtable = qfits_table_open(fn, ext);
     if (!table->qtable) {
-        fprintf(stderr, "Failed to read FITS table header from file %s.\n", fn);
-        free(table);
+        fprintf(stderr, "Failed to read FITS table header from file %s, extension %i.\n", fn, ext);
+        anfits_table_close(table);
         return NULL;
     }
+    table->primheader = qfits_header_read(fn);
+    if (!table->primheader) {
+        fprintf(stderr, "Failed to read FITS primary header from file %s.\n", fn);
+        anfits_table_close(table);
+        return NULL;
+    }
+    table->header = qfits_header_readext(fn, ext);
+    if (!table->header) {
+        fprintf(stderr, "Failed to read FITS header from file %s, extension %i.\n", fn, ext);
+        anfits_table_close(table);
+        return NULL;
+    }
+
 	table->filename = strdup(fn);
 	table->columns = NULL; //bl_new(10, sizeof(column_t));
 	table->written_rows = 0;
     return table;
+}
+
+anfits_table_t* anfits_table_open(const char* fn) {
+    return anfits_table_open_extension(fn, 1);
 }
 
 int anfits_table_nrows(const anfits_table_t* table) {
@@ -124,6 +180,7 @@ int anfits_table_nrows(const anfits_table_t* table) {
 }
 
 int anfits_table_ncols(const anfits_table_t* table) {
+    if (!table->columns) return -1;
     return bl_size(table->columns);
 }
 
