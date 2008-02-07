@@ -37,11 +37,27 @@ static xylist_t* xylist_new() {
 }
 
 xylist_t* xylist_open(const char* fn) {
-    return NULL;
+    qfits_header* hdr;
+	xylist_t* ls = NULL;
+	ls = xylist_new();
+	if (!ls)
+		return NULL;
+    ls->table = fitstable_open(fn);
+    if (!ls->table) {
+		fprintf(stderr, "Failed to open FITS table %s.\n", fn);
+        free(ls);
+        return NULL;
+    }
+    hdr = fitstable_get_primary_header(ls->table);
+	ls->antype = fits_get_dupstring(hdr, "AN_FILE");
+	ls->nfields = qfits_query_n_ext(fn);
+    ls->field = -1;
+	return ls;
 }
 
 xylist_t* xylist_open_for_writing(const char* fn) {
 	xylist_t* ls;
+    qfits_header* hdr;
 	ls = xylist_new();
 	if (!ls)
 		goto bailout;
@@ -54,7 +70,8 @@ xylist_t* xylist_open_for_writing(const char* fn) {
     ls->table->extension = 0;
 
 	ls->antype = AN_FILETYPE_XYLS;
-	//qfits_header_add(ls->table->primheader, "AN_FILE", ls->antype, NULL, NULL);
+    hdr = fitstable_get_primary_header(ls->table);
+    qfits_header_add(hdr, "AN_FILE", ls->antype, "Astrometry.net file type", NULL);
     ls->field = 1;
 	return ls;
 
@@ -128,8 +145,9 @@ void xylist_next_field(xylist_t* ls) {
 }
 
 qfits_header* xylist_get_primary_header(xylist_t* ls) {
-    qfits_header* hdr = fitstable_get_primary_header(ls->table);
-    //qfits_header_mod(hdr, "AN_FILE", ls->antype, "Astrometry.net file type");
+    qfits_header* hdr;
+    hdr = fitstable_get_primary_header(ls->table);
+    qfits_header_mod(hdr, "AN_FILE", ls->antype, "Astrometry.net file type");
     return hdr;
 }
 
