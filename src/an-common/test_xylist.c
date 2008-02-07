@@ -14,6 +14,7 @@ void test_read_write(CuTest* ct) {
     xylist_t *in, *out;
     char* fn = get_tmpfile(0);
     field_t fld;
+    field_t infld;
 
     out = xylist_open_for_writing(fn);
     CuAssertPtrNotNull(ct, out);
@@ -72,6 +73,7 @@ void test_read_write(CuTest* ct) {
 
     CuAssertIntEquals(ct, 0, xylist_close(out));
 
+    out = NULL;
 
 
 
@@ -86,6 +88,22 @@ void test_read_write(CuTest* ct) {
     CuAssertPtrNotNull(ct, typ);
     CuAssertIntEquals(ct, 0, strcmp(typ, "XYLS"));
     free(typ);
+
+    CuAssertIntEquals(ct, 42, qfits_header_getint(hdr, "KEYA", -1));
+
+    xylist_set_xname(in, "XXX");
+    xylist_set_yname(in, "YYY");
+
+    hdr = xylist_get_header(in);
+    CuAssertPtrNotNull(ct, hdr);
+    CuAssertIntEquals(ct, 43, qfits_header_getint(hdr, "KEYB", -1));
+
+    CuAssertPtrNotNull(ct, xylist_read_field(in, &infld));
+
+
+
+
+
 
     CuAssertIntEquals(ct, 0, xylist_close(in));
 

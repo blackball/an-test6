@@ -136,6 +136,34 @@ int xylist_write_field(xylist_t* ls, field_t* fld) {
     return 0;
 }
 
+field_t* xylist_read_field(xylist_t* ls, field_t* fld) {
+    bool freeit = FALSE;
+    tfits_type dubl = fitscolumn_double_type();
+
+    if (!fld) {
+        fld = calloc(1, sizeof(field_t));
+        freeit = TRUE;
+    }
+
+    fld->N = fitstable_nrows(ls->table);
+    fld->x = fitstable_read_column(ls->table, ls->xname, dubl);
+    fld->y = fitstable_read_column(ls->table, ls->yname, dubl);
+    // umm, HACK
+    fld->flux = fitstable_read_column(ls->table, "FLUX", dubl);
+    fld->background = fitstable_read_column(ls->table, "BACKGROUND", dubl);
+
+    if (!(fld->x && fld->y)) {
+        free(fld->x);
+        free(fld->y);
+        free(fld->flux);
+        free(fld->background);
+        if (freeit)
+            free(fld);
+        return NULL;
+    }
+    return fld;
+}
+
 // Used when writing: start a new field.  Set up the table and header
 // structures so that they can be added to before writing the field header.
 void xylist_next_field(xylist_t* ls) {
