@@ -26,15 +26,14 @@ struct fitscol_t {
     bool in_struct;
     int coffset;
 
-    // ??? Called to retrieve data to be written to the output file.
-    //void (*get_data_callback)(void* data, int offset, int N, fitscol_t* col, void* user);
-    //void* get_data_user;
-    // ??? Called when data has been read from the input file.
-    //void (*put_data_callback)(void* data, int offset, int N, fitscol_t* col, void* user);
-    //void* put_data_user;
-
-    // Where to read/write data from/to.
     /*
+     // Called to retrieve data to be written to the output file.
+     //void (*get_data_callback)(void* data, int offset, int N, fitscol_t* col, void* user);
+     //void* get_data_user;
+     // Called when data has been read from the input file.
+     //void (*put_data_callback)(void* data, int offset, int N, fitscol_t* col, void* user);
+     //void* put_data_user;
+     // Where to read/write data from/to.
      void* cdata;
      int cdata_stride;
      */
@@ -49,10 +48,6 @@ static void fitstable_add_column(fitstable_t* tab, fitscol_t* col);
 static void fitstable_create_table(fitstable_t* tab);
 
 /*
- void fitstable_print_missing(fitstable_t* tab, FILE* f);
-
- fitscol_t* fitstable_get_column(fitstable_t* table, int col);
-
  int fitstable_read_array(const fitstable_t* tab,
  //const fitscol_t* cols, int Ncols,
  int offset, int N,
@@ -68,6 +63,10 @@ static int ncols(const fitstable_t* t) {
 }
 static fitscol_t* getcol(const fitstable_t* t, int i) {
     return bl_access(t->cols, i);
+}
+
+bool is_writing(const fitstable_t* t) {
+    return t->fid ? TRUE : FALSE;
 }
 
 tfits_type fitscolumn_int_type() {
@@ -169,8 +168,6 @@ void fitstable_add_column_struct(fitstable_t* tab,
     col.colname = name;
     col.units = units;
     col.fitstype = fits_type;
-    //col.target_fitstype = fits_type;
-    //col.target_arraysize = arraysize;
     col.ctype = c_type;
     col.arraysize = arraysize;
     col.in_struct = TRUE;
@@ -290,7 +287,6 @@ int fitstable_write_row(fitstable_t* table, ...) {
     }
 	va_end(ap);
     free(buf);
-	//table->written_rows++;
     table->table->nr++;
     return ret;
 }
@@ -374,7 +370,8 @@ qfits_header* fitstable_get_header(fitstable_t* t) {
 }
 
 void fitstable_next_extension(fitstable_t* tab) {
-    fits_pad_file(tab->fid);
+    if (tab->fid)
+        fits_pad_file(tab->fid);
     qfits_table_close(tab->table);
     qfits_header_destroy(tab->header);
     tab->extension++;
@@ -450,6 +447,10 @@ int fitstable_close(fitstable_t* tab) {
     if (tab->primheader) {
         qfits_header_destroy(tab->primheader);
     }
+    if (tab->header)
+        qfits_header_destroy(tab->header);
+    if (tab->table)
+        qfits_table_close(tab->table);
     free(tab->fn);
     bl_free(tab->cols);
     free(tab);
@@ -538,9 +539,7 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
         fitscol_t* col = getcol(tab, i);
         qfits_col* qcol;
 
-        // FIXME - target?
-
-        // ? set this here?
+        // FIXME? set this here?
         col->csize = fits_get_atom_size(col->ctype);
 
         // Column found?
@@ -548,12 +547,6 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
         if (col->col == -1)
             continue;
         qcol = tab->table->col + col->col;
-        /*
-         // save params
-         col->fitstype = qcol->atom_type;
-         col->arraysize = qcol->atom_nb;
-         col->fitssize = fits_get_atom_size(col->fitstype);
-         */
 
         // Type & array size correct?
         if (col->fitstype != fitscolumn_any_type() &&
@@ -570,22 +563,6 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
             continue;
         }
         col->arraysize = qcol->atom_nb;
-
-        // Type correct?
-        /*
-         if (col->target_fitstype != fitscolumn_any_type() &&
-         col->target_fitstype != col->fitstype) {
-         col->col = -1;
-         continue;
-         }
-         
-         // Array size correct?
-         if (col->target_arraysize &&
-         col->arraysize != col->target_arraysize) {
-         col->col = -1;
-         continue;
-         }
-         */
     }
 
     for (i=0; i<ncols(tab); i++) {
@@ -721,12 +698,6 @@ int fitstable_nrows(fitstable_t* t) {
  }
  }
  fprintf(f, "\n");
- }
- */
-
-/*
- fitscol_t* fitstable_get_column(fitstable_t* table, int col) {
- return getcol(table, col);
  }
  */
 

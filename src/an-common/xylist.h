@@ -45,6 +45,9 @@ void field_sety(field_t* f, int i, double y);
 
 int field_n(field_t* f);
 
+// Just free the data, not the field itself.
+void field_free_data(field_t* f);
+
 /*
  typedef dl xy;
  #define mk_xy(n) dl_new((n)*2)
@@ -70,7 +73,7 @@ struct xylist_t {
     fitstable_t* table;
     //anfits_table_t* table;
 
-	const char* antype; // Astrometry.net filetype string.
+	char* antype; // Astrometry.net filetype string.
 
     const char* xname;
     const char* yname;
@@ -86,7 +89,7 @@ struct xylist_t {
     int nfields;
 
 	// field we're currently reading/writing
-	unsigned int field;
+	//unsigned int field;
 };
 typedef struct xylist_t xylist_t;
 
@@ -126,6 +129,8 @@ typedef struct xylist_t xylist_t;
 xylist_t* xylist_open(const char* fn);
 
 xylist_t* xylist_open_for_writing(const char* fn);
+
+void xylist_set_antype(xylist_t* ls, const char* type);
 
 void xylist_set_xname(xylist_t* ls, const char* name);
 void xylist_set_yname(xylist_t* ls, const char* name);

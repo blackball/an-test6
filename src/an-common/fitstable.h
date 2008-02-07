@@ -105,8 +105,6 @@ struct fitstable_t {
 
     int extension;
 
-    //bool writing;
-
     // When writing:
 	char* fn;
     FILE* fid;

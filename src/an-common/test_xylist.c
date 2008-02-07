@@ -7,7 +7,7 @@
 static char* get_tmpfile(int i) {
     static char fn[256];
     sprintf(fn, "/tmp/test-xylist-%i", i);
-    return fn;
+    return strdup(fn);
 }
 
 void test_read_write(CuTest* ct) {
@@ -67,6 +67,9 @@ void test_read_write(CuTest* ct) {
 
     xylist_next_field(out);
 
+    int N2 = 5;
+    fld.N = N2;
+
     CuAssertIntEquals(ct, 0, xylist_write_header(out));
     CuAssertIntEquals(ct, 0, xylist_write_field(out, &fld));
     CuAssertIntEquals(ct, 0, xylist_fix_header(out));
@@ -100,13 +103,45 @@ void test_read_write(CuTest* ct) {
 
     CuAssertPtrNotNull(ct, xylist_read_field(in, &infld));
 
+    CuAssertIntEquals(ct, N, infld.N);
+    for (i=0; i<N; i++) {
+        CuAssertIntEquals(ct, fld.x[i], infld.x[i]);
+        CuAssertIntEquals(ct, fld.y[i], infld.y[i]);
+        CuAssertIntEquals(ct, fld.flux[i], infld.flux[i]);
+    }
+    CuAssertPtrEquals(ct, NULL, infld.background);
 
+    field_free_data(&infld);
 
+    xylist_next_field(in);
 
+    // the columns are named differently...
+    CuAssertPtrEquals(ct, NULL, xylist_read_field(in, &infld));
 
+    xylist_set_xname(in, "X2");
+    xylist_set_yname(in, "Y2");
+
+    memset(&infld, 0, sizeof(infld));
+    CuAssertPtrNotNull(ct, xylist_read_field(in, &infld));
+
+    CuAssertIntEquals(ct, N2, infld.N);
+    for (i=0; i<N2; i++) {
+        CuAssertIntEquals(ct, fld.x[i], infld.x[i]);
+        CuAssertIntEquals(ct, fld.y[i], infld.y[i]);
+    }
+    CuAssertPtrEquals(ct, NULL, infld.flux);
+    CuAssertPtrEquals(ct, NULL, infld.background);
+
+    field_free_data(&infld);
+
+    xylist_next_field(in);
+    // no such field...
+    CuAssertPtrEquals(ct, NULL, xylist_read_field(in, &infld));
 
     CuAssertIntEquals(ct, 0, xylist_close(in));
 
 
+    // I love valgrind-clean tests
+    free(fn);
 }
 
