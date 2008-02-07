@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include "fitstable.h"
 #include "fitsioutils.h"
 
@@ -361,3 +363,162 @@ void test_arrays(CuTest* ct) {
         CuAssertIntEquals(ct, (int)outy[i], iny[i]);
     CuAssertIntEquals(ct, 0, fitstable_close(tab));
 }
+
+void test_conversion(CuTest* ct) {
+    fitstable_t* tab, *outtab;
+    int i;
+    int N = 100;
+    int D = 3;
+    double out[N*D];
+    double* in;
+    char* fn;
+    int d, t;
+
+    tfits_type i32 = TFITS_BIN_TYPE_J;
+    tfits_type dubl = fitscolumn_double_type();
+
+    fn = get_tmpfile(6);
+    outtab = fitstable_open_for_writing(fn);
+    CuAssertPtrNotNull(ct, outtab);
+    CuAssertIntEquals(ct, 0, fitstable_write_primary_header(outtab));
+
+    fitstable_add_write_column_array_convert(outtab, i32,  dubl, D, "X", "foounits");
+    CuAssertIntEquals(ct, 1, fitstable_ncols(outtab));
+    CuAssertIntEquals(ct, 0, fitstable_write_header(outtab));
+
+    for (i=0; i<N*D; i++)
+        out[i] = i;
+
+    for (i=0; i<N; i++)
+        CuAssertIntEquals(ct, 0, fitstable_write_row(outtab, out+i*D));
+    CuAssertIntEquals(ct, 0, fitstable_fix_header(outtab));
+
+    // writing shouldn't affect the data values
+    for (i=0; i<N*D; i++)
+        CuAssertIntEquals(ct, i, out[i]);
+
+    CuAssertIntEquals(ct, 0, fitstable_close(outtab));
+
+    tab = fitstable_open(fn);
+    CuAssertPtrNotNull(ct, tab);
+    CuAssertIntEquals(ct, N, fitstable_nrows(tab));
+
+    d = fitstable_get_array_size(tab, "X");
+    t = fitstable_get_type(tab, "X");
+
+    CuAssertIntEquals(ct, D, d);
+    CuAssertIntEquals(ct, i32, t);
+
+    in = fitstable_read_column_array(tab, "X", dubl);
+    CuAssertPtrNotNull(ct, in);
+
+    for (i=0; i<N*D; i++)
+        CuAssertIntEquals(ct, out[i], (int)in[i]);
+    CuAssertIntEquals(ct, 0, fitstable_close(tab));
+}
+
+struct ts1 {
+    int x1;
+    int x2[3];
+    double x3;
+    double x4;
+};
+typedef struct ts1 ts1;
+
+struct ts2 {
+    double x1;
+    int16_t x2[3];
+    int x3;
+    float x4;
+};
+typedef struct ts2 ts2;
+
+void test_struct_1(CuTest* ct) {
+    fitstable_t* tab, *outtab;
+    tfits_type i16 = TFITS_BIN_TYPE_I;
+    tfits_type itype = fitscolumn_int_type();
+    tfits_type dubl = fitscolumn_double_type();
+    tfits_type flt = fitscolumn_float_type();
+    char* fn;
+    int i, N = 100;
+    ts1 x[N];
+    ts2 y[N];
+    int d, t;
+
+    fn = get_tmpfile(7);
+    outtab = fitstable_open_for_writing(fn);
+    CuAssertPtrNotNull(ct, outtab);
+    CuAssertIntEquals(ct, 0, fitstable_write_primary_header(outtab));
+
+    fitstable_add_write_column_struct(outtab, itype, 1, offsetof(ts1, x1),
+                                      itype, "X1", "x1units");
+    fitstable_add_write_column_struct(outtab, itype, 3, offsetof(ts1, x2),
+                                      i16, "X2", "x2units");
+    fitstable_add_write_column_struct(outtab, dubl, 1, offsetof(ts1, x3),
+                                      dubl, "X3", "x3units");
+    fitstable_add_write_column_struct(outtab, dubl, 1, offsetof(ts1, x4),
+                                      flt, "X4", "x4units");
+    CuAssertIntEquals(ct, 0, fitstable_write_header(outtab));
+
+    for (i=0; i<N; i++) {
+        x[i].x1 = i;
+        x[i].x2[0] = 1000 + i;
+        x[i].x2[1] = 2000 + i;
+        x[i].x2[2] = 3000 + i;
+        x[i].x3 = i * 1000.0;
+        x[i].x4 = i * 1e6;
+        CuAssertIntEquals(ct, 0, fitstable_write_struct(outtab, x+i));
+    }
+
+    CuAssertIntEquals(ct, 0, fitstable_fix_header(outtab));
+    CuAssertIntEquals(ct, 0, fitstable_close(outtab));
+
+    tab = fitstable_open(fn);
+    CuAssertPtrNotNull(ct, tab);
+    CuAssertIntEquals(ct, N, fitstable_nrows(tab));
+
+    d = fitstable_get_array_size(tab, "X1");
+    t = fitstable_get_type(tab, "X1");
+    CuAssertIntEquals(ct, 1, d);
+    CuAssertIntEquals(ct, itype, t);
+
+    d = fitstable_get_array_size(tab, "X2");
+    t = fitstable_get_type(tab, "X2");
+    CuAssertIntEquals(ct, 3, d);
+    CuAssertIntEquals(ct, i16, t);
+
+    d = fitstable_get_array_size(tab, "X3");
+    t = fitstable_get_type(tab, "X3");
+    CuAssertIntEquals(ct, 1, d);
+    CuAssertIntEquals(ct, dubl, t);
+
+    d = fitstable_get_array_size(tab, "X4");
+    t = fitstable_get_type(tab, "X4");
+    CuAssertIntEquals(ct, 1, d);
+    CuAssertIntEquals(ct, flt, t);
+
+    fitstable_add_read_column_struct(tab, dubl, 1, offsetof(ts2, x1),
+                                     itype, "X1");
+    fitstable_add_read_column_struct(tab, i16, 3, offsetof(ts2, x2),
+                                     i16, "X2");
+    fitstable_add_read_column_struct(tab, itype, 1, offsetof(ts2, x3),
+                                     dubl, "X3");
+    fitstable_add_read_column_struct(tab, flt, 1, offsetof(ts2, x4),
+                                     flt, "X4");
+
+    fitstable_read_extension(tab, 1);
+
+    for (i=0; i<N; i++) {
+        double eps = 1e-10;
+        CuAssertIntEquals(ct, 0, fitstable_read_struct(tab, y+i));
+        CuAssertDblEquals(ct, x[i].x1, y[i].x1, eps);
+        CuAssertIntEquals(ct, x[i].x2[0], y[i].x2[0]);
+        CuAssertIntEquals(ct, x[i].x2[1], y[i].x2[1]);
+        CuAssertIntEquals(ct, x[i].x2[2], y[i].x2[2]);
+        CuAssertIntEquals(ct, x[i].x3, y[i].x3);
+        CuAssertDblEquals(ct, x[i].x4, y[i].x4, eps);
+    }
+
+}
+
+

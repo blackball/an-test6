@@ -74,8 +74,8 @@ struct fitscol_t {
 
     bool required;
 
-    // size of one data item (or the whole array if it's an array type)
-    // computed: fits_sizeof({fits,c}type) * arraysize
+    // size of one data item
+    // computed: fits_sizeof({fits,c}type)
     int fitssize;
     int csize;
 
@@ -121,6 +121,8 @@ struct fitstable_t {
 
     int extension;
 
+    int reading_row;
+
     //bool writing;
 
     // When writing:
@@ -139,6 +141,7 @@ typedef struct fitstable_t fitstable_t;
 // Returns the FITS type of "int" on this machine.
 tfits_type fitscolumn_int_type();
 tfits_type fitscolumn_double_type();
+tfits_type fitscolumn_float_type();
 
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type();
@@ -173,6 +176,22 @@ int fitstable_get_type(fitstable_t* tab, const char* name);
 
 //// Shortcuts
 
+void fitstable_add_read_column_struct(fitstable_t* tab,
+                                      tfits_type c_type,
+                                      int arraysize,
+                                      int structoffset,
+                                      tfits_type fits_type,
+                                      const char* name);
+
+void fitstable_add_write_column_struct(fitstable_t* tab,
+                                       tfits_type c_type,
+                                       int arraysize,
+                                       int structoffset,
+                                       tfits_type fits_type,
+                                       const char* name,
+                                       const char* units);
+
+
 void fitstable_add_write_column(fitstable_t* tab, tfits_type t,
                                 const char* name, const char* units);
 
@@ -181,6 +200,19 @@ void fitstable_add_write_column_array(fitstable_t* tab, tfits_type t,
                                       const char* name,
                                       const char* units);
 
+void fitstable_add_write_column_convert(fitstable_t* tab,
+                                        tfits_type fits_type,
+                                        tfits_type c_type,
+                                        const char* name,
+                                        const char* units);
+
+void fitstable_add_write_column_array_convert(fitstable_t* tab,
+                                              tfits_type fits_type,
+                                              tfits_type c_type,
+                                              int arraysize,
+                                              const char* name,
+                                              const char* units);
+
 void* fitstable_read_column(const fitstable_t* tab,
                             const char* colname, tfits_type t);
 
@@ -188,6 +220,10 @@ void* fitstable_read_column_array(const fitstable_t* tab,
                                   const char* colname, tfits_type t);
 
 int fitstable_write_row(fitstable_t* table, ...);
+
+int fitstable_write_struct(fitstable_t* table, const void* struc);
+
+int fitstable_read_struct(fitstable_t* table, void* struc);
 
 //// /Shortcuts
 

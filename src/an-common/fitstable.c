@@ -32,6 +32,10 @@ tfits_type fitscolumn_double_type() {
     return TFITS_BIN_TYPE_D;
 }
 
+tfits_type fitscolumn_float_type() {
+    return TFITS_BIN_TYPE_E;
+}
+
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type() {
     return (tfits_type)-1;
@@ -43,47 +47,181 @@ int fitstable_ncols(fitstable_t* t) {
 
 void fitstable_add_write_column(fitstable_t* tab, tfits_type t,
                                 const char* name, const char* units) {
-    fitscol_t col;
-    memset(&col, 0, sizeof(fitscol_t));
-    col.colname = name;
-    col.units = units;
-    col.fitstype = col.ctype = t;
-    col.arraysize = 1;
-    col.in_struct = FALSE;
+    fitstable_add_write_column_array_convert(tab, t, t, 1, name, units);
+}
 
-    fitstable_add_column(tab, &col);
+void fitstable_add_write_column_convert(fitstable_t* tab,
+                                        tfits_type fits_type,
+                                        tfits_type c_type,
+                                        const char* name,
+                                        const char* units) {
+    fitstable_add_write_column_array_convert(tab, fits_type, c_type, 1, name, units);
 }
 
 void fitstable_add_write_column_array(fitstable_t* tab, tfits_type t,
                                       int arraysize,
                                       const char* name,
                                       const char* units) {
+    fitstable_add_write_column_array_convert(tab, t, t, arraysize, name, units);
+}
+
+void fitstable_add_write_column_array_convert(fitstable_t* tab,
+                                              tfits_type fits_type,
+                                              tfits_type c_type,
+                                              int arraysize,
+                                              const char* name,
+                                              const char* units) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
     col.colname = name;
     col.units = units;
-    col.fitstype = col.ctype = t;
+    col.fitstype = fits_type;
+    col.ctype = c_type;
     col.arraysize = arraysize;
     col.in_struct = FALSE;
     fitstable_add_column(tab, &col);
+}
+
+void fitstable_add_write_column_struct(fitstable_t* tab,
+                                       tfits_type c_type,
+                                       int arraysize,
+                                       int structoffset,
+                                       tfits_type fits_type,
+                                       const char* name,
+                                       const char* units) {
+    fitscol_t col;
+    memset(&col, 0, sizeof(fitscol_t));
+    col.colname = name;
+    col.units = units;
+    col.fitstype = fits_type;
+    col.ctype = c_type;
+    col.arraysize = arraysize;
+    col.in_struct = TRUE;
+    col.coffset = structoffset;
+    fitstable_add_column(tab, &col);
+}
+
+void fitstable_add_read_column_struct(fitstable_t* tab,
+                                      tfits_type c_type,
+                                      int arraysize,
+                                      int structoffset,
+                                      tfits_type fits_type,
+                                      const char* name) {
+    fitscol_t col;
+    memset(&col, 0, sizeof(fitscol_t));
+    col.colname = name;
+    col.fitstype = fits_type;
+    col.target_fitstype = fits_type;
+    col.target_arraysize = arraysize;
+    col.ctype = c_type;
+    col.arraysize = arraysize;
+    col.in_struct = TRUE;
+    col.coffset = structoffset;
+    fitstable_add_column(tab, &col);
+}
+
+int fitstable_read_struct(fitstable_t* tab, void* struc) {
+    int i;
+    void* tempdata = NULL;
+    int highwater = 0;
+
+    for (i=0; i<ncols(tab); i++) {
+        void* dest;
+        void* finaldest;
+        fitscol_t* col = getcol(tab, i);
+        if (col->col == -1)
+            continue;
+        if (!col->in_struct)
+            continue;
+        finaldest = ((char*)struc) + col->coffset;
+
+        if (col->fitstype != col->ctype) {
+            int NB = col->fitssize * col->arraysize;
+            if (NB > highwater) {
+                free(tempdata);
+                tempdata = malloc(NB);
+                highwater = NB;
+            }
+            dest = tempdata;
+        } else {
+            dest = finaldest;
+        }
+
+        // Read from FITS file...
+        qfits_query_column_seq_to_array
+            (tab->table, col->col, tab->reading_row, 1, dest, 0);
+
+        if (col->fitstype != col->ctype) {
+            fits_convert_data(((char*)finaldest), col->csize, col->ctype,
+                              ((char*)dest), col->fitssize, col->fitstype,
+                              col->arraysize);
+        }
+    }
+    free(tempdata);
+    tab->reading_row++;
+    return 0;
+}
+
+int fitstable_write_struct(fitstable_t* table, const void* struc) {
+    int i;
+    char* buf = NULL;
+    int Nbuf = 0;
+	int ret = 0;
+
+    for (i=0; i<ncols(table); i++) {
+        fitscol_t* col = getcol(table, i);
+        void* columndata = ((char*)struc) + col->coffset;
+        if (col->fitstype != col->ctype) {
+            int sz = MAX(256, MAX(col->csize, col->fitssize) * col->arraysize);
+            if (sz > Nbuf) {
+                free(buf);
+                buf = malloc(sz);
+            }
+            fits_convert_data(buf, col->fitssize, col->fitstype,
+                              columndata, col->csize, col->ctype,
+                              col->arraysize);
+            columndata = buf;
+        }
+        ret = fits_write_data_array(table->fid, columndata,
+                                    col->fitstype, col->arraysize);
+        if (ret)
+            break;
+    }
+    free(buf);
+    table->table->nr++;
+    return ret;
 }
 
 int fitstable_write_row(fitstable_t* table, ...) {
 	va_list ap;
 	int ncols = fitstable_ncols(table);
 	int i;
-
+    char* buf = NULL;
+    int Nbuf = 0;
 	int ret = 0;
+
 	va_start(ap, table);
 	for (i=0; i<ncols; i++) {
 		fitscol_t *col = bl_access(table->cols, i);
 		void *columndata = va_arg(ap, void *);
+        if (col->fitstype != col->ctype) {
+            int sz = MAX(256, MAX(col->csize, col->fitssize) * col->arraysize);
+            if (sz > Nbuf) {
+                free(buf);
+                buf = malloc(sz);
+            }
+            fits_convert_data(buf, col->fitssize, col->fitstype,
+                              columndata, col->csize, col->ctype,
+                              col->arraysize);
+            columndata = buf;
+        }
         ret = fits_write_data_array(table->fid, columndata,
                                     col->fitstype, col->arraysize);
         if (ret)
             break;
     }
 	va_end(ap);
+    free(buf);
 	//table->written_rows++;
     table->table->nr++;
     return ret;
@@ -254,8 +392,11 @@ int fitstable_close(fitstable_t* tab) {
 
 void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols) {
     int i;
-    for (i=0; i<Ncols; i++)
-        bl_append(tab->cols, cols + i);
+    for (i=0; i<Ncols; i++) {
+        fitscol_t* col = bl_append(tab->cols, cols + i);
+        col->csize = fits_get_atom_size(col->ctype);
+        col->fitssize = fits_get_atom_size(col->fitstype);
+    }
 }
 
 void fitstable_add_column(fitstable_t* tab, fitscol_t* col) {
@@ -304,6 +445,7 @@ int fitstable_open_extension(fitstable_t* tab, int ext) {
 		fprintf(stderr, "Couldn't get header for FITS extension %i in file %s.\n", ext, tab->fn);
 		return -1;
 	}
+    tab->reading_row = 0;
     return 0;
 }
 
@@ -334,7 +476,7 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
         // FIXME - target?
 
         // ? set this here?
-        col->csize = fits_get_atom_size(col->ctype) * col->arraysize;
+        col->csize = fits_get_atom_size(col->ctype);
 
         // Column found?
         col->col = fits_find_column(tab->table, col->colname);
@@ -344,7 +486,7 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
         // save params
         col->fitstype = qcol->atom_type;
         col->arraysize = qcol->atom_nb;
-        col->fitssize = fits_get_atom_size(col->fitstype) * col->arraysize;
+        col->fitssize = fits_get_atom_size(col->fitstype);
 
         // Type correct?
         if (col->target_fitstype != fitscolumn_any_type() &&
