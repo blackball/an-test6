@@ -41,7 +41,7 @@ int anfits_table_write_primary_header(anfits_table_t* table) {
 }
 
 int anfits_table_fix_header(anfits_table_t* table) {
-
+    return -1;
 }
 
 int anfits_table_write_header(anfits_table_t* table) {
