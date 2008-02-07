@@ -22,12 +22,10 @@
 #include <stdio.h>
 
 #include "qfits.h"
+#include "fitsfile.h"
 
 struct fitsbin_chunk_t {
 	char* tablename;
-
-	// Extra FITS headers to add to the extension header containing the table.
-	qfits_header* header;
 
 	// The data (NULL if the table was not found)
 	void* data;
@@ -45,9 +43,15 @@ struct fitsbin_chunk_t {
     int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata);
     void* userdata;
 
-    // Writing:
-	off_t header_start;
-	off_t header_end;
+    /*
+     // Extra FITS headers to add to the extension header containing the table.
+     qfits_header* header;
+
+     // Writing:
+     off_t header_start;
+     off_t header_end;
+     */
+    fitsextension_t ext;
 
 	// Internal use:
 	// The mmap'ed address
@@ -64,15 +68,18 @@ struct fitsbin_t {
     fitsbin_chunk_t* chunks;
     int nchunks;
 
-	// The primary FITS header
-	qfits_header* primheader;
-
     // Error string in which to report errors.
     char** errstr;
 
-	// Writing:
-	FILE* fid;
-	off_t primheader_end;
+    fitsfile_t* fitsfile;
+
+    /*
+     // Writing:
+     FILE* fid;
+     // The primary FITS header
+     qfits_header* primheader;
+     off_t primheader_end;
+     */
 };
 typedef struct fitsbin_t fitsbin_t;
 
@@ -83,15 +90,19 @@ int fitsbin_read(fitsbin_t* fb);
 
 int fitsbin_close(fitsbin_t* fb);
 
+qfits_header* fitsbin_get_primary_header(fitsbin_t* fb);
+
 int fitsbin_write_primary_header(fitsbin_t* fb);
 
 int fitsbin_fix_primary_header(fitsbin_t* fb);
+
+qfits_header* fitsbin_get_chunk_header(fitsbin_t* fb, int chunk);
 
 int fitsbin_write_chunk_header(fitsbin_t* fb, int chunk);
 
 int fitsbin_fix_chunk_header(fitsbin_t* fb, int chunk);
 
-int fitsbin_start_write(fitsbin_t* fb);
+//int fitsbin_start_write(fitsbin_t* fb);
 
 int fitsbin_write_item(fitsbin_t* fb, int chunk, void* data);
 
@@ -110,9 +121,5 @@ int fitsbin_fix_header(fitsbin_t* fb);
 
 fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 									char** errstr);
-
-
-
-
 
 #endif
