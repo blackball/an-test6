@@ -473,28 +473,58 @@ int fits_write_data_K(FILE* fid, int64_t value) {
 	return 0;
 }
 
+int fits_write_data_array(FILE* fid, void* vvalue, tfits_type type,
+                          int N) {
+    int i;
+    int rtn = 0;
+    char* pvalue = (char*)vvalue;
+    for (i=0; i<N; i++) {
+        switch (type) {
+        case TFITS_BIN_TYPE_A:
+            rtn = fits_write_data_A(fid, *(unsigned char*)pvalue);
+            pvalue += sizeof(unsigned char);
+            break;
+        case TFITS_BIN_TYPE_B:
+            rtn = fits_write_data_B(fid, *(unsigned char*)pvalue);
+            pvalue += sizeof(unsigned char);
+            break;
+        case TFITS_BIN_TYPE_D:
+            rtn = fits_write_data_D(fid, *(double*)pvalue);
+            pvalue += sizeof(double);
+            break;
+        case TFITS_BIN_TYPE_E:
+            rtn = fits_write_data_E(fid, *(float*)pvalue);
+            pvalue += sizeof(float);
+            break;
+        case TFITS_BIN_TYPE_I:
+            rtn = fits_write_data_I(fid, *(int16_t*)pvalue);
+            pvalue += sizeof(int16_t);
+            break;
+        case TFITS_BIN_TYPE_J:
+            rtn = fits_write_data_J(fid, *(int32_t*)pvalue);
+            pvalue += sizeof(int32_t);
+            break;
+        case TFITS_BIN_TYPE_K:
+            rtn = fits_write_data_K(fid, *(int64_t*)pvalue);
+            pvalue += sizeof(int64_t);
+            break;
+        case TFITS_BIN_TYPE_X:
+            rtn = fits_write_data_X(fid, *(unsigned char*)pvalue);
+            pvalue += sizeof(unsigned char);
+            break;
+        default:
+            fprintf(stderr, "fitsioutils: fits_write_data: unknown data type %i.\n", type);
+            rtn = -1;
+            break;
+        }
+        if (rtn)
+            break;
+    }
+    return rtn;
+}
+
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type) {
-	switch (type) {
-	case TFITS_BIN_TYPE_A:
-		return fits_write_data_A(fid, *(unsigned char*)pvalue);
-	case TFITS_BIN_TYPE_B:
-		return fits_write_data_B(fid, *(unsigned char*)pvalue);
-	case TFITS_BIN_TYPE_D:
-		return fits_write_data_D(fid, *(double*)pvalue);
-	case TFITS_BIN_TYPE_E:
-		return fits_write_data_E(fid, *(float*)pvalue);
-	case TFITS_BIN_TYPE_I:
-		return fits_write_data_I(fid, *(int16_t*)pvalue);
-	case TFITS_BIN_TYPE_J:
-		return fits_write_data_J(fid, *(int32_t*)pvalue);
-	case TFITS_BIN_TYPE_K:
-		return fits_write_data_K(fid, *(int64_t*)pvalue);
-	case TFITS_BIN_TYPE_X:
-		return fits_write_data_X(fid, *(unsigned char*)pvalue);
-	default: break;
-	}
-	fprintf(stderr, "fitsioutils: fits_write_data: unknown data type %i.\n", type);
-	return -1;
+    return fits_write_data_array(fid, pvalue, type, 1);
 }
 
 int fits_bytes_needed(int size) {

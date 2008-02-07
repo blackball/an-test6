@@ -143,5 +143,7 @@ int fits_write_data_K(FILE* fid, int64_t value);
 int fits_write_data_X(FILE* fid, unsigned char value);
 
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type);
+int fits_write_data_array(FILE* fid, void* vvalue, tfits_type type,
+                          int N);
 
 #endif
