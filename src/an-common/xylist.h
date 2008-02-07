@@ -24,19 +24,39 @@
 
 #include "starutil.h"
 #include "qfits.h"
-#include "bl.h"
-#include "fitstable.h"
+//#include "bl.h"
+//#include "fitstable.h"
+#include "anfits.h"
 
-typedef dl xy;
-#define mk_xy(n) dl_new((n)*2)
-#define free_xy(x) dl_free(x)
-#define xy_ref(x, i) dl_get(x, i)
-#define xy_refx(x, i) dl_get(x, 2*(i))
-#define xy_refy(x, i) dl_get(x, (2*(i))+1)
-#define xy_size(x) (dl_size(x)/2)
-#define xy_set(x,i,v) dl_set(x,i,v)
-#define xy_setx(x,i,v) dl_set(x,2*(i),v)
-#define xy_sety(x,i,v) dl_set(x,2*(i)+1,v)
+struct field_t {
+    double* x;
+    double* y;
+    double* flux;
+    double* background;
+    int N;
+};
+typedef struct field_t field_t;
+
+double field_getx(field_t* f, int i);
+double field_gety(field_t* f, int i);
+
+void field_setx(field_t* f, int i, double x);
+void field_sety(field_t* f, int i, double y);
+
+int field_n(field_t* f);
+
+/*
+ typedef dl xy;
+ #define mk_xy(n) dl_new((n)*2)
+ #define free_xy(x) dl_free(x)
+ #define xy_ref(x, i) dl_get(x, i)
+ #define xy_refx(x, i) dl_get(x, 2*(i))
+ #define xy_refy(x, i) dl_get(x, (2*(i))+1)
+ #define xy_size(x) (dl_size(x)/2)
+ #define xy_set(x,i,v) dl_set(x,i,v)
+ #define xy_setx(x,i,v) dl_set(x,2*(i),v)
+ #define xy_sety(x,i,v) dl_set(x,2*(i)+1,v)
+ */
 
 #define AN_FILETYPE_XYLS "XYLS"
 
@@ -47,7 +67,8 @@ typedef dl xy;
 struct xylist {
 	int parity;
 
-    fitstable_t* table;
+    //fitstable_t* table;
+    anfits_table_t* table;
 
 	const char* antype; // Astrometry.net filetype string.
 
@@ -60,61 +81,98 @@ struct xylist {
 typedef struct xylist xylist;
 
 
-// add a FITS column that will piggy-back with the X,Y data.
-// returns the index of the column.
-int xylist_add_column(xylist* ls, fitscol_t* col);
+/************************************
+ rdlist_open_for_writing(failedrdlsfn);
+ rdlist_get_header(bp->indexrdls);
+ rdlist_write_header(failedrdls);
+ rdlist_new_field(bp->indexrdls);
+ rdlist_get_field_header(bp->indexrdls);
+ rdlist_write_field_header(bp->indexrdls);
+ rdlist_write_new_field(failedrdls);
+ rdlist_write_entries(failedrdls, radec, 1)
+ rdlist_fix_field(failedrdls);
+ rdlist_fix_header(failedrdls);
+ rdlist_close(failedrdls);
+ rdlist_open(inputfiles[0]);
+ rdlist_get_field(rdls, 1);
 
-// retrieves an extra column previously added to this xylist.
-fitscol_t* xylist_get_column(const xylist* ls, int col);
+ xylist_open(bp->fieldfname);
+ xylist_set_xname(bp->xyls, bp->xcolname);
+ xylist_set_yname(bp->xyls, bp->ycolname);
+ xylist_n_fields(bp->xyls);
+ xylist_close(bp->xyls);
+ xylist_get_field_header(bp->xyls, fieldnum);
+ xylist_n_entries(bp->xyls, fieldnum);
+ xylist_read_entries(bp->xyls, fieldnum, 0, sp->nfield, sp->field);
+ xylist_get_field(xyls, 1);
+ xylist_get_header(xyls);
+
+ xylist_is_file_xylist(infile, xcol, ycol, &reason);
 
 
-// Is the given filename an xylist?
-int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
-                          const char** reason);
 
-void xylist_set_xname(xylist* ls, const char* name);
-void xylist_set_yname(xylist* ls, const char* name);
-void xylist_set_xtype(xylist* ls, tfits_type type);
-void xylist_set_ytype(xylist* ls, tfits_type type);
-void xylist_set_xunits(xylist* ls, const char* units);
-void xylist_set_yunits(xylist* ls, const char* units);
+ ************************************/
 
-qfits_header* xylist_get_header(xylist* ls);
-
-// you can change the parameters (ie, xname, yname) 
-// after opening but before calling xylist_get_field.
 xylist* xylist_open(const char* fn);
 
-int xylist_n_fields(xylist* ls);
 
-// it's your responsibility to free_xy() this.
-xy* xylist_get_field(xylist* ls, unsigned int field);
+/*
+ // add a FITS column that will piggy-back with the X,Y data.
+ // returns the index of the column.
+ int xylist_add_column(xylist* ls, fitscol_t* col);
 
-// it's your responsibility to call qfits_header_destroy().
-qfits_header* xylist_get_field_header(xylist* ls, unsigned int field);
+ // retrieves an extra column previously added to this xylist.
+ fitscol_t* xylist_get_column(const xylist* ls, int col);
 
-int xylist_n_entries(xylist* ls, unsigned int field);
+ // Is the given filename an xylist?
+ int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
+ const char** reason);
 
-int xylist_read_entries(xylist* ls, unsigned int field,
+ void xylist_set_xname(xylist* ls, const char* name);
+ void xylist_set_yname(xylist* ls, const char* name);
+ void xylist_set_xtype(xylist* ls, tfits_type type);
+ void xylist_set_ytype(xylist* ls, tfits_type type);
+ void xylist_set_xunits(xylist* ls, const char* units);
+ void xylist_set_yunits(xylist* ls, const char* units);
+
+ qfits_header* xylist_get_header(xylist* ls);
+
+ // you can change the parameters (ie, xname, yname) 
+ // after opening but before calling xylist_get_field.
+ xylist* xylist_open(const char* fn);
+ 
+ int xylist_n_fields(xylist* ls);
+ 
+ // it's your responsibility to free_xy() this.
+ xy* xylist_get_field(xylist* ls, unsigned int field);
+
+ // it's your responsibility to call qfits_header_destroy().
+ qfits_header* xylist_get_field_header(xylist* ls, unsigned int field);
+
+ int xylist_n_entries(xylist* ls, unsigned int field);
+ 
+ int xylist_read_entries(xylist* ls, unsigned int field,
 						unsigned int offset, unsigned int n,
 						double* vals);
 
-xylist* xylist_open_for_writing(char* fn);
+ xylist* xylist_open_for_writing(char* fn);
 
-// Write the header for the whole file
-int xylist_write_header(xylist* ls);
+ // Write the header for the whole file
+ int xylist_write_header(xylist* ls);
 
-// Fix the header for the whole file
-int xylist_fix_header(xylist* ls);
+ // Fix the header for the whole file
+ int xylist_fix_header(xylist* ls);
 
-// Start a new field and write its header.
-int xylist_write_new_field(xylist* ls);
+ // Start a new field and write its header.
+ int xylist_write_new_field(xylist* ls);
+ */
 
 /*
   Just start a new field (you might want to use this function plus
   xylist_write_field_header instead of xylist_write_new_field
   if you want to add something to the header before writing it out).
 */
+/*
 int xylist_new_field(xylist* ls);
 
 // Write the current field's header.
@@ -127,5 +185,6 @@ int xylist_fix_field(xylist* ls);
 int xylist_write_entries(xylist* ls, double* vals, unsigned int nvals);
 
 int xylist_close(xylist* ls);
+ */
 
 #endif
