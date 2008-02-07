@@ -128,15 +128,20 @@ grab-stellarium-constellations: grab-stellarium-constellations.o \
 
 ### TESTS
 
-ALL_TEST_FILES = test_anfits_table test_bl test_endian test_fitstable
+ALL_TEST_FILES = test_bl test_endian test_fitstable test_xylist
+#test_anfits_table 
 ALL_TEST_EXTRA_OBJS = 
 ALL_TEST_LIBS = $(ANUTILS_LIB) $(QFITS_LIB)
 
 include $(COMMON)/makefile.tests
 
-test_anfits_table: $(ANUTILS_LIB) $(QFITS_LIB)
+#test_anfits_table: $(ANUTILS_LIB) $(QFITS_LIB)
 
 test_fitstable: $(ANUTILS_LIB) $(QFITS_LIB)
+
+#test_xylist: $(ANUTILS_LIB) $(QFITS_LIB)
+test_xylist: xylist.o fitstable.o fitsioutils.o bl.o an-endian.o \
+	ioutils.o $(QFITS_LIB)
 
 test_bl: $(ANUTILS_LIB)
 

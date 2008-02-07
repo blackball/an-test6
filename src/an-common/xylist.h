@@ -25,8 +25,8 @@
 #include "starutil.h"
 #include "qfits.h"
 //#include "bl.h"
-//#include "fitstable.h"
-#include "anfits.h"
+#include "fitstable.h"
+//#include "anfits.h"
 
 struct field_t {
     double* x;
@@ -64,13 +64,23 @@ int field_n(field_t* f);
   One table per field.
   One row per star.
 */
-struct xylist {
+struct xylist_t {
 	int parity;
 
-    //fitstable_t* table;
-    anfits_table_t* table;
+    fitstable_t* table;
+    //anfits_table_t* table;
 
 	const char* antype; // Astrometry.net filetype string.
+
+    const char* xname;
+    const char* yname;
+    const char* xunits;
+    const char* yunits;
+    tfits_type xtype;
+    tfits_type ytype;
+
+    bool include_flux;
+    bool include_background;
 
     // When reading: total number of fields in this file.
     int nfields;
@@ -78,7 +88,7 @@ struct xylist {
 	// field we're currently reading/writing
 	unsigned int field;
 };
-typedef struct xylist xylist;
+typedef struct xylist_t xylist_t;
 
 
 /************************************
@@ -113,8 +123,34 @@ typedef struct xylist xylist;
 
  ************************************/
 
-xylist* xylist_open(const char* fn);
+xylist_t* xylist_open(const char* fn);
 
+xylist_t* xylist_open_for_writing(char* fn);
+
+void xylist_set_xname(xylist_t* ls, const char* name);
+void xylist_set_yname(xylist_t* ls, const char* name);
+void xylist_set_xtype(xylist_t* ls, tfits_type type);
+void xylist_set_ytype(xylist_t* ls, tfits_type type);
+void xylist_set_xunits(xylist_t* ls, const char* units);
+void xylist_set_yunits(xylist_t* ls, const char* units);
+
+void xylist_set_include_flux(xylist_t* ls, bool inc);
+
+int xylist_write_primary_header(xylist_t* ls);
+
+void xylist_next_field(xylist_t* ls);
+
+int xylist_write_header(xylist_t* ls);
+
+int xylist_write_field(xylist_t* ls, field_t* fld);
+
+int xylist_fix_header(xylist_t* ls);
+
+int xylist_close(xylist_t* ls);
+
+qfits_header* xylist_get_primary_header(xylist_t* ls);
+
+qfits_header* xylist_get_header(xylist_t* ls);
 
 /*
  // add a FITS column that will piggy-back with the X,Y data.
@@ -127,13 +163,6 @@ xylist* xylist_open(const char* fn);
  // Is the given filename an xylist?
  int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
  const char** reason);
-
- void xylist_set_xname(xylist* ls, const char* name);
- void xylist_set_yname(xylist* ls, const char* name);
- void xylist_set_xtype(xylist* ls, tfits_type type);
- void xylist_set_ytype(xylist* ls, tfits_type type);
- void xylist_set_xunits(xylist* ls, const char* units);
- void xylist_set_yunits(xylist* ls, const char* units);
 
  qfits_header* xylist_get_header(xylist* ls);
 
@@ -154,8 +183,6 @@ xylist* xylist_open(const char* fn);
  int xylist_read_entries(xylist* ls, unsigned int field,
 						unsigned int offset, unsigned int n,
 						double* vals);
-
- xylist* xylist_open_for_writing(char* fn);
 
  // Write the header for the whole file
  int xylist_write_header(xylist* ls);
