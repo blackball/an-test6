@@ -164,13 +164,28 @@ int fitstable_open_next_extension(fitstable_t* tab);
 // when writing...
 void fitstable_next_extension(fitstable_t* tab);
 
+// when writing: remove all existing columns from the table.
+void fitstable_clear_table(fitstable_t* tab);
+
+int fitstable_get_array_size(fitstable_t* tab, const char* name);
+
+int fitstable_get_type(fitstable_t* tab, const char* name);
+
 //// Shortcuts
 
 void fitstable_add_write_column(fitstable_t* tab, tfits_type t,
                                 const char* name, const char* units);
 
+void fitstable_add_write_column_array(fitstable_t* tab, tfits_type t,
+                                      int arraysize,
+                                      const char* name,
+                                      const char* units);
+
 void* fitstable_read_column(const fitstable_t* tab,
                             const char* colname, tfits_type t);
+
+void* fitstable_read_column_array(const fitstable_t* tab,
+                                  const char* colname, tfits_type t);
 
 int fitstable_write_row(fitstable_t* table, ...);
 
