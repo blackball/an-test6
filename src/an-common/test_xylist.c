@@ -1,4 +1,3 @@
-
 #include "xylist.h"
 #include "fitsioutils.h"
 #include "qfits.h"
@@ -58,21 +57,37 @@ void test_read_write(CuTest* ct) {
     CuAssertIntEquals(ct, 0, xylist_write_field(out, &fld));
     CuAssertIntEquals(ct, 0, xylist_fix_header(out));
 
+    xylist_set_xname(out, "X2");
+    xylist_set_yname(out, "Y2");
+    xylist_set_xunits(out, "ux");
+    xylist_set_yunits(out, "uy");
 
+    xylist_set_include_flux(out, FALSE);
 
-    xylist_set_xname(out, "XXX");
-    xylist_set_yname(out, "YYY");
-    xylist_set_ytype(out, TFITS_BIN_TYPE_E);
-    xylist_set_xunits(out, "pix");
-    xylist_set_yunits(out, "piy");
+    xylist_next_field(out);
 
-    xylist_set_include_flux(out, TRUE);
-
-    //xylist_next_field(out);
-
+    CuAssertIntEquals(ct, 0, xylist_write_header(out));
+    CuAssertIntEquals(ct, 0, xylist_write_field(out, &fld));
+    CuAssertIntEquals(ct, 0, xylist_fix_header(out));
 
     CuAssertIntEquals(ct, 0, xylist_close(out));
 
+
+
+
+
+    
+    in = xylist_open(fn);
+    CuAssertPtrNotNull(ct, in);
+
+    hdr = xylist_get_primary_header(in);
+    CuAssertPtrNotNull(ct, hdr);
+    char* typ = fits_get_dupstring(hdr, "AN_FILE");
+    CuAssertPtrNotNull(ct, typ);
+    CuAssertIntEquals(ct, 0, strcmp(typ, "XYLS"));
+    free(typ);
+
+    CuAssertIntEquals(ct, 0, xylist_close(in));
 
 
 }

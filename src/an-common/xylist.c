@@ -36,7 +36,11 @@ static xylist_t* xylist_new() {
     return xy;
 }
 
-xylist_t* xylist_open_for_writing(char* fn) {
+xylist_t* xylist_open(const char* fn) {
+    return NULL;
+}
+
+xylist_t* xylist_open_for_writing(const char* fn) {
 	xylist_t* ls;
 	ls = xylist_new();
 	if (!ls)
@@ -119,12 +123,14 @@ int xylist_write_field(xylist_t* ls, field_t* fld) {
 // structures so that they can be added to before writing the field header.
 void xylist_next_field(xylist_t* ls) {
     fitstable_next_extension(ls->table);
-    //fitstable_clear_table(ls->table);
+    fitstable_clear_table(ls->table);
 	ls->nfields++;
 }
 
 qfits_header* xylist_get_primary_header(xylist_t* ls) {
-    return fitstable_get_primary_header(ls->table);
+    qfits_header* hdr = fitstable_get_primary_header(ls->table);
+    //qfits_header_mod(hdr, "AN_FILE", ls->antype, "Astrometry.net file type");
+    return hdr;
 }
 
 qfits_header* xylist_get_header(xylist_t* ls) {
@@ -150,6 +156,8 @@ qfits_header* xylist_get_header(xylist_t* ls) {
 }
 
 int xylist_write_primary_header(xylist_t* ls) {
+    // ensure we've added the AN_FILE header...
+    xylist_get_primary_header(ls);
     return fitstable_write_primary_header(ls->table);
 }
 
@@ -158,6 +166,8 @@ int xylist_fix_primary_header(xylist_t* ls) {
 }
 
 int xylist_write_header(xylist_t* ls) {
+    // ensure we've added our columns to the table...
+    xylist_get_header(ls);
     return fitstable_write_header(ls->table);
 }
 

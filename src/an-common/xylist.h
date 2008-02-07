@@ -125,7 +125,7 @@ typedef struct xylist_t xylist_t;
 
 xylist_t* xylist_open(const char* fn);
 
-xylist_t* xylist_open_for_writing(char* fn);
+xylist_t* xylist_open_for_writing(const char* fn);
 
 void xylist_set_xname(xylist_t* ls, const char* name);
 void xylist_set_yname(xylist_t* ls, const char* name);
