@@ -119,6 +119,10 @@ struct fitstable_t {
     // ???
     il* extra_cols;
 
+    int extension;
+
+    //bool writing;
+
     // When writing:
 	char* fn;
     FILE* fid;
@@ -150,22 +154,48 @@ fitstable_t* fitstable_open_for_writing(const char* fn);
 int  fitstable_close(fitstable_t*);
 void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols);
 void fitstable_add_column(fitstable_t* tab, fitscol_t* col);
+
+int fitstable_ncols(fitstable_t* t);
+
+int fitstable_open_extension(fitstable_t* tab, int ext);
+
+int fitstable_open_next_extension(fitstable_t* tab);
+
+// when writing...
+void fitstable_next_extension(fitstable_t* tab);
+
+//// Shortcuts
+
+void fitstable_add_write_column(fitstable_t* tab, tfits_type t,
+                                const char* name, const char* units);
+
+void* fitstable_read_column(const fitstable_t* tab,
+                            const char* colname, tfits_type t);
+
+int fitstable_write_row(fitstable_t* table, ...);
+
+//// /Shortcuts
+
 int  fitstable_read_extension(fitstable_t* tab, int ext);
 
+qfits_header* fitstable_get_primary_header(fitstable_t* t);
+
 // Write primary header.
-int fitstable_write_header(fitstable_t* t);
+int fitstable_write_primary_header(fitstable_t* t);
 
 // Rewrite (fix) primary header.
-int fitstable_fix_header(fitstable_t* t);
+int fitstable_fix_primary_header(fitstable_t* t);
 
 // Called just before starting to write a new table (extension).
 int fitstable_new_table(fitstable_t* t);
 
+qfits_header* fitstable_get_header(fitstable_t* t);
+
 // Write the table header.
-int fitstable_write_table_header(fitstable_t* t);
+int fitstable_write_header(fitstable_t* t);
 
 // Rewrite (fix) the table header.
-int fitstable_fix_table_header(fitstable_t* t);
+int fitstable_fix_header(fitstable_t* t);
 
 //int fitstable_read(fitstable_t* tab, qfits_table* qtab);
 

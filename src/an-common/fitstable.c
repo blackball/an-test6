@@ -1,6 +1,8 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <stdarg.h>
+#include <sys/param.h>
 
 #include "fitstable.h"
 #include "fitsioutils.h"
@@ -35,6 +37,112 @@ tfits_type fitscolumn_any_type() {
     return (tfits_type)-1;
 }
 
+int fitstable_ncols(fitstable_t* t) {
+    return ncols(t);
+}
+
+void fitstable_add_write_column(fitstable_t* tab, tfits_type t,
+                                const char* name, const char* units) {
+    fitscol_t col;
+    memset(&col, 0, sizeof(fitscol_t));
+    col.colname = name;
+    col.units = units;
+    col.fitstype = col.ctype = t;
+    col.arraysize = 1;
+    col.in_struct = FALSE;
+
+    fitstable_add_column(tab, &col);
+}
+
+int fitstable_write_row(fitstable_t* table, ...) {
+	va_list ap;
+	int ncols = fitstable_ncols(table);
+	int i;
+
+	int ret = 0;
+	va_start(ap, table);
+	for (i=0; i<ncols; i++) {
+		fitscol_t *col = bl_access(table->cols, i);
+		void *columndata = va_arg(ap, void *);
+		ret = fits_write_data(table->fid, columndata, col->fitstype);
+		if (ret)
+			break;
+	}
+	va_end(ap);
+	//table->written_rows++;
+    table->table->nr++;
+    return ret;
+}
+
+void* fitstable_read_column(const fitstable_t* tab,
+                            const char* colname, tfits_type ctype) {
+    int colnum;
+    qfits_col* col;
+    int fitssize;
+    int csize;
+    int fitstype;
+    void* data;
+    int N;
+
+    colnum = fits_find_column(tab->table, colname);
+    if (colnum == -1) {
+        fprintf(stderr, "Column \"%s\" not found in FITS table %s.\n", colname, tab->fn);
+        return NULL;
+    }
+    col = tab->table->col + colnum;
+    if (col->atom_nb != 1) {
+        fprintf(stderr, "Column \"%s\" in FITS table %s is an array of size %i, not a scalar.\n",
+                colname, tab->fn, col->atom_nb);
+        return NULL;
+    }
+
+    fitstype = col->atom_type;
+    fitssize = fits_get_atom_size(fitstype);
+    csize = fits_get_atom_size(ctype);
+    N = tab->table->nr;
+    data = calloc(MAX(csize, fitssize), N);
+
+    qfits_query_column_seq_to_array(tab->table, colnum, 0, N, data, fitssize);
+
+    if (fitstype != ctype) {
+        if (csize < fitssize) {
+            fits_convert_data(data, csize, ctype,
+                              data, fitssize, fitstype, N);
+            data = realloc(data, csize * N);
+        } else if (csize == fitssize) {
+            fits_convert_data(data, csize, ctype,
+                              data, fitssize, fitstype, N);
+        } else if (csize > fitssize) {
+            // HACK!
+            fits_convert_data(((char*)data) + (N-1) * csize,
+                              -csize, ctype,
+                              ((char*)data) + (N-1) * fitssize,
+                              -fitssize, fitstype, N);
+        }
+    }
+	return data;
+}
+
+qfits_header* fitstable_get_primary_header(fitstable_t* t) {
+    return t->primheader;
+}
+
+qfits_header* fitstable_get_header(fitstable_t* t) {
+    if (!t->header) {
+        fitstable_new_table(t);
+    }
+    return t->header;
+}
+
+void fitstable_next_extension(fitstable_t* tab) {
+    fits_pad_file(tab->fid);
+    qfits_table_close(tab->table);
+    qfits_header_destroy(tab->header);
+    tab->extension++;
+    tab->table = NULL;
+    tab->header = NULL;
+}
+
 static fitstable_t* fitstable_new() {
     fitstable_t* tab;
     tab = calloc(1, sizeof(fitstable_t));
@@ -52,10 +160,15 @@ fitstable_t* fitstable_open(const char* fn) {
 		fprintf(stderr, "Failed to allocate new FITS table structure.\n");
         goto bailout;
 	}
+    tab->extension = 1;
     tab->fn = strdup(fn);
     tab->primheader = qfits_header_read(fn);
     if (!tab->primheader) {
         fprintf(stderr, "Failed to read primary FITS header from %s.\n", fn);
+        goto bailout;
+    }
+    if (fitstable_open_extension(tab, tab->extension)) {
+        fprintf(stderr, "Failed to open extension %i in file %s.\n", tab->extension, fn);
         goto bailout;
     }
 	return tab;
@@ -114,6 +227,31 @@ void fitstable_add_columns(fitstable_t* tab, fitscol_t* cols, int Ncols) {
 
 void fitstable_add_column(fitstable_t* tab, fitscol_t* col) {
     fitstable_add_columns(tab, col, 1);
+}
+
+int fitstable_open_next_extension(fitstable_t* tab) {
+    tab->extension++;
+    return fitstable_open_extension(tab, tab->extension);
+}
+
+int fitstable_open_extension(fitstable_t* tab, int ext) {
+    if (tab->table) {
+        qfits_table_close(tab->table);
+    }
+	tab->table = qfits_table_open(tab->fn, ext);
+	if (!tab->table) {
+		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n", ext, tab->fn);
+		return -1;
+	}
+    if (tab->header) {
+        qfits_header_destroy(tab->header);
+    }
+    tab->header = qfits_header_readext(tab->fn, ext);
+	if (!tab->header) {
+		fprintf(stderr, "Couldn't get header for FITS extension %i in file %s.\n", ext, tab->fn);
+		return -1;
+	}
+    return 0;
 }
 
 int fitstable_read_extension(fitstable_t* tab, int ext) {
@@ -180,7 +318,7 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
 	return -1;
 }
 
-int fitstable_write_header(fitstable_t* t) {
+int fitstable_write_primary_header(fitstable_t* t) {
 	assert(t->fid);
 	assert(t->primheader);
     // note, qfits_header_dump pads the file to the next FITS block.
@@ -189,7 +327,7 @@ int fitstable_write_header(fitstable_t* t) {
 	return 0;
 }
 
-int fitstable_fix_header(fitstable_t* t) {
+int fitstable_fix_primary_header(fitstable_t* t) {
 	off_t offset;
     off_t old_end;
     off_t new_end;
@@ -222,8 +360,13 @@ int fitstable_new_table(fitstable_t* t) {
     return 0;
 }
 
-int fitstable_write_table_header(fitstable_t* t) {
+int fitstable_write_header(fitstable_t* t) {
 	assert(t->fid);
+    if (!t->header) {
+        if (fitstable_new_table(t)) {
+            return -1;
+        }
+    }
 	assert(t->header);
     // add padding.
     fits_pad_file(t->fid);
@@ -233,7 +376,7 @@ int fitstable_write_table_header(fitstable_t* t) {
 	return 0;
 }
 
-int fitstable_fix_table_header(fitstable_t* t) {
+int fitstable_fix_header(fitstable_t* t) {
 	off_t offset;
     off_t old_end;
     off_t new_end;
@@ -244,7 +387,7 @@ int fitstable_fix_table_header(fitstable_t* t) {
     old_end = t->end_table_offset;
     // update NAXIS2 to reflect the number of rows written.
     fits_header_mod_int(t->header, "NAXIS2", t->table->nr, NULL);
-    fitstable_write_table_header(t);
+    fitstable_write_header(t);
     new_end = t->end_table_offset;
 	if (old_end != new_end) {
 		fprintf(stderr, "Error: fitstable table header size changed: was %u, but is now %u.  Corruption is likely!\n",
