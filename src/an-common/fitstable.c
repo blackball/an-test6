@@ -89,16 +89,8 @@ void fitstable_add_write_column_struct(fitstable_t* tab,
                                        tfits_type fits_type,
                                        const char* name,
                                        const char* units) {
-    fitscol_t col;
-    memset(&col, 0, sizeof(fitscol_t));
-    col.colname = name;
-    col.units = units;
-    col.fitstype = fits_type;
-    col.ctype = c_type;
-    col.arraysize = arraysize;
-    col.in_struct = TRUE;
-    col.coffset = structoffset;
-    fitstable_add_column(tab, &col);
+    fitstable_add_column_struct(tab, c_type, arraysize, structoffset,
+                                fits_type, name, units);
 }
 
 void fitstable_add_read_column_struct(fitstable_t* tab,
@@ -107,9 +99,21 @@ void fitstable_add_read_column_struct(fitstable_t* tab,
                                       int structoffset,
                                       tfits_type fits_type,
                                       const char* name) {
+    fitstable_add_column_struct(tab, c_type, arraysize, structoffset,
+                                fits_type, name, NULL);
+}
+
+void fitstable_add_column_struct(fitstable_t* tab,
+                                 tfits_type c_type,
+                                 int arraysize,
+                                 int structoffset,
+                                 tfits_type fits_type,
+                                 const char* name,
+                                 const char* units) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
     col.colname = name;
+    col.units = units;
     col.fitstype = fits_type;
     col.target_fitstype = fits_type;
     col.target_arraysize = arraysize;
@@ -120,46 +124,56 @@ void fitstable_add_read_column_struct(fitstable_t* tab,
     fitstable_add_column(tab, &col);
 }
 
-int fitstable_read_struct(fitstable_t* tab, void* struc) {
+int fitstable_read_structs(fitstable_t* tab, void* struc,
+                           int strucstride, int offset, int N) {
     int i;
     void* tempdata = NULL;
     int highwater = 0;
 
     for (i=0; i<ncols(tab); i++) {
         void* dest;
+        int stride;
         void* finaldest;
+        int finalstride;
         fitscol_t* col = getcol(tab, i);
         if (col->col == -1)
             continue;
         if (!col->in_struct)
             continue;
         finaldest = ((char*)struc) + col->coffset;
+        finalstride = strucstride;
 
         if (col->fitstype != col->ctype) {
-            int NB = col->fitssize * col->arraysize;
+            int NB = col->fitssize * col->arraysize * N;
             if (NB > highwater) {
                 free(tempdata);
                 tempdata = malloc(NB);
                 highwater = NB;
             }
             dest = tempdata;
+            stride = col->fitssize * col->arraysize;
         } else {
             dest = finaldest;
+            stride = finalstride;
         }
 
         // Read from FITS file...
-        qfits_query_column_seq_to_array
-            (tab->table, col->col, tab->reading_row, 1, dest, 0);
+        qfits_query_column_seq_to_array(tab->table, col->col, offset, N, dest, stride);
 
         if (col->fitstype != col->ctype) {
-            fits_convert_data(((char*)finaldest), col->csize, col->ctype,
-                              ((char*)dest), col->fitssize, col->fitstype,
-                              col->arraysize);
+            int j;
+            for (j=0; j<col->arraysize; j++)
+                fits_convert_data(((char*)finaldest) + j * col->csize, finalstride, col->ctype,
+                                  ((char*)dest) + j * col->fitssize, stride, col->fitstype,
+                                  N);
         }
     }
     free(tempdata);
-    tab->reading_row++;
     return 0;
+}
+
+int fitstable_read_struct(fitstable_t* tab, int offset, void* struc) {
+    return fitstable_read_structs(tab, struc, 0, offset, 1);
 }
 
 int fitstable_write_struct(fitstable_t* table, const void* struc) {
@@ -445,7 +459,7 @@ int fitstable_open_extension(fitstable_t* tab, int ext) {
 		fprintf(stderr, "Couldn't get header for FITS extension %i in file %s.\n", ext, tab->fn);
 		return -1;
 	}
-    tab->reading_row = 0;
+    //tab->reading_row = 0;
     return 0;
 }
 
