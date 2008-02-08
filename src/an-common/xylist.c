@@ -191,14 +191,17 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
 
 // Used when writing: start a new field.  Set up the table and header
 // structures so that they can be added to before writing the field header.
-void xylist_next_field(xylist_t* ls) {
+int xylist_next_field(xylist_t* ls) {
     fitstable_next_extension(ls->table);
     if (is_writing(ls)) {
         fitstable_clear_table(ls->table);
+        ls->nfields++;
     } else {
-        fitstable_open_next_extension(ls->table);
+        int rtn = fitstable_open_next_extension(ls->table);
+        if (rtn)
+            return rtn;
     }
-	ls->nfields++;
+    return 0;
 }
 
 qfits_header* xylist_get_primary_header(xylist_t* ls) {

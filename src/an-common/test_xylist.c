@@ -165,7 +165,8 @@ void test_read_write(CuTest* ct) {
 
     xy_free_data(&infld);
 
-    xylist_next_field(in);
+    int r = xylist_next_field(in);
+    CuAssertIntEquals(ct, 0, r);
 
     // the columns are named differently...
     CuAssertPtrEquals(ct, NULL, xylist_read_field(in, &infld));
@@ -186,12 +187,12 @@ void test_read_write(CuTest* ct) {
 
     xy_free_data(&infld);
 
-    xylist_next_field(in);
+    r = xylist_next_field(in);
     // no such field...
+    CuAssertIntEquals(ct, -1, r);
     CuAssertPtrEquals(ct, NULL, xylist_read_field(in, &infld));
 
     CuAssertIntEquals(ct, 0, xylist_close(in));
-
 
     // I love valgrind-clean tests
     free(fn);

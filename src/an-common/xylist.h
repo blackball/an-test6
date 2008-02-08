@@ -91,7 +91,7 @@ void xylist_set_include_flux(xylist_t* ls, bool inc);
 
 int xylist_write_primary_header(xylist_t* ls);
 
-void xylist_next_field(xylist_t* ls);
+int xylist_next_field(xylist_t* ls);
 
 int xylist_write_header(xylist_t* ls);
 
