@@ -38,6 +38,10 @@ seterr(char** errstr, const char* format, ...) {
 	va_end(va);
 }
 
+FILE* fitsbin_get_fid(fitsbin_t* fb) {
+    return fb->fitsfile->fid;
+}
+
 void fitsbin_set_filename(fitsbin_t* fb, const char* fn) {
     free(fb->filename);
     fb->filename = strdup(fn);

@@ -117,10 +117,12 @@ qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 	qf->numquads = nquads;
     fitsbin_set_filename(qf->fb, fn);
 
-    if (fitsbin_start_write(qf->fb))
-        goto bailout;
+    /*
+     if (fitsbin_start_write(qf->fb))
+     goto bailout;
+     */
 
-	hdr = qf->fb->primheader;
+	hdr = fitsbin_get_primary_header(qf->fb);
     fits_add_endian(hdr);
 	fits_header_add_int(hdr, "NSTARS", qf->numstars, "Number of stars used.");
 	fits_header_add_int(hdr, "NQUADS", qf->numquads, "Number of quads used.");
@@ -157,9 +159,11 @@ int qidxfile_write_header(qidxfile* qf) {
 
 int qidxfile_write_star(qidxfile* qf, uint* quads, uint nquads) {
 	fitsbin_t* fb = qf->fb;
-	FILE* fid = fb->fid;
+	FILE* fid;
 	uint32_t nq;
 	int i;
+
+    fid = fitsbin_get_fid(fb);
 
 	// Write the offset & size:
 	if (fseeko(fid, fb->chunks[CHUNK_QIDX].header_end + qf->cursor_index * 2 * sizeof(uint32_t), SEEK_SET)) {

@@ -84,6 +84,8 @@ struct fitsbin_t {
 typedef struct fitsbin_t fitsbin_t;
 
 
+FILE* fitsbin_get_fid(fitsbin_t* fb);
+
 fitsbin_t* fitsbin_new(int nchunks);
 
 int fitsbin_read(fitsbin_t* fb);
