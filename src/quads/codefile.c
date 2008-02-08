@@ -136,7 +136,7 @@ codefile* codefile_open_for_writing(const char* fn) {
 		goto bailout;
 
 	// add default values to header
-	hdr = cf->fb->primheader;
+	hdr = codefile_get_header(cf);
     fits_add_endian(hdr);
 	qfits_header_add(hdr, "AN_FILE", "CODE", "This file lists the code for each quad.", NULL);
 	qfits_header_add(hdr, "NCODES", "0", "", NULL);
@@ -176,7 +176,7 @@ int codefile_fix_header(codefile* cf) {
 	fb->chunks[CHUNK_CODES].itemsize = cf->dimcodes * sizeof(double);
 	fb->chunks[CHUNK_CODES].nrows = cf->numcodes;
 
-	hdr = fb->primheader;
+	hdr = codefile_get_header(cf);
 
 	// fill in the real values...
 	fits_header_mod_int(hdr, "DIMCODES", cf->dimcodes, "Number of values in a code.");
@@ -205,7 +205,7 @@ int codefile_write_code(codefile* cf, double* code) {
 }
 
 qfits_header* codefile_get_header(const codefile* cf) {
-	return cf->fb->primheader;
+	return fitsbin_get_primary_header(cf->fb);
 }
 
 int codefile_dimcodes(const codefile* cf) {
