@@ -28,25 +28,25 @@
 #include "fitstable.h"
 //#include "anfits.h"
 
-struct field_t {
+struct xy_t {
     double* x;
     double* y;
     double* flux;
     double* background;
     int N;
 };
-typedef struct field_t field_t;
+typedef struct xy_t xy_t;
 
-double field_getx(field_t* f, int i);
-double field_gety(field_t* f, int i);
+double xy_getx(xy_t* f, int i);
+double xy_gety(xy_t* f, int i);
 
-void field_setx(field_t* f, int i, double x);
-void field_sety(field_t* f, int i, double y);
+void xy_setx(xy_t* f, int i, double x);
+void xy_sety(xy_t* f, int i, double y);
 
-int field_n(field_t* f);
+int xy_n(xy_t* f);
 
 // Just free the data, not the field itself.
-void field_free_data(field_t* f);
+void xy_free_data(xy_t* f);
 
 /*
  typedef dl xy;
@@ -147,10 +147,10 @@ void xylist_next_field(xylist_t* ls);
 
 int xylist_write_header(xylist_t* ls);
 
-int xylist_write_field(xylist_t* ls, field_t* fld);
+int xylist_write_field(xylist_t* ls, xy_t* fld);
 
-// (input field_t* is optional; if not given, a new one is allocated and returned.)
-field_t* xylist_read_field(xylist_t* ls, field_t* fld);
+// (input xy_t* is optional; if not given, a new one is allocated and returned.)
+xy_t* xylist_read_field(xylist_t* ls, xy_t* fld);
 
 int xylist_fix_header(xylist_t* ls);
 

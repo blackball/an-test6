@@ -10,11 +10,65 @@ static char* get_tmpfile(int i) {
     return strdup(fn);
 }
 
+void test_simple(CuTest* ct) {
+    xylist_t *in, *out;
+    char* fn = get_tmpfile(1);
+    xy_t fld;
+    xy_t infld;
+
+    out = xylist_open_for_writing(fn);
+    CuAssertPtrNotNull(ct, out);
+    xylist_set_include_flux(out, TRUE);
+    CuAssertIntEquals(ct, 0, xylist_write_primary_header(out));
+    CuAssertIntEquals(ct, 0, xylist_write_header(out));
+
+    int N = 100;
+    double x[N];
+    double y[N];
+    double flux[N];
+    int i;
+
+    for (i=0; i<N; i++) {
+        x[i] = i + 1;
+        y[i] = 3 * i;
+        flux[i] = 10 * i;
+    }
+    fld.N = N;
+    fld.x = x;
+    fld.y = y;
+    fld.flux = flux;
+
+    CuAssertIntEquals(ct, 0, xylist_write_field(out, &fld));
+    CuAssertIntEquals(ct, 0, xylist_fix_header(out));
+    CuAssertIntEquals(ct, 0, xylist_close(out));
+    out = NULL;
+
+
+    in = xylist_open(fn);
+    CuAssertPtrNotNull(ct, in);
+
+    CuAssertIntEquals(ct, 0, strcmp(in->antype, AN_FILETYPE_XYLS));
+    CuAssertPtrNotNull(ct, xylist_read_field(in, &infld));
+    CuAssertIntEquals(ct, N, infld.N);
+    for (i=0; i<N; i++) {
+        CuAssertIntEquals(ct, fld.x[i], infld.x[i]);
+        CuAssertIntEquals(ct, fld.y[i], infld.y[i]);
+        CuAssertIntEquals(ct, fld.flux[i], infld.flux[i]);
+    }
+    CuAssertPtrEquals(ct, NULL, infld.background);
+
+    xy_free_data(&infld);
+    CuAssertIntEquals(ct, 0, xylist_close(in));
+    in = NULL;
+
+    free(fn);
+}
+
 void test_read_write(CuTest* ct) {
     xylist_t *in, *out;
     char* fn = get_tmpfile(0);
-    field_t fld;
-    field_t infld;
+    xy_t fld;
+    xy_t infld;
 
     out = xylist_open_for_writing(fn);
     CuAssertPtrNotNull(ct, out);
@@ -79,8 +133,6 @@ void test_read_write(CuTest* ct) {
     out = NULL;
 
 
-
-
     
     in = xylist_open(fn);
     CuAssertPtrNotNull(ct, in);
@@ -111,7 +163,7 @@ void test_read_write(CuTest* ct) {
     }
     CuAssertPtrEquals(ct, NULL, infld.background);
 
-    field_free_data(&infld);
+    xy_free_data(&infld);
 
     xylist_next_field(in);
 
@@ -132,7 +184,7 @@ void test_read_write(CuTest* ct) {
     CuAssertPtrEquals(ct, NULL, infld.flux);
     CuAssertPtrEquals(ct, NULL, infld.background);
 
-    field_free_data(&infld);
+    xy_free_data(&infld);
 
     xylist_next_field(in);
     // no such field...

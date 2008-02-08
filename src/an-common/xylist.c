@@ -27,7 +27,7 @@
 #include "fitsioutils.h"
 #include "an-bool.h"
 
-void field_free_data(field_t* f) {
+void xy_free_data(xy_t* f) {
     if (!f) return;
     free(f->x);
     free(f->y);
@@ -136,7 +136,7 @@ void xylist_set_include_flux(xylist_t* ls, bool inc) {
     ls->include_flux = inc;
 }
 
-int xylist_write_field(xylist_t* ls, field_t* fld) {
+int xylist_write_field(xylist_t* ls, xy_t* fld) {
     int i;
     assert(fld);
     for (i=0; i<fld->N; i++) {
@@ -156,7 +156,7 @@ int xylist_write_field(xylist_t* ls, field_t* fld) {
     return 0;
 }
 
-field_t* xylist_read_field(xylist_t* ls, field_t* fld) {
+xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
     bool freeit = FALSE;
     tfits_type dubl = fitscolumn_double_type();
 
@@ -166,7 +166,7 @@ field_t* xylist_read_field(xylist_t* ls, field_t* fld) {
     }
 
     if (!fld) {
-        fld = calloc(1, sizeof(field_t));
+        fld = calloc(1, sizeof(xy_t));
         freeit = TRUE;
     }
 
