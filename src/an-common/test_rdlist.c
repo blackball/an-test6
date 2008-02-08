@@ -64,8 +64,8 @@ void test_simple(CuTest* ct) {
 
     free(fn);
 }
-/*
-void tst_read_write(CuTest* ct) {
+
+void test_read_write(CuTest* ct) {
     rdlist_t *in, *out;
     char* fn = get_tmpfile(0);
     rd_t fld;
@@ -80,13 +80,11 @@ void tst_read_write(CuTest* ct) {
 
     CuAssertIntEquals(ct, 0, rdlist_write_primary_header(out));
 
-    rdlist_set_xname(out, "XXX");
-    rdlist_set_yname(out, "YYY");
-    rdlist_set_ytype(out, TFITS_BIN_TYPE_E);
-    rdlist_set_xunits(out, "pix");
-    rdlist_set_yunits(out, "piy");
-
-    rdlist_set_include_flux(out, TRUE);
+    rdlist_set_raname(out, "RRR");
+    rdlist_set_decname(out, "DDD");
+    rdlist_set_ratype(out, TFITS_BIN_TYPE_E);
+    rdlist_set_raunits(out, "deg");
+    rdlist_set_decunits(out, "deg");
 
     hdr = rdlist_get_header(out);
     CuAssertPtrNotNull(ct, hdr);
@@ -95,30 +93,25 @@ void tst_read_write(CuTest* ct) {
     CuAssertIntEquals(ct, 0, rdlist_write_header(out));
 
     int N = 10;
-    double x[N];
-    double y[N];
-    double flux[N];
+    double ra[N];
+    double dec[N];
     int i;
 
     for (i=0; i<N; i++) {
-        x[i] = 10 * i;
-        y[i] = 5 * i;
-        flux[i] = 100 * i;
+        ra[i] = 10 * i;
+        dec[i] = 5 * i;
     }
     fld.N = 10;
-    fld.x = x;
-    fld.y = y;
-    fld.flux = flux;
+    fld.ra = ra;
+    fld.dec = dec;
 
     CuAssertIntEquals(ct, 0, rdlist_write_field(out, &fld));
     CuAssertIntEquals(ct, 0, rdlist_fix_header(out));
 
-    rdlist_set_xname(out, "X2");
-    rdlist_set_yname(out, "Y2");
-    rdlist_set_xunits(out, "ux");
-    rdlist_set_yunits(out, "uy");
-
-    rdlist_set_include_flux(out, FALSE);
+    rdlist_set_raname(out, "RA2");
+    rdlist_set_decname(out, "DEC2");
+    rdlist_set_raunits(out, "ur");
+    rdlist_set_decunits(out, "ud");
 
     rdlist_next_field(out);
 
@@ -147,8 +140,8 @@ void tst_read_write(CuTest* ct) {
 
     CuAssertIntEquals(ct, 42, qfits_header_getint(hdr, "KEYA", -1));
 
-    rdlist_set_xname(in, "XXX");
-    rdlist_set_yname(in, "YYY");
+    rdlist_set_raname(in, "RRR");
+    rdlist_set_decname(in, "DDD");
 
     hdr = rdlist_get_header(in);
     CuAssertPtrNotNull(ct, hdr);
@@ -158,11 +151,9 @@ void tst_read_write(CuTest* ct) {
 
     CuAssertIntEquals(ct, N, infld.N);
     for (i=0; i<N; i++) {
-        CuAssertIntEquals(ct, fld.x[i], infld.x[i]);
-        CuAssertIntEquals(ct, fld.y[i], infld.y[i]);
-        CuAssertIntEquals(ct, fld.flux[i], infld.flux[i]);
+        CuAssertIntEquals(ct, fld.ra[i], infld.ra[i]);
+        CuAssertIntEquals(ct, fld.dec[i], infld.dec[i]);
     }
-    CuAssertPtrEquals(ct, NULL, infld.background);
 
     rd_free_data(&infld);
 
@@ -171,20 +162,17 @@ void tst_read_write(CuTest* ct) {
     // the columns are named differently...
     CuAssertPtrEquals(ct, NULL, rdlist_read_field(in, &infld));
 
-    rdlist_set_xname(in, "X2");
-    rdlist_set_yname(in, "Y2");
+    rdlist_set_raname(in, "RA2");
+    rdlist_set_decname(in, "DEC2");
 
     memset(&infld, 0, sizeof(infld));
     CuAssertPtrNotNull(ct, rdlist_read_field(in, &infld));
 
     CuAssertIntEquals(ct, N2, infld.N);
     for (i=0; i<N2; i++) {
-        CuAssertIntEquals(ct, fld.x[i], infld.x[i]);
-        CuAssertIntEquals(ct, fld.y[i], infld.y[i]);
+        CuAssertIntEquals(ct, fld.ra[i], infld.ra[i]);
+        CuAssertIntEquals(ct, fld.dec[i], infld.dec[i]);
     }
-    CuAssertPtrEquals(ct, NULL, infld.flux);
-    CuAssertPtrEquals(ct, NULL, infld.background);
-
     rd_free_data(&infld);
 
     rdlist_next_field(in);
@@ -192,10 +180,5 @@ void tst_read_write(CuTest* ct) {
     CuAssertPtrEquals(ct, NULL, rdlist_read_field(in, &infld));
 
     CuAssertIntEquals(ct, 0, rdlist_close(in));
-
-
-    // I love valgrind-clean tests
     free(fn);
 }
-
- */
