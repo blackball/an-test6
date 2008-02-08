@@ -931,6 +931,8 @@ static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
 		int fieldnum;
 		MatchObj template ;
 		qfits_header* fieldhdr = NULL;
+        xy_t xy;
+        int i;
 
 		fieldnum = il_get(bp->fieldlist, fi);
 
@@ -939,7 +941,11 @@ static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
 		template.fieldfile = bp->fieldid;
 
 		// Get the FIELDID string from the xyls FITS header.
-		fieldhdr = xylist_get_field_header(bp->xyls, fieldnum);
+        if (xylist_open_field(bp->xyls, fieldnum)) {
+            logerr("Failed to open extension %i in xylist.\n", fieldnum);
+            goto cleanup;
+        }
+		fieldhdr = xylist_get_header(bp->xyls);
 		if (fieldhdr) {
 			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, bp->fieldid_key));
 			if (idstr)
@@ -951,16 +957,19 @@ static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
             goto cleanup;
 
 		// Get the field.
-		sp->nfield = xylist_n_entries(bp->xyls, fieldnum);
-		if (sp->nfield == -1) {
-			logerr("Couldn't determine how many objects are in field %i.\n", fieldnum);
-			goto cleanup;
-		}
+        if (xylist_read_field(bp->xyls, &xy)) {
+            logerr("Failed to read xylist field.\n");
+            goto cleanup;
+        }
+
+        // HACK - make sp->nfield,field into an xy_t.
+		sp->nfield = xy.N;
 		sp->field = realloc(sp->field, 2 * sp->nfield * sizeof(double));
-		if (xylist_read_entries(bp->xyls, fieldnum, 0, sp->nfield, sp->field)) {
-			logerr("Failed to read field.\n");
-			goto cleanup;
-		}
+        for (i=0; i<xy.N; i++) {
+            sp->field[2*i + 0] = xy.x[i];
+            sp->field[2*i + 1] = xy.y[i];
+        }
+        xy_free_data(&xy);
 
 		sp->numtries = 0;
 		sp->nummatches = 0;
@@ -1267,45 +1276,45 @@ static int write_solutions(blind_t* bp) {
 				   bp->indexrdlsfname);
             return -1;
 		}
-        h = rdlist_get_header(bp->indexrdls);
+        h = rdlist_get_primary_header(bp->indexrdls);
 
         boilerplate_add_fits_headers(h);
         fits_add_long_history(h, "This \"indexrdls\" file was created by the program \"blind\"."
                               "  It contains the RA/DEC of index objects that were found inside a solved field.");
         qfits_header_add(h, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
         add_blind_params(bp, h);
-        if (rdlist_write_header(bp->indexrdls)) {
+        if (rdlist_write_primary_header(bp->indexrdls)) {
             logerr("Failed to write index RDLS header.\n");
             return -1;
         }
 
         for (i=0; i<bl_size(bp->solutions); i++) {
             MatchObj* mo = bl_access(bp->solutions, i);
-            if (rdlist_new_field(bp->indexrdls)) {
-                logerr("Failed to write index RDLS field header.\n");
-                return -1;
-            }
+            rd_t rd;
             if (strlen(mo->fieldname)) {
-                qfits_header* hdr = rdlist_get_field_header(bp->indexrdls);
+                qfits_header* hdr = rdlist_get_header(bp->indexrdls);
                 qfits_header_add(hdr, "FIELDID", mo->fieldname, "Name of this field", NULL);
             }
-            if (rdlist_write_field_header(bp->indexrdls)) {
+            if (rdlist_write_header(bp->indexrdls)) {
                 logerr("Failed to write index RDLS field header.\n");
                 return -1;
             }
             assert(mo->indexrdls);
 
-            if (rdlist_write_entries(bp->indexrdls, mo->indexrdls, mo->nindexrdls)) {
+            // HACK - make mo.indexrdls an rd_t.
+            rd_from_array(&rd, mo->indexrdls, mo->nindexrdls);
+
+            if (rdlist_write_field(bp->indexrdls, &rd)) {
                 logerr("Failed to write index RDLS entry.\n");
                 return -1;
             }
-            if (rdlist_fix_field(bp->indexrdls)) {
+            if (rdlist_fix_header(bp->indexrdls)) {
                 logerr("Failed to fix index RDLS field header.\n");
                 return -1;
             }
         }
 
-		if (rdlist_fix_header(bp->indexrdls) ||
+		if (rdlist_fix_primary_header(bp->indexrdls) ||
 			rdlist_close(bp->indexrdls)) {
 			logerr("Failed to close index RDLS file.\n");
             return -1;

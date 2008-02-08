@@ -92,7 +92,7 @@ struct blind_params {
 	bool use_idfile;
 
 	// The fields to solve!
-	xylist* xyls;
+	xylist_t* xyls;
 
 	// How finely to uniformize the field.
 	int field_uniform_NX;
@@ -100,7 +100,7 @@ struct blind_params {
 
 	// Output files
 	matchfile* mf;
-	rdlist* indexrdls;
+	rdlist_t* indexrdls;
 	bool indexrdls_solvedonly;
 	double indexrdls_expand;
 

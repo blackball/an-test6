@@ -135,7 +135,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to open file %s to write RDLS.\n", rdlsfn);
 		exit(-1);
 	}
-	if (rdlist_write_header(rdls)) {
+	if (rdlist_write_primary_header(rdls)) {
 		fprintf(stderr, "Failed to write header to RDLS file %s.\n", rdlsfn);
 		exit(-1);
 	}
@@ -187,7 +187,7 @@ int main(int argc, char** args) {
 		}
 	}
 
-	if (rdlist_fix_header(rdls) ||
+	if (rdlist_fix_primary_header(rdls) ||
 		rdlist_close(rdls)) {
 		fprintf(stderr, "Failed to fix header of RDLS file.\n");
 		exit(-1);

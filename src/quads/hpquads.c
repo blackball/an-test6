@@ -841,7 +841,7 @@ int main(int argc, char** argv) {
 			fprintf(stderr, "Failed to open file %s to write failed-quads RDLS.\n", failedrdlsfn);
 			exit(-1);
 		}
-		if (rdlist_write_header(failedrdls)) {
+		if (rdlist_write_primary_header(failedrdls)) {
 			fprintf(stderr, "Failed to write header of failed RDLS file.\n");
 		}
 	}
@@ -1406,7 +1406,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (failedrdls) {
-		if (rdlist_fix_header(failedrdls) ||
+		if (rdlist_fix_primary_header(failedrdls) ||
 			rdlist_close(failedrdls)) {
 			fprintf(stderr, "Failed to fix header of failed RDLS file.\n");
 		}
