@@ -86,7 +86,7 @@ int quadfile_dimquads(const quadfile* qf) {
 }
 
 qfits_header* quadfile_get_header(const quadfile* qf) {
-	return qf->fb->primheader;
+	return fitsbin_get_primary_header(qf->fb);
 }
 
 quadfile* quadfile_open(const char* fn) {
@@ -127,11 +127,13 @@ quadfile* quadfile_open_for_writing(const char* fn) {
 
     qf->dimquads = 4;
     fitsbin_set_filename(qf->fb, fn);
-    if (fitsbin_start_write(qf->fb))
-        goto bailout;
+    /*
+     if (fitsbin_start_write(qf->fb))
+     goto bailout;
+     */
 
 	// add default values to header
-	hdr = qf->fb->primheader;
+	hdr = fitsbin_get_primary_header(qf->fb);
     fits_add_endian(hdr);
 	qfits_header_add(hdr, "AN_FILE", "QUAD", "This file lists, for each quad, its stars.", NULL);
 	qfits_header_add(hdr, "DIMQUADS", "0", "Number of stars in a quad.", NULL);
@@ -190,7 +192,7 @@ int quadfile_fix_header(quadfile* qf) {
 	fb->chunks[CHUNK_QUADS].itemsize = qf->dimquads * sizeof(uint32_t);
 	fb->chunks[CHUNK_QUADS].nrows = qf->numquads;
 
-	hdr = fb->primheader;
+	hdr = fitsbin_get_primary_header(fb);
 
 	// fill in the real values...
 	fits_header_mod_int(hdr, "DIMQUADS", qf->dimquads, "Number of stars in a quad.");

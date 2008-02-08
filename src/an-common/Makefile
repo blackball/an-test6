@@ -79,7 +79,7 @@ ANFILES_DEPS :=
 ANFILES_OBJ := 
 ifndef NO_QFITS
 ANFILES_OBJ += starkd.o rdlist.o xylist.o an_catalog.o \
-	qidxfile.o quadfile.o
+	qidxfile.o quadfile.o fitstable.o
 ANFILES_DEPS += $(QFITS_LIB)
 endif
 
@@ -142,12 +142,13 @@ DEP_OBJ += $(ALL_TEST_FILES_O)
 
 test_fitstable: $(ANUTILS_LIB) $(QFITS_LIB)
 
-#test_xylist: $(ANUTILS_LIB) $(QFITS_LIB)
-test_xylist: xylist.o fitstable.o fitsioutils.o bl.o an-endian.o \
-	ioutils.o $(QFITS_LIB)
+test_xylist: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#test_xylist: xylist.o fitstable.o fitsioutils.o bl.o an-endian.o \
+#	ioutils.o $(QFITS_LIB)
 
-test_rdlist: rdlist.o xylist.o fitstable.o fitsioutils.o bl.o \
-	an-endian.o ioutils.o $(QFITS_LIB)
+test_rdlist: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#test_rdlist: rdlist.o xylist.o fitstable.o fitsioutils.o bl.o \
+#	an-endian.o ioutils.o $(QFITS_LIB)
 
 test_bl: $(ANUTILS_LIB)
 

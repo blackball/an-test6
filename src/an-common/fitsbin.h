@@ -83,6 +83,7 @@ struct fitsbin_t {
 };
 typedef struct fitsbin_t fitsbin_t;
 
+off_t fitsbin_get_data_start(fitsbin_t* fb, int chunk);
 
 FILE* fitsbin_get_fid(fitsbin_t* fb);
 

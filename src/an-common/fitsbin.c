@@ -42,6 +42,11 @@ FILE* fitsbin_get_fid(fitsbin_t* fb) {
     return fb->fitsfile->fid;
 }
 
+off_t fitsbin_get_data_start(fitsbin_t* fb, int chunk) {
+    assert(chunk < fb->nchunks);
+    return fb->chunks[chunk].ext.header_end;
+}
+
 void fitsbin_set_filename(fitsbin_t* fb, const char* fn) {
     free(fb->filename);
     fb->filename = strdup(fn);
