@@ -18,64 +18,82 @@
 
 #ifndef RDLIST_H
 #define RDLIST_H
+
+#include <stdio.h>
+#include <sys/types.h>
+
 #include "xylist.h"
+#include "starutil.h"
+#include "qfits.h"
+#include "fitstable.h"
 
 #define AN_FILETYPE_RDLS "RDLS"
 
-typedef xylist rdlist;
+typedef xylist_t rdlist_t;
+
+struct rd_t {
+    double* ra;
+    double* dec;
+    int N;
+};
+typedef struct rd_t rd_t;
+
+double rd_getra(rd_t* f, int i);
+double rd_getdec(rd_t* f, int i);
+void rd_setx(rd_t* f, int i, double x);
+void rd_sety(rd_t* f, int i, double y);
+int rd_n(rd_t* f);
+
+// Just free the data, not the field itself.
+void rd_free_data(rd_t* f);
+
+
+
+rdlist_t* rdlist_open(const char* fn);
+
+rdlist_t* rdlist_open_for_writing(const char* fn);
+
+//void rdlist_set_antype(rdlist_t* ls, const char* type);
+#define rdlist_set_antype xylist_set_antype
+
+void rdlist_set_raname(rdlist_t* ls, const char* name);
+void rdlist_set_decname(rdlist_t* ls, const char* name);
+void rdlist_set_ratype(rdlist_t* ls, tfits_type type);
+void rdlist_set_dectype(rdlist_t* ls, tfits_type type);
+void rdlist_set_raunits(rdlist_t* ls, const char* units);
+void rdlist_set_decunits(rdlist_t* ls, const char* units);
+
+//int rdlist_write_primary_header(rdlist_t* ls);
+#define rdlist_write_primary_header xylist_write_primary_header
+
+//void rdlist_next_field(rdlist_t* ls);
+#define rdlist_next_field xylist_next_field
+
+//int rdlist_write_header(rdlist_t* ls);
+#define rdlist_write_header xylist_write_header
+
+int rdlist_write_field(rdlist_t* ls, rd_t* fld);
+
+// (input rd_t* is optional; if not given, a new one is allocated and returned.)
+rd_t* rdlist_read_field(rdlist_t* ls, rd_t* fld);
+
+//int rdlist_fix_header(rdlist_t* ls);
+#define rdlist_fix_header xylist_fix_header
+
+//int rdlist_close(rdlist_t* ls);
+#define rdlist_close xylist_close
+
+//qfits_header* rdlist_get_primary_header(rdlist_t* ls);
+#define rdlist_get_primary_header xylist_get_primary_header
+
+//qfits_header* rdlist_get_header(rdlist_t* ls);
+#define rdlist_get_header xylist_get_header
 
 /*
- typedef xy rd;
- #define mk_rd(n) dl_new((n)*2)
- #define free_rd(x) dl_free(x)
- #define rd_ref(x, i) dl_get(x, i)
- #define rd_refra(x, i) dl_get(x, 2*(i))
- #define rd_refdec(x, i) dl_get(x, (2*(i))+1)
- #define rd_size(x) (dl_size(x)/2)
- #define rd_set(x,i,v) dl_set(x,i,v)
- #define rd_setra(x,i,v) dl_set(x,2*(i),v)
- #define rd_setdec(x,i,v) dl_set(x,2*(i)+1,v)
+ // Is the given filename an xylist?
+ int rdlist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
+ const char** reason);
  */
-/*
-void rdlist_set_rname(rdlist* ls, const char* name);
-void rdlist_set_dname(rdlist* ls, const char* name);
-void rdlist_set_rtype(rdlist* ls, tfits_type type);
-void rdlist_set_dtype(rdlist* ls, tfits_type type);
-void rdlist_set_runits(rdlist* ls, const char* units);
-void rdlist_set_dunits(rdlist* ls, const char* units);
 
-qfits_header* rdlist_get_header(rdlist* ls);
-
-qfits_header* rdlist_get_field_header(rdlist* ls);
-
-inline rdlist* rdlist_open(char* fn);
-
-inline int rdlist_n_fields(rdlist* ls);
-
-inline rd* rdlist_get_field(rdlist* ls, uint field);
-
-inline int rdlist_n_entries(rdlist* ls, uint field);
-
-inline int rdlist_read_entries(rdlist* ls, uint field,
-							   uint offset, uint n,
-							   double* vals);
-
-inline rdlist* rdlist_open_for_writing(char* fn);
-
-inline int rdlist_write_header(rdlist* ls);
-
-inline int rdlist_fix_header(rdlist* ls);
-
-inline int rdlist_write_new_field(rdlist* ls);
-
-int rdlist_new_field(rdlist* ls);
-
-int rdlist_write_field_header(rdlist* ls);
-
-inline int rdlist_write_entries(rdlist* ls, double* vals, uint nvals);
-
-inline int rdlist_fix_field(rdlist* ls);
-
-inline int rdlist_close(rdlist* ls);
- */
 #endif
+
