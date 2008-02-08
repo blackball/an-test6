@@ -45,10 +45,12 @@ void rd_sety(rd_t* f, int i, double y);
 int rd_n(rd_t* f);
 
 void rd_from_dl(rd_t* r, dl* l);
+void rd_from_array(rd_t* r, double* radec, int N);
 
 // Just free the data, not the field itself.
 void rd_free_data(rd_t* f);
 
+void rd_alloc_data(rd_t* f, int N);
 
 
 rdlist_t* rdlist_open(const char* fn);
@@ -67,6 +69,8 @@ void rdlist_set_decunits(rdlist_t* ls, const char* units);
 
 //int rdlist_write_primary_header(rdlist_t* ls);
 #define rdlist_write_primary_header xylist_write_primary_header
+
+#define rdlist_fix_primary_header xylist_fix_primary_header
 
 //void rdlist_next_field(rdlist_t* ls);
 #define rdlist_next_field xylist_next_field

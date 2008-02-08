@@ -43,11 +43,24 @@ void rd_free_data(rd_t* f) {
     free(f->dec);
 }
 
+void rd_alloc_data(rd_t* f, int N) {
+    f->ra = malloc(N * sizeof(double));
+    f->dec = malloc(N * sizeof(double));
+    f->N = N;
+}
+
+void rd_from_array(rd_t* r, double* radec, int N) {
+    int i;
+    rd_alloc_data(r, N);
+    for (i=0; i<r->N; i++) {
+        r->ra [i] = radec[i*2];
+        r->dec[i] = radec[i*2+1];
+    }
+}
+
 void rd_from_dl(rd_t* r, dl* l) {
     int i;
-    r->N = dl_size(l)/2;
-    r->ra  = malloc(r->N * sizeof(double));
-    r->dec = malloc(r->N * sizeof(double));
+    rd_alloc_data(r, dl_size(l)/2);
     for (i=0; i<r->N; i++) {
         r->ra [i] = dl_get(l, i*2);
         r->dec[i] = dl_get(l, i*2+1);

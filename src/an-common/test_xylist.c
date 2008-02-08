@@ -47,6 +47,8 @@ void test_simple(CuTest* ct) {
     in = xylist_open(fn);
     CuAssertPtrNotNull(ct, in);
 
+    CuAssertIntEquals(ct, 1, xylist_n_fields(in));
+
     CuAssertIntEquals(ct, 0, strcmp(in->antype, AN_FILETYPE_XYLS));
     CuAssertPtrNotNull(ct, xylist_read_field(in, &infld));
     CuAssertIntEquals(ct, N, infld.N);
@@ -136,6 +138,8 @@ void test_read_write(CuTest* ct) {
     
     in = xylist_open(fn);
     CuAssertPtrNotNull(ct, in);
+
+    CuAssertIntEquals(ct, 2, xylist_n_fields(in));
 
     hdr = xylist_get_primary_header(in);
     CuAssertPtrNotNull(ct, hdr);

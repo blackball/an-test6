@@ -136,6 +136,10 @@ void xylist_set_include_flux(xylist_t* ls, bool inc) {
     ls->include_flux = inc;
 }
 
+int xylist_n_fields(xylist_t* ls) {
+    return ls->nfields;
+}
+
 int xylist_write_field(xylist_t* ls, xy_t* fld) {
     int i;
     assert(fld);
@@ -187,6 +191,10 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
         return NULL;
     }
     return fld;
+}
+
+int xylist_open_field(xylist_t* ls, int i) {
+    return fitstable_open_extension(ls->table, i);
 }
 
 // Used when writing: start a new field.  Set up the table and header
@@ -241,6 +249,11 @@ int xylist_write_primary_header(xylist_t* ls) {
 
 int xylist_fix_primary_header(xylist_t* ls) {
     return fitstable_fix_primary_header(ls->table);
+    /*
+     qfits_header* hdr = ls->table->primheader;
+     qfits_header_mod(hdr, "AN_FILE", ls->antype, "Astrometry.net file type");
+     return fitstable_fix_header(ls->table);
+     */
 }
 
 int xylist_write_header(xylist_t* ls) {
@@ -251,10 +264,5 @@ int xylist_write_header(xylist_t* ls) {
 
 int xylist_fix_header(xylist_t* ls) {
     return fitstable_fix_header(ls->table);
-    /*
-     qfits_header* hdr = ls->table->primheader;
-     qfits_header_mod(hdr, "AN_FILE", ls->antype, "Astrometry.net file type");
-     return fitstable_fix_header(ls->table);
-     */
 }
 

@@ -91,7 +91,11 @@ void xylist_set_include_flux(xylist_t* ls, bool inc);
 
 int xylist_write_primary_header(xylist_t* ls);
 
+int xylist_fix_primary_header(xylist_t* ls);
+
 int xylist_next_field(xylist_t* ls);
+
+int xylist_open_field(xylist_t* ls, int i);
 
 int xylist_write_header(xylist_t* ls);
 
@@ -107,6 +111,8 @@ int xylist_close(xylist_t* ls);
 qfits_header* xylist_get_primary_header(xylist_t* ls);
 
 qfits_header* xylist_get_header(xylist_t* ls);
+
+int xylist_n_fields(xylist_t* ls);
 
 /*
  // Is the given filename an xylist?
