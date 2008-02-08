@@ -44,6 +44,8 @@ void rd_setx(rd_t* f, int i, double x);
 void rd_sety(rd_t* f, int i, double y);
 int rd_n(rd_t* f);
 
+void rd_from_dl(rd_t* r, dl* l);
+
 // Just free the data, not the field itself.
 void rd_free_data(rd_t* f);
 

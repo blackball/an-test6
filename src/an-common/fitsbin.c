@@ -188,6 +188,10 @@ int fitsbin_write_item(fitsbin_t* fb, int chunk, void* data) {
     return fitsbin_write_items(fb, chunk, data, 1);
 }
 
+int fitsbin_start_write(fitsbin_t* fb) {
+    return 0;
+}
+
 fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 									char** errstr) {
 	fitsbin_t* fb;

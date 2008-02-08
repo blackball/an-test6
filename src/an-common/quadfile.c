@@ -127,10 +127,9 @@ quadfile* quadfile_open_for_writing(const char* fn) {
 
     qf->dimquads = 4;
     fitsbin_set_filename(qf->fb, fn);
-    /*
-     if (fitsbin_start_write(qf->fb))
-     goto bailout;
-     */
+
+    if (fitsbin_start_write(qf->fb))
+        goto bailout;
 
 	// add default values to header
 	hdr = fitsbin_get_primary_header(qf->fb);

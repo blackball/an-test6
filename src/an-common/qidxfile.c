@@ -117,10 +117,8 @@ qidxfile* qidxfile_open_for_writing(const char* fn, uint nstars, uint nquads) {
 	qf->numquads = nquads;
     fitsbin_set_filename(qf->fb, fn);
 
-    /*
-     if (fitsbin_start_write(qf->fb))
-     goto bailout;
-     */
+    if (fitsbin_start_write(qf->fb))
+        goto bailout;
 
 	hdr = fitsbin_get_primary_header(qf->fb);
     fits_add_endian(hdr);
