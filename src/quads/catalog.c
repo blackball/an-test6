@@ -32,6 +32,10 @@
 #define CHUNK_XYZ 0
 #define CHUNK_MAG 1
 
+static FILE* getfid(catalog* cat) {
+    return fitsbin_get_fid(cat->fb);
+}
+
 static int callback_read_header(qfits_header* primheader, qfits_header* header,
 								size_t* expected, char** errstr, void* userdata) {
 	catalog* cat = userdata;
@@ -114,7 +118,7 @@ catalog* catalog_open(char* catfn) {
 
 static void add_default_header_vals(catalog* cat) {
 	qfits_header* hdr;
-	hdr = cat->fb->primheader;
+	hdr = catalog_get_header(cat);
 	qfits_header_add(hdr, "AN_FILE", "OBJS", "This file has a list of object positions.", NULL);
     fits_add_endian(hdr);
 	fits_add_double_size(hdr);
@@ -147,6 +151,7 @@ catalog* catalog_open_for_writing(char* fn)  {
 }
 
 int catalog_write_to_file(catalog* cat, char* fn) {
+    FILE* fid;
     fitsbin_set_filename(cat->fb, fn);
     if (fitsbin_start_write(cat->fb)) {
         fprintf(stderr, "Failed to write catalog.\n");
@@ -166,20 +171,20 @@ int catalog_write_to_file(catalog* cat, char* fn) {
         return -1;
     }
 
-	fits_pad_file(cat->fb->fid);
+    fid = getfid(cat);
+    fits_pad_file(fid);
 
-	if (fclose(cat->fb->fid)) {
+	if (fclose(fid)) {
 		fflush(stdout);
 		fprintf(stderr, "Couldn't close catalog file %s: %s\n",
 		        fn, strerror(errno));
 		return -1;
 	}
-    cat->fb->fid = NULL;
 	return 0;
 }
 
 qfits_header* catalog_get_header(catalog* cat) {
-    return cat->fb->primheader;
+    return fitsbin_get_primary_header(cat->fb);
 }
 
 int catalog_write_header(catalog* cat) {
@@ -199,7 +204,7 @@ int catalog_fix_header(catalog* cat) {
 	fitsbin_t* fb = cat->fb;
 	fb->chunks[CHUNK_XYZ].nrows = cat->numstars;
 
-	hdr = fb->primheader;
+	hdr = catalog_get_header(cat);
 	// fill in the real values...
     fits_header_mod_int(hdr, "NSTARS", cat->numstars, "Number of stars.");
     fits_header_mod_int(hdr, "HEALPIX", cat->healpix, "Healpix covered by this catalog.");
@@ -267,7 +272,7 @@ int catalog_write_star(catalog* cat, double* star) {
 int catalog_write_mags(catalog* cat) {
 	fitsbin_chunk_t* chunk;
 
-	if (fits_pad_file(cat->fb->fid)) {
+	if (fits_pad_file(getfid(cat))) {
 		fflush(stdout);
 		fprintf(stderr, "Failed to pad catalog FITS file.\n");
 		return -1;
@@ -287,7 +292,7 @@ int catalog_write_mags(catalog* cat) {
 		return -1;
 	}
 
-	if (fits_pad_file(cat->fb->fid)) {
+	if (fits_pad_file(getfid(cat))) {
 		fflush(stdout);
 		fprintf(stderr, "Failed to pad catalog FITS file.\n");
 		return -1;

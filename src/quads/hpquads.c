@@ -719,7 +719,7 @@ int main(int argc, char** argv) {
 	char* basefnin = NULL;
 	char* basefnout = NULL;
 	char* failedrdlsfn = NULL;
-	rdlist* failedrdls = NULL;
+	rdlist_t* failedrdls = NULL;
 	int xpass, ypass;
 	uint id = 0;
 	int xpasses = 1;
@@ -1163,29 +1163,43 @@ int main(int argc, char** argv) {
 			printf("Made %i quads so far.\n", bt_size(bigquadlist) + Nquads);
 
 			if (failedrdls) {
-				int j;
+				//int j;
 				dl* lists[] = { nostars_radec, noreuse_radec, noquads_radec };
 				int l;
 
 				for (l=0; l<3; l++) {
 					dl* list = lists[l];
-					if (rdlist_write_new_field(failedrdls)) {
-						fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
+                    rd_t rd;
+                    /*
+                     if (rdlist_write_new_field(failedrdls)) {
+                     fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
+                     exit(-1);
+                     }
+                     */
+					if (rdlist_write_header(failedrdls)) {
+						fprintf(stderr, "Failed to write a field in failed RDLS file.\n");
 						exit(-1);
 					}
-					for (j=0; j<dl_size(list); j+=2) {
-						double radec[2];
-						radec[0] = dl_get(list, j);
-						radec[1] = dl_get(list, j+1);
-						if (rdlist_write_entries(failedrdls, radec, 1)) {
-							fprintf(stderr, "Failed to write failed-RDLS entries.\n");
-							exit(-1);
-						}
-					}
-					if (rdlist_fix_field(failedrdls)) {
+
+                    rd_from_dl(&rd, list);
+                    rdlist_write_field(failedrdls, &rd);
+                    rd_free_data(&rd);
+                    /*
+                     for (j=0; j<dl_size(list); j+=2) {
+                     double radec[2];
+                     radec[0] = dl_get(list, j);
+                     radec[1] = dl_get(list, j+1);
+                     if (rdlist_write_entries(failedrdls, radec, 1)) {
+                     fprintf(stderr, "Failed to write failed-RDLS entries.\n");
+                     exit(-1);
+                     }
+                     }
+                     */
+					if (rdlist_fix_header(failedrdls)) {
 						fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
 						exit(-1);
 					}
+                    rdlist_next_field(failedrdls);
 				}
 			}
 
@@ -1196,7 +1210,7 @@ int main(int argc, char** argv) {
 				int nmade = 0;
 				lastgrass = -1;
 				if (failedrdls) {
-					if (rdlist_write_new_field(failedrdls)) {
+					if (rdlist_write_header(failedrdls)) {
 						fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
 						exit(-1);
 					}
@@ -1232,11 +1246,13 @@ int main(int argc, char** argv) {
 						continue;
 					failedhp2:
 						if (failedrdls) {
-							double radec[2];
-							xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
-							radec[0] = rad2deg(radec[0]);
-							radec[1] = rad2deg(radec[1]);
-							if (rdlist_write_entries(failedrdls, radec, 1)) {
+                            double ra, dec;
+                            rd_t rd;
+                            xyzarr2radecdeg(centre, &ra, &dec);
+                            rd.N = 1;
+                            rd.ra  = &ra;
+                            rd.dec = &dec;
+							if (rdlist_write_field(failedrdls, &rd)) {
 								fprintf(stderr, "Failed to write failed-RDLS entries.\n");
 								exit(-1);
 							}
@@ -1251,7 +1267,7 @@ int main(int argc, char** argv) {
 					il_remove_all(noreuse_hps);
 				}
 				if (failedrdls) {
-					if (rdlist_fix_field(failedrdls)) {
+					if (rdlist_fix_header(failedrdls)) {
 						fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
 						exit(-1);
 					}

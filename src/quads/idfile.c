@@ -117,7 +117,7 @@ idfile* idfile_open_for_writing(char* fn) {
         goto bailout;
 
 	// the header
-    hdr = id->fb->primheader;
+    hdr = idfile_get_header(id);
     fits_add_endian(hdr);
 
 	// These are be placeholder values...
@@ -145,7 +145,7 @@ int idfile_write_anid(idfile* id, uint64_t anid) {
 }
 
 qfits_header* idfile_get_header(idfile* id) {
-    return id->fb->primheader;
+    return fitsbin_get_primary_header(id->fb);
 }
 
 int idfile_fix_header(idfile* id) {
@@ -154,7 +154,7 @@ int idfile_fix_header(idfile* id) {
 
 	fb->chunks[CHUNK_IDS].nrows = id->numstars;
 
-	hdr = fb->primheader;
+	hdr = idfile_get_header(id);
 
 	// fill in the real values...
 	fits_header_mod_int(hdr, "NSTARS", id->numstars, "Number of stars.");
