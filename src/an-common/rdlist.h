@@ -77,6 +77,10 @@ void rdlist_set_decunits(rdlist_t* ls, const char* units);
 //void rdlist_next_field(rdlist_t* ls);
 #define rdlist_next_field xylist_next_field
 
+#define rdlist_open_field xylist_open_field
+
+#define rdlist_n_fields xylist_n_fields
+
 //int rdlist_write_header(rdlist_t* ls);
 #define rdlist_write_header xylist_write_header
 
