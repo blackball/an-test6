@@ -93,6 +93,12 @@ int rdlist_write_field(rdlist_t* ls, rd_t* fld);
 
 int rdlist_write_one_row(rdlist_t* ls, rd_t* fld, int row);
 
+#define rdlist_add_tagalong_column xylist_add_tagalong_column
+
+#define rdlist_write_tagalong_column xylist_write_tagalong_column
+
+#define rdlist_read_tagalong_column xylist_read_tagalong_column
+
 // (input rd_t* is optional; if not given, a new one is allocated and returned.)
 rd_t* rdlist_read_field(rdlist_t* ls, rd_t* fld);
 
