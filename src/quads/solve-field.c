@@ -375,7 +375,7 @@ int main(int argc, char** args) {
 		char fnbuf[1024];
 		char* infile = NULL;
 		bool isxyls;
-		const char* reason;
+		char* reason;
 		int len;
 		char* cpy;
 		char* base;

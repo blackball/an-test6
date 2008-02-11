@@ -73,7 +73,7 @@ int main(int argc, char** args) {
 	pl* qidxes;
 
 	//rdlist* rdls = NULL;
-	xylist* xyls = NULL;
+	xylist_t* xyls = NULL;
 	sip_t sip;
 	int i;
 	int W, H;
@@ -194,6 +194,7 @@ int main(int argc, char** args) {
 		il* corrquads;
 		il* corruniqquads;
 		il* corrfullquads;
+        xy_t* xy;
 		double* fieldxy;
 		int Nfield;
 		kdtree_t* ftree;
@@ -288,12 +289,15 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Found %i stars involved in quads (fully contained).\n", il_size(starsinquadsfull));
 
 		// Now find correspondences between index objects and field objects.
-		Nfield = xylist_n_entries(xyls, 1);
-		fieldxy = malloc(Nfield * 2 * sizeof(double));
-		if (xylist_read_entries(xyls, 1, 0, Nfield, fieldxy)) {
+        xy = xylist_read_field(xyls, NULL);
+        if (!xy) {
 			fprintf(stderr, "Failed to read xyls entries.\n");
 			exit(-1);
-		}
+        }
+        Nfield = xy_n(xy);
+        fieldxy = xy_to_flat_array(xy, NULL);
+        xy_free(xy);
+
 		// Build a tree out of the field objects (in pixel space)
 		ftree = kdtree_build(NULL, fieldxy, Nfield, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_SPLIT);
 		if (!ftree) {

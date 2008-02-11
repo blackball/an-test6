@@ -51,7 +51,7 @@ int main(int argc, char** args) {
     int argchar;
 	char* outfn = NULL;
 	char* fn;
-    rdlist* rdls;
+    rdlist_t* rdls;
 	startree* skdt = NULL;
 	int i;
 
@@ -91,7 +91,7 @@ int main(int argc, char** args) {
         }
         Nstars = startree_N(skdt);
 
-        if (rdlist_write_new_field(rdls)) {
+        if (rdlist_write_header(rdls)) {
             fprintf(stderr, "Failed to write new RDLS field header.\n");
             exit(-1);
         }
@@ -106,7 +106,7 @@ int main(int argc, char** args) {
 			}
             startree_get(skdt, i, xyz);
             xyzarr2radecdegarr(xyz, radec);
-            if (rdlist_write_entries(rdls, radec, 1)) {
+            if (rdlist_write_one_radec(rdls, radec[0], radec[1])) {
                 fprintf(stderr, "Failed to write a RA,Dec entry.\n");
                 exit(-1);
             }
@@ -115,7 +115,7 @@ int main(int argc, char** args) {
 
         startree_close(skdt);
 
-        if (rdlist_fix_field(rdls)) {
+        if (rdlist_fix_header(rdls)) {
             fprintf(stderr, "Failed to fix RDLS field header.\n");
             exit(-1);
         }

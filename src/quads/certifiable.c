@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
     char** inputfiles = NULL;
     int ninputfiles = 0;
     char* rdlsfname = NULL;
-    rdlist* rdls = NULL;
+    rdlist_t* rdls = NULL;
     int i;
     int correct, incorrect;
     int firstfield = 1;
@@ -225,7 +226,7 @@ int main(int argc, char *argv[]) {
                 double r2;
                 double arc;
                 int nrd;
-                double* rd;
+                rd_t* rd;
                 int k;
                 bool err = FALSE;
 
@@ -251,29 +252,31 @@ int main(int argc, char *argv[]) {
                 rac = rad2deg(xy2ra(xyzc[0], xyzc[1]));
                 decc = rad2deg(z2dec(xyzc[2]));
 
-                // read the RDLS entries for this field and make sure they're all
-                // within "radius" of the center.
-                nrd = rdlist_n_entries(rdls, fieldnum);
-                if (Ncenter && Ncenter < nrd)
-                    nrd = Ncenter;
-                rd = malloc(nrd * 2 * sizeof(double));
-                if (rdlist_read_entries(rdls, fieldnum, 0, nrd, rd)) {
+                rd = rdlist_read_field_num(rdls, fieldnum, NULL);
+                if (!rd) {
                     fprintf(stderr, "Failed to read RDLS entries for field %i.\n", fieldnum);
                     exit(-1);
                 }
+                nrd = rd_n(rd);
+                if (Ncenter)
+                    nrd = MIN(nrd, Ncenter);
+
                 for (k=0; k<nrd; k++) {
                     double xyz[3];
-                    radecdeg2xyzarr(rd[k*2], rd[k*2+1], xyz);
+                    double ra, dec;
+                    ra  = rd_getra (rd, k);
+                    dec = rd_getdec(rd, k);
+                    radecdeg2xyzarr(ra, dec, xyz);
                     if (distsq_exceeds(xyz, xyzc, 3, r2 * 1.2)) {
                         printf("\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
                                fieldnum, rac, decc, arc);
-                        printf("rdls %i is (%g, %g).\n", k, rd[k*2], rd[k*2+1]);
+                        printf("rdls %i is (%g, %g).\n", k, ra, dec);
                         printf("Logprob %g (%g).\n", mo->logodds, exp(mo->logodds));
                         err = TRUE;
                         break;
                     }
                 }
-                free(rd);
+                rd_free(rd);
 
                 if (err) {
                     incorrect++;

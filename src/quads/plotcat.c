@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 	an_catalog* ancat;
 	usnob_fits* usnob;
 	tycho2_fits* tycho;
-	dl* rdls;
+	rd_t* rd;
 	il* fields;
 	int backside = 0;
 	int W = 3000, H;
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 		ancat = NULL;
 		usnob = NULL;
 		tycho = NULL;
-		rdls = NULL;
+		rd = NULL;
 		numstars = 0;
 		fname = argv[optind];
 		fprintf(stderr, "Reading file %s...\n", fname);
@@ -233,41 +233,57 @@ int main(int argc, char *argv[])
 				}
 				numstars = startree_N(skdt);
 			} else if (strncasecmp(valstr, AN_FILETYPE_RDLS, strlen(AN_FILETYPE_RDLS)) == 0) {
-				rdlist_t* rdlsfile;
+                pl* rds;
+				rdlist_t* rdls;
 				int nfields, f;
+                int ntotal;
 				fprintf(stderr, "Looks like an rdls (RA,DEC list)\n");
-				rdlsfile = rdlist_open(fname);
-				if (!rdlsfile) {
+				rdls = rdlist_open(fname);
+				if (!rdls) {
 					fprintf(stderr, "Couldn't open RDLS file.\n");
 					return 1;
 				}
-				rdls = dl_new(256);
 				nfields = il_size(fields);
 				if (!nfields) {
-					nfields = rdlist_n_fields(rdlsfile);
+					nfields = rdlist_n_fields(rdls);
 					fprintf(stderr, "Plotting all %i fields.\n", nfields);
 				}
+                rds = pl_new(nfields);
+                ntotal = 0;
 				for (f=1; f<=nfields; f++) {
 					int fld;
-					dl* rd;
-					int j, M;
+                    rd_t* thisrd;
 					if (il_size(fields))
 						fld = il_get(fields, f-1);
 					else
 						fld = f;
-					rd = rdlist_get_field(rdlsfile, fld);
-					if (!rd) {
-						fprintf(stderr, "RDLS file does not contain field %i.\n", fld);
-						return 1;
-					}
-					fprintf(stderr, "Field %i has %i entries.\n", fld, dl_size(rd)/2);
-					M = dl_size(rd);
-					for (j=0; j<M; j++)
-						dl_append(rdls, dl_get(rd, j));
-					dl_free(rd);
+                    thisrd = rdlist_read_field_num(rdls, fld, NULL);
+                    if (!thisrd) {
+						fprintf(stderr, "Failed to open extension %i in RDLS file %s.\n", fld, fname);
+                        return 1;
+                    }
+					fprintf(stderr, "Field %i has %i entries.\n", fld, rd_n(thisrd));
+                    ntotal += rd_n(thisrd);
+                    pl_append(rds, thisrd);
 				}
-				rdlist_close(rdlsfile);
-				numstars = dl_size(rdls)/2;
+				rdlist_close(rdls);
+				numstars = ntotal;
+                // merge all the rd_t data.
+                if (pl_size(rds) == 1) {
+                    rd = pl_get(rds, 0);
+                } else {
+                    int j;
+                    int nsofar = 0;
+                    rd = rd_alloc(ntotal);
+                    for (j=0; j<pl_size(rds); j++) {
+                        rd_t* thisrd = pl_get(rds, j);
+                        rd_copy(rd, nsofar, thisrd, 0, rd_n(thisrd));
+                        nsofar += rd_n(thisrd);
+                        rd_free(thisrd);
+                    }
+                }
+                pl_free(rds);
+
 			} else {
 				fprintf(stderr, "Unknown Astrometry.net file type: \"%s\".\n", valstr);
 				exit(-1);
@@ -307,7 +323,7 @@ int main(int argc, char *argv[])
 			tycho->br.blocksize = BLOCK;
 		}
 		qfits_header_destroy(hdr);
-		if (!(cat || skdt || ancat || usnob || tycho || rdls)) {
+		if (!(cat || skdt || ancat || usnob || tycho || rd)) {
 			fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
 			exit(-1);
 		}
@@ -333,10 +349,10 @@ int main(int argc, char *argv[])
 					fprintf(stderr, "Failed to read star %i from star kdtree.\n", i);
 					exit(-1);
 				}
-			} else if (rdls) {
+			} else if (rd) {
 				double ra, dec;
-				ra  = dl_get(rdls, 2*i);
-				dec = dl_get(rdls, 2*i+1);
+				ra  = rd_getra (rd, i);
+				dec = rd_getdec(rd, i);
 				radecdeg2xyzarr(ra, dec, xyz);
 			} else if (ancat) {
 			  an_entry* entry = an_catalog_read_entry(ancat);
@@ -359,8 +375,8 @@ int main(int argc, char *argv[])
 			catalog_close(cat);
 		if (skdt)
 			startree_close(skdt);
-		if (rdls)
-			dl_free(rdls);
+		if (rd)
+            rd_free(rd);
 		if (ancat)
 			an_catalog_close(ancat);
 		if (usnob)

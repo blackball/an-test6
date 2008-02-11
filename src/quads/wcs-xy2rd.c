@@ -154,12 +154,7 @@ int main(int argc, char** args) {
         rd_t rd;
 		int j;
 
-        if (xylist_open_field(xyls, fieldind)) {
-			fprintf(stderr, "Failed to open xyls field %i.\n", fieldind);
-			exit(-1);
-		}
-
-        if (!xylist_read_field(xyls, &xy)) {
+        if (!xylist_read_field_num(xyls, fieldind, &xy)) {
 			fprintf(stderr, "Failed to read xyls field %i.\n", fieldind);
 			exit(-1);
         }

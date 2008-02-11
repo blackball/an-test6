@@ -57,10 +57,11 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	char* fn;
 	quadfile* qf;
-    rdlist* rdls;
+    rdlist_t* rdls;
 	startree* skdt = NULL;
     bool addradius = FALSE;
 	int i;
+    int radcolumn = -1;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -91,27 +92,15 @@ int main(int argc, char** args) {
     }
 
     if (addradius) {
-        assert(0);
-        /* temporarily disabled while tinkering with rdlist/xylist internals
-        // HACK!
-        uint ncols, nrows, tablesize;
-        qfits_table* table;
-        char* nil = " ";
-        ncols = 3;
-        nrows = 0;
-        tablesize = 0;
-        table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-        fits_add_column(table, 0, rdls->xtype, 1, (rdls->xunits ? rdls->xunits : nil), rdls->xname);
-        fits_add_column(table, 1, rdls->ytype, 1, (rdls->yunits ? rdls->yunits : nil), rdls->yname);
-        fits_add_column(table, 2, TFITS_BIN_TYPE_D, 1, "deg", "QUADRADIUS");
-        table->tab_w = qfits_compute_table_width(table);
-        rdls->table = table;
-         */
+        radcolumn = rdlist_add_tagalong_column(rdls, fitscolumn_double_type(),
+                                               1, fitscolumn_double_type(),
+                                               "QUADRADIUS", "deg");
     }
 
 	for (; optind<argc; optind++) {
 		int Nstars;
         int dimquads;
+
 		basename = args[optind];
 		printf("Reading files with basename %s\n", basename);
 
@@ -132,7 +121,7 @@ int main(int argc, char** args) {
         }
         Nstars = startree_N(skdt);
         
-        if (rdlist_write_new_field(rdls)) {
+        if (rdlist_write_header(rdls)) {
             fprintf(stderr, "Failed to write new RDLS field header.\n");
             exit(-1);
         }
@@ -155,21 +144,17 @@ int main(int argc, char** args) {
             star_midpoint(midab, axyz, bxyz);
             xyzarr2radecdegarr(midab, radec);
 
-            if (rdlist_write_entries(rdls, radec, 1)) {
+            if (rdlist_write_one_radec(rdls, radec[0], radec[1])) {
                 fprintf(stderr, "Failed to write a RA,Dec entry.\n");
                 exit(-1);
             }
 
             if (addradius) {
-                assert(0);
-                // FIXME - fitstable.
-                /*
-                 double rad = arcsec2deg(distsq2arcsec(distsq(midab, axyz, 3)));
-                 if (fits_write_data_D(rdls->fid, rad)) {
-                 fprintf(stderr, "Failed to write quad radius.\n");
-                 exit(-1);
-                 }
-                 */
+                double rad = arcsec2deg(distsq2arcsec(distsq(midab, axyz, 3)));
+                if (rdlist_write_tagalong_column(rdls, radcolumn, i, 1, &rad, 0)) {
+                    fprintf(stderr, "Failed to write quad radius.\n");
+                    exit(-1);
+                }
             }
 		}
 		printf("\n");
@@ -177,7 +162,7 @@ int main(int argc, char** args) {
         startree_close(skdt);
 		quadfile_close(qf);
 
-        if (rdlist_fix_field(rdls)) {
+        if (rdlist_fix_header(rdls)) {
             fprintf(stderr, "Failed to fix RDLS field header.\n");
             exit(-1);
         }

@@ -160,13 +160,8 @@ int main(int argc, char** args) {
         xy_t xy;
         rd_t rd;
 
-        if (rdlist_open_field(rdls, fieldnum)) {
+        if (!rdlist_read_field_num(rdls, fieldnum, &rd)) {
 			fprintf(stderr, "Failed to read rdls field %i.\n", fieldnum);
-			exit(-1);
-        }
-
-        if (!rdlist_read_field(rdls, &rd)) {
-			fprintf(stderr, "Failed to read rdls data for field %i.\n", fieldnum);
 			exit(-1);
         }
 
