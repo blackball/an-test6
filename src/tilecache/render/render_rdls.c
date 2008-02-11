@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdarg.h>
+#include <sys/param.h>
 
 #include "tilerender.h"
 #include "render_rdls.h"
@@ -26,8 +27,6 @@ static void logmsg(char* format, ...) {
 int render_rdls(unsigned char* img, render_args_t* args)
 {
     int i, j, Nstars, Nib=0;
-    xylist* rdls;
-    double* rdvals = NULL;
 	int r;
 	cairo_t* cairo;
 	cairo_surface_t* target;
@@ -51,6 +50,8 @@ int render_rdls(unsigned char* img, render_args_t* args)
 		double rad = 3.0;
 		char style = 'o';
 		double r, g, b;
+        rdlist_t* rdls;
+        rd_t* rd;
 
 		cairo_set_line_width(cairo, lw);
 		r = g = b = 1.0;
@@ -91,29 +92,23 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 		if (fieldnum < 1)
 			fieldnum = 1;
-		Nstars = rdlist_n_entries(rdls, fieldnum);
-		if (Nstars == -1) {
+
+        rd = rdlist_read_field_num(rdls, fieldnum, NULL);
+        if (!rd) {
 			logmsg("Failed to read RDLS file. \"%s\"\n", rdlsfn);
 			return -1;
 		}
-
-		if (maxstars && Nstars > maxstars)
-			Nstars = maxstars;
-
-		rdvals = malloc(Nstars * 2 * sizeof(double));
-		if (rdlist_read_entries(rdls, fieldnum, 0, Nstars, rdvals)) {
-			logmsg("Failed to read RDLS file. \"%s\"\n", rdlsfn);
-			free(rdvals);
-			return -1;
-		}
+        Nstars = rd_n(rd);
+        if (maxstars)
+            Nstars = MIN(Nstars, maxstars);
 		logmsg("Got %i stars.\n", Nstars);
 
 		Nib = 0;
 		for (i=0; i<Nstars; i++) {
 			double px, py;
 
-			px =  ra2pixelf(rdvals[i*2+0], args);
-			py = dec2pixelf(rdvals[i*2+1], args);
+			px =  ra2pixelf(rd_getra (rd, i), args);
+			py = dec2pixelf(rd_getdec(rd, i), args);
 
 			if (!in_image_margin(px, py, rad, args))
 				continue;
@@ -156,6 +151,10 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 			Nib++;
 		}
+
+        rd_free(rd);
+        rdlist_close(rdls);
+
     }
     logmsg("%i stars inside image bounds.\n", Nib);
 
@@ -163,8 +162,6 @@ int render_rdls(unsigned char* img, render_args_t* args)
 	
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
-
-    free(rdvals);
 
     return 0;
 }
