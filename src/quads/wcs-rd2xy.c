@@ -59,8 +59,8 @@ int main(int argc, char** args) {
     bool verbose = TRUE;
 
 	bool hassip = FALSE;
-	xylist* xyls = NULL;
-	rdlist* rdls = NULL;
+	xylist_t* xyls = NULL;
+	rdlist_t* rdls = NULL;
 	il* fields;
 	sip_t sip;
 	int i;
@@ -130,9 +130,9 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 	if (rcol)
-        rdlist_set_rname(rdls, rcol);
+        rdlist_set_raname(rdls, rcol);
 	if (dcol)
-		rdlist_set_dname(rdls, dcol);
+		rdlist_set_decname(rdls, dcol);
 
 	// write XYLS.
 	xyls = xylist_open_for_writing(xylsfn);
@@ -140,7 +140,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to open file %s to write XYLS.\n", xylsfn);
 		exit(-1);
 	}
-	if (xylist_write_header(xyls)) {
+	if (xylist_write_primary_header(xyls)) {
 		fprintf(stderr, "Failed to write header to XYLS file %s.\n", xylsfn);
 		exit(-1);
 	}
@@ -156,54 +156,61 @@ int main(int argc, char** args) {
         printf("Processing %i extensions...\n", il_size(fields));
 	for (i=0; i<il_size(fields); i++) {
 		int fieldnum = il_get(fields, i);
-		double* rdvals;
-		int nvals;
 		int j;
+        xy_t xy;
+        rd_t rd;
 
-		nvals = rdlist_n_entries(rdls, fieldnum);
-		rdvals = malloc(2 * nvals * sizeof(double));
-		if (rdlist_read_entries(rdls, fieldnum, 0, nvals, rdvals)) {
-			fprintf(stderr, "Failed to read rdls data.\n");
+        if (rdlist_open_field(rdls, fieldnum)) {
+			fprintf(stderr, "Failed to read rdls field %i.\n", fieldnum);
 			exit(-1);
-		}
+        }
 
-		if (xylist_write_new_field(xyls)) {
+        if (!rdlist_read_field(rdls, &rd)) {
+			fprintf(stderr, "Failed to read rdls data for field %i.\n", fieldnum);
+			exit(-1);
+        }
+
+        xy_alloc_data(&xy, rd_n(&rd), FALSE, FALSE);
+
+		if (xylist_write_header(xyls)) {
 			fprintf(stderr, "Failed to write xyls field header.\n");
 			exit(-1);
 		}
 
-		for (j=0; j<nvals; j++) {
-			double xy[2];
+		for (j=0; j<rd_n(&rd); j++) {
+			double x, y, ra, dec;
+            ra  = rd_getra (&rd, j);
+            dec = rd_getdec(&rd, j);
 			if (hassip) {
-				if (!sip_radec2pixelxy(&sip, rdvals[j*2+0], rdvals[j*2+1],
-									   &(xy[0]), &(xy[1]))) {
+				if (!sip_radec2pixelxy(&sip, ra, dec, &x, &y)) {
 					fprintf(stderr, "Point RA,Dec = (%g,%g) projects to the opposite side of the sphere.\n",
-							rdvals[j*2+0], rdvals[j*2+1]);
+							ra, dec);
 					continue;
 				}
 			} else {
-				if (!tan_radec2pixelxy(&(sip.wcstan), rdvals[j*2+0], rdvals[j*2+1],
-									   &(xy[0]), &(xy[1]))) {
+				if (!tan_radec2pixelxy(&(sip.wcstan), ra, dec, &x, &y)) {
 					fprintf(stderr, "Point RA,Dec = (%g,%g) projects to the opposite side of the sphere.\n",
-							rdvals[j*2+0], rdvals[j*2+1]);
+							ra, dec);
 					continue;
 				}
 			}
 
-			if (xylist_write_entries(xyls, xy, 1)) {
-				fprintf(stderr, "Failed to write xyls entry.\n");
-				exit(-1);
-			}
 		}
-		free(rdvals);
-
-		if (xylist_fix_field(xyls)) {
+        if (xylist_write_field(xyls, &xy)) {
+            fprintf(stderr, "Failed to write xyls field.\n");
+            exit(-1);
+        }
+		if (xylist_fix_header(xyls)) {
 			fprintf(stderr, "Failed to fix xyls field header.\n");
 			exit(-1);
 		}
+        xylist_next_field(xyls);
+
+        xy_free_data(&xy);
+        rd_free_data(&rd);
 	}
 
-	if (xylist_fix_header(xyls) ||
+	if (xylist_fix_primary_header(xyls) ||
 		xylist_close(xyls)) {
 		fprintf(stderr, "Failed to fix header of XYLS file.\n");
 		exit(-1);
