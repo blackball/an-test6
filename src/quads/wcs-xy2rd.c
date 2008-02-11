@@ -57,8 +57,8 @@ int main(int argc, char** args) {
 	bool forcetan = FALSE;
 
 	bool hassip = FALSE;
-	rdlist* rdls = NULL;
-	xylist* xyls = NULL;
+	rdlist_t* rdls = NULL;
+	xylist_t* xyls = NULL;
 	il* fields;
 	sip_t sip;
 	int i;
@@ -150,41 +150,54 @@ int main(int argc, char** args) {
 	fprintf(stderr, "Processing %i extensions...\n", il_size(fields));
 	for (i=0; i<il_size(fields); i++) {
 		int fieldind = il_get(fields, i);
-		double* xyvals;
-		int nvals;
+        xy_t xy;
+        rd_t rd;
 		int j;
 
-		nvals = xylist_n_entries(xyls, fieldind);
-		xyvals = malloc(2 * nvals * sizeof(double));
-		if (xylist_read_entries(xyls, fieldind, 0, nvals, xyvals)) {
-			fprintf(stderr, "Failed to read xyls data.\n");
+        if (xylist_open_field(xyls, fieldind)) {
+			fprintf(stderr, "Failed to open xyls field %i.\n", fieldind);
 			exit(-1);
 		}
 
-		if (rdlist_write_new_field(rdls)) {
+        if (!xylist_read_field(xyls, &xy)) {
+			fprintf(stderr, "Failed to read xyls field %i.\n", fieldind);
+			exit(-1);
+        }
+
+		if (rdlist_write_header(rdls)) {
 			fprintf(stderr, "Failed to write rdls field header.\n");
 			exit(-1);
 		}
 
-		for (j=0; j<nvals; j++) {
-			double radec[2];
+        rd_alloc_data(&rd, xy_n(&xy));
+
+		for (j=0; j<xy_n(&xy); j++) {
+            double x, y, ra, dec;
+            x = xy_getx(&xy, j);
+            y = xy_gety(&xy, j);
 			if (hassip) {
-				sip_pixelxy2radec(&sip, xyvals[j*2+0], xyvals[j*2+1], &(radec[0]), &(radec[1]));
+				sip_pixelxy2radec(&sip, x, y, &ra, &dec);
 			} else {
-				tan_pixelxy2radec(&(sip.wcstan), xyvals[j*2+0], xyvals[j*2+1], &(radec[0]), &(radec[1]));
+				tan_pixelxy2radec(&(sip.wcstan), x, y, &ra, &dec);
 			}
 
-			if (rdlist_write_entries(rdls, radec, 1)) {
-				fprintf(stderr, "Failed to write rdls entry.\n");
-				exit(-1);
-			}
+            rd_setra (&rd, j, ra);
+            rd_setdec(&rd, j, dec);
 		}
-		free(xyvals);
 
-		if (rdlist_fix_field(rdls)) {
+        if (rdlist_write_field(rdls, &rd)) {
+            fprintf(stderr, "Failed to write rdls field.\n");
+            exit(-1);
+        }
+        rd_free_data(&rd);
+        xy_free_data(&xy);
+
+		if (rdlist_fix_header(rdls)) {
 			fprintf(stderr, "Failed to fix rdls field header.\n");
 			exit(-1);
 		}
+
+        rdlist_next_field(rdls);
 	}
 
 	if (rdlist_fix_primary_header(rdls) ||

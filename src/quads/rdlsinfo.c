@@ -50,8 +50,8 @@ int main(int argc, char** args) {
 	char* progname = args[0];
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
-	rdlist* rdls;
-	dl* rd;
+	rdlist_t* rdls;
+	rd_t* rd;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -76,7 +76,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	rd = rdlist_get_field(rdls, 1);
+	rd = rdlist_read_field(rdls, NULL);
 	if (!rd) {
 		fprintf(stderr, "Failed to get RDLS field.\n");
 		exit(-1);
@@ -93,9 +93,9 @@ int main(int argc, char** args) {
 		int i;
 		ramax = decmax = -HUGE_VAL;
 		ramin = decmin =  HUGE_VAL;
-		for (i=0; i<(dl_size(rd)/2); i++) {
-			double ra  = dl_get(rd, 2*i);
-			double dec = dl_get(rd, 2*i+1);
+		for (i=0; i<rd_n(rd); i++) {
+			double ra  = rd_getra (rd, i);
+			double dec = rd_getdec(rd, i);
 			if (ra > ramax) ramax = ra;
 			if (ra < ramin) ramin = ra;
 			if (dec > decmax) decmax = dec;
@@ -105,8 +105,8 @@ int main(int argc, char** args) {
 			// probably wrapped around
 			ramax = 0.0;
 			ramin = 360.0;
-			for (i=0; i<(dl_size(rd)/2); i++) {
-				double ra  = dl_get(rd, 2*i);
+			for (i=0; i<rd_n(rd); i++) {
+				double ra  = rd_getra(rd, i);
 				if (ra > 180)
 					ramin = MIN(ramin, ra);
 				else
@@ -121,8 +121,8 @@ int main(int argc, char** args) {
 		deccenter = (decmin + decmax) / 2.0;
 		ymerccenter = mercy2dec((dec2mercy(decmin) + dec2mercy(decmax))/2.0);
 
-		radec2xyzarr(deg2rad(ramin), deg2rad(decmin), xyz1);
-		radec2xyzarr(deg2rad(ramax), deg2rad(decmax), xyz2);
+		radecdeg2xyzarr(ramin, decmin, xyz1);
+		radecdeg2xyzarr(ramax, decmax, xyz2);
 		arc = rad2deg(distsq2arc(distsq(xyz1, xyz2, 3) / 2.0));
 
 		printf("ra_min %g\n", ramin);
@@ -155,9 +155,7 @@ int main(int argc, char** args) {
 		printf("zoom_merc %i\n", (int)floor(log((600.0/256.0) * 1.0 / maxd) / log(2.0)));
 	}
 
-	dl_free(rd);
-
+	rd_free(rd);
 	rdlist_close(rdls);
-
 	return 0;
 }

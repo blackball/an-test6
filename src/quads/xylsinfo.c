@@ -45,8 +45,8 @@ int main(int argc, char** args) {
 	char* progname = args[0];
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
-	xylist* xyls;
-	dl* xy;
+	xylist_t* xyls;
+	xy_t* xy;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -71,7 +71,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	xy = xylist_get_field(xyls, 1);
+	xy = xylist_read_field(xyls, NULL);
 	if (!xy) {
 		fprintf(stderr, "Failed to get XYLS field.\n");
 		exit(-1);
@@ -85,9 +85,9 @@ int main(int argc, char** args) {
 		int i;
 		xmax = ymax = -HUGE_VAL;
 		xmin = ymin =  HUGE_VAL;
-		for (i=0; i<(dl_size(xy)/2); i++) {
-			double x = dl_get(xy, 2*i);
-			double y = dl_get(xy, 2*i+1);
+		for (i=0; i<xy_n(xy); i++) {
+			double x = xy_getx(xy, i);
+			double y = xy_gety(xy, i);
 			if (x > xmax) xmax = x;
 			if (x < xmin) xmin = x;
 			if (y > ymax) ymax = y;
@@ -114,7 +114,7 @@ int main(int argc, char** args) {
 		printf("diag %g\n", diag);
 	}
 
-	dl_free(xy);
+	xy_free(xy);
 	xylist_close(xyls);
 	return 0;
 }

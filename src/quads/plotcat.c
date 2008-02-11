@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
 				}
 				numstars = startree_N(skdt);
 			} else if (strncasecmp(valstr, AN_FILETYPE_RDLS, strlen(AN_FILETYPE_RDLS)) == 0) {
-				rdlist* rdlsfile;
+				rdlist_t* rdlsfile;
 				int nfields, f;
 				fprintf(stderr, "Looks like an rdls (RA,DEC list)\n");
 				rdlsfile = rdlist_open(fname);
