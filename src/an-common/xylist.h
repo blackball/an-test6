@@ -43,6 +43,12 @@ void xy_sety(xy_t* f, int i, double y);
 
 int xy_n(xy_t* f);
 
+xy_t* xy_alloc(int N, bool flux, bool back);
+
+void xy_alloc_data(xy_t* f, int N, bool flux, bool back);
+
+void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back);
+
 // Just free the data, not the field itself.
 void xy_free_data(xy_t* f);
 
@@ -94,6 +100,8 @@ int xylist_write_primary_header(xylist_t* ls);
 int xylist_fix_primary_header(xylist_t* ls);
 
 int xylist_next_field(xylist_t* ls);
+
+//int xylist_start_field(xylist_t* ls);
 
 int xylist_open_field(xylist_t* ls, int i);
 

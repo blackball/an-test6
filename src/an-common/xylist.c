@@ -35,6 +35,50 @@ void xy_free_data(xy_t* f) {
     free(f->background);
 }
 
+xy_t* xy_alloc(int N, bool flux, bool back) {
+    xy_t* xy = calloc(1, sizeof(xy_t));
+    xy_alloc_data(xy, N, flux, back);
+    return xy;
+}
+
+void xy_alloc_data(xy_t* f, int N, bool flux, bool back) {
+    f->x = malloc(N * sizeof(double));
+    f->y = malloc(N * sizeof(double));
+    if (flux)
+        f->flux = malloc(N * sizeof(double));
+    if (back)
+        f->background = malloc(N * sizeof(double));
+    f->N = N;
+}
+
+void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back) {
+    int i;
+    int nr = 2;
+    int ind;
+    if (flux)
+        nr++;
+    if (back)
+        nr++;
+
+    xy_alloc_data(xy, dl_size(l)/nr, flux, back);
+    ind = 0;
+    for (i=0; i<xy->N; i++) {
+        xy->x[i] = dl_get(l, ind);
+        ind++;
+        xy->y[i] = dl_get(l, ind);
+        ind++;
+        if (flux) {
+            xy->flux[i] = dl_get(l, ind);
+            ind++;
+        }
+        if (back) {
+            xy->background[i] = dl_get(l, ind);
+            ind++;
+        }
+    }
+}
+
+
 static xylist_t* xylist_new() {
     xylist_t* xy = calloc(1, sizeof(xylist_t));
     xy->xname = "X";
@@ -196,6 +240,12 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
 int xylist_open_field(xylist_t* ls, int i) {
     return fitstable_open_extension(ls->table, i);
 }
+
+/*
+ int xylist_start_field(xylist_t* ls) {
+ return xylist_next_field(ls);
+ }
+ */
 
 // Used when writing: start a new field.  Set up the table and header
 // structures so that they can be added to before writing the field header.
