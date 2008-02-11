@@ -75,6 +75,12 @@ void rd_copy(rd_t* dest, int dest_offset, const rd_t* src, int src_offset, int N
     }
 }
 
+rd_t* rd_get_subset(const rd_t* src, int offset, int N) {
+    rd_t* dest = rd_alloc(N);
+    rd_copy(dest, 0, src, offset, N);
+    return dest;
+}
+
 void rd_from_array(rd_t* r, double* radec, int N) {
     int i;
     rd_alloc_data(r, N);

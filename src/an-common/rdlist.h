@@ -58,6 +58,8 @@ rd_t* rd_alloc(int N);
 
 void rd_copy(rd_t* dest, int dest_offset, const rd_t* src, int src_offset, int N);
 
+rd_t* rd_get_subset(const rd_t* src, int offset, int N);
+
 rdlist_t* rdlist_open(const char* fn);
 
 rdlist_t* rdlist_open_for_writing(const char* fn);
