@@ -176,6 +176,14 @@ int rdlist_write_one_row(rdlist_t* ls, rd_t* fld, int row) {
     return xylist_write_one_row(ls, &xy, row);
 }
 
+int rdlist_write_one_radec(rdlist_t* ls, double ra, double dec) {
+    xy_t xy;
+    xy.x = &ra;
+    xy.y = &dec;
+    xy.N = 1;
+    return xylist_write_one_row(ls, &xy, 0);
+}
+
 /*
  int rdlist_n_entries(rdlist_t* ls, uint field) {
  return xylist_n_entries(ls, field);

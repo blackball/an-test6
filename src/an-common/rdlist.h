@@ -93,6 +93,8 @@ int rdlist_write_field(rdlist_t* ls, rd_t* fld);
 
 int rdlist_write_one_row(rdlist_t* ls, rd_t* fld, int row);
 
+int rdlist_write_one_radec(rdlist_t* ls, double ra, double dec);
+
 #define rdlist_add_tagalong_column xylist_add_tagalong_column
 
 #define rdlist_write_tagalong_column xylist_write_tagalong_column
