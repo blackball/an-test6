@@ -162,7 +162,7 @@ int kdtree_level_end(const kdtree_t* kd, int level) {
 }
 
 static inline u8 node_level(int nodeid) {
-    return an_fls(nodeid + 1) - 1;
+    return an_flsB(nodeid + 1);
 }
 
 int kdtree_get_level(const kdtree_t* kd, int nodeid) {
@@ -373,7 +373,7 @@ int kdtree_compute_levels(int N, int Nleaf) {
 }
 
 int kdtree_nnodes_to_nlevels(int Nnodes) {
-    return an_fls(Nnodes + 1) - 1;
+    return an_flsB(Nnodes + 1);
 }
 
 /* This returns the NODE id (not leaf index) */
