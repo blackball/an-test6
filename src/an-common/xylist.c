@@ -27,12 +27,31 @@
 #include "fitsioutils.h"
 #include "an-bool.h"
 
+double xy_getx(xy_t* f, int i) {
+    assert(i < f->N);
+    return f->x[i];
+}
+
+double xy_gety(xy_t* f, int i) {
+    assert(i < f->N);
+    return f->y[i];
+}
+
+int xy_n(xy_t* f) {
+    return f->N;
+}
+
 void xy_free_data(xy_t* f) {
     if (!f) return;
     free(f->x);
     free(f->y);
     free(f->flux);
     free(f->background);
+}
+
+void xy_free(xy_t* f) {
+    xy_free_data(f);
+    free(f);
 }
 
 xy_t* xy_alloc(int N, bool flux, bool back) {

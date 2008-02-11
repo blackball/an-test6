@@ -38,10 +38,10 @@ struct rd_t {
 };
 typedef struct rd_t rd_t;
 
-double rd_getra(rd_t* f, int i);
+double rd_getra (rd_t* f, int i);
 double rd_getdec(rd_t* f, int i);
-void rd_setx(rd_t* f, int i, double x);
-void rd_sety(rd_t* f, int i, double y);
+void rd_setra (rd_t* f, int i, double ra);
+void rd_setdec(rd_t* f, int i, double dec);
 int rd_n(rd_t* f);
 
 void rd_from_dl(rd_t* r, dl* l);
@@ -49,6 +49,8 @@ void rd_from_array(rd_t* r, double* radec, int N);
 
 // Just free the data, not the field itself.
 void rd_free_data(rd_t* f);
+
+void rd_free(rd_t* f);
 
 void rd_alloc_data(rd_t* f, int N);
 

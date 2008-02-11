@@ -16,31 +16,43 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
+#include <assert.h>
+
 #include "rdlist.h"
 
-void rdlist_set_raname(rdlist_t* ls, const char* name) {
-    xylist_set_xname(ls, name);
+double rd_getra (rd_t* f, int i) {
+    assert(i < f->N);
+    return f->ra[i];
 }
-void rdlist_set_decname(rdlist_t* ls, const char* name) {
-    xylist_set_yname(ls, name);
+
+double rd_getdec(rd_t* f, int i) {
+    assert(i < f->N);
+    return f->dec[i];
 }
-void rdlist_set_ratype(rdlist_t* ls, tfits_type type) {
-    xylist_set_xtype(ls, type);
+
+void rd_setra (rd_t* f, int i, double ra) {
+    assert(i < f->N);
+    f->ra[i] = ra;
 }
-void rdlist_set_dectype(rdlist_t* ls, tfits_type type) {
-    xylist_set_ytype(ls, type);
+
+void rd_setdec(rd_t* f, int i, double dec) {
+    assert(i < f->N);
+    f->dec[i] = dec;
 }
-void rdlist_set_raunits(rdlist_t* ls, const char* units) {
-    xylist_set_xunits(ls, units);
-}
-void rdlist_set_decunits(rdlist_t* ls, const char* units) {
-    xylist_set_yunits(ls, units);
+
+int rd_n(rd_t* r) {
+    return r->N;
 }
 
 void rd_free_data(rd_t* f) {
     if (!f) return;
     free(f->ra);
     free(f->dec);
+}
+
+void rd_free(rd_t* f) {
+    rd_free_data(f);
+    free(f);
 }
 
 void rd_alloc_data(rd_t* f, int N) {
@@ -65,6 +77,25 @@ void rd_from_dl(rd_t* r, dl* l) {
         r->ra [i] = dl_get(l, i*2);
         r->dec[i] = dl_get(l, i*2+1);
     }
+}
+
+void rdlist_set_raname(rdlist_t* ls, const char* name) {
+    xylist_set_xname(ls, name);
+}
+void rdlist_set_decname(rdlist_t* ls, const char* name) {
+    xylist_set_yname(ls, name);
+}
+void rdlist_set_ratype(rdlist_t* ls, tfits_type type) {
+    xylist_set_xtype(ls, type);
+}
+void rdlist_set_dectype(rdlist_t* ls, tfits_type type) {
+    xylist_set_ytype(ls, type);
+}
+void rdlist_set_raunits(rdlist_t* ls, const char* units) {
+    xylist_set_xunits(ls, units);
+}
+void rdlist_set_decunits(rdlist_t* ls, const char* units) {
+    xylist_set_yunits(ls, units);
 }
 
 

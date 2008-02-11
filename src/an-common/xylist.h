@@ -52,6 +52,8 @@ void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back);
 // Just free the data, not the field itself.
 void xy_free_data(xy_t* f);
 
+void xy_free(xy_t* f);
+
 #define AN_FILETYPE_XYLS "XYLS"
 
 /*
