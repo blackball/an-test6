@@ -23,6 +23,8 @@
 // MacOSX doesn't have endian.h
 #if __APPLE__
 # include <sys/types.h>
+#elif __FreeBSD__
+# include <sys/endian.h>
 #else
 # include <endian.h>
 #endif
