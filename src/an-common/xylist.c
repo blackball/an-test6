@@ -301,6 +301,13 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
     return fld;
 }
 
+xy_t* xylist_read_field_num(xylist_t* ls, int ext, xy_t* fld) {
+    if (!xylist_open_field(ls, ext)) {
+        return NULL;
+    }
+    return xylist_read_field(ls, fld);
+}
+
 int xylist_open_field(xylist_t* ls, int i) {
     return fitstable_open_extension(ls->table, i);
 }

@@ -114,6 +114,8 @@ int xylist_write_field(xylist_t* ls, xy_t* fld);
 // (input xy_t* is optional; if not given, a new one is allocated and returned.)
 xy_t* xylist_read_field(xylist_t* ls, xy_t* fld);
 
+xy_t* xylist_read_field_num(xylist_t* ls, int ext, xy_t* fld);
+
 int xylist_fix_header(xylist_t* ls);
 
 int xylist_close(xylist_t* ls);

@@ -54,6 +54,9 @@ void rd_free(rd_t* f);
 
 void rd_alloc_data(rd_t* f, int N);
 
+rd_t* rd_alloc(int N);
+
+void rd_copy(rd_t* dest, int dest_offset, const rd_t* src, int src_offset, int N);
 
 rdlist_t* rdlist_open(const char* fn);
 
@@ -88,6 +91,8 @@ int rdlist_write_field(rdlist_t* ls, rd_t* fld);
 
 // (input rd_t* is optional; if not given, a new one is allocated and returned.)
 rd_t* rdlist_read_field(rdlist_t* ls, rd_t* fld);
+
+rd_t* rdlist_read_field_num(rdlist_t* ls, int ext, rd_t* fld);
 
 //int rdlist_fix_header(rdlist_t* ls);
 #define rdlist_fix_header xylist_fix_header

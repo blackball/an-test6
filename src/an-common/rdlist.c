@@ -61,6 +61,20 @@ void rd_alloc_data(rd_t* f, int N) {
     f->N = N;
 }
 
+rd_t* rd_alloc(int N) {
+    rd_t* rd = calloc(1, sizeof(rd_t));
+    rd_alloc_data(rd, N);
+    return rd;
+}
+
+void rd_copy(rd_t* dest, int dest_offset, const rd_t* src, int src_offset, int N) {
+    int i;
+    for (i=0; i<N; i++) {
+        dest->ra [i + dest_offset] = src->ra [i + src_offset];
+        dest->dec[i + dest_offset] = src->dec[i + src_offset];
+    }
+}
+
 void rd_from_array(rd_t* r, double* radec, int N) {
     int i;
     rd_alloc_data(r, N);
@@ -129,6 +143,13 @@ rd_t* rdlist_read_field(rdlist_t* ls, rd_t* fld) {
     fld->dec = xy.y;
     fld->N   = xy.N;
     return fld;
+}
+
+rd_t* rdlist_read_field_num(rdlist_t* ls, int ext, rd_t* fld) {
+    if (!rdlist_open_field(ls, ext)) {
+        return NULL;
+    }
+    return rdlist_read_field(ls, fld);
 }
 
 int rdlist_write_field(rdlist_t* ls, rd_t* fld) {
