@@ -99,6 +99,19 @@ void xylist_set_yunits(xylist_t* ls, const char* units);
 
 void xylist_set_include_flux(xylist_t* ls, bool inc);
 
+
+// when writing.
+// Returns the column number of the added column; use this number
+// in the call to xylist_write_tagalong_column.
+int xylist_add_tagalong_column(xylist_t* ls, tfits_type c_type,
+                               int arraysize, tfits_type fits_type,
+                               const char* name, const char* units);
+int xylist_write_tagalong_column(xylist_t* ls, int colnum,
+                                 int offset, int N,
+                                 void* data, int datastride);
+void* xylist_read_tagalong_column(xylist_t* ls, const char* colname,
+                                  tfits_type c_type);
+
 int xylist_write_primary_header(xylist_t* ls);
 
 int xylist_fix_primary_header(xylist_t* ls);
@@ -112,6 +125,8 @@ int xylist_open_field(xylist_t* ls, int i);
 int xylist_write_header(xylist_t* ls);
 
 int xylist_write_field(xylist_t* ls, xy_t* fld);
+
+int xylist_write_one_row(xylist_t* ls, xy_t* fld, int row);
 
 // (input xy_t* is optional; if not given, a new one is allocated and returned.)
 xy_t* xylist_read_field(xylist_t* ls, xy_t* fld);

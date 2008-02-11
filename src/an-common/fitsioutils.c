@@ -32,70 +32,84 @@
 
 int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
                       const void* vsrc, int srcstride, tfits_type srctype,
-                      int N) {
-    int i;
+                      int arraysize, int N) {
+    int i, j;
     char* dest = vdest;
     const char* src = vsrc;
+    int destatomsize = fits_get_atom_size(desttype);
+    int srcatomsize = fits_get_atom_size(srctype);
 
+    // this loop is over rows of data
     for (i=0; i<N; i++) {
+        // store local pointers to we can stride over the array, without
+        // affecting the row stride.
+        char* adest = dest;
+        const char* asrc = src;
         int64_t ival = 0;
         double  dval = 0;
         bool src_is_int = TRUE;
-        
-        switch (srctype) {
-        case TFITS_BIN_TYPE_A:
-        case TFITS_BIN_TYPE_X:
-        case TFITS_BIN_TYPE_L:
-        case TFITS_BIN_TYPE_B:
-            ival = *((uint8_t*)src);
-            break;
-        case TFITS_BIN_TYPE_I:
-            ival = *((int16_t*)src);
-            break;
-        case TFITS_BIN_TYPE_J:
-            ival = *((int32_t*)src);
-            break;
-        case TFITS_BIN_TYPE_K:
-            ival = *((int64_t*)src);
-            break;
-        case TFITS_BIN_TYPE_E:
-            dval = *((float*)src);
-            src_is_int = FALSE;
-            break;
-        case TFITS_BIN_TYPE_D:
-            dval = *((double*)src);
-            src_is_int = FALSE;
-            break;
-        default:
-            assert(0);
-            return -1;
-        }
 
-        switch (desttype) {
-        case TFITS_BIN_TYPE_A:
-        case TFITS_BIN_TYPE_X:
-        case TFITS_BIN_TYPE_L:
-        case TFITS_BIN_TYPE_B:
-            *((uint8_t*)dest) = (src_is_int ? ival : dval);
-            break;
-        case TFITS_BIN_TYPE_I:
-            *((int16_t*)dest) = (src_is_int ? ival : dval);
-            break;
-        case TFITS_BIN_TYPE_J:
-            *((int32_t*)dest) = (src_is_int ? ival : dval);
-            break;
-        case TFITS_BIN_TYPE_K:
-            *((int64_t*)dest) = (src_is_int ? ival : dval);
-            break;
-        case TFITS_BIN_TYPE_E:
-            *((float*)dest) = (src_is_int ? ival : dval);
-            break;
-        case TFITS_BIN_TYPE_D:
-            *((double*)dest) = (src_is_int ? ival : dval);
-            break;
-        default:
-            assert(0);
-            return -1;
+        // this loop is over elements of the array, if the column contains an array.
+        // (ie, for scalar columns, arraysize is 1.)
+        for (j=0; j<arraysize; j++) {
+            switch (srctype) {
+            case TFITS_BIN_TYPE_A:
+            case TFITS_BIN_TYPE_X:
+            case TFITS_BIN_TYPE_L:
+            case TFITS_BIN_TYPE_B:
+                ival = *((uint8_t*)asrc);
+                break;
+            case TFITS_BIN_TYPE_I:
+                ival = *((int16_t*)asrc);
+                break;
+            case TFITS_BIN_TYPE_J:
+                ival = *((int32_t*)asrc);
+                break;
+            case TFITS_BIN_TYPE_K:
+                ival = *((int64_t*)asrc);
+                break;
+            case TFITS_BIN_TYPE_E:
+                dval = *((float*)asrc);
+                src_is_int = FALSE;
+                break;
+            case TFITS_BIN_TYPE_D:
+                dval = *((double*)asrc);
+                src_is_int = FALSE;
+                break;
+            default:
+                assert(0);
+                return -1;
+            }
+
+            switch (desttype) {
+            case TFITS_BIN_TYPE_A:
+            case TFITS_BIN_TYPE_X:
+            case TFITS_BIN_TYPE_L:
+            case TFITS_BIN_TYPE_B:
+                *((uint8_t*)adest) = (src_is_int ? ival : dval);
+                break;
+            case TFITS_BIN_TYPE_I:
+                *((int16_t*)adest) = (src_is_int ? ival : dval);
+                break;
+            case TFITS_BIN_TYPE_J:
+                *((int32_t*)adest) = (src_is_int ? ival : dval);
+                break;
+            case TFITS_BIN_TYPE_K:
+                *((int64_t*)adest) = (src_is_int ? ival : dval);
+                break;
+            case TFITS_BIN_TYPE_E:
+                *((float*)adest) = (src_is_int ? ival : dval);
+                break;
+            case TFITS_BIN_TYPE_D:
+                *((double*)adest) = (src_is_int ? ival : dval);
+                break;
+            default:
+                assert(0);
+                return -1;
+            }
+
+            asrc  += srcatomsize;
+            adest += destatomsize;
         }
 
         dest += deststride;
@@ -473,11 +487,21 @@ int fits_write_data_K(FILE* fid, int64_t value) {
 	return 0;
 }
 
-int fits_write_data_array(FILE* fid, void* vvalue, tfits_type type,
+int fits_write_data_array(FILE* fid, const void* vvalue, tfits_type type,
                           int N) {
     int i;
     int rtn = 0;
-    char* pvalue = (char*)vvalue;
+    const char* pvalue = (const char*)vvalue;
+
+    if (pvalue == NULL) {
+        if (fseeko(fid, fits_get_atom_size(type) * N, SEEK_CUR)) {
+            fprintf(stderr, "Failed to skip %i bytes in fits_write_data_array: %s\n",
+                    fits_get_atom_size(type) * N, strerror(errno));
+            return -1;
+        }
+        return 0;
+    }
+
     for (i=0; i<N; i++) {
         switch (type) {
         case TFITS_BIN_TYPE_A:

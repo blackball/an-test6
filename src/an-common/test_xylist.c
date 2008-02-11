@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "xylist.h"
 #include "fitsioutils.h"
 #include "qfits.h"
@@ -9,6 +11,88 @@ static char* get_tmpfile(int i) {
     sprintf(fn, "/tmp/test-xylist-%i", i);
     return strdup(fn);
 }
+
+void test_tagalong(CuTest* ct) {
+    xylist_t *in, *out;
+    char* fn = get_tmpfile(2);
+    xy_t fld;
+    xy_t infld;
+
+    out = xylist_open_for_writing(fn);
+    CuAssertPtrNotNull(ct, out);
+    xylist_set_include_flux(out, TRUE);
+    CuAssertIntEquals(ct, 0, xylist_write_primary_header(out));
+
+    int N = 100;
+    double x[N];
+    double y[N];
+    double flux[N];
+    double tagalong[2*N];
+    int i;
+
+    srand(0);
+
+    for (i=0; i<N; i++) {
+        float f;
+        x[i] = i + 1;
+        y[i] = 3 * i;
+        flux[i] = 10 * i;
+        //f = rand() / (double)RAND_MAX;
+        f = 10000 + i;
+        tagalong[2*i]   = f;
+        //f = rand() / (double)RAND_MAX;
+        f = 11000 + i;
+        tagalong[2*i+1] = f;
+    }
+    fld.N = N;
+    fld.x = x;
+    fld.y = y;
+    fld.flux = flux;
+
+    int tagcol = xylist_add_tagalong_column(out, fitscolumn_double_type(),
+                                            2, fitscolumn_float_type(),
+                                            "TAGALONG", "tags");
+    //CuAssertIntEquals(ct, 3, tagcol);
+    CuAssertIntEquals(ct, 0, tagcol);
+
+    CuAssertIntEquals(ct, 0, xylist_write_header(out));
+    CuAssertIntEquals(ct, 0, xylist_write_field(out, &fld));
+
+    int rtn = xylist_write_tagalong_column(out, tagcol, 0, N, tagalong, 2*sizeof(double));
+    CuAssertIntEquals(ct, 0, rtn);
+
+    CuAssertIntEquals(ct, 0, xylist_fix_header(out));
+    CuAssertIntEquals(ct, 0, xylist_close(out));
+    out = NULL;
+
+
+
+    in = xylist_open(fn);
+    CuAssertPtrNotNull(ct, in);
+
+    CuAssertIntEquals(ct, 1, xylist_n_fields(in));
+
+    CuAssertIntEquals(ct, 0, strcmp(in->antype, AN_FILETYPE_XYLS));
+    CuAssertPtrNotNull(ct, xylist_read_field(in, &infld));
+    CuAssertIntEquals(ct, N, infld.N);
+    for (i=0; i<N; i++) {
+        CuAssertIntEquals(ct, fld.x[i], infld.x[i]);
+        CuAssertIntEquals(ct, fld.y[i], infld.y[i]);
+        CuAssertIntEquals(ct, fld.flux[i], infld.flux[i]);
+    }
+    CuAssertPtrEquals(ct, NULL, infld.background);
+
+    double* intag = xylist_read_tagalong_column(in, "TAGALONG", fitscolumn_double_type());
+    CuAssertIntEquals(ct, 0, memcmp(tagalong, intag, 2 * N * sizeof(double)));
+    free(intag);
+
+    xy_free_data(&infld);
+    CuAssertIntEquals(ct, 0, xylist_close(in));
+    in = NULL;
+
+    free(fn);
+}
+
 
 void test_simple(CuTest* ct) {
     xylist_t *in, *out;

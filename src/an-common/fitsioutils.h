@@ -130,7 +130,7 @@ int fits_add_column(qfits_table* table, int column, tfits_type type,
  */
 int fits_convert_data(void* dest, int deststride, tfits_type desttype,
                       const void* src, int srcstride, tfits_type srctype,
-                      int N);
+                      int arraysize, int N);
 
 // write single column fields:
 int fits_write_data_A(FILE* fid, unsigned char value);
@@ -143,7 +143,11 @@ int fits_write_data_K(FILE* fid, int64_t value);
 int fits_write_data_X(FILE* fid, unsigned char value);
 
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type);
-int fits_write_data_array(FILE* fid, void* vvalue, tfits_type type,
+
+// Writes one cell of a FITS table (which may be an array or scalar)
+// which has already been converted to FITS format "type".
+// If "vvalue" is NULL, just skips past that number of bytes.
+int fits_write_data_array(FILE* fid, const void* vvalue, tfits_type type,
                           int N);
 
 #endif

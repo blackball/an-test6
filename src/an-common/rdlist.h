@@ -91,6 +91,8 @@ void rdlist_set_decunits(rdlist_t* ls, const char* units);
 
 int rdlist_write_field(rdlist_t* ls, rd_t* fld);
 
+int rdlist_write_one_row(rdlist_t* ls, rd_t* fld, int row);
+
 // (input rd_t* is optional; if not given, a new one is allocated and returned.)
 rd_t* rdlist_read_field(rdlist_t* ls, rd_t* fld);
 
@@ -107,12 +109,6 @@ rd_t* rdlist_read_field_num(rdlist_t* ls, int ext, rd_t* fld);
 
 //qfits_header* rdlist_get_header(rdlist_t* ls);
 #define rdlist_get_header xylist_get_header
-
-/*
- // Is the given filename an xylist?
- int rdlist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
- const char** reason);
- */
 
 #endif
 

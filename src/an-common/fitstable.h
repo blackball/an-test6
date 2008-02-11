@@ -212,7 +212,15 @@ void* fitstable_read_column_array(const fitstable_t* tab,
 
 int fitstable_write_row(fitstable_t* table, ...);
 
+// Writes one row, with data drawn from the given structure.
 int fitstable_write_struct(fitstable_t* table, const void* struc);
+
+// Fills in one column, starting at "rowoffset" and of length "nrows",
+// by taking data from the given structure.
+// Leaves the file offset unchanged.
+int fitstable_write_one_column(fitstable_t* table, int colnum,
+                               int rowoffset, int nrows,
+                               const void* src, int src_stride);
 
 int fitstable_read_struct(fitstable_t* table, int index, void* struc);
 

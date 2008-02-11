@@ -232,6 +232,26 @@ xylist_t* xylist_open_for_writing(const char* fn) {
 	return NULL;
 }
 
+int xylist_add_tagalong_column(xylist_t* ls, tfits_type c_type,
+                               int arraysize, tfits_type fits_type,
+                               const char* name, const char* units) {
+    fitstable_add_write_column_struct(ls->table, c_type, arraysize,
+                                      0, fits_type, name, units);
+    return fitstable_ncols(ls->table) - 1;
+}
+
+int xylist_write_tagalong_column(xylist_t* ls, int colnum,
+                                 int offset, int N,
+                                 void* data, int datastride) {
+    return fitstable_write_one_column(ls->table, colnum, offset, N,
+                                      data, datastride);
+}
+
+void* xylist_read_tagalong_column(xylist_t* ls, const char* colname,
+                                  tfits_type c_type) {
+    return fitstable_read_column_array(ls->table, colname, c_type);
+}
+
 void xylist_set_antype(xylist_t* ls, const char* type) {
     free(ls->antype);
     ls->antype = strdup(type);
@@ -277,6 +297,12 @@ int xylist_n_fields(xylist_t* ls) {
     return ls->nfields;
 }
 
+int xylist_write_one_row(xylist_t* ls, xy_t* fld, int row) {
+    return fitstable_write_row(ls->table, fld->x + row, fld->y + row,
+                               ls->include_flux ? fld->flux + row : NULL,
+                               ls->include_background ? fld->background + row : NULL);
+}
+
 int xylist_write_field(xylist_t* ls, xy_t* fld) {
     int i;
     assert(fld);
@@ -285,14 +311,6 @@ int xylist_write_field(xylist_t* ls, xy_t* fld) {
                                 ls->include_flux ? fld->flux + i : NULL,
                                 ls->include_background ? fld->background + i : NULL))
             return -1;
-        /*
-         int ret = 0;
-         if (ls->include_flux && ls->include_background)
-         ret = fitstable_write_row(
-         if (ls->include_flux)
-         if (ls->include_background)
-         else
-         */
     }
     return 0;
 }

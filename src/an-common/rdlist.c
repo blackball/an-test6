@@ -167,6 +167,15 @@ int rdlist_write_field(rdlist_t* ls, rd_t* fld) {
     return xylist_write_field(ls, &xy);
 }
 
+int rdlist_write_one_row(rdlist_t* ls, rd_t* fld, int row) {
+    xy_t xy;
+    memset(&xy, 0, sizeof(xy_t));
+    xy.x = fld->ra;
+    xy.y = fld->dec;
+    xy.N = fld->N;
+    return xylist_write_one_row(ls, &xy, row);
+}
+
 /*
  int rdlist_n_entries(rdlist_t* ls, uint field) {
  return xylist_n_entries(ls, field);
