@@ -49,6 +49,8 @@ void xy_alloc_data(xy_t* f, int N, bool flux, bool back);
 
 void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back);
 
+double* xy_to_flat_array(xy_t* xy, double* arr);
+
 // Just free the data, not the field itself.
 void xy_free_data(xy_t* f);
 

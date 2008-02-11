@@ -70,6 +70,35 @@ void xy_alloc_data(xy_t* f, int N, bool flux, bool back) {
     f->N = N;
 }
 
+double* xy_to_flat_array(xy_t* xy, double* arr) {
+    int nr = 2;
+    int i, ind;
+    if (xy->flux)
+        nr++;
+    if (xy->background)
+        nr++;
+
+    if (!arr)
+        arr = malloc(nr * xy_n(xy) * sizeof(double));
+
+    ind = 0;
+    for (i=0; i<xy->N; i++) {
+        arr[ind] = xy->x[i];
+        ind++;
+        arr[ind] = xy->y[i];
+        ind++;
+        if (xy->flux) {
+            arr[ind] = xy->flux[i];
+            ind++;
+        }
+        if (xy->background) {
+            arr[ind] = xy->background[i];
+            ind++;
+        }
+    }
+    return arr;
+}
+
 void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back) {
     int i;
     int nr = 2;
