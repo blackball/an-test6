@@ -143,7 +143,7 @@ void fitstable_add_write_column_struct(fitstable_t* tab,
                                        const char* name,
                                        const char* units) {
     fitstable_add_column_struct(tab, c_type, arraysize, structoffset,
-                                fits_type, name, units);
+                                fits_type, name, units, FALSE);
 }
 
 void fitstable_add_read_column_struct(fitstable_t* tab,
@@ -151,9 +151,10 @@ void fitstable_add_read_column_struct(fitstable_t* tab,
                                       int arraysize,
                                       int structoffset,
                                       tfits_type fits_type,
-                                      const char* name) {
+                                      const char* name,
+                                      bool required) {
     fitstable_add_column_struct(tab, c_type, arraysize, structoffset,
-                                fits_type, name, NULL);
+                                fits_type, name, NULL, required);
 }
 
 void fitstable_add_column_struct(fitstable_t* tab,
@@ -162,7 +163,8 @@ void fitstable_add_column_struct(fitstable_t* tab,
                                  int structoffset,
                                  tfits_type fits_type,
                                  const char* name,
-                                 const char* units) {
+                                 const char* units,
+                                 bool required) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
     col.colname = name;
@@ -172,6 +174,7 @@ void fitstable_add_column_struct(fitstable_t* tab,
     col.arraysize = arraysize;
     col.in_struct = TRUE;
     col.coffset = structoffset;
+    col.required = required;
     fitstable_add_column(tab, &col);
 }
 

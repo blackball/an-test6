@@ -124,10 +124,8 @@ qfits_header* xylist_get_header(xylist_t* ls);
 
 int xylist_n_fields(xylist_t* ls);
 
-/*
- // Is the given filename an xylist?
- int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
- const char** reason);
- */
+// Is the given filename an xylist?
+bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
+                           char** reason);
 
 #endif

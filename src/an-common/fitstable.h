@@ -163,7 +163,8 @@ void fitstable_add_read_column_struct(fitstable_t* tab,
                                       int arraysize,
                                       int structoffset,
                                       tfits_type fits_type,
-                                      const char* name);
+                                      const char* name,
+                                      bool required);
 
 void fitstable_add_write_column_struct(fitstable_t* tab,
                                        tfits_type c_type,
@@ -179,7 +180,8 @@ void fitstable_add_column_struct(fitstable_t* tab,
                                  int structoffset,
                                  tfits_type fits_type,
                                  const char* name,
-                                 const char* units);
+                                 const char* units,
+                                 bool required);
 
 void fitstable_add_write_column(fitstable_t* tab, tfits_type t,
                                 const char* name, const char* units);

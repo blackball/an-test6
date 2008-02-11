@@ -63,6 +63,10 @@ void test_simple(CuTest* ct) {
     CuAssertIntEquals(ct, 0, xylist_close(in));
     in = NULL;
 
+    CuAssertIntEquals(ct, TRUE, xylist_is_file_xylist(fn, NULL, NULL, NULL));
+    CuAssertIntEquals(ct, FALSE, xylist_is_file_xylist("no-such-file", NULL, NULL, NULL));
+    CuAssertIntEquals(ct, FALSE, xylist_is_file_xylist(fn, "XXX", "YYY", NULL));
+
     free(fn);
 }
 

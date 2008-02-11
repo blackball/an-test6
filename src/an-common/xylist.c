@@ -98,6 +98,51 @@ void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back) {
 }
 
 
+bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
+                           char** reason) {
+    int rtn;
+    xylist_t* xyls = xylist_open(fn);
+    if (!xyls) {
+        if (reason) sprintf(*reason, "Failed to open file %s", fn);
+        return FALSE;
+    }
+    if (xcolumn)
+        xylist_set_xname(xyls, xcolumn);
+    if (ycolumn)
+        xylist_set_yname(xyls, ycolumn);
+
+    /*
+     rtn = xylist_open_field(xyls, 1);
+     if (rtn) {
+     xylist_close(xyls);
+     if (reason) sprintf(*reason, "Failed to read FITS extension %i from file %s", 1, fn);
+     return 0;
+     }
+     xy = xylist_read_field(xyls, NULL);
+     if (!xy) {
+     xylist_close(xyls);
+     if (reason) sprintf(*reason, "Failed to read FITS extension %i from file %s", 1, fn);
+     return 0;
+     }
+     */
+
+    //xylist_get_header(xyls);
+
+    fitstable_add_read_column_struct(xyls->table, fitscolumn_double_type(),
+                                     1, 0, fitscolumn_any_type(), xyls->xname, TRUE);
+    fitstable_add_read_column_struct(xyls->table, fitscolumn_double_type(),
+                                     1, 0, fitscolumn_any_type(), xyls->yname, TRUE);
+
+    rtn = fitstable_read_extension(xyls->table, 1);
+    xylist_close(xyls);
+    if (rtn) {
+        if (reason) sprintf(*reason, "Failed to find a matching FITS table in extension 1 of file %s\n", fn);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 static xylist_t* xylist_new() {
     xylist_t* xy = calloc(1, sizeof(xylist_t));
     xy->xname = "X";
