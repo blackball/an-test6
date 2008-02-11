@@ -103,7 +103,7 @@ bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycol
     int rtn;
     xylist_t* xyls = xylist_open(fn);
     if (!xyls) {
-        if (reason) sprintf(*reason, "Failed to open file %s", fn);
+        if (reason) asprintf(reason, "Failed to open file %s", fn);
         return FALSE;
     }
     if (xcolumn)
@@ -136,7 +136,7 @@ bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycol
     rtn = fitstable_read_extension(xyls->table, 1);
     xylist_close(xyls);
     if (rtn) {
-        if (reason) sprintf(*reason, "Failed to find a matching FITS table in extension 1 of file %s\n", fn);
+        if (reason) asprintf(reason, "Failed to find a matching FITS table in extension 1 of file %s\n", fn);
         return FALSE;
     }
 
