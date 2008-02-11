@@ -28,7 +28,7 @@
 #include "kdtree_internal_common.h"
 #include "kdtree_mem.h"
 #include "keywords.h"
-#include "fls.h"
+#include "an-fls.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
 
@@ -162,7 +162,7 @@ int kdtree_level_end(const kdtree_t* kd, int level) {
 }
 
 static inline u8 node_level(int nodeid) {
-    return fls(nodeid + 1) - 1;
+    return an_fls(nodeid + 1) - 1;
 }
 
 int kdtree_get_level(const kdtree_t* kd, int nodeid) {
@@ -373,7 +373,7 @@ int kdtree_compute_levels(int N, int Nleaf) {
 }
 
 int kdtree_nnodes_to_nlevels(int Nnodes) {
-    return fls(Nnodes + 1) - 1;
+    return an_fls(Nnodes + 1) - 1;
 }
 
 /* This returns the NODE id (not leaf index) */

@@ -11,8 +11,8 @@
  And of course the kernel is distributed under the terms of the GPL v2.
  */
 
-#ifndef _ASM_GENERIC_BITOPS_FLS_H_
-#define _ASM_GENERIC_BITOPS_FLS_H_
+#ifndef AN_FLS_H
+#define AN_FLS_H
 
 #include <stdint.h>
 #include <assert.h>
@@ -26,14 +26,14 @@
  *
  * Note fls(0) = 0, fls(1) = 1, fls(0x80000000) = 32.
  */
-static inline int fls(int x);
+static inline int an_fls(int x);
 
 /**
  * flsB()  =  fls() - 1.
  *
  * Note that x MUST be > 0.
  */
-static inline uint8_t flsB(uint32_t x);
+static inline uint8_t an_flsB(uint32_t x);
 
 
 
@@ -41,7 +41,7 @@ static inline uint8_t flsB(uint32_t x);
 
 #if AN_I386
 
-static inline int fls(int x) {
+static inline int an_fls(int x) {
     int r;
     __asm__("bsrl %1,%0\n\t"
             "jnz 1f\n\t"
@@ -50,7 +50,7 @@ static inline int fls(int x) {
     return r+1;
 } 
 
-static inline uint8_t flsB(uint32_t x) {
+static inline uint8_t an_flsB(uint32_t x) {
     int r;
     assert(x);
     __asm__("bsrl %1,%0\n\t"
@@ -62,7 +62,7 @@ static inline uint8_t flsB(uint32_t x) {
 
 #elif AN_X86_64
 
-static __inline__ int fls(int x) {
+static __inline__ int an_fls(int x) {
     int r;
     __asm__("bsrl %1,%0\n\t"
             "cmovzl %2,%0"
@@ -70,7 +70,7 @@ static __inline__ int fls(int x) {
     return r+1;
 } 
 
-static inline uint8_t flsB(uint32_t x) {
+static inline uint8_t an_flsB(uint32_t x) {
     int r;
     assert(x);
     __asm__("bsrl %1,%0\n\t"
@@ -81,7 +81,7 @@ static inline uint8_t flsB(uint32_t x) {
 
 #else
 
-static inline int fls(int x) {
+static inline int an_fls(int x) {
     int r = 32;
     if (!x)
         return 0;
@@ -108,7 +108,7 @@ static inline int fls(int x) {
     return r;
 }
 
-static inline uint8_t flsB(uint32_t x) {
+static inline uint8_t an_flsB(uint32_t x) {
     int r = 31;
     assert(x);
     if (!(x & 0xffff0000u)) {
@@ -136,6 +136,6 @@ static inline uint8_t flsB(uint32_t x) {
 
 #endif
 
-#endif /* _ASM_GENERIC_BITOPS_FLS_H_ */
+#endif
 
 
