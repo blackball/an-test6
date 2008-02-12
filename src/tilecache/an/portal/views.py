@@ -164,7 +164,7 @@ def jobstatus(request):
         'sources' : get_url(job, 'sources-medium'),
         'sources_big' : get_url(job, 'sources-big'),
         'sources_small' : get_url(job, 'sources-small'),
-        'otherxylists' : otherxylists,
+        #'otherxylists' : otherxylists,
         'jobowner' : jobowner,
         'allowanon' : anonymous,
         }
