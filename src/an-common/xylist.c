@@ -17,7 +17,7 @@
 */
 
 #include <stdio.h>
-
+#include <stdarg.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
@@ -26,6 +26,15 @@
 #include "fitstable.h"
 #include "fitsioutils.h"
 #include "an-bool.h"
+#include "keywords.h"
+
+ATTRIB_FORMAT(printf,1,2)
+static void error(const char* format, ...) {
+    va_list lst;
+    va_start(lst, format);
+    vfprintf(stderr, format, lst);
+    va_end(lst);
+}
 
 double xy_getx(xy_t* f, int i) {
     assert(i < f->N);
@@ -203,7 +212,7 @@ xylist_t* xylist_open(const char* fn) {
 		return NULL;
     ls->table = fitstable_open(fn);
     if (!ls->table) {
-		fprintf(stderr, "Failed to open FITS table %s.\n", fn);
+		error("Failed to open FITS table %s.\n", fn);
         free(ls);
         return NULL;
     }
@@ -271,7 +280,7 @@ int xylist_close(xylist_t* ls) {
     int rtn = 0;
     if (ls->table) {
         if (fitstable_close(ls->table)) {
-			fprintf(stderr, "Failed to close xylist table\n");
+			error("Failed to close xylist table\n");
             rtn = -1;
         }
     }
@@ -359,10 +368,15 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
 }
 
 xy_t* xylist_read_field_num(xylist_t* ls, int ext, xy_t* fld) {
-    if (!xylist_open_field(ls, ext)) {
+	xy_t* rtn;
+	if (xylist_open_field(ls, ext)) {
+		error("xylist_open_field(%i) failed\n", ext);
         return NULL;
     }
-    return xylist_read_field(ls, fld);
+	rtn = xylist_read_field(ls, fld);
+	if (!rtn)
+		error("xylist_read_field() failed\n");
+    return rtn;
 }
 
 int xylist_open_field(xylist_t* ls, int i) {
