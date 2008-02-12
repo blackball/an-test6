@@ -3,16 +3,16 @@ from django.contrib.auth.models import User
 
 from an.util import orderby
 from an.portal.wcs import TanWCS
-from an.portal.job import AstroField
+from an.portal.job import Job
 
 import logging
 
 class Image(models.Model):
     objects = orderby.OrderByManager()
 
-    field = models.ForeignKey(AstroField, null=True)
+    job = models.ForeignKey(Job, null=True)
 
-    user = models.ForeignKey(User)
+    #user = models.ForeignKey(User)
 
     # a short (usually one line) description of the image
     # identifying the image source (e.g., survey name), object name or field coordinates,
@@ -35,10 +35,10 @@ class Image(models.Model):
     # the mean modified Julian date of the observation.
     # By "mean" we mean the midpoint of the observation in terms of normalized exposure times:
     # this is the "characteristic observation time" and is independent of observation duration.
-    jdate = models.PositiveIntegerField()
+    #jdate = models.PositiveIntegerField()
 
     # WCS
-    wcs = models.ForeignKey(TanWCS)
+    #wcs = models.ForeignKey(TanWCS)
 
     # Cached WCS values:
 

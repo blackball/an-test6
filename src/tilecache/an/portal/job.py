@@ -77,34 +77,7 @@ class Calibration(models.Model):
     # psf
 
 
-# Holds user-specific metadata about a DiskFile:
-# two users can upload the same file contents but give different metadata.
-class UserFile(models.Model):
-    # The file that goes with this job
-    diskfile = models.ForeignKey(DiskFile, null=True)
-
-    # The license associated with the file.
-    license = models.ForeignKey(License, null=True)
-
-    # Has the user granted us permission to serve this file to everyone?
-    exposeToWeb = models.BooleanField(default=False)
-
-    # The original filename on the user's machine, or basename of URL, etc.
-    # Needed for, eg, tarball submissions.  Purely for informative purposes,
-    # to show the user a filename that makes sense.
-    origname = models.CharField(max_length=64, null=True)
-
-    def __init__(self, *args, **kwargs):
-        super(UserFile, self).__init__(*args, **kwargs)
-
-    def __str__(self):
-        s = '<Field ' + str(self.id)
-        s += ', fileid ' + str(self.fileid)
-        if self.filetype:
-            s += ', ' + self.filetype
-        s += '>'
-        return s
-
+class JunkInTheTrunk(object):
     # Choose a new unique fileid that does not conflict with an existing
     # file.  May have the side-effect of calling save().
     def choose_new_fileid(self):
@@ -361,12 +334,24 @@ class Job(models.Model):
 
     submission = models.ForeignKey(Submission, related_name='jobs', null=True)
 
-    userfile = models.ForeignKey(UserFile)
+    # The file that goes with this job
+    diskfile = models.ForeignKey(DiskFile, null=True)
+
+    # The license associated with the file.
+    filelicense = models.ForeignKey(License, null=True)
+
+    # The original filename on the user's machine, or basename of URL, etc.
+    # Needed for, eg, tarball submissions.  Purely for informative purposes,
+    # to show the user a filename that makes sense.
+    fileorigname = models.CharField(max_length=64, null=True)
+
+    # Has the user granted us permission to serve this file to everyone?
+    exposefile = models.BooleanField(default=False)
 
     calibration = models.ForeignKey(Calibration, null=True)
 
     # Has the user granted us permission to show this job to everyone?
-    exposeToWeb = models.BooleanField(default=False)
+    exposejob = models.BooleanField(default=False)
 
     status = models.CharField(max_length=16)
     failurereason = models.CharField(max_length=256)
