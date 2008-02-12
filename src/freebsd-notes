@@ -44,44 +44,6 @@ This program built for i386-portbld-freebsd6.2
 
 > export CC=gcc42
 > gmake > /dev/null
-...
-Makefile:313: warning: ignoring old commands for target `install-html-recursive'
-f77_wrap.h:132: warning: 'c2fstrv2' defined but not used
-f77_wrap.h:221: warning: 'F2CcopyLogVect' defined but not used
-f77_wrap.h:231: warning: 'C2FcopyLogVect' defined but not used
-f77_wrap.h:221: warning: 'F2CcopyLogVect' defined but not used
-f77_wrap.h:231: warning: 'C2FcopyLogVect' defined but not used
-f77_wrap.h:132: warning: 'c2fstrv2' defined but not used
-ar: creating libcfitsio.a
-../an-common/makefile.deps:40: deps: No such file or directory
-makefile.deps:40: deps: No such file or directory
-gnu-specific-test.c: In function 'main':
-gnu-specific-test.c:23: warning: implicit declaration of function 'canonicalize_file_name'
-gnu-specific-test.c:23: warning: initialization makes pointer from integer without a cast
-/var/tmp//ccaOtdL9.o(.text+0x1a): In function `main':
-/usr/home/dstn/an/an-common/gnu-specific-test.c:23: undefined reference to `canonicalize_file_name'
-collect2: ld returned 1 exit status
-In file included from an-endian.c:19:
-an-endian.h:27:21: error: endian.h: No such file or directory
-gmake[3]: *** [an-endian.o] Error 1
-gmake[2]: *** [../an-common/remake-anutils] Error 2
-gmake[1]: *** [../libkd/libkd.a] Error 2
-gmake: *** [all] Error 2
-
-[edit]
-
-> gmake > /dev/null
-In file included from kdtree.c:31:
-fls.h:29: error: static declaration of 'fls' follows non-static declaration
-/usr/include/strings.h:47: error: previous declaration of 'fls' was here
-gmake[2]: *** [kdtree.o] Error 1
-gmake[1]: *** [../libkd/libkd.a] Error 2
-gmake: *** [all] Error 2
-
-[edit]
-
-> gmake > /dev/null
-[oh yeah, I'm mucking with xylist and it doesn't compile in Linux either!]
 
 > gmake extra > /dev/null
 plotquad.c:26:19: error: cairo.h: No such file or directory
@@ -91,12 +53,9 @@ plotquad.c:27:17: error: ppm.h: No such file or directory
 # pkg_add -r cairo netpbm netpbm-devel
 
 > gmake extra > /dev/null
-[just the usual xylist failures]
+[hmm, I'm getting repeated gcc42 internal errors which go away when don't
+reoccur when I re-run make... something wrong with this machine?]
 
 > gmake web > /dev/null
-[just the usual xylist failures]
-
-[and of course, watcher doesn't work]
-
-
+[watcher doesn't work - it depends on Linux-only inotify]
 
