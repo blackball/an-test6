@@ -19,19 +19,21 @@ from an.portal.models import UserPreferences
 # Represents one file on disk
 class DiskFile(models.Model):
     # sha-1 hash of the file contents.
-    filehash = models.CharField(max_length=40, unique=True)
-    #?? primary_key=True)
+    filehash = models.CharField(max_length=40, unique=True, primary_key=True)
 
     ### Everything below here can be derived from the above; they're
     ### just cached for performance reasons.
 
-    # type of the uploaded file
+    # type of the file
     # ("jpg", "png", "gif", "fits", etc)
     filetype = models.CharField(max_length=16, null=True)
 
     # size of the image
     imagew = models.PositiveIntegerField(null=True)
     imageh = models.PositiveIntegerField(null=True)
+
+    
+
 
 
 class License(models.Model):
@@ -75,11 +77,9 @@ class Calibration(models.Model):
     # psf
 
 
-# Represents one field to be solved: either an image or xylist.
-class AstroField(models.Model):
-    # The owner of this job
-    #user = models.ForeignKey(User)
-
+# Holds user-specific metadata about a DiskFile:
+# two users can upload the same file contents but give different metadata.
+class UserFile(models.Model):
     # The file that goes with this job
     diskfile = models.ForeignKey(DiskFile, null=True)
 
@@ -95,7 +95,7 @@ class AstroField(models.Model):
     origname = models.CharField(max_length=64, null=True)
 
     def __init__(self, *args, **kwargs):
-        super(AstroField, self).__init__(*args, **kwargs)
+        super(UserFile, self).__init__(*args, **kwargs)
 
     def __str__(self):
         s = '<Field ' + str(self.id)
@@ -111,7 +111,7 @@ class AstroField(models.Model):
         if not self.fileid:
             # find the largest existing fileid and add 1.
             try:
-                v = AstroField.objects.filter(fileid__isnull=False).order_by('-fileid').values('fileid')[0]
+                v = UserFile.objects.filter(fileid__isnull=False).order_by('-fileid').values('fileid')[0]
                 v = v['fileid']
                 self.fileid = v + 1
             except IndexError:
@@ -120,18 +120,18 @@ class AstroField(models.Model):
             log('Trying fileid %i...' % self.fileid)
             # save() to indicate that we are going to try to use this fileid.
             self.save()
-            # check if any other AstroField has this fileid:
-            n = AstroField.objects.filter(fileid=self.fileid).count()
+            # check if any other UserFile has this fileid:
+            n = UserFile.objects.filter(fileid=self.fileid).count()
             if n > 1:
-                # some other AstroField already has this fileid.
-                log('AstroField database: %i entries have fileid %i' % (n, self.fileid))
+                # some other UserFile already has this fileid.
+                log('UserFile database: %i entries have fileid %i' % (n, self.fileid))
                 self.fileid += 1
                 continue
             # check if the file already exists.
-            fn = AstroField.get_filename_for_fileid(self.fileid)
+            fn = UserFile.get_filename_for_fileid(self.fileid)
             if os.path.exists(fn):
                 # the file already exists.
-                log('AstroField: file %s already exists for fileid %i' % (fn, self.fileid))
+                log('UserFile: file %s already exists for fileid %i' % (fn, self.fileid))
                 self.fileid += 1
                 continue
             # touch the file to claim it.
@@ -140,7 +140,7 @@ class AstroField(models.Model):
                 f.close()
             except IOError:
                 # error touching the file.
-                log('AstroField: error touching file %s for fileid %i' % (fn, self.fileid))
+                log('UserFile: error touching file %s for fileid %i' % (fn, self.fileid))
                 self.fileid += 1
                 continue
             break
@@ -182,7 +182,7 @@ class AstroField(models.Model):
     def filename(self):
         if not self.fileid:
             self.choose_new_fileid()
-        return AstroField.get_filename_for_fileid(self.fileid)
+        return UserFile.get_filename_for_fileid(self.fileid)
 
     def get_medium_scale(self):
         w = self.imagew
@@ -361,7 +361,7 @@ class Job(models.Model):
 
     submission = models.ForeignKey(Submission, related_name='jobs', null=True)
 
-    field = models.ForeignKey(AstroField)
+    userfile = models.ForeignKey(UserFile)
 
     calibration = models.ForeignKey(Calibration, null=True)
 
