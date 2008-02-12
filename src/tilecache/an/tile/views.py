@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from an.tile.models import Image
 
-from an.portal.job import Submission, Job, AstroField
+from an.portal.job import Submission, Job, DiskFile
 from an.portal.convert import convert
 
 import re

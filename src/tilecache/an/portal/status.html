@@ -73,7 +73,7 @@ only you can view this page.
 <a href="javascript:document.forms.jobpublishform.submit();" class="smalllink">Publish to the VO</a>
 </form>
 {% else %}
-Job owner: {{ job.user.username }}
+Job owner: {{ job.get_user.username }}
 {% endif %}
 </div>
 

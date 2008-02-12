@@ -12,7 +12,8 @@ class Image(models.Model):
 
     job = models.ForeignKey(Job, null=True)
 
-    #user = models.ForeignKey(User)
+    # HACK
+    user = models.ForeignKey(User)
 
     # a short (usually one line) description of the image
     # identifying the image source (e.g., survey name), object name or field coordinates,

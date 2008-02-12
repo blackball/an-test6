@@ -459,6 +459,9 @@ class Job(models.Model):
     def get_relative_job_dir(self):
         return Job.s_get_relative_job_dir(self.jobid)
 
+    def get_user(self):
+        return self.submission.user
+
     def create_job_dir(self):
         Job.create_dir_for_jobid(self.jobid)
 

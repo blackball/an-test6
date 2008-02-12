@@ -22,7 +22,7 @@ import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
 
-from an.portal.job import Job, Submission, AstroField
+from an.portal.job import Job, Submission, DiskFile
 
 from an.portal.convert import convert
 from an.portal.log import log
@@ -272,15 +272,14 @@ def getfield(request):
     if not 'fieldid' in request.GET:
         return HttpResponse('no fieldid')
     fieldid = request.GET['fieldid']
-    fields = AstroField.objects.all().filter(id=fieldid)
+    fields = DiskFile.objects.all().filter(id=fieldid)
     if not len(fields):
         return HttpResponse('no such field')
     field = fields[0]
 
-    owner = (field.user == request.user)
-    anonymous = field.redistributable()
-    if not (owner or anonymous):
-        return HttpResponse('The owner of this field (' + field.user.username + ') has not granted public access.')
+    if not field.show():
+        return HttpResponse('The owner of this field has not granted public access.')
+    #(' + field.user.username + ') 
 
     res = HttpResponse()
     ct = field.content_type()
