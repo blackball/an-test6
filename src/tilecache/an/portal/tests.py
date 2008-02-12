@@ -3,11 +3,6 @@ from unittest import TestLoader, TestSuite
 from an.portal.test_login import LoginTestCases
 from an.portal.test_newjob import NewJobTestCases
 
-# Granting the right to create databases:
-# as root: pgsql postgres
-#  > \du   # to list users
-#  > ALTER ROLE gmaps CREATEDB;
-
 def suite():
     all_suites = TestSuite()
 

@@ -36,14 +36,6 @@ from an import settings
 
 import sip
 
-# Adding a user:
-# > python manage.py shell
-# >>> from django.contrib.auth.models import User
-# >>> email = 'user@domain.com'
-# >>> passwd = 'password'
-# >>> user = User.objects.create_user(email, email, passwd)
-# >>> user.save()
-
 def get_status_url(jobid):
     return reverse(jobstatus) + '?jobid=' + jobid
 
