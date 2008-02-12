@@ -95,6 +95,9 @@ def submission_status(request, submission):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
+def run_variant(request):
+    return HttpResponse('Not implemented')
+
 def jobstatus(request):
     if not request.GET:
         return HttpResponse('no GET')
@@ -135,12 +138,13 @@ def jobstatus(request):
     otherxylists = []
     # (image url, link url)
     #otherxylists.append(('test-image-url', 'test-link-url'))
-    for n in (1,2,3,4,5):
+    for n in (1,2,3,4):
         fn = convert(job, job.field, 'xyls-exists?', { 'variant': n })
         if fn is None:
             break
-        otherxylists.append((get_url(job, 'sources-small-%i' % n),
-                             'run-xyls-variant-%i' % n))
+        otherxylists.append((get_url(job, 'sources-small&variant=%i' % n),
+                             reverse(run_variant) + '?jobid=%s&variant=%i' % (job.jobid, n)))
+                             #get_status_url(job.jobid) + '&run-xyls&variant=%i' % n))
 
 
     ctxt = {
@@ -321,11 +325,21 @@ def getfile(request):
 
     res = HttpResponse()
 
+    variant = 0
+    if 'variant' in request.GET:
+        variant = int(request.GET['variant'])
+
     pngimages = [ 'annotation', 'annotation-big',
                   'sources-small', 'sources-medium', 'sources-big',
-                  'redgreen', 'redgreen-big' ]
+                  'redgreen', 'redgreen-big',
+                  ]
+
+    convertargs = {}
+    if variant:
+        convertargs['variant'] = variant
+
     if f in pngimages:
-        fn = convert(job, job.field, f)
+        fn = convert(job, job.field, f, convertargs)
         res['Content-Type'] = 'image/png'
         res['Content-Length'] = file_size(fn)
         f = open(fn)

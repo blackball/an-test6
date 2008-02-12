@@ -72,7 +72,7 @@ def produce_alternate_xylists(job):
     log("I'm producing alternate xylists like nobody's bidness.")
     field = job.field
 
-    for n in range(1, 2, 3, 4, 5):
+    for n in [1, 2, 3, 4]:
         log('Producing xyls variant %i...' % n)
         convert(job, field, 'xyls', { 'variant': n })
 

@@ -139,6 +139,7 @@ Your field contains:
 switch to solving using that list of sources.</p>
 {% for otherxyimg, otherxylink  in otherxylists %}
 <a href="{{ otherxylink }}"><img src="{{ otherxyimg }}" /></a>
+{% cycle '' '<br />' %}
 {% endfor %}
 </div>
 {% endif %}

@@ -56,11 +56,18 @@ def is_tarball(fn):
 def convert(job, field, fn, args=None):
     if args is None:
         args = {}
-    log('convert(%s)' % fn)
+    log('convert(%s, args=%s)' % (fn, str(args)))
     tempdir = gmaps_config.tempdir
     basename = os.path.join(tempdir, job.jobid + '-')
     fullfn = basename + fn
-    if os.path.exists(fullfn):
+    exists = os.path.exists(fullfn)
+
+    variant = 0
+    if 'variant' in args:
+        variant = int(args['variant'])
+
+    # Hack
+    if exists and not variant:
         return fullfn
 
     if fn == 'uncomp' or fn == 'uncomp-js':
@@ -163,11 +170,14 @@ def convert(job, field, fn, args=None):
         return fullfn
 
     elif fn == 'xyls' or fn == 'xyls-exists?':
-        if 'variant' in args:
-            fn = 'xyls-%i' % int(args['variant'])
+        check_exists = (fn == 'xyls-exists?')
+        if variant:
+            fn = 'xyls-%i' % variant
             fullfn = basename + fn
+            if os.path.exists(fullfn):
+                return fullfn
 
-        if fn == 'xyls-exists?':
+        if check_exists:
             if os.path.exists(fullfn):
                 return fullfn
             return None
@@ -190,15 +200,17 @@ def convert(job, field, fn, args=None):
         sxylog = 'blind.log'
 
         extraargs = ''
-        if 'variant' in args:
-            n = args['variant']
+        if variant:
             altargs = {
                 1: '',
+                2: '',
+                3: '',
+                4: '',
                 }
-            if n in altargs:
-                extraargs = altargs[n]
+            if variant in altargs:
+                extraargs = altargs[variant]
             # HACK
-            sxylog = '/tmp/alternate-xylist-%s.log' % n
+            sxylog = '/tmp/alternate-xylist-%s.log' % variant
 
         infn = convert(job, field, 'fitsimg')
         cmd = 'image2xy %s-o %s %s >> %s 2>&1' % (extraargs, fullfn, infn, sxylog)
@@ -371,7 +383,14 @@ def convert(job, field, fn, args=None):
 
     elif fn == 'sources-small':
         imgfn = convert(job, field, 'ppm-small-8bit')
-        xyls = job.get_filename('job.axy')
+        if variant:
+            fn = 'sources-small-%i' % variant
+            fullfn = basename + fn
+            if os.path.exists(fullfn):
+                return fullfn
+            xyls = convert(job, field, 'xyls', args)
+        else:
+            xyls = job.get_filename('job.axy')
         (dscale, dw, dh) = field.get_small_scale()
         scale = 1.0 / float(dscale)
         commonargs = ('-i %s -x %g -y %g -w 1 -S %g -C red' %
@@ -380,6 +399,7 @@ def convert(job, field, fn, args=None):
                 (commonargs, imgfn)) +
                (' | plotxy -I - %s -n 100 -N 500 -r 4 > %s' %
                 (commonargs, fullfn)))
+        log('Command: ' + cmd)
         run_convert_command(cmd, fullfn)
         return fullfn
 

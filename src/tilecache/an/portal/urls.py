@@ -12,6 +12,7 @@ urlpatterns = patterns('',
 					   (r'^status/$',      an.portal.views.jobstatus),
 					   (r'^getfile/$',     an.portal.views.getfile),
 					   (r'^summary/$',     an.portal.views.summary),
+                       (r'^run-variant/$', an.portal.views.run_variant),
 					   (r'^changeperms/$', an.portal.views.changeperms),
 					   (r'^publishtovo/$', an.portal.views.publishtovo),
 					   )
