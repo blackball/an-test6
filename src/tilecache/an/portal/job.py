@@ -16,34 +16,83 @@ from an.portal.wcs import *
 from an.portal.models import UserPreferences
 
 
+# Represents one file on disk
+class DiskFile(models.Model):
+    # sha-1 hash of the file contents.
+    filehash = models.CharField(max_length=40, unique=True)
+    #?? primary_key=True)
+
+    ### Everything below here can be derived from the above; they're
+    ### just cached for performance reasons.
+
+    # type of the uploaded file
+    # ("jpg", "png", "gif", "fits", etc)
+    filetype = models.CharField(max_length=16, null=True)
+
+    # size of the image
+    imagew = models.PositiveIntegerField(null=True)
+    imageh = models.PositiveIntegerField(null=True)
+
+
+class License(models.Model):
+    pass
+
+class Tag(models.Model):
+    # Who added this tag?
+    user = models.ForeignKey(User)
+
+    # Machine tag or human-readable?
+    machineTag = models.BooleanField(default=False)
+
+    # The tag.
+    text = models.CharField(max_length=4096)
+
+    # When was this tag added?
+    addedtime = models.DateTimeField()
+
+
+class Calibration(models.Model):
+    # TAN WCS, straight from the quad match
+    raw_tan = models.ForeignKey(TanWCS, related_name='calibrations_raw', null=True)
+    # TAN WCS, after tweaking
+    tweaked_tan = models.ForeignKey(TanWCS, related_name='calibrations_tweaked', null=True)
+    # SIP
+    sip = models.ForeignKey(SipWCS, null=True)
+
+    # RA,Dec bounding box.
+    ramin =      models.FloatField()
+    ramax =      models.FloatField()
+    decmin = models.FloatField()
+    decmax = models.FloatField()
+
+    # in the future...
+    #blind_date = models.DateField()
+    # or
+    #blind_date = models.ForeignKey(BlindDateSolution, null=True)
+
+    # bandpass
+    # zeropoint
+    # psf
+
+
 # Represents one field to be solved: either an image or xylist.
 class AstroField(models.Model):
-    user = models.ForeignKey(User, editable=False)
+    # The owner of this job
+    #user = models.ForeignKey(User)
 
-    # ID number of the file on the filesystem.  This is NOT necessarily
-    # unique (multiple AstroFields may share a file).
-    fileid = models.PositiveIntegerField(editable=False, null=True)
+    # The file that goes with this job
+    diskfile = models.ForeignKey(DiskFile, null=True)
 
-    # Has the user explicitly granted us permission to redistribute this image?
-    allowredist = models.BooleanField(default=False)
-    # Has the user explicitly forbidden us permission to redistribute this image?
-    forbidredist = models.BooleanField(default=False)
+    # The license associated with the file.
+    license = models.ForeignKey(License, null=True)
+
+    # Has the user granted us permission to serve this file to everyone?
+    exposeToWeb = models.BooleanField(default=False)
 
     # The original filename on the user's machine, or basename of URL, etc.
     # Needed for, eg, tarball submissions.  Purely for informative purposes,
     # to show the user a filename that makes sense.
     origname = models.CharField(max_length=64, null=True)
-
-    # type of the uploaded file, after decompression
-    # ("jpg", "png", "gif", "fits", etc)
-    filetype = models.CharField(max_length=16, editable=False)
-
-    # sha-1 hash of the uncompressed file.
-    filehash = models.CharField(max_length=40, editable=False)
-
-    # size of the image
-    imagew = models.PositiveIntegerField(editable=False, null=True)
-    imageh = models.PositiveIntegerField(editable=False, null=True)
 
     def __init__(self, *args, **kwargs):
         super(AstroField, self).__init__(*args, **kwargs)
@@ -55,9 +104,6 @@ class AstroField(models.Model):
             s += ', ' + self.filetype
         s += '>'
         return s
-
-    #def save(self):
-    #    super(AstroField, self).save()
 
     # Choose a new unique fileid that does not conflict with an existing
     # file.  May have the side-effect of calling save().
@@ -166,6 +212,14 @@ class AstroField(models.Model):
         return os.path.join(config.fielddir, str(fileid))
     get_filename_for_fileid = staticmethod(get_filename_for_fileid)
 
+
+class BatchSubmission(models.Model):
+    pass
+
+class WebSubmission(models.Model):
+    # All sorts of goodies like IP, HTTP headers, etc.
+    pass
+
 class Submission(models.Model):
     scaleunits_CHOICES = (
         ('arcsecperpix', 'arcseconds per pixel'),
@@ -196,18 +250,23 @@ class Submission(models.Model):
         ('fits', 'FITS table of source locations'),
         ('text', 'Text list of source locations'),
         )
+    ###
 
-    jobid = models.CharField(max_length=32, unique=True, primary_key=True)
+    subid = models.CharField(max_length=32, unique=True, primary_key=True)
 
     user = models.ForeignKey(User)
 
+    # Only one of these should be set...
+    batch = models.ForeignKey(BatchSubmission, null=True)
+    web = models.ForeignKey(WebSubmission, null=True)
+
+    # url / file / etc.
     datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
 
+    # image / fits / text
     filetype = models.CharField(max_length=10, choices=filetype_CHOICES)
 
-    # ???
     status = models.CharField(max_length=16)
-
     failurereason = models.CharField(max_length=256)
 
     url = models.URLField(blank=True, null=True)
@@ -297,50 +356,29 @@ class Submission(models.Model):
 
 
 class Job(models.Model):
+    # test-200802-12345678
     jobid = models.CharField(max_length=32, unique=True, primary_key=True)
+
+    submission = models.ForeignKey(Submission, related_name='jobs', null=True)
+
+    field = models.ForeignKey(AstroField)
+
+    calibration = models.ForeignKey(Calibration, null=True)
+
+    # Has the user granted us permission to show this job to everyone?
+    exposeToWeb = models.BooleanField(default=False)
 
     status = models.CharField(max_length=16)
     failurereason = models.CharField(max_length=256)
 
-    submission = models.ForeignKey(Submission, related_name='jobs', null=True)
-
-    # has the user explicitly granted anonymous access to this job
-    # status page?
-    allowanon = models.BooleanField(default=False)
-
-    # has the user explicitly forbidden anonymous access to this job
-    # status page?
-    forbidanon = models.BooleanField(default=False)
-
-    field = models.ForeignKey(AstroField)
-
-
-    # If any of these solver parameters are set for a particular Job, they
-    # override the settings for the Submission.
-    parity = models.PositiveSmallIntegerField(choices=Submission.parity_CHOICES, null=True)
-    # for FITS tables, the names of the X and Y columns.
-    xcol = models.CharField(max_length=16, null=True)
-    ycol = models.CharField(max_length=16, null=True)
-    # image scale.
-    scaleunits = models.CharField(max_length=16, choices=Submission.scaleunits_CHOICES, null=True)
-    scaletype  = models.CharField(max_length=3, choices=Submission.scaletype_CHOICES, null=True)
-    scalelower = models.FloatField(null=True)
-    scaleupper = models.FloatField(null=True)
-    scaleest   = models.FloatField(null=True)
-    scaleerr   = models.FloatField(null=True)
-    # tweak.
-    tweak = models.BooleanField(null=True)
-    tweakorder = models.PositiveSmallIntegerField(null=True)
-
+    # How did we find the calibration for this job?
+    howsolved = models.CharField(max_length=256)
 
     # times
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
 
-    # solution
-    tanwcs = models.ForeignKey(TanWCS, null=True)
-
-    solved = models.BooleanField(default=False)
+    tags = models.ManyToManyField(Tag)
 
     def __str__(self):
         s = '<Job %s, ' % self.jobid
