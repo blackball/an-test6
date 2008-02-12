@@ -41,6 +41,7 @@ char* cairoutils_get_color_name(int i) {
     case 0: return "red";
     case 1: return "green";
     case 2: return "brightred";
+	case 3: return "black";
     }
     return NULL;
 }
@@ -56,6 +57,10 @@ int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
     } else if (!strcmp(optarg, "green")) {
         *r = *b = 0.0;
         *g = 1.0;
+    } else if (!strcmp(optarg, "black")) {
+        *r = 0.0;
+        *g = 0.0;
+        *b = 0.0;
     } else {
         return -1;
     }

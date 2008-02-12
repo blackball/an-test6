@@ -42,7 +42,7 @@ def image(request):
     (f, tmpfile) = tempfile.mkstemp('.jpg', 'hoggthinks')
     os.close(f)
     img = gmaps_config.tcdir + 'an/portal/hogg-thinks.jpg'
-    cmd = ('add-text -o %s -j %s -x 425 -y 160 -W 360 -H 190 -c black -t "%s"'
+    cmd = ('add-text -o %s -j %s -x 425 -y 170 -W 360 -H 190 -c black -t "%s"'
            % (tmpfile, img, shell_escape_inside_quotes(form.cleaned_data['text'])))
     (rtn, stdout, stderr) = run_command(cmd)
     res = HttpResponse()
