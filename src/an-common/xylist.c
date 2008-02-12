@@ -37,6 +37,16 @@ double xy_gety(xy_t* f, int i) {
     return f->y[i];
 }
 
+void xy_setx(xy_t* f, int i, double val) {
+    assert(i < f->N);
+    f->x[i] = val;
+}
+
+void xy_sety(xy_t* f, int i, double val) {
+    assert(i < f->N);
+    f->y[i] = val;
+}
+
 int xy_n(xy_t* f) {
     return f->N;
 }

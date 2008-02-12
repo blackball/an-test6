@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/param.h>
 
 #include <cairo.h>
 #include <ppm.h>
@@ -76,8 +77,8 @@ int main(int argc, char *args[]) {
 	double rad = 5.0;
 	double lw = 1.0;
 	char shape = 'c';
-	xylist* xyls;
-	double* xyvals;
+	xylist_t* xyls;
+	xy_t* xy;
 	int Nxy;
 	int i;
 	double scale = 1.0;
@@ -173,33 +174,27 @@ int main(int argc, char *args[]) {
 		exit(-1);
 	}
     if (xcol)
-        xyls->xname = xcol;
+        xylist_set_xname(xyls, xcol);
     if (ycol)
-        xyls->yname = ycol;
+        xylist_set_yname(xyls, ycol);
 
 	// Find number of entries in xylist.
-	Nxy = xylist_n_entries(xyls, ext);
-	if (Nxy == -1) {
+    xy = xylist_read_field_num(xyls, ext, NULL);
+    if (!xy) {
 		fprintf(stderr, "Failed to read FITS extension %i from file %s.\n", ext, fname);
 		exit(-1);
 	}
+    Nxy = xy_n(xy);
 
 	// If N is specified, apply it as a max.
-	if (N && (N < Nxy)) {
-		Nxy = N;
-	}
-
-	// Read xylist entries.
-	xyvals = malloc(2 * Nxy * sizeof(double));
-	if (xylist_read_entries(xyls, ext, 0, Nxy, xyvals)) {
-		fprintf(stderr, "Failed to read XY values from file %s.\n", fname);
-		exit(-1);
-	}
+    if (N)
+        Nxy = MIN(Nxy, N);
 
 	// Scale xylist entries.
 	if (scale != 1.0) {
-		for (i=0; i<(2*Nxy); i++) {
-			xyvals[i] *= scale;
+		for (i=0; i<Nxy; i++) {
+			xy_setx(xy, i, scale * xy_getx(xy, i));
+			xy_sety(xy, i, scale * xy_gety(xy, i));
 		}
 	}
 
@@ -209,15 +204,13 @@ int main(int argc, char *args[]) {
 	if (!W) {
 		double maxX = 0.0;
 		for (i=n; i<Nxy; i++)
-			if (xyvals[2*i] > maxX)
-				maxX = xyvals[2*i];
+            maxX = MAX(maxX, xy_getx(xy, i));
 		W = ceil(maxX + rad - xoff);
 	}
 	if (!H) {
 		double maxY = 0.0;
 		for (i=n; i<Nxy; i++)
-			if (xyvals[2*i+1] > maxY)
-				maxY = xyvals[2*i+1];
+            maxY = MAX(maxY, xy_gety(xy, i));
 		H = ceil(maxY + rad - yoff);
 	}
 
@@ -245,8 +238,8 @@ int main(int argc, char *args[]) {
 
 	// Draw markers.
 	for (i=n; i<Nxy; i++) {
-		double x = xyvals[2*i] + 0.5 - xoff;
-		double y = xyvals[2*i+1] + 0.5 - yoff;
+		double x = xy_getx(xy, i) + 0.5 - xoff;
+		double y = xy_gety(xy, i) + 0.5 - yoff;
 		switch (shape) {
 		case 'c':
 			cairo_arc(cairo, x, y, rad, 0.0, 2.0*M_PI);
@@ -270,8 +263,6 @@ int main(int argc, char *args[]) {
 		cairo_stroke(cairo);
 	}
 
-	free(xyvals);
-
     // Convert image for output...
     cairoutils_argb32_to_rgba(img, W, H);
 
@@ -287,6 +278,7 @@ int main(int argc, char *args[]) {
         }
     }
 
+    xy_free(xy);
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
     free(img);

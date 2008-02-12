@@ -96,4 +96,7 @@ plotquad.c:27:17: error: ppm.h: No such file or directory
 > gmake web > /dev/null
 [just the usual xylist failures]
 
+[and of course, watcher doesn't work]
+
+
 
