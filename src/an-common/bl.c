@@ -1608,6 +1608,10 @@ char* sl_insert(sl* list, int indx, const char* data) {
 	return copy;
 }
 
+void sl_insert_nocopy(sl* list, int indx, const char* str) {
+	bl_insert(list, indx, &str);
+}
+
 void sl_remove_from(sl* list, int start) {
     sl_remove_index_range(list, start, sl_size(list) - start);
 }
@@ -1623,6 +1627,10 @@ void sl_remove_index_range(sl* list, int start, int length) {
         free(str);
     }
     bl_remove_index_range(list, start, length);
+}
+
+void sl_remove(sl* list, int index) {
+    bl_remove_index(list, index);
 }
 
 void  sl_remove_all(sl* list) {
@@ -1696,6 +1704,17 @@ char* sl_insert_sortedf(sl* list, const char* format, ...) {
     if (vasprintf(&str, format, lst) == -1)
 		return NULL;
 	sl_insert_sorted_nocopy(list, str);
+    va_end(lst);
+	return str;
+}
+
+char* sl_insertf(sl* list, int index, const char* format, ...) {
+    va_list lst;
+	char* str;
+    va_start(lst, format);
+    if (vasprintf(&str, format, lst) == -1)
+		return NULL;
+	sl_insert_nocopy(list, index, str);
     va_end(lst);
 	return str;
 }

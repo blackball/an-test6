@@ -276,6 +276,8 @@ char*  sl_set(sl* list, int n, const char* val);
 int    sl_check_consistency(sl* list);
 // inserts a copy of the given string.
 char*  sl_insert(sl* list, int indx, const char* str);
+// inserts the given string.
+void sl_insert_nocopy(sl* list, int indx, const char* str);
 // frees all the strings and removes them from the list.
 void   sl_remove_all(sl* list);
 
@@ -286,6 +288,8 @@ void   sl_insert_sorted_nocopy(sl* list, const char* string);
 char* sl_insert_sorted(sl* list, const char* string);
 
 void sl_remove_index_range(sl* list, int start, int length);
+
+void sl_remove(sl* list, int index);
 
 // remove all elements starting from "start" to the end of the list.
 void sl_remove_from(sl* list, int start);
@@ -307,5 +311,10 @@ sl_appendf(sl* list, const char* format, ...);
 char*
 ATTRIB_FORMAT(printf,2,3)
 sl_insert_sortedf(sl* list, const char* format, ...);
+
+// Inserts the (newly-allocated) formatted string and returns it.
+char*
+ATTRIB_FORMAT(printf,3,4)
+sl_insertf(sl* list, int index, const char* format, ...);
 
 #endif
