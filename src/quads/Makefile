@@ -84,7 +84,7 @@ PROSPECTUS := quadidx codeprojections quadlocations quadscales quadsperstar \
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
 
-CAIROEXECS := plotquad plotxy plot-constellations
+CAIROEXECS := plotquad plotxy plot-constellations add-text
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \
 	codekd.o idfile.o $(UTIL_OBJS)
@@ -408,6 +408,9 @@ plot-constellations.o: plot-constellations.c
 plot-constellations: plot-constellations.o $(COMMON)/cairoutils.o \
 		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o svn.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
+	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB) $(JPEG_LIB)
+
+add-text: add-text.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB) $(JPEG_LIB)
 
 plotxy.o: plotxy.c
