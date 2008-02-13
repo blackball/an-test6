@@ -223,7 +223,7 @@ function buttonStyleCommon(button) {
 	buttonStyleOn(button);
 }
 
-var imageShowing = 1;
+var imageShowing = 0;
 var gridShowing = 0;
 
 var imageOverlay;
@@ -288,11 +288,6 @@ function restackOverlays() {
 	oldOverlays = newOverlays;
 }
 
-function toggleOverlayRestack(overlayName) {
-	toggleButton(overlayName);
-	restackOverlays();
-}
-
 function toggleImage() {
 	toggleButton("image");
 	updateImage();
@@ -306,22 +301,21 @@ function toggleGrid() {
 }
 
 function updateGrid() {
-	var tag = "&tag=grid";
-	tag += "&rotation=" + rotation;
+	//var tag = "&tag=grid";
+	var tag = "&rotation=" + rotation;
 	var layers = [];
 	if (gridShowing)
 		layers.push('grid');
-	layerstr = layers.join(",");
-	gridOverlay = makeOverlay(layerstr, tag);
+	gridOverlay = makeOverlay(layers.join(','), tag);
 }
 
 function updateImage() {
-	var tag = "&tag=image";
-	tag += "&rotation=" + rotation;
+	//var tag = "&tag=image";
+	var tag = "&rotation=" + rotation;
 	var lay = [];
 	if (imageShowing)
 		lay.push('image');
-	imageOverlay = makeOverlay(lay.join(","), tag);
+	imageOverlay = makeOverlay(lay.join(','), tag);
 }
 
 function indexOf(arr, element) {
@@ -419,9 +413,6 @@ function startup() {
     map.addMapType(blackMapType);
     map.setMapType(blackMapType);
 
-	updateImage();
-	updateGrid();
-
 	if ('rotation' in getdata) {
 		gotoform.rotation.value = getdata['rotation'];
 		changeRotation();
@@ -441,6 +432,10 @@ function startup() {
 	} else {
 		toggleButton('image');
 	}
+
+	updateImage();
+	updateGrid();
+
 	restackOverlays();
 
 	// Connect up the event listeners...
