@@ -64,7 +64,7 @@ def submission_status(request, submission):
     somesolved = False
     for job in jobs:
         log("job: " + str(job))
-        if job.solved:
+        if job.solved():
             somesolved = True
             log("somesolved = true.")
             break
@@ -73,7 +73,7 @@ def submission_status(request, submission):
     #         '&layers=tycho,grid,userboundary&arcsinh')
 
     gmaps = (reverse('an.tile.views.index') +
-             '?submission=%s' % submission.jobid +
+             '?submission=%s' % submission.get_id() +
              '&layers=tycho,grid,userboundary&arcsinh')
 
     ctxt = {
@@ -100,7 +100,7 @@ def jobstatus(request):
     job = get_job(jobid)
     if not job:
         log('job not found.')
-        submissions = Submission.objects.all().filter(jobid=jobid)
+        submissions = Submission.objects.all().filter(subid=jobid)
         log('found %i submissions.' % len(submissions))
         if len(submissions):
             submission = submissions[0]
@@ -123,7 +123,7 @@ def jobstatus(request):
     if not (jobowner or anonymous):
         return HttpResponse('The owner of this job (' + job.submission.user.username + ') has not granted public access.')
 
-    field = job.field
+    df = job.diskfile
     submission = job.submission
     log('jobstatus: Job is: ' + str(job))
 
@@ -131,7 +131,7 @@ def jobstatus(request):
     # (image url, link url)
     #otherxylists.append(('test-image-url', 'test-link-url'))
     for n in (1,2,3,4):
-        fn = convert(job, job.field, 'xyls-exists?', { 'variant': n })
+        fn = convert(job, df, 'xyls-exists?', { 'variant': n })
         if fn is None:
             break
         otherxylists.append((get_url(job, 'sources-small&variant=%i' % n),
@@ -142,7 +142,7 @@ def jobstatus(request):
     ctxt = {
         'jobid' : job.jobid,
         'jobstatus' : job.status,
-        'jobsolved' : job.solved,
+        'jobsolved' : job.solved(),
         'jobsubmittime' : submission.format_submittime(),
         'jobstarttime' : job.format_starttime(),
         'jobfinishtime' : job.format_finishtime(),
@@ -161,8 +161,8 @@ def jobstatus(request):
         'allowanon' : anonymous,
         }
 
-    if job.solved:
-        wcsinfofn = convert(job, job.field, 'wcsinfo')
+    if job.solved():
+        wcsinfofn = convert(job, df, 'wcsinfo')
         f = open(wcsinfofn)
         wcsinfotxt = f.read()
         f.close()
@@ -185,7 +185,7 @@ def jobstatus(request):
                      'wcsurl' : get_url(job, 'wcs.fits'),
                      })
 
-        objsfn = convert(job, job.field, 'objsinfield')
+        objsfn = convert(job, df, 'objsinfield')
         f = open(objsfn)
         objtxt = f.read()
         f.close()
@@ -197,7 +197,7 @@ def jobstatus(request):
         ctxt['objsinfield'] = objs
 
         # deg
-        fldsz = math.sqrt(field.imagew * field.imageh) * float(wcsinfo['pixscale']) / 3600.0
+        fldsz = math.sqrt(df.imagew * df.imageh) * float(wcsinfo['pixscale']) / 3600.0
 
         url = (reverse('an.tile.views.get_tile') +
                '?layers=tycho,grid,userboundary' +
@@ -237,7 +237,7 @@ def jobstatus(request):
                           url + largestyle + urlargs])
 
         # HACK
-        fn = convert(job, job.field, 'fullsizepng')
+        fn = convert(job, df, 'fullsizepng')
         url = (reverse('an.tile.views.index') +
                ('?zoom=%i&ra=%.3f&dec=%.3f&userimage=%s' %
                 (int(wcsinfo['merczoom']), float(wcsinfo['ra_center']),
@@ -268,23 +268,29 @@ def jobstatus(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
+def getdf(idstr):
+    dfs = DiskFile.objects.all().filter(filehash=idstr)
+    if not len(dfs):
+        return None
+    df = dfs[0]
+    return df
+
 def getfield(request):
     if not 'fieldid' in request.GET:
         return HttpResponse('no fieldid')
     fieldid = request.GET['fieldid']
-    fields = DiskFile.objects.all().filter(id=fieldid)
-    if not len(fields):
+    df = getdf(fieldid)
+    if not df:
         return HttpResponse('no such field')
-    field = fields[0]
-
-    if not field.show():
+        
+    if not df.show():
         return HttpResponse('The owner of this field has not granted public access.')
     #(' + field.user.username + ') 
 
     res = HttpResponse()
-    ct = field.content_type()
+    ct = df.content_type()
     res['Content-Type'] = ct or 'application/octet-stream'
-    fn = field.filename()
+    fn = df.get_path()
     res['Content-Length'] = file_size(fn)
     #res['Content-Disposition'] = 'attachment; filename="' + f + '"'
     res['Content-Disposition'] = 'inline'
@@ -307,10 +313,10 @@ def getfile(request):
     if not 'f' in request.GET:
         return HttpResponse('no f=')
 
-    jobowner = (job.submission.user == request.user)
-    anonymous = job.allowanonymous()
+    jobowner = (job.get_user() == request.user)
+    anonymous = job.is_exposed()
     if not (jobowner or anonymous):
-        return HttpResponse('The owner of this job (' + job.submission.user.username + ') has not granted public access.')
+        return HttpResponse('The owner of this job (' + job.get_user().username + ') has not granted public access.')
 
     f = request.GET['f']
 
@@ -330,7 +336,7 @@ def getfile(request):
         convertargs['variant'] = variant
 
     if f in pngimages:
-        fn = convert(job, job.field, f, convertargs)
+        fn = convert(job, job.diskfile, f, convertargs)
         res['Content-Type'] = 'image/png'
         res['Content-Length'] = file_size(fn)
         f = open(fn)
@@ -355,6 +361,22 @@ def getfile(request):
         res['Content-Type'] = 'text/plain'
         res['Content-Disposition'] = 'inline'
         res['Content-Length'] = file_size(fn)
+        f = open(fn)
+        res.write(f.read())
+        f.close()
+        return res
+
+    if f == 'origfile':
+        if not job.is_file_exposed():
+            return HttpResponse('access to this file is forbidden.')
+        df = job.diskfile
+        res = HttpResponse()
+        ct = df.content_type()
+        res['Content-Type'] = ct or 'application/octet-stream'
+        fn = df.get_path()
+        res['Content-Length'] = file_size(fn)
+        # res['Content-Disposition'] = 'attachment; filename="' + f + '"'
+        res['Content-Disposition'] = 'inline'
         f = open(fn)
         res.write(f.read())
         f.close()
@@ -417,11 +439,11 @@ def summary(request):
             subs.append(sub)
 
     for job in jobs:
-        log('Job ', job, 'allow anon?', job.allowanonymous(prefs))
-        log('Job.allowanon:', job.allowanon, ' forbidanon:', job.forbidanon)
+        #log('Job ', job, 'allow anon?', job.allowanonymous(prefs))
+        #log('Job.allowanon:', job.allowanon, ' forbidanon:', job.forbidanon)
         log('prefs:', prefs)
-        log('Redist:', job.field.redistributable())
-        log('Field:', job.field)
+        #log('Redist:', job.field.redistributable())
+        #log('Field:', job.field)
 
     voimgs = voImage.objects.all().filter(user=request.user)
 
@@ -444,59 +466,33 @@ def changeperms(request):
         return HttpResponse('no POST')
     prefs = UserPreferences.for_user(request.user)
 
-    if 'fieldid' in request.POST:
-        fid = int(request.POST['fieldid'])
-        fields = AstroField.objects.all().filter(id = fid)
-        if not fields or len(fields) != 1:
-            return HttpResponse('no field')
-        field = fields[0]
-        if field.user != request.user:
-            return HttpResponse('not your field!')
-        if 'redist' in request.POST:
-            redist = int(request.POST['redist'])
-            if redist:
-                field.forbidredist = False
-                if not prefs.autoredistributable:
-                    # need to explicitly allow this one.
-                    field.allowredist = True
-            else:
-                field.allowredist = False
-                if prefs.autoredistributable:
-                    # need to explicitly forbid.
-                    field.forbidredist = True
-            field.save()
-            if 'HTTP_REFERER' in request.META:
-                return HttpResponseRedirect(request.META['HTTP_REFERER'])
-            return HttpResponseRedirect(reverse(summary))
-            
-        return HttpResponse('no action.')
+    if not 'jobid' in request.POST:
+        return HttpResponse('no jobid')
 
-    if 'jobid' in request.POST:
-        jobid = request.POST['jobid']
-        jobs = Job.objects.all().filter(jobid = jobid)
-        if not jobs or len(jobs) != 1:
-            return HttpResponse('no job')
-        job = jobs[0]
-        if job.submission.user != request.user:
-            return HttpResponse('not your job!')
-        if 'allowanon' in request.POST:
-            allow = int(request.POST['allowanon'])
-            if allow:
-                job.forbidanon = False
-                if not prefs.anonjobstatus:
-                    # need to explicitly allow this one.
-                    job.allowanon = True
-            else:
-                job.allowanon = False
-                if prefs.anonjobstatus:
-                    # need to explicitly forbid.
-                    job.forbidanon = True
-            job.save()
-            if 'HTTP_REFERER' in request.META:
-                return HttpResponseRedirect(request.META['HTTP_REFERER'])
-            return HttpResponseRedirect(reverse(summary))
+    jobid = request.POST['jobid']
+    jobs = Job.objects.all().filter(jobid = jobid)
+    if not jobs or len(jobs) != 1:
+        return HttpResponse('no job')
+    job = jobs[0]
+    if job.get_user() != request.user:
+        return HttpResponse('not your job!')
+    if 'allowanon' in request.POST:
+        allow = int(request.POST['allowanon'])
+        job.set_job_exposed(allow)
+        job.save()
+        if 'HTTP_REFERER' in request.META:
+            return HttpResponseRedirect(request.META['HTTP_REFERER'])
+        return HttpResponseRedirect(reverse(summary))
 
-        return HttpResponse('no action.')
+    if 'redist' in request.POST:
+        redist = int(request.POST['redist'])
+        job.set_file_exposed(redist)
+        job.save()
+        if 'HTTP_REFERER' in request.META:
+            return HttpResponseRedirect(request.META['HTTP_REFERER'])
+        return HttpResponseRedirect(reverse(summary))
+
+    return HttpResponse('no action.')
 
 @login_required
 def publishtovo(request):
@@ -507,7 +503,7 @@ def publishtovo(request):
         return HttpResponse('no job')
     if job.submission.user != request.user:
         return HttpResponse('not your job')
-    if not job.solved:
+    if not job.solved():
         return HttpResponse('job is not solved')
     wcs = job.tanwcs
     if not wcs:

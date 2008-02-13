@@ -27,7 +27,7 @@ import shutil
 
 from django.db import models
 
-from an.portal.models import Job, Submission, AstroField
+from an.portal.models import Job, Submission, DiskFile
 from an.upload.models import UploadedFile
 from an.portal.log import log
 from an.portal.convert import convert, is_tarball, FileConversionError
@@ -70,11 +70,11 @@ def handle_job(job, sshconfig):
 
 def produce_alternate_xylists(job):
     log("I'm producing alternate xylists like nobody's bidness.")
-    field = job.field
+    df = job.diskfile
 
     for n in [1, 2, 3, 4]:
         log('Producing xyls variant %i...' % n)
-        convert(job, field, 'xyls', { 'variant': n })
+        convert(job, df, 'xyls', { 'variant': n })
 
 
    
@@ -84,8 +84,8 @@ def real_handle_job(job, sshconfig):
     job.status = 'Running'
     job.save()
 
-    field = job.field
-    log('field file is %s' % field.filename())
+    df = job.diskfile
+    log('diskfile is %s' % df.get_path())
 
     submission = job.submission
     jobid = job.jobid
@@ -95,25 +95,24 @@ def real_handle_job(job, sshconfig):
     os.chdir(jobdir)
 
     # Handle compressed files.
-    uncomp = convert(job, field, 'uncomp')
+    uncomp = convert(job, df, 'uncomp')
     log('uncompressed file is %s' % uncomp)
 
     # Compute hash of uncompressed file.
-    field.compute_filehash(uncomp)
+    #field.compute_filehash(uncomp)
 
     axy = 'job.axy'
     axypath = job.get_filename(axy)
+    axyargs = {}
 
     filetype = job.submission.filetype
-
-    axyargs = {}
 
     if filetype == 'image':
         log('source extraction...')
         userlog('Doing source extraction...')
 
-        convert(job, field, 'getimagesize')
-        if (field.imagew * field.imageh) > 5000000:  # 5 MPixels
+        convert(job, df, 'getimagesize')
+        if (df.imagew * df.imageh) > 5000000:  # 5 MPixels
             userlog('Downsampling your image...')
             target = 'xyls-half-sorted'
         else:
@@ -121,7 +120,7 @@ def real_handle_job(job, sshconfig):
 
         try:
             log('image2xy...')
-            xylist = convert(job, field, target)
+            xylist = convert(job, df, target)
             log('xylist is', xylist)
         except FileConversionError,e:
             userlog('Source extraction failed.')
@@ -133,10 +132,10 @@ def real_handle_job(job, sshconfig):
 
     elif (filetype == 'fits') or (filetype == 'text'):
         if filetype == 'text':
-            field.filetype = 'text'
+            df.filetype = 'text'
             try:
                 userlog('Parsing your text file...')
-                xylist = convert(job, field, 'xyls')
+                xylist = convert(job, df, 'xyls')
                 log('xylist is', xylist)
             except FileConversionError,e:
                 userlog('Parsing your text file failed.')
@@ -144,10 +143,10 @@ def real_handle_job(job, sshconfig):
                 return -1
 
         else:
-            field.filetype = 'xyls'
+            df.filetype = 'xyls'
             try:
                 log('fits2fits...')
-                xylist = convert(job, field, 'xyls')
+                xylist = convert(job, df, 'xyls')
                 log('xylist is', xylist)
             except FileConversionError,e:
                 userlog('Sanitizing your FITS file failed.')
@@ -192,8 +191,8 @@ def real_handle_job(job, sshconfig):
             '--height' : height,
             '--no-fits2fits' : None,
             })
-        field.imagew = width
-        field.imageh = height
+        df.imagew = width
+        df.imageh = height
 
     else:
         bailout(job, 'no filetype')
@@ -236,9 +235,6 @@ def real_handle_job(job, sshconfig):
     else:
         axyargs['--no-tweak'] = None
 
-    #for (k,v) in axyargs.items():
-    #log('  ', k, ' = ', str(v))
-
     cmd = 'augment-xylist ' + ' '.join(k + ((v and ' ' + str(v)) or '') for (k,v) in axyargs.items())
 
     log('running: ' + cmd)
@@ -251,7 +247,7 @@ def real_handle_job(job, sshconfig):
 
     log('created axy file ' + axypath)
 
-    field.save()
+    df.save()
 
     # shell into compute server...
 
@@ -296,7 +292,6 @@ def real_handle_job(job, sshconfig):
     # Record results in the job database.
 
     if os.path.exists(job.get_filename('solved')):
-        job.solved = True
         job.status = 'Solved'
 
         # BIG HACK! - look through LD_LIBRARY_PATH if this is still needed...
@@ -306,7 +301,13 @@ def real_handle_job(job, sshconfig):
         # Add WCS to database.
         wcs = TanWCS(file=job.get_filename('wcs.fits'))
         wcs.save()
-        job.tanwcs = wcs
+
+        # HACK - need to make blind write out raw TAN, tweaked TAN, and tweaked SIP.
+        # HACK - compute ramin, ramax, decmin, decmax.
+        calib = Calibration(raw_tan = wcs)
+        calib.save()
+
+        job.calibration = calib
         
     else:
         job.status = 'Failed'
@@ -338,21 +339,25 @@ def handle_tarball(basedir, filenames, submission):
     log('Got %i paths.' % len(validpaths))
 
     for p in validpaths:
-        field = AstroField(user = submission.user,
-                           origname = os.path.basename(p),
-                           )
-        field.save()
-        log('New field ' + str(field.id))
-        destfile = field.filename()
-        log('Moving %s to %s' % (p, destfile))
-        shutil.move(p, destfile)
+        origname = os.path.basename(p)
+
+        df = DiskFile.for_file(p)
+        df.save()
+        log('New diskfile ' + str(df.filehash))
 
         if len(validpaths) == 1:
-            job = Job(
-                jobid = submission.jobid,
-                submission = submission,
-                field = field,
-                )
+            jobid = submission.subid
+        else:
+            jobid = Job.generate_jobid()
+
+        job = Job(
+            jobid = jobid,
+            submission = submission,
+            diskfile = df,
+            fileorigname = origname,
+            )
+
+        if len(validpaths) == 1:
             job.save()
             submission.save()
             # One file in tarball: convert straight to a Job.
@@ -362,10 +367,6 @@ def handle_tarball(basedir, filenames, submission):
                 return rtn
             break
 
-        job = Job(submission = submission,
-                  field = field,
-                  jobid = Job.generate_jobid(),
-                  )
         job.status = 'Queued'
         job.save()
         submission.save()
@@ -393,45 +394,46 @@ def main(sshconfig, joblink):
         return handle_job(jobs[0], sshconfig)
 
     # else it's a Submission...
-    submissions = Submission.objects.all().filter(jobid=jobid)
+    submissions = Submission.objects.all().filter(subid=jobid)
     if len(submissions) != 1:
         log('Found %i submissions, not 1' % len(submissions))
         sys.exit(-1)
     submission = submissions[0]
     log('Running submission: ' + str(submission))
 
-    field = AstroField(user = submission.user)
-    field.choose_new_fileid()
-    field.save()
-    origfile = field.filename()
+    tmpfile = None
     basename = None
 
     if submission.datasrc == 'url':
-        # download the URL.
+        # download the URL to a new temp file.
         userlog('Retrieving URL...')
-        log('Retrieving URL ' + submission.url + ' to file ' + origfile)
-        f = urllib.urlretrieve(submission.url, origfile)
+        (fd, tmpfile) = tempfile.mkstemp('', 'download')
+        os.close(fd)
+        log('Retrieving URL ' + submission.url + ' to file ' + tmpfile)
+        f = urllib.urlretrieve(submission.url, tmpfile)
         p = urlparse(submission.url)
         p = p[2]
         if p:
             s = p.split('/')
             basename = s[-1]
+
     elif submission.datasrc == 'file':
-        # move the uploaded file.
-        temp = submission.uploaded.get_filename()
-        log('uploaded tempfile is ' + temp)
-        log('rename(%s, %s)' % (temp, origfile))
-        shutil.move(temp, origfile)
+        tmpfile = submission.uploaded.get_filename()
+        log('uploaded tempfile is ' + tmpfile)
         basename = submission.uploaded.userfilename
     else:
         bailout(job, 'no datasrc')
         return -1
 
-    field.origname = basename
-    field.save()
+    df = DiskFile.for_file(tmpfile)
+    df.save()
+
+    submission.diskfile = df
+    submission.fileorigname = basename
+    submission.save()
 
     # Handle compressed files.
-    uncomp = convert(submission, field, 'uncomp-js')
+    uncomp = convert(submission, submission.diskfile, 'uncomp-js')
 
     # Handle tar files: add a Submission, create new Jobs.
     job = None
@@ -453,9 +455,10 @@ def main(sshconfig, joblink):
     else:
         # Not a tarball.
         job = Job(
-            jobid = submission.jobid,
             submission = submission,
-            field = field,
+            jobid = submission.subid,
+            fileorigname = submission.fileorigname,
+            diskfile = submission.diskfile,
             )
         job.save()
         submission.save()

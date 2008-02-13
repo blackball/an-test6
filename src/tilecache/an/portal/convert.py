@@ -53,12 +53,12 @@ def is_tarball(fn):
     log('file type: "%s"' % typeinfo)
     return typeinfo == 'POSIX tar archive'
 
-def convert(job, field, fn, args=None):
+def convert(job, df, fn, args=None):
     if args is None:
         args = {}
     log('convert(%s, args=%s)' % (fn, str(args)))
     tempdir = gmaps_config.tempdir
-    basename = os.path.join(tempdir, job.jobid + '-')
+    basename = os.path.join(tempdir, job.get_id() + '-')
     fullfn = basename + fn
     exists = os.path.exists(fullfn)
 
@@ -71,7 +71,7 @@ def convert(job, field, fn, args=None):
         return fullfn
 
     if fn == 'uncomp' or fn == 'uncomp-js':
-        orig = field.filename()
+        orig = df.get_path()
         #log('convert uncomp: Field file is', orig)
         comp = image2pnm.uncompress_file(orig, fullfn)
         if comp:
@@ -81,7 +81,7 @@ def convert(job, field, fn, args=None):
         return fullfn
 
     elif fn == 'pnm':
-        infn = convert(job, field, 'uncomp')
+        infn = convert(job, df, 'uncomp')
         #andir = gmaps_config.basedir + 'quads/'
         log('Converting %s to %s...\n' % (infn, fullfn))
         (filetype, errstr) = image2pnm.image2pnm(infn, fullfn, None, False, False, None, False)
@@ -89,30 +89,30 @@ def convert(job, field, fn, args=None):
             err = 'Error converting image file: %s' % errstr
             log(err)
             raise FileConversionError(errstr)
-        field.filetype = filetype
+        df.filetype = filetype
         return fullfn
 
     elif fn == 'getimagesize':
-        infn = convert(job, field, 'pnm')
+        infn = convert(job, df, 'pnm')
         x = run_pnmfile(infn)
         if x is None:
             raise FileConversionError('couldn\'t find file size')
         (w, h, pnmtype, maxval) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
-        field.imagew = w
-        field.imageh = h
+        df.imagew = w
+        df.imageh = h
         return None
 
     elif fn == 'pgm':
         # run 'pnmfile' on the pnm.
-        infn = convert(job, field, 'pnm')
+        infn = convert(job, df, 'pnm')
         x = run_pnmfile(infn)
         if x is None:
             raise FileConversionError('couldn\'t find file size')
         (w, h, pnmtype, maxval) = x
         log('Type %s, w %i, h %i' % (pnmtype, w, h))
-        field.imagew = w
-        field.imageh = h
+        df.imagew = w
+        df.imageh = h
         if pnmtype == 'G':
             return infn
         cmd = 'ppmtopgm %s > %s' % (infn, fullfn)
@@ -125,11 +125,11 @@ def convert(job, field, fn, args=None):
             # just create the red-circle plot.
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
-                   (xylist, field.imagew, field.imageh, fullfn))
+                   (xylist, df.imagew, df.imageh, fullfn))
             run_convert_command(cmd)
             return fullfn
 
-        imgfn = convert(job, field, 'pnm')
+        imgfn = convert(job, df, 'pnm')
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
@@ -149,14 +149,14 @@ def convert(job, field, fn, args=None):
 
     elif fn == 'fitsimg':
         # check the uncompressed input image type...
-        infn = convert(job, field, 'uncomp')
-        (field.filetype, cmd, errmsg) = image2pnm.get_image_type(infn)
+        infn = convert(job, df, 'uncomp')
+        (df.filetype, cmd, errmsg) = image2pnm.get_image_type(infn)
         if errmsg:
             log(errmsg)
             raise FileConversionError(errmsg)
 
         # fits image: fits2fits it.
-        if field.filetype == image2pnm.fitstype:
+        if df.filetype == image2pnm.fitstype:
             errmsg = fits2fits.fits2fits(infn, fullfn, False)
             if errmsg:
                 log(errmsg)
@@ -164,7 +164,7 @@ def convert(job, field, fn, args=None):
             return fullfn
 
         # else, convert to pgm and run pnm2fits.
-        infn = convert(job, field, 'pgm')
+        infn = convert(job, df, 'pgm')
         cmd = 'pnmtofits %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
@@ -183,14 +183,14 @@ def convert(job, field, fn, args=None):
             return None
 
         if job.is_input_text():
-            infn = convert(job, field, 'uncomp')
+            infn = convert(job, df, 'uncomp')
             cmd = 'xylist2fits %s %s' % (infn, fullfn)
             run_convert_command(cmd)
             return fullfn
 
         if job.is_input_fits():
             # For FITS bintable uploads: put it through fits2fits.
-            infn = convert(job, field, 'uncomp')
+            infn = convert(job, df, 'uncomp')
             errmsg = fits2fits.fits2fits(infn, fullfn, False)
             if errmsg:
                 log(errmsg)
@@ -212,13 +212,13 @@ def convert(job, field, fn, args=None):
             # HACK
             sxylog = '/tmp/alternate-xylist-%s.log' % variant
 
-        infn = convert(job, field, 'fitsimg')
+        infn = convert(job, df, 'fitsimg')
         cmd = 'image2xy %s-o %s %s >> %s 2>&1' % (extraargs, fullfn, infn, sxylog)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'xyls-half':
-        infn = convert(job, field, 'fitsimg')
+        infn = convert(job, df, 'fitsimg')
         sxylog = 'blind.log'
         cmd = 'image2xy -H -o %s %s >> %s 2>&1' % (fullfn, infn, sxylog)
         run_convert_command(cmd)
@@ -226,9 +226,9 @@ def convert(job, field, fn, args=None):
 
     elif fn == 'xyls-sorted' or fn == 'xyls-half-sorted':
         if fn == 'xyls-sorted':
-            infn = convert(job, field, 'xyls')
+            infn = convert(job, df, 'xyls')
         else:
-            infn = convert(job, field, 'xyls-half')
+            infn = convert(job, df, 'xyls-half')
         logfn = 'blind.log'
         cmd = 'resort-xylist -d %s %s 2>> %s' % (infn, fullfn, logfn)
         run_convert_command(cmd)
@@ -254,16 +254,16 @@ def convert(job, field, fn, args=None):
             # just create the red-circle plot.
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -x 1 -y 1 -C brightred -w 2 > %s' %
-                   (xylist, field.imagew, field.imageh, fullfn))
+                   (xylist, df.imagew, df.imageh, fullfn))
             run_convert_command(cmd)
             return fullfn
-        infn = convert(job, field, 'pnm')
+        infn = convert(job, df, 'pnm')
         cmd = 'pnmtopng %s > %s' % (infn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'jpeg-norm':
-        infn = convert(job, field, 'pnm')
+        infn = convert(job, df, 'pnm')
         #cmd = 'pnmtojpeg %s > %s' % (infn, fullfn)
         #cmd = 'pnmnorm %s | pnmtojpeg > %s' % (infn, fullfn)
         cmd = 'pnmnorm -keephues -wpercent 1 %s | pnmtojpeg > %s' % (infn, fullfn)
@@ -282,11 +282,12 @@ def convert(job, field, fn, args=None):
 
     elif (fn == 'pnm-small') or (fn == 'pnm-medium'):
         small = (fn == 'pnm-small')
-        imgfn = convert(job, field, 'pnm')
+        imgfn = convert(job, df, 'pnm')
+        log('in convert(%s): df = %s' % (fn, str(df)))
         if small:
-            (scale, w, h) = field.get_small_scale()
+            (scale, w, h) = df.get_small_scale()
         else:
-            (scale, w, h) = field.get_medium_scale()
+            (scale, w, h) = df.get_medium_scale()
         if scale == 1:
             return imgfn
         #cmd = 'pnmscale -reduce %g %s > %s' % (float(scale), imgfn, fullfn)
@@ -303,14 +304,14 @@ def convert(job, field, fn, args=None):
         if job.is_input_fits() or job.is_input_text():
             # just create the red-circle plot.
             if small:
-                (scale, dw, dh) = field.get_small_scale()
+                (scale, dw, dh) = df.get_small_scale()
             else:
-                (scale, dw, dh) = field.get_medium_scale()
+                (scale, dw, dh) = df.get_medium_scale()
             if scale == 1:
                 if eightbit:
-                    return convert(job, field, 'ppm-8bit')
+                    return convert(job, df, 'ppm-8bit')
                 else:
-                    return convert(job, field, 'ppm')
+                    return convert(job, df, 'ppm')
             xylist = job.get_filename('job.axy')
             cmd = ('plotxy -i %s -W %i -H %i -s %i -x 1 -y 1 -C brightred -w 2 -P > %s' %
                    (xylist, dw, dh, scale, fullfn))
@@ -318,9 +319,9 @@ def convert(job, field, fn, args=None):
             return fullfn
 
         if small:
-            imgfn = convert(job, field, 'pnm-small')
+            imgfn = convert(job, df, 'pnm-small')
         else:
-            imgfn = convert(job, field, 'pnm-medium')
+            imgfn = convert(job, df, 'pnm-medium')
         x = run_pnmfile(imgfn)
         if x is None:
             raise FileConversionError('pnmfile failed')
@@ -340,15 +341,15 @@ def convert(job, field, fn, args=None):
 
     elif fn == 'annotation':
         wcsfn = job.get_filename('wcs.fits')
-        imgfn = convert(job, field, 'ppm-medium-8bit')
-        (scale, dw, dh) = field.get_medium_scale()
+        imgfn = convert(job, df, 'ppm-medium-8bit')
+        (scale, dw, dh) = df.get_medium_scale()
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s' %
                (wcsfn, fullfn, 1.0/float(scale), imgfn))
         run_convert_command(cmd)
         return fullfn
 
     elif fn == 'annotation-big':
-        imgfn = convert(job, field, 'ppm-8bit')
+        imgfn = convert(job, df, 'ppm-8bit')
         wcsfn = job.get_filename('wcs.fits')
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s' %
                (wcsfn, fullfn, imgfn))
@@ -357,14 +358,14 @@ def convert(job, field, fn, args=None):
 
     elif fn == 'redgreen' or fn == 'redgreen-big':
         if fn == 'redgreen':
-            imgfn = convert(job, field, 'ppm-medium-8bit')
-            (dscale, dw, dh) = field.get_medium_scale()
+            imgfn = convert(job, df, 'ppm-medium-8bit')
+            (dscale, dw, dh) = df.get_medium_scale()
             scale = 1.0 / float(dscale)
         else:
-            imgfn = convert(job, field, 'ppm-8bit')
+            imgfn = convert(job, df, 'ppm-8bit')
             scale = 1.0
         fxy = job.get_filename('job.axy')
-        ixy = convert(job, field, 'index-xy')
+        ixy = convert(job, df, 'index-xy')
         commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
         logfn = 'blind.log'
         cmd = ('plotxy -i %s -I %s -r 4 -C green -P' % (ixy, imgfn) + commonargs 
@@ -382,16 +383,16 @@ def convert(job, field, fn, args=None):
         return fullfn
 
     elif fn == 'sources-small':
-        imgfn = convert(job, field, 'ppm-small-8bit')
+        imgfn = convert(job, df, 'ppm-small-8bit')
         if variant:
             fn = 'sources-small-%i' % variant
             fullfn = basename + fn
             if os.path.exists(fullfn):
                 return fullfn
-            xyls = convert(job, field, 'xyls', args)
+            xyls = convert(job, df, 'xyls', args)
         else:
             xyls = job.get_filename('job.axy')
-        (dscale, dw, dh) = field.get_small_scale()
+        (dscale, dw, dh) = df.get_small_scale()
         scale = 1.0 / float(dscale)
         commonargs = ('-i %s -x %g -y %g -w 1 -S %g -C red' %
                       (xyls, scale, scale, scale))
@@ -404,9 +405,9 @@ def convert(job, field, fn, args=None):
         return fullfn
 
     elif fn == 'sources-medium':
-        imgfn = convert(job, field, 'ppm-medium-8bit')
+        imgfn = convert(job, df, 'ppm-medium-8bit')
         xyls = job.get_filename('job.axy')
-        (dscale, dw, dh) = field.get_medium_scale()
+        (dscale, dw, dh) = df.get_medium_scale()
         scale = 1.0 / float(dscale)
         commonargs = ('-i %s -x %g -y %g -w 2 -S %g -C red' %
                       (xyls, scale, scale, scale))
@@ -418,7 +419,7 @@ def convert(job, field, fn, args=None):
         return fullfn
 
     elif fn == 'sources-big':
-        imgfn = convert(job, field, 'ppm-8bit')
+        imgfn = convert(job, df, 'ppm-8bit')
         xyls = job.get_filename('job.axy')
         commonargs = ('-i %s -x %g -y %g -w 2 -C red' %
                       (xyls, 1, 1))

@@ -1,8 +1,10 @@
 import datetime
 import logging
 import os.path
+import os
 import random
 import sha
+import shutil
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -32,8 +34,106 @@ class DiskFile(models.Model):
     imagew = models.PositiveIntegerField(null=True)
     imageh = models.PositiveIntegerField(null=True)
 
-    
+    #def __init__(self, *args, **kwargs):
+    #    if 'file' in kwargs and 'filehash' not in kwargs:
+    #        fn = kwargs['file']
+    #        hashval = DiskFile.get_hash(fn)
+    #        kwargs['filehash'] = hashval
+    #    super(DiskFile, self).__init__(*args, **kwargs)
 
+    def __str__(self):
+        return ('<DiskFile %s, type %s, size %ix%i>' %
+                (self.filehash, self.filetype or '(none)',
+                 self.imagew or 0, self.imageh or 0))
+
+    def content_type(self):
+        typemap = {
+            'jpg' : 'image/jpeg',
+            'gif' : 'image/gif',
+            'png' : 'image/png',
+            'fits' : 'image/fits',
+            'text' : 'text/plain',
+            'xyls' : 'image/fits',
+            }
+        if not self.filetype in typemap:
+            return None
+        return typemap[self.filetype]
+
+    def show(self):
+        jobs = self.jobs.all()
+        for job in jobs:
+            if job.get_expose_file():
+                return True
+        return False
+
+    def submitted_by_user(self, u):
+        jobs = self.jobs.all()
+        for job in jobs:
+            if job.user == u:
+                return True
+        return False
+    
+    # Moves the given file into the place where it belongs.
+    @staticmethod
+    def for_file(path):
+        hsh = DiskFile.get_hash(path)
+        existing = DiskFile.objects.all().filter(filehash=hsh)
+        if len(existing) == 1:
+            return existing[0]
+        assert(len(existing) == 0)
+        df = DiskFile(filehash=hsh)
+        dest = df.get_path()
+        df.create_dir()
+        shutil.move(path, dest)
+        # FIXME - set filetype, imagew, imageh?
+        return df
+
+    def get_path(self):
+        hsh = str(self.filehash)
+        return os.path.join(config.fielddir, hsh[:2], hsh[2:])
+
+    # ensure that this file's directory exists.
+    def create_dir(self):
+        path = self.get_path()
+        d = os.path.dirname(path)
+        if os.path.exists(d):
+            return
+        os.makedirs(d)
+
+    def file_exists(self):
+        return os.path.exists(self.get_path())
+
+    def delete_file(self):
+        os.unlink(self.get_path())
+
+    @staticmethod
+    def get_hash(fn):
+        h = sha.new()
+        f = open(fn, 'rb')
+        while True:
+            d = f.read(4096)
+            if len(d) == 0:
+                break
+            h.update(d)
+        return h.hexdigest()
+
+    def get_medium_scale(self):
+        w = self.imagew
+        h = self.imageh
+        scale = max(1.0,
+                    math.pow(2.0, math.ceil(
+            math.log(max(w, h) / 800.) / math.log(2.0))))
+        displayw = int(round(w / scale))
+        displayh = int(round(h / scale))
+        return (scale, displayw, displayh)
+
+    def get_small_scale(self):
+        w = self.imagew
+        h = self.imageh
+        scale = float(max(1.0, max(w, h) / 300.))
+        displayw = int(round(w / scale))
+        displayh = int(round(h / scale))
+        return (scale, displayw, displayh)
 
 
 class License(models.Model):
@@ -136,6 +236,10 @@ class Submission(models.Model):
 
     url = models.URLField(blank=True, null=True)
 
+    # The file that was submitted.
+    fileorigname = models.CharField(max_length=64, null=True)
+    diskfile = models.ForeignKey(DiskFile, null=True)
+
     uploaded = models.ForeignKey(UploadedFile, null=True, blank=True)
 
     parity = models.PositiveSmallIntegerField(choices=parity_CHOICES,
@@ -166,12 +270,12 @@ class Submission(models.Model):
         for k,v in kwargs.items():
             if v is None:
                 del kwargs[k]
-        if not 'jobid' in kwargs:
-            kwargs['jobid'] = Job.generate_jobid()
+        if not 'subid' in kwargs:
+            kwargs['subid'] = Job.generate_jobid()
         super(Submission, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        s = '<Submission %s, status %s, user %s' % (self.jobid, self.status, self.user.username)
+        s = '<Submission %s, status %s, user %s' % (self.get_id(), self.status, self.user.username)
         if self.datasrc == 'url':
             s += ', url ' + str(self.url)
         elif self.datasrc == 'file':
@@ -190,17 +294,20 @@ class Submission(models.Model):
         s += '>'
         return s
 
+    def get_id(self):
+        return self.subid
+
     def get_job_dir(self):
-        return Job.s_get_job_dir(self.jobid)
+        return Job.s_get_job_dir(self.get_id())
 
     def get_relative_job_dir(self):
-        return Job.s_get_relative_job_dir(self.jobid)
+        return Job.s_get_relative_job_dir(self.get_id())
 
     def create_job_dir(self):
-        Job.create_dir_for_jobid(self.jobid)
+        Job.create_dir_for_jobid(self.get_id())
 
     def get_filename(self, fn):
-        return Job.get_job_filename(self.jobid, fn)
+        return Job.get_job_filename(self.get_id(), fn)
 
     def get_url(self):
         if self.datasrc == 'url':
@@ -227,7 +334,7 @@ class Job(models.Model):
     submission = models.ForeignKey(Submission, related_name='jobs', null=True)
 
     # The file that goes with this job
-    diskfile = models.ForeignKey(DiskFile, null=True)
+    diskfile = models.ForeignKey(DiskFile, related_name='jobs', null=True)
 
     # The license associated with the file.
     filelicense = models.ForeignKey(License, null=True)
@@ -258,13 +365,41 @@ class Job(models.Model):
     tags = models.ManyToManyField(Tag)
 
     def __str__(self):
-        s = '<Job %s, ' % self.jobid
+        s = '<Job %s, ' % self.get_id()
         s += str(self.submission)
         if self.status:
             s += ', %s' % self.status
-        s += ' ' + str(self.field)
+        s += ' ' + str(self.diskfile)
         s += '>'
         return s
+
+    def get_id(self):
+        return self.jobid
+
+    def get_fileid(self):
+        return self.diskfile.filehash
+
+    def get_expose_file(self):
+        return self.exposefile
+
+    def set_job_exposed(self, exposed):
+        self.exposejob = exposed and True or False
+
+    def set_file_exposed(self, exposed):
+        self.exposefile = exposed and True or False
+
+    def is_file_exposed(self):
+        return self.exposefile
+
+    def is_exposed(self):
+        return self.exposejob
+
+    def solved(self):
+        calib = self.calibration
+        log('calib is %s' % str(calib))
+        if calib is None:
+            return False
+        return True
 
     def is_input_fits(self):
         return self.submission.filetype == 'fits'
@@ -273,7 +408,7 @@ class Job(models.Model):
         return self.submission.filetype == 'text'
 
     def get_xy_cols(self):
-        return (self.field.xcol, self.field.ycol)
+        return (self.submission.xcol, self.submission.ycol)
 
     def friendly_parity(self):
         pstrs = [ 'Positive', 'Negative', 'Try both' ]
@@ -312,59 +447,43 @@ class Job(models.Model):
             return None
 
     def get_parity(self):
-        if self.parity is not None:
-            return self.parity
         return self.submission.parity
 
     def get_scalelower(self):
-        return self.scalelower or self.submission.scalelower
+        return self.submission.scalelower
 
     def get_scaleupper(self):
-        return self.scaleupper or self.submission.scaleupper
+        return self.submission.scaleupper
 
     def get_scaleest(self):
-        return self.scaleest or self.submission.scaleest
+        return self.submission.scaleest
 
     def get_scaleerr(self):
-        return self.scaleerr or self.submission.scaleerr
+        return self.submission.scaleerr
 
     def get_scaletype(self):
-        return self.scaletype or self.submission.scaletype
+        return self.submission.scaletype
 
     def get_scaleunits(self):
-        return self.scaleunits or self.submission.scaleunits
+        return self.submission.scaleunits
 
     def get_tweak(self):
-        if self.tweak is not None:
-            tweak = self.tweak
-        else:
-            tweak = self.submission.tweak
-        if self.tweakorder is not None:
-            order = self.tweakorder
-        else:
-            order = self.submission.tweak
-        return (tweak, order)
+        return (self.submission.tweak, self.submission.tweakorder)
 
     def get_job_dir(self):
-        return Job.s_get_job_dir(self.jobid)
+        return Job.s_get_job_dir(self.get_id())
 
     def get_relative_job_dir(self):
-        return Job.s_get_relative_job_dir(self.jobid)
+        return Job.s_get_relative_job_dir(self.get_id())
 
     def get_user(self):
         return self.submission.user
 
     def create_job_dir(self):
-        Job.create_dir_for_jobid(self.jobid)
+        Job.create_dir_for_jobid(self.get_id())
 
     def allowanonymous(self, prefs=None):
-        if self.allowanon:
-            return True
-        if self.forbidanon:
-            return False
-        if not prefs:
-            prefs = UserPreferences.for_user(self.submission.user)
-        return prefs.anonjobstatus
+        return self.exposejob
 
     def set_starttime_now(self):
         self.starttime = Job.timenow()
@@ -382,10 +501,10 @@ class Job(models.Model):
         return Job.format_time_brief(self.finishtime)
 
     def get_orig_file(self):
-        return self.field.filename()
+        return self.fileorigname()
 
     def get_filename(self, fn):
-        return Job.get_job_filename(self.jobid, fn)
+        return Job.get_job_filename(self.get_id(), fn)
 
     def get_relative_filename(self, fn):
         return os.path.join(self.get_relative_job_dir(), fn)
@@ -430,6 +549,7 @@ class Job(models.Model):
     @staticmethod
     def generate_jobid():
         today = datetime.date.today()
+        # HACK - we don't check that it's unique!!
         jobid = '%s-%i%02i-%08i' % (config.siteid, today.year,
                                     today.month, random.randint(0, 99999999))
         return jobid
@@ -440,6 +560,6 @@ class Job(models.Model):
         j.create_job_dir()
         # enqueue by creating a symlink in the job queue directory.
         jobdir = j.get_job_dir()
-        link = config.jobqueuedir + j.jobid
+        link = config.jobqueuedir + j.get_id()
         os.symlink(jobdir, link)
 

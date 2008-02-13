@@ -39,19 +39,6 @@ class JunkInTheTrunk(object):
                 continue
             break
 
-    def content_type(self):
-        typemap = {
-            'jpg' : 'image/jpeg',
-            'gif' : 'image/gif',
-            'png' : 'image/png',
-            'fits' : 'image/fits',
-            'text' : 'text/plain',
-            'xyls' : 'image/fits', # ??
-            }
-        if not self.filetype in typemap:
-            return None
-        return typemap[self.filetype]
-
     def redistributable(self, prefs=None):
         if self.allowredist:
             return True
@@ -77,30 +64,6 @@ class JunkInTheTrunk(object):
         if not self.fileid:
             self.choose_new_fileid()
         return UserFile.get_filename_for_fileid(self.fileid)
-
-    def get_medium_scale(self):
-        w = self.imagew
-        h = self.imageh
-        #log('w=%s, h=%s' % (str(w), str(h)))
-        #log('max(w,h) = %s' % (str(max(w,h))))
-        scale = max(1.0,
-                    math.pow(2.0, math.ceil(
-            math.log(max(w, h) / 800.) / math.log(2.0))))
-        scale = max(1.0,
-                    math.pow(2.0, math.ceil(
-            math.log(max(w, h) / 800.) / math.log(2.0))))
-        displayw = int(round(w / scale))
-        displayh = int(round(h / scale))
-        return (scale, displayw, displayh)
-
-    def get_small_scale(self):
-        w = self.imagew
-        h = self.imageh
-        scale = float(max(1.0, max(w, h) / 300.))
-        displayw = int(round(w / scale))
-        displayh = int(round(h / scale))
-        return (scale, displayw, displayh)
-    
 
     def get_filename_for_fileid(fileid):
         return os.path.join(config.fielddir, str(fileid))

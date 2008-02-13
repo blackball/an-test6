@@ -23,7 +23,7 @@ tr.odd td {}
 {% for s in subs %}
 <tr class="{% cycle even,odd %}">
 <td>
-<a href="{{ statusurl }}{{ s.jobid }}">{{ s.jobid }}</a>
+<a href="{{ statusurl }}{{ s.jobid }}">{{ s.subid }}</a>
 </td>
 <td>
 {{ s.format_submittime_brief }}
@@ -70,10 +70,10 @@ tr.odd td {}
 {% if job.submission.uploaded.userfilename %}
 File: {{ job.submission.uploaded.userfilename }}
 
-{% if job.field.origname %}
-{% ifequal job.field.origname job.submission.uploaded.userfilename %}
+{% if job.fileorigname %}
+{% ifequal job.fileorigname job.submission.fileorigname %}
 {% else %}
-({{ job.field.origname }})
+({{ job.fileorigname }})
 {% endifequal %}
 {% endif %}
 
@@ -87,13 +87,13 @@ File: {{ job.submission.uploaded.userfilename }}
 {% endcomment %}
 
 {% endif %}
-<a href="{{ getfield }}{{ job.field.id }}">Stored Copy</a>
+<a href="{{ getfileurl }}{{ job.get_id }}&f=origfile">Stored Copy</a>
 </td>
 
 <td class="c">
 <form action="{% url an.portal.views.changeperms %}" method="post" name="fieldpermsform_{{ forloop.counter }}">
-<input type="hidden" name="fieldid" value="{{ job.field.id }}" />
-{% if job.field.redistributable %}
+<input type="hidden" name="jobid" value="{{ job.get_id }}" />
+{% if job.is_file_exposed %}
 <input type="hidden" name="redist" value="0" />
 Yes
 &nbsp;
@@ -109,7 +109,7 @@ No
 
 <td class="c">
 <form action="{% url an.portal.views.changeperms %}" method="post" name="jobpermsform_{{ forloop.counter }}">
-<input type="hidden" name="jobid" value="{{ job.jobid }}" />
+<input type="hidden" name="jobid" value="{{ job.get_id }}" />
 {% if job.allowanonymous %}
 <input type="hidden" name="allowanon" value="0" />
 Yes

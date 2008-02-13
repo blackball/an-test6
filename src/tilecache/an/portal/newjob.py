@@ -240,7 +240,7 @@ def submit_submission(request, submission):
     submission.set_submittime_now()
     submission.status = 'Queued'
     submission.save()
-    request.session['jobid'] = submission.jobid
+    request.session['jobid'] = submission.get_id()
     Job.submit_job_or_submission(submission)
 
 @login_required
@@ -345,7 +345,7 @@ def newlong(request):
             )
         submission.save()
         submit_submission(request, submission)
-        return HttpResponseRedirect(get_status_url(submission.jobid))
+        return HttpResponseRedirect(get_status_url(submission.subid))
 
     if 'jobid' in request.session:
         del request.session['jobid']
