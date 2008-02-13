@@ -81,7 +81,6 @@ var map;
 
 // URLs of tileserver.  These are defined in the HTML (map.php)
 var TILE_URL  = CONFIG_TILE_URL;
-//var BLACK_URL = CONFIG_BLACK_URL;
 
 // The arguments in the HTTP request
 var getdata;
@@ -322,7 +321,7 @@ function updateImage() {
 	var lay = [];
 	if (imageShowing)
 		lay.push('image');
-	imagesOverlay = makeOverlay(lay.join(","), tag);
+	imageOverlay = makeOverlay(lay.join(","), tag);
 }
 
 function indexOf(arr, element) {
@@ -368,6 +367,10 @@ function moveended() {
 	mapmoved();
 }
 
+function getBlackUrl(tile, zoom) {
+    return "black.png";
+}
+
 /*
   This function gets called when the page loads.
 */
@@ -410,13 +413,12 @@ function startup() {
 	// Clear the set of map types.
 	map.getMapTypes().length = 0;
 	
-    /*
-     var blackTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-     blackTile.getTileUrl = getBlackUrl;
-     var blackMapType = makeMapType([blackTile], "Map");
-     map.addMapType(blackMapType);
-     map.setMapType(blackMapType);
-     */
+    var blackTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+    blackTile.getTileUrl = getBlackUrl;
+    var blackMapType = makeMapType([blackTile], "Map");
+    map.addMapType(blackMapType);
+    map.setMapType(blackMapType);
+
 	updateImage();
 	updateGrid();
 
