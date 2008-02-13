@@ -1,0 +1,32 @@
+Go to http://code.google.com/apis/maps to get an API key for your site.
+(Use your normal web server's URL)
+
+Edit web/index.html - search for "EDIT HERE" - add your API key, and
+add your dynamic-content web server's URL.
+
+Put the contents of the "web" directory on your normal web server (eg CSlab)
+
+
+Setting up your own web server on CSLab:
+
+bash
+cd /tmp
+# Get Apache
+wget http://apache.sunsite.ualberta.ca/httpd/httpd-2.2.8.tar.bz2
+tar xjf httpd-2.2.8.tar.bz2
+### EDIT HERE
+export APACHE_DIR=/u/dstn/software/apache-2.2.8
+###
+./configure --prefix=$APACHE_DIR
+make
+make install
+#
+# Get mod_python
+cd /tmp
+wget ftp://apache.sunsite.ualberta.ca/pub/apache/httpd/modpython/mod_python-3.3.1.tgz
+tar xzf mod_python-3.3.1.tgz
+cd mod_python-3.3.1
+./configure --with-apxs=$APACHE_DIR/bin/apxs
+make
+make install_dso
+
