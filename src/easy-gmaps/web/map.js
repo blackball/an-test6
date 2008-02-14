@@ -91,7 +91,11 @@ var passargs = [ 'rotation' ];
 var gotoform = document.getElementById("gotoform");
 
 function long2x(lng) {
-    return lng / 360.0;
+    x = lng / 360.0;
+    if (x < 0) {
+        x += 1.0;
+    }
+    return x;
 }
 
 function x2long(x) {
@@ -107,11 +111,11 @@ function sinh(x) {
 }
 
 function lat2y(lat) {
-    return 0.5 + asinh(Math.tan(lat * Math.PI / 180.0));
+    return 0.5 + (asinh(Math.tan(lat * Math.PI / 180.0)) / (2.0 * Math.PI));
 }
 
 function y2lat(y) {
-	return Math.atan(sinh((y - 0.5) * (2.0 * Math.PI)));
+	return Math.atan(sinh((y - 0.5) * (2.0 * Math.PI))) * (180.0 / Math.PI);
 }
 
 /*
