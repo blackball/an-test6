@@ -98,13 +98,20 @@ function x2long(x) {
     return x * 360.0;
 }
 
+function asinh(x) {
+    return Math.log(x + Math.sqrt(1. + x*x));
+}
+
+function sinh(x) {
+    return (Math.exp(x) - Math.exp(-x)) / 2.0;
+}
+
 function lat2y(lat) {
-    return lat;
-    //return 0.5 + (asinh(tan(L * pi / 180.0))
+    return 0.5 + asinh(tan(lat * Math.PI / 180.0));
 }
 
 function y2lat(y) {
-    return y;
+	return atan(sinh((y - 0.5) * (2.0 * Math.PI)));
 }
 
 /*
