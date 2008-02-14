@@ -256,7 +256,7 @@ def newurl(request):
                             url = url)
             submission.save()
             submit_submission(request, submission)
-            return HttpResponseRedirect(get_status_url(submission.jobid))
+            return HttpResponseRedirect(get_status_url(submission.subid))
         else:
             urlerr = form['url'].erroros[0]
     else:
