@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 #include "qfits.h"
-#include "fitsfile.h"
+
 
 struct fitsbin_chunk_t {
 	char* tablename;
@@ -43,15 +43,12 @@ struct fitsbin_chunk_t {
     int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata);
     void* userdata;
 
-    /*
-     // Extra FITS headers to add to the extension header containing the table.
-     qfits_header* header;
 
-     // Writing:
-     off_t header_start;
-     off_t header_end;
-     */
-    fitsextension_t ext;
+    qfits_header* header;
+
+    // Writing:
+    off_t header_start;
+    off_t header_end;
 
 	// Internal use:
 	// The mmap'ed address
@@ -71,15 +68,12 @@ struct fitsbin_t {
     // Error string in which to report errors.
     char** errstr;
 
-    fitsfile_t* fitsfile;
+    // Writing:
+    FILE* fid;
 
-    /*
-     // Writing:
-     FILE* fid;
-     // The primary FITS header
-     qfits_header* primheader;
-     off_t primheader_end;
-     */
+    // The primary FITS header
+    qfits_header* primheader;
+    off_t primheader_end;
 };
 typedef struct fitsbin_t fitsbin_t;
 

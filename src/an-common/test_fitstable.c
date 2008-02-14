@@ -499,13 +499,13 @@ void test_struct_1(CuTest* ct) {
     CuAssertIntEquals(ct, flt, t);
 
     fitstable_add_read_column_struct(tab, dubl, 1, offsetof(ts2, x1),
-                                     anytype, "X1");
+                                     anytype, "X1", TRUE);
     fitstable_add_read_column_struct(tab, i16, 3, offsetof(ts2, x2),
-                                     anytype, "X2");
+                                     anytype, "X2", TRUE);
     fitstable_add_read_column_struct(tab, itype, 1, offsetof(ts2, x3),
-                                     anytype, "X3");
+                                     anytype, "X3", TRUE);
     fitstable_add_read_column_struct(tab, flt, 1, offsetof(ts2, x4),
-                                     anytype, "X4");
+                                     anytype, "X4", TRUE);
 
     fitstable_read_extension(tab, 1);
 
@@ -554,16 +554,16 @@ static void add_columns(fitstable_t* tab, bool writing) {
 
     fitstable_add_column_struct(tab, dubl, 1, offsetof(ts3, x1),
                                 (writing ? itype : anytype), "X1",
-                                "x1units");
+                                "x1units", TRUE);
     fitstable_add_column_struct(tab, i16, 3, offsetof(ts3, x2),
                                 (writing ? itype : anytype), "X2",
-                                "x2units");
+                                "x2units", TRUE);
     fitstable_add_column_struct(tab, itype, 1, offsetof(ts3, x3),
                                 (writing ? flt : anytype), "X3",
-                                "x3units");
+                                "x3units", TRUE);
     fitstable_add_column_struct(tab, flt, 1, offsetof(ts3, x4),
                                 (writing ? dubl : anytype), "X4",
-                                "x4units");
+                                "x4units", TRUE);
 }
 
 void test_struct_2(CuTest* ct) {

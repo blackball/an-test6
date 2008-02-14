@@ -27,6 +27,7 @@
 #include "fitsbin.h"
 #include "fitsioutils.h"
 #include "ioutils.h"
+#include "fitsfile.h"
 
 static void
 ATTRIB_FORMAT(printf,2,3)
@@ -39,12 +40,12 @@ seterr(char** errstr, const char* format, ...) {
 }
 
 FILE* fitsbin_get_fid(fitsbin_t* fb) {
-    return fb->fitsfile->fid;
+    return fb->fid;
 }
 
 off_t fitsbin_get_data_start(fitsbin_t* fb, int chunk) {
     assert(chunk < fb->nchunks);
-    return fb->chunks[chunk].ext.header_end;
+    return fb->chunks[chunk].header_end;
 }
 
 void fitsbin_set_filename(fitsbin_t* fb, const char* fn) {
@@ -63,12 +64,10 @@ fitsbin_t* fitsbin_new(int nchunks) {
 }
 
 static void free_chunk(fitsbin_chunk_t* chunk) {
+    if (!chunk) return;
 	free(chunk->tablename);
-    fitsfile_extension_close(&chunk->ext);
-    /*
-     if (chunk->ext.header)
-     qfits_header_destroy(chunk->ext.header);
-     */
+    if (chunk->header)
+        qfits_header_destroy(chunk->header);
 	if (chunk->map) {
 		if (munmap(chunk->map, chunk->mapsize)) {
 			fprintf(stderr, "Failed to munmap fitsbin: %s\n", strerror(errno));
@@ -80,10 +79,15 @@ int fitsbin_close(fitsbin_t* fb) {
     int i;
     int rtn = 0;
 	if (!fb) return rtn;
-    if (fitsfile_close(fb->fitsfile)) {
-        fprintf(stderr, "Error closing fitsbin: %s\n", strerror(errno));
-        rtn = -1;
+    if (fb->fid) {
+		fits_pad_file(fb->fid);
+		if (fclose(fb->fid)) {
+			fprintf(stderr, "Error closing fitsbin file: %s\n", strerror(errno));
+            rtn = -1;
+        }
     }
+    if (fb->primheader)
+        qfits_header_destroy(fb->primheader);
     for (i=0; i<fb->nchunks; i++)
         free_chunk(fb->chunks + i);
     free(fb->chunks);
@@ -92,15 +96,17 @@ int fitsbin_close(fitsbin_t* fb) {
 }
 
 int fitsbin_write_primary_header(fitsbin_t* fb) {
-    return fitsfile_write_primary_header(fb->fitsfile);
+    return fitsfile_write_primary_header(fb->fid, fb->primheader,
+                                         &fb->primheader_end, fb->filename);
 }
 
 qfits_header* fitsbin_get_primary_header(fitsbin_t* fb) {
-    return fitsfile_get_primary_header(fb->fitsfile);
+    return fb->primheader;
 }
 
 int fitsbin_fix_primary_header(fitsbin_t* fb) {
-    return fitsfile_fix_primary_header(fb->fitsfile);
+    return fitsfile_fix_primary_header(fb->fid, fb->primheader,
+                                       &fb->primheader_end, fb->filename);
 }
 
 int fitsbin_write_header(fitsbin_t* fb) {
@@ -123,7 +129,7 @@ qfits_header* fitsbin_get_chunk_header(fitsbin_t* fb, int chunknum) {
 				   chunk->tablename, "", "", "", 0, 0, 0, 0, 0);
     hdr = qfits_table_ext_header_default(table);
     qfits_table_close(table);
-    fitsfile_extension_set_header(&(chunk->ext), hdr);
+    chunk->header = hdr;
     return hdr;
 }
 
@@ -135,24 +141,11 @@ int fitsbin_write_chunk_header(fitsbin_t* fb, int chunknum) {
     assert(chunknum >= 0);
     chunk = fb->chunks + chunknum;
     hdr = fitsbin_get_chunk_header(fb, chunknum);
-    if (fitsfile_extension_write_header(&(chunk->ext), fb->fitsfile->fid)) {
-        fprintf(stderr, "Failed to write fitsbin extension header %i in file %s.\n", chunknum, fitsfile_filename(fb->fitsfile));
+    if (fitsfile_write_header(fb->fid, chunk->header,
+                              &chunk->header_start, &chunk->header_end,
+                              chunknum, fb->filename)) {
         return -1;
     }
-
-    /*
-     // Copy headers from "chunk->header" to "hdr".
-     // Skip first and last ("SIMPLE" and "END") headers.
-     for (i=1; i<(chunk->ext.header->n - 1); i++) {
-     char key[FITS_LINESZ+1];
-     char val[FITS_LINESZ+1];
-     char com[FITS_LINESZ+1];
-     char lin[FITS_LINESZ+1];
-     qfits_header_getitem(chunk->ext.header, i, key, val, com, lin);
-     qfits_header_add(hdr, key, val, com, lin);
-     }
-     */
-	//qfits_header_destroy(hdr);
 	return 0;
 }
 
@@ -162,22 +155,19 @@ int fitsbin_fix_header(fitsbin_t* fb) {
 
 int fitsbin_fix_chunk_header(fitsbin_t* fb, int chunknum) {
     fitsbin_chunk_t* chunk;
-
     assert(chunknum < fb->nchunks);
     assert(chunknum >= 0);
-
     chunk = fb->chunks + chunknum;
-
-    if (fitsfile_extension_fix_header(&(chunk->ext), fb->fitsfile->fid)) {
-        fprintf(stderr, "Failed to fix extension %i of fitsbin file %s\n",
-                chunknum, fb->fitsfile->filename);
+    if (fitsfile_fix_header(fb->fid, chunk->header,
+                            &chunk->header_start, &chunk->header_end,
+                            chunknum, fb->filename)) {
         return -1;
     }
 	return 0;
 }
 
 int fitsbin_write_items(fitsbin_t* fb, int chunk, void* data, int N) {
-    if (fwrite(data, fb->chunks[chunk].itemsize, N, fb->fitsfile->fid) != N) {
+    if (fwrite(data, fb->chunks[chunk].itemsize, N, fb->fid) != N) {
         fprintf(stderr, "Failed to write %i items: %s\n", N, strerror(errno));
         return -1;
     }
@@ -201,18 +191,15 @@ fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 	if (!fb)
         return NULL;
 
-    /*
-     if (fitsbin_start_write(fb)) {
-     goto bailout;
-     }
-     */
-    fb->fitsfile = fitsfile_open_for_writing(fn);
-    if (!fb->fitsfile) {
-        fprintf(stderr, "Failed to open fitsbin file %s for writing.\n", fn);
-        free(fb);
+	fb->fid = fopen(fn, "wb");
+	if (!fb->fid) {
+		fprintf(stderr, "Couldn't open file \"%s\" for output: %s\n", fn, strerror(errno));
+        fitsbin_close(fb);
         return NULL;
-    }
-	//chunk->ext.header = qfits_header_default();
+	}
+
+	fb->filename = strdup(fn);
+    fb->primheader = qfits_header_default();
 
     chunk = fb->chunks;
 	chunk->tablename = strdup(tablename);
@@ -232,12 +219,7 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
     if (!fb)
         return fb;
 
-    fb->fitsfile = fitsfile_open(fn);
-    if (!fb->fitsfile) {
-        free(fb);
-        return NULL;
-    }
-    //fb->filename = strdup(fn);
+	fb->filename = strdup(fn);
     fb->errstr = errstr;
 
     chunk = fb->chunks;
@@ -267,7 +249,7 @@ int fitsbin_read(fitsbin_t* fb) {
     int i;
     char** errstr;
 
-    fn = fb->fitsfile->filename;
+    fn = fb->filename;
     errstr = fb->errstr;
 
 	if (!qfits_is_fits(fn)) {
@@ -301,14 +283,14 @@ int fitsbin_read(fitsbin_t* fb) {
             }
         }
 
-        chunk->ext.header = qfits_header_readext(fn, ext);
-        if (!chunk->ext.header) {
+        chunk->header = qfits_header_readext(fn, ext);
+        if (!chunk->header) {
             seterr(errstr, "Couldn't read FITS header from file \"%s\" extension %i.", fn, ext);
             goto bailout;
         }
 
         if (chunk->callback_read_header &&
-            chunk->callback_read_header(fb->fitsfile->primary.header, chunk->ext.header, &expected, fb->errstr, chunk->userdata)) {
+            chunk->callback_read_header(fb->primheader, chunk->header, &expected, fb->errstr, chunk->userdata)) {
             goto bailout;
         }
 

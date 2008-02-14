@@ -22,6 +22,10 @@ QFITS_LIB := $(QFITS_INSTALL)/lib/libqfits.a
 QFITS_CFLAGS := $(CFLAGS_DEF)
 QFITS_LDFLAGS := $(LDFLAGS_DEF)
 
+# For _sip.so:
+QFITS_CFLAGS += -fPIC
+QFITS_LDFLAGS += -fPIC
+
 QFITS_CONFIGURE_FLAGS := --enable-memory-mode=0 --enable-shared=no \
 	--prefix=`pwd`/stage \
 	CFLAGS="$(QFITS_CFLAGS)" \

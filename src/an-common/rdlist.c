@@ -139,7 +139,7 @@ rdlist_t* rdlist_open(const char* fn) {
 
 rd_t* rdlist_read_field(rdlist_t* ls, rd_t* fld) {
     xy_t xy;
-    if (xylist_read_field(ls, &xy)) {
+    if (!xylist_read_field(ls, &xy)) {
         return NULL;
     }
     if (!fld) {

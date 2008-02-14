@@ -1183,14 +1183,17 @@ int il_insert_unique_ascending(il* list, int n) {
 			upper = mid;
 	}
 
-	if (n == iarray[lower])
+    // check if it's a duplicate...
+    // --if it's the smallest element in this node, "lower" ends up being -1,
+    //   hence the ">= 0" check.
+	if (lower >= 0 && n == iarray[lower])
 		return -1;
 
 	// set the jump accessors...
 	list->last_access = node;
 	list->last_access_n = nskipped;
-	// ... so that this runs in O(1).
-	bl_insert(list, nskipped + lower + 1, &n);
+	// ... so that the insert runs in O(1).
+    bl_insert(list, nskipped + lower + 1, &n);
 	return nskipped + lower + 1;
 }
 

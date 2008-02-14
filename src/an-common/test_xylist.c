@@ -94,7 +94,7 @@ void test_tagalong(CuTest* ct) {
 }
 
 
-void test_simple(CuTest* ct) {
+void test_simple_xy(CuTest* ct) {
     xylist_t *in, *out;
     char* fn = get_tmpfile(1);
     xy_t fld;
@@ -154,7 +154,7 @@ void test_simple(CuTest* ct) {
     free(fn);
 }
 
-void test_read_write(CuTest* ct) {
+void test_read_write_xy(CuTest* ct) {
     xylist_t *in, *out;
     char* fn = get_tmpfile(0);
     xy_t fld;

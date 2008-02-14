@@ -6,6 +6,7 @@
 
 #include "fitstable.h"
 #include "fitsioutils.h"
+#include "fitsfile.h"
 
 struct fitscol_t {
     const char* colname;
@@ -402,8 +403,8 @@ static void* read_array(const fitstable_t* tab,
 
     if (fitstype != ctype) {
         if (csize <= fitssize) {
-            fits_convert_data(data, csize, ctype,
-                              data, fitssize, fitstype,
+            fits_convert_data(data, csize * arraysize, ctype,
+                              data, fitssize * arraysize, fitstype,
                               arraysize, N);
             if (csize < fitssize)
                 data = realloc(data, csize * N * arraysize);
@@ -649,32 +650,13 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
 }
 
 int fitstable_write_primary_header(fitstable_t* t) {
-	assert(t->fid);
-	assert(t->primheader);
-    // note, qfits_header_dump pads the file to the next FITS block.
-	qfits_header_dump(t->primheader, t->fid);
-	t->end_header_offset = ftello(t->fid);
-	return 0;
+    return fitsfile_write_primary_header(t->fid, t->primheader,
+                                         &t->end_header_offset, t->fn);
 }
 
 int fitstable_fix_primary_header(fitstable_t* t) {
-	off_t offset;
-    off_t old_end;
-    off_t new_end;
-	assert(t->fid);
-	assert(t->primheader);
-	offset = ftello(t->fid);
-	fseeko(t->fid, 0, SEEK_SET);
-    old_end = t->end_header_offset;
-    fitstable_write_header(t);
-    new_end = t->end_header_offset;
-	if (old_end != new_end) {
-		fprintf(stderr, "Error: fitstable header size changed: was %u, but is now %u.  Corruption is likely!\n",
-				(uint)old_end, (uint)new_end);
-		return -1;
-	}
-	fseeko(t->fid, offset, SEEK_SET);
-	return 0;
+    return fitsfile_fix_primary_header(t->fid, t->primheader,
+                                       &t->end_header_offset, t->fn);
 }
 
 // Called just before starting to write a new field.
@@ -691,44 +673,26 @@ int fitstable_new_table(fitstable_t* t) {
 }
 
 int fitstable_write_header(fitstable_t* t) {
-	assert(t->fid);
     if (!t->header) {
         if (fitstable_new_table(t)) {
             return -1;
         }
     }
-	assert(t->header);
-    // add padding.
-    fits_pad_file(t->fid);
-	t->table_offset = ftello(t->fid);
-	qfits_header_dump(t->header, t->fid);
-    t->end_table_offset = ftello(t->fid);
-	return 0;
+    return fitsfile_write_header(t->fid, t->header,
+                                 &t->table_offset, &t->end_table_offset,
+                                 t->extension, t->fn);
 }
 
 int fitstable_fix_header(fitstable_t* t) {
-	off_t offset;
-    off_t old_end;
-    off_t new_end;
-	assert(t->fid);
-	assert(t->header);
-	offset = ftello(t->fid);
-	fseeko(t->fid, t->table_offset, SEEK_SET);
-    old_end = t->end_table_offset;
     // update NAXIS2 to reflect the number of rows written.
     fits_header_mod_int(t->header, "NAXIS2", t->table->nr, NULL);
-    fitstable_write_header(t);
-    new_end = t->end_table_offset;
-	if (old_end != new_end) {
-		fprintf(stderr, "Error: fitstable table header size changed: was %u, but is now %u.  Corruption is likely!\n",
-				(uint)old_end, (uint)new_end);
-		return -1;
-	}
-    // go back to where we were (ie, probably the end of the data array)...
-	fseeko(t->fid, offset, SEEK_SET);
-    // add padding.
-    fits_pad_file(t->fid);
-	return 0;
+
+    if (fitsfile_fix_header(t->fid, t->header,
+                            &t->table_offset, &t->end_table_offset,
+                            t->extension, t->fn)) {
+        return -1;
+    }
+    return fits_pad_file(t->fid);
 }
 
 /*
