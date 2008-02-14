@@ -107,11 +107,11 @@ function sinh(x) {
 }
 
 function lat2y(lat) {
-    return 0.5 + asinh(tan(lat * Math.PI / 180.0));
+    return 0.5 + asinh(Math.tan(lat * Math.PI / 180.0));
 }
 
 function y2lat(y) {
-	return atan(sinh((y - 0.5) * (2.0 * Math.PI)));
+	return Math.atan(sinh((y - 0.5) * (2.0 * Math.PI)));
 }
 
 /*
