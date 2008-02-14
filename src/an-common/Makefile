@@ -80,7 +80,7 @@ ANFILES_DEPS :=
 
 ANFILES_OBJ := 
 ifndef NO_QFITS
-ANFILES_OBJ += starkd.o rdlist.o xylist.o an_catalog.o \
+ANFILES_OBJ += starkd.o rdlist.o xylist.o an-catalog.o \
 	qidxfile.o quadfile.o fitstable.o fitsbin.o fitsfile.o
 ANFILES_DEPS += $(QFITS_LIB)
 endif
