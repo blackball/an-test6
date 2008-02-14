@@ -80,6 +80,9 @@ struct render_args {
 	char* cmap;
 	bool nopre; // don't use pre-rendered tiles (useful when you're trying to *make* pre-rendered tiles)
 
+    // Assume the prerendered tiles are backwards (ie were rendered before the RA/merc flip)
+    bool pre_backward;
+
     char* version;
 
 	// Args for render_rdls

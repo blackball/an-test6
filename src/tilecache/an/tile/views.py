@@ -348,7 +348,6 @@ def get_tile(request):
                       (ramin, ramax, decmin, decmax, len(filenames)))
 
         # Compute filename
-        #m = hashlib.md5()
         m = sha.new()
         m.update(files)
         digest = m.hexdigest()

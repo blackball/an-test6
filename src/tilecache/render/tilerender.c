@@ -66,7 +66,7 @@ uLong compressBound (uLong sourceLen) {
   The width and height in pixels are  -w <width> -h <height>
   */
 
-const char* OPTIONS = "ab:c:dg:h:i:k:l:npr:sw:x:y:zB:C:D:F:I:JL:MN:RS:V:W:X:Y:";
+const char* OPTIONS = "ab:c:dg:h:i:k:l:npr:sw:x:y:zB:C:D:F:I:JL:MN:RS:V:W:X:Y:P";
 
 
 /* All render layers must go in here */

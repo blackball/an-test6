@@ -154,6 +154,8 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 
     switch (type) {
     case USNOB:
+        // FIXME - prerender!!
+        max_prerendered = -1;
         break;
     case CLEAN:
         max_prerendered = -1;

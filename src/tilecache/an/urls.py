@@ -20,6 +20,7 @@ urlpatterns = patterns('',
                        (r'^gmaps/$', 'an.tile.views.index'),
                        (r'^hoggthinksimg', 'an.portal.hoggthinks.image'),
                        (r'^hoggthinks', 'an.portal.hoggthinks.form'),
+                       (r'^easy-gmaps', 'an.portal.easy_gmaps.tile'),
                        #
                        (r'^$', 'an.portal.newjob.newlong'),
                        # This is a fake placeholder to allow {% url %} and reverse() to resolve an.media to /anmedia.

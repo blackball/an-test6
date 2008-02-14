@@ -27,9 +27,9 @@ def get_tile(request):
 
     cmdline = ('julia -W %i -H %i -x %g -X %g -y %g -Y %g' %
                (imw, imh, xmin, xmax, ymin, ymax))
-    if sx:
+    if sx is not None:
         cmdline += ' -s %g' % sx
-    if sy:
+    if sy is not None:
         cmdline += ' -S %g' % sy
 
     cmdline += ' | pnmtopng'

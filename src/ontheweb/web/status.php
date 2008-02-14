@@ -560,7 +560,7 @@ if ($didsolve) {
         $units = "arcminutes";
     }
 
-	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees";
+	echo "<h3 class=\"c\">Your field is at (RA, Dec) = (" . $rac . ", " . $decc . ") degrees";
     echo "<br />\n";
     echo "and spans " . ($exact ? "" : "about ");
     printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);

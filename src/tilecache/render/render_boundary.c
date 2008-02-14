@@ -36,7 +36,9 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	bool fullfilename = TRUE;
 	double r, g, b;
 
-	r = g = b = 1.0;
+	//r = g = b = 1.0;
+	r = b = 0;
+    g = 1.0;
 
 	logmsg("Starting.\n");
 
