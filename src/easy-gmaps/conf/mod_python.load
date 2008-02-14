@@ -1,1 +1,1 @@
-LoadModule python_module /usr/lib/apache2/modules/mod_python.so
+LoadModule python_module modules/mod_python.so
