@@ -12,6 +12,12 @@ def get_tile(request):
     try:
         (xmin, xmax, ymin, ymax) = get_bb(request)
         (imw, imh) = get_imagesize(request)
+        sx = None
+        sy = None
+        if 'seedx' in request.GET:
+            sx = float(request.GET['seedx'])
+        if 'seedy' in request.GET:
+            sy = float(request.GET['seedy'])
     except Exception, x:
         return HttpResponse(str(x))
 
@@ -19,8 +25,16 @@ def get_tile(request):
     ymin = 1. - ymax
     ymax = newymax
 
-    cmdline = ('julia -W %i -H %i -x %g -X %g -y %g -Y %g | pnmtopng' %
+    cmdline = ('julia -W %i -H %i -x %g -X %g -y %g -Y %g' %
                (imw, imh, xmin, xmax, ymin, ymax))
+    if sx:
+        cmdline += ' -s %g' % sx
+    if sy:
+        cmdline += ' -S %g' % sy
+
+    cmdline += ' | pnmtopng'
+
+
     cache = True
 
     if not cache:

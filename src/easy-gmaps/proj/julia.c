@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <sys/param.h>
 
-const char* OPTIONS = "x:X:y:Y:W:H:";
+const char* OPTIONS = "x:X:y:Y:W:H:s:S:";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -37,8 +37,17 @@ int main(int argc, char** args) {
     unsigned char* img;
     double cx, cy;
 
+    cx = -0.726895347709114071439;
+    cy =  0.188887129043845954792;
+
 	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 's':
+            cx = atof(optarg);
+            break;
+        case 'S':
+            cy = atof(optarg);
+            break;
         case 'x':
             xmin = atof(optarg);
             break;
@@ -87,9 +96,6 @@ int main(int argc, char** args) {
     ystep = (ymax - ymin) / (double)H;
 
     img = malloc(3 * W * H);
-
-    cx = -0.726895347709114071439;
-    cy =  0.188887129043845954792;
 
     for (j=0; j<H; j++) {
         double x, y;
