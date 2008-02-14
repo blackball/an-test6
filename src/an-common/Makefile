@@ -66,8 +66,7 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so
 ANUTILS_DEPS :=
 
 ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o \
-	sip.o sip-utils.o md5.o constellations.o gnu-specific.o an-endian.o \
-	anfits_table.o
+	sip.o sip-utils.o md5.o constellations.o gnu-specific.o an-endian.o
 ifndef NO_QFITS
 ANUTILS_OBJ += fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)
@@ -133,7 +132,6 @@ grab-stellarium-constellations: grab-stellarium-constellations.o \
 
 ALL_TEST_FILES = test_bl test_endian test_fitstable test_xylist \
 	test_rdlist
-#test_anfits_table 
 ALL_TEST_EXTRA_OBJS = 
 ALL_TEST_LIBS = $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -141,17 +139,11 @@ include $(COMMON)/makefile.tests
 
 DEP_OBJ += $(ALL_TEST_FILES_O)
 
-#test_anfits_table: $(ANUTILS_LIB) $(QFITS_LIB)
-
 test_fitstable: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 test_xylist: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-#test_xylist: xylist.o fitstable.o fitsioutils.o bl.o an-endian.o \
-#	ioutils.o $(QFITS_LIB)
 
 test_rdlist: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-#test_rdlist: rdlist.o xylist.o fitstable.o fitsioutils.o bl.o \
-#	an-endian.o ioutils.o $(QFITS_LIB)
 
 test_bl: $(ANUTILS_LIB)
 
