@@ -65,9 +65,6 @@ struct fitsbin_t {
     fitsbin_chunk_t* chunks;
     int nchunks;
 
-    // Error string in which to report errors.
-    char** errstr;
-
     // Writing:
     FILE* fid;
 
@@ -110,13 +107,11 @@ void fitsbin_set_filename(fitsbin_t* fb, const char* fn);
 // Single-chunk shortcuts:
 
 fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
-						char** errstr, 
 						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
 						void* userdata);
 int fitsbin_write_header(fitsbin_t* fb);
 int fitsbin_fix_header(fitsbin_t* fb);
 
-fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
-									char** errstr);
+fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename);
 
 #endif

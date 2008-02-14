@@ -957,7 +957,7 @@ static void solve_fields(blind_t* bp, sip_t* verify_wcs) {
             goto cleanup;
 
 		// Get the field.
-        if (xylist_read_field(bp->xyls, &xy)) {
+        if (!xylist_read_field(bp->xyls, &xy)) {
             logerr("Failed to read xylist field.\n");
             goto cleanup;
         }
@@ -1301,13 +1301,16 @@ static int write_solutions(blind_t* bp) {
             }
             assert(mo->indexrdls);
 
-            // HACK - make mo.indexrdls an rd_t.
+            // HACK - should instead make mo.indexrdls an rd_t.
             rd_from_array(&rd, mo->indexrdls, mo->nindexrdls);
 
             if (rdlist_write_field(bp->indexrdls, &rd)) {
                 logerr("Failed to write index RDLS entry.\n");
                 return -1;
             }
+
+            rd_free_data(&rd);
+
             if (rdlist_fix_header(bp->indexrdls)) {
                 logerr("Failed to fix index RDLS field header.\n");
                 return -1;

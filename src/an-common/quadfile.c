@@ -46,11 +46,11 @@ static int callback_read_header(qfits_header* primheader, qfits_header* header,
 
 	if ((qf->numquads == -1) || (qf->numstars == -1) ||
 		(qf->index_scale_upper == -1.0) || (qf->index_scale_lower == -1.0)) {
-		if (errstr) *errstr = "Couldn't find NQUADS or NSTARS or SCALE_U or SCALE_L entries in FITS header.";
+        asprintf(errstr, "Couldn't find NQUADS or NSTARS or SCALE_U or SCALE_L entries in FITS header.");
 		return -1;
 	}
     if (fits_check_endian(primheader)) {
-		if (errstr) *errstr = "File was written with the wrong endianness.";
+        asprintf(errstr, "File was written with the wrong endianness.");
 		return -1;
     }
 
@@ -97,9 +97,10 @@ quadfile* quadfile_open(const char* fn) {
         goto bailout;
 
     fitsbin_set_filename(qf->fb, fn);
-    if (fitsbin_read(qf->fb))
+    if (fitsbin_read(qf->fb)) {
+        fprintf(stderr, "quadfile_open: fitsbin_read failed.\n");
         goto bailout;
-
+    }
 	qf->quadarray = qf->fb->chunks[CHUNK_QUADS].data;
     return qf;
 

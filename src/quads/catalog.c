@@ -100,10 +100,7 @@ catalog* catalog_open(char* catfn) {
 
     fitsbin_set_filename(cat->fb, catfn);
     if (fitsbin_read(cat->fb)) {
-        if (*cat->fb->errstr)
-            fprintf(stderr, "%s\n", *cat->fb->errstr);
-        else
-            fprintf(stderr, "fitsbin_read() failed.\n");
+        fprintf(stderr, "catalog: fitsbin_read() failed.\n");
 		goto bailout;
 	}
 	cat->stars = cat->fb->chunks[CHUNK_XYZ].data;

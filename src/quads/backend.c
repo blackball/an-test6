@@ -310,9 +310,9 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 if (get_index_scales(fullpath, &lo, &hi) == 0) {
                     add_index(backend, fullpath, lo, hi);
                 } else {
-                    free(fullpath);
                     if (verbose)
                         printf("Failed to add index \"%s\".\n", fullpath);
+                    free(fullpath);
                 }
             }
             sl_free2(trybases);

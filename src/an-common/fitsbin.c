@@ -29,15 +29,19 @@
 #include "ioutils.h"
 #include "fitsfile.h"
 
-static void
-ATTRIB_FORMAT(printf,2,3)
-seterr(char** errstr, const char* format, ...) {
-	va_list va;
-	if (!errstr) return;
-	va_start(va, format);
-	vasprintf(errstr, format, va);
-	va_end(va);
-}
+/*
+ static void
+ ATTRIB_FORMAT(printf,2,3)
+ seterr(char** errstr, const char* format, ...) {
+ va_list va;
+ if (!errstr) return;
+ va_start(va, format);
+ vasprintf(errstr, format, va);
+ va_end(va);
+ // Hack
+ fprintf(stderr, "%s", *errstr);
+ }
+ */
 
 FILE* fitsbin_get_fid(fitsbin_t* fb) {
     return fb->fid;
@@ -90,6 +94,7 @@ int fitsbin_close(fitsbin_t* fb) {
         qfits_header_destroy(fb->primheader);
     for (i=0; i<fb->nchunks; i++)
         free_chunk(fb->chunks + i);
+    free(fb->filename);
     free(fb->chunks);
 	free(fb);
     return rtn;
@@ -182,8 +187,7 @@ int fitsbin_start_write(fitsbin_t* fb) {
     return 0;
 }
 
-fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
-									char** errstr) {
+fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename) {
 	fitsbin_t* fb;
     fitsbin_chunk_t* chunk;
 
@@ -208,7 +212,6 @@ fitsbin_t* fitsbin_open_for_writing(const char* fn, const char* tablename,
 }
 
 fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
-						char** errstr, 
 						int (*callback_read_header)(qfits_header* primheader, qfits_header* header, size_t* expected, char** errstr, void* userdata),
 						void* userdata) {
     fitsbin_t* fb;
@@ -219,8 +222,14 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
     if (!fb)
         return fb;
 
+    fb->primheader = qfits_header_read(fn);
+    if (!fb->primheader) {
+        fprintf(stderr, "Couldn't read FITS header from file \"%s\".", fn);
+        fitsbin_close(fb);
+        return NULL;
+    }
+
 	fb->filename = strdup(fn);
-    fb->errstr = errstr;
 
     chunk = fb->chunks;
     chunk->tablename = strdup(tablename);
@@ -232,9 +241,6 @@ fitsbin_t* fitsbin_open(const char* fn, const char* tablename,
         fitsbin_close(fb);
         return NULL;
     }
-    if (errstr)
-        *errstr = *(fb->errstr);
-
     return fb;
 }
 
@@ -247,36 +253,37 @@ int fitsbin_read(fitsbin_t* fb) {
 	int mapoffset;
     char* fn;
     int i;
-    char** errstr;
+    char* errstr;
 
     fn = fb->filename;
-    errstr = fb->errstr;
 
 	if (!qfits_is_fits(fn)) {
-        seterr(errstr, "File \"%s\" is not FITS format.", fn);
+        fprintf(stderr, "File \"%s\" is not FITS format.", fn);
         goto bailout;
 	}
+
+    // HACK .... what is the interaction between this func and fitsbin_open()?
+    if (!fb->primheader) {
+        fb->primheader = qfits_header_read(fn);
+        if (!fb->primheader) {
+            fprintf(stderr, "Couldn't read FITS header from file \"%s\".", fn);
+            //fitsbin_close(fb);
+            return -1;
+        }
+    }
 
 	fid = fopen(fn, "rb");
 	if (!fid) {
-		seterr(errstr, "Failed to open file \"%s\": %s.", fn, strerror(errno));
+		fprintf(stderr, "Failed to open file \"%s\": %s.", fn, strerror(errno));
         goto bailout;
 	}
-
-    /*
-     fb->primheader = qfits_header_read(fn);
-     if (!fb->primheader) {
-     seterr(errstr, "Couldn't read FITS header from file \"%s\".", fn);
-     goto bailout;
-     }
-     */
 
     for (i=0; i<fb->nchunks; i++) {
         fitsbin_chunk_t* chunk = fb->chunks + i;
 
         if (fits_find_table_column(fn, chunk->tablename, &tabstart, &tabsize, &ext)) {
             if (chunk->required) {
-                seterr(errstr, "Couldn't find table \"%s\" in file \"%s\".", chunk->tablename, fn);
+                fprintf(stderr, "Couldn't find table \"%s\" in file \"%s\".", chunk->tablename, fn);
                 goto bailout;
             } else {
                 continue;
@@ -285,17 +292,18 @@ int fitsbin_read(fitsbin_t* fb) {
 
         chunk->header = qfits_header_readext(fn, ext);
         if (!chunk->header) {
-            seterr(errstr, "Couldn't read FITS header from file \"%s\" extension %i.", fn, ext);
+            fprintf(stderr, "Couldn't read FITS header from file \"%s\" extension %i.", fn, ext);
             goto bailout;
         }
 
         if (chunk->callback_read_header &&
-            chunk->callback_read_header(fb->primheader, chunk->header, &expected, fb->errstr, chunk->userdata)) {
+            chunk->callback_read_header(fb->primheader, chunk->header, &expected, &errstr, chunk->userdata)) {
+            fprintf(stderr, "fitsbin callback failed: %s\n", errstr);
             goto bailout;
         }
 
         if (expected && (fits_bytes_needed(expected) != tabsize)) {
-            seterr(errstr, "Expected table size (%i => %i FITS blocks) is not equal to size of table \"%s\" (%i FITS blocks).",
+            fprintf(stderr, "Expected table size (%i => %i FITS blocks) is not equal to size of table \"%s\" (%i FITS blocks).",
                    (int)expected, fits_blocks_needed(expected), chunk->tablename, tabsize / FITS_BLOCK_SIZE);
             goto bailout;
         }
@@ -307,7 +315,7 @@ int fitsbin_read(fitsbin_t* fb) {
 
         chunk->map = mmap(0, chunk->mapsize, mode, flags, fileno(fid), mapstart);
         if (chunk->map == MAP_FAILED) {
-            seterr(errstr, "Couldn't mmap file \"%s\": %s", fn, strerror(errno));
+            fprintf(stderr, "Couldn't mmap file \"%s\": %s", fn, strerror(errno));
             chunk->map = NULL;
             goto bailout;
         }
