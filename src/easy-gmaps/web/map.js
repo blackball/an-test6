@@ -86,7 +86,7 @@ var TILE_URL  = CONFIG_TILE_URL;
 var getdata;
 
 // args that we pass on.
-var passargs = [ 'rotation' ];
+var passargs = [ ];
 
 var gotoform = document.getElementById("gotoform");
 
@@ -185,6 +185,8 @@ function linktohere() {
 	url += "?x=" + long2x(center.lng()) + "&y=" + lat2y(center.lat())
 		+ "&zoom=" + map.getZoom();
 
+    url += '&seedx=' + seedx + '&seedy=' + seedy;
+
 	var show = [];
 	if (imageShowing)
 		show.push("image");
@@ -263,7 +265,8 @@ function makeMapType(tiles, label) {
 	return new GMapType(tiles, G_SATELLITE_MAP.getProjection(), label, G_SATELLITE_MAP);
 }
 
-var rotation = 0;
+var seedx = 0;
+var seedy = 0;
 
 function min(a, b) {
 	if (a < b) return a;
@@ -313,7 +316,8 @@ function toggleGrid() {
 
 function updateGrid() {
 	//var tag = "&tag=grid";
-	var tag = "&rotation=" + rotation;
+	//var tag = "&rotation=" + rotation;
+    var tag = '';
 	var layers = [];
 	if (gridShowing)
 		layers.push('grid');
@@ -322,7 +326,7 @@ function updateGrid() {
 
 function updateImage() {
 	//var tag = "&tag=image";
-	var tag = "&rotation=" + rotation;
+	var tag = "&seedx=" + seedx + "&seedy=" + seedy;
 	var lay = [];
 	if (imageShowing)
 		lay.push('image');
@@ -348,11 +352,20 @@ function mymap(f, arr) {
 	return res;
 }
 
-function changeRotation() {
-	rotation = Number(gotoform.rotation.value);
+function changeSeed() {
+	seedx = Number(gotoform.seedx.value);
+	seedy = Number(gotoform.seedy.value);
 	updateImage();
 	updateGrid();
 	restackOverlays();
+}
+
+function setSeed(x, y) {
+    //seedx = x;
+    //seedy = y;
+    gotoform.seedx.value = "" + x;
+    gotoform.seedy.value = "" + y;
+    changeSeed();
 }
 
 function removeAllChildren(node) {
@@ -424,10 +437,16 @@ function startup() {
     map.addMapType(blackMapType);
     map.setMapType(blackMapType);
 
-	if ('rotation' in getdata) {
-		gotoform.rotation.value = getdata['rotation'];
-		changeRotation();
+    setSeed(-0.726895347709114071439,
+            0.188887129043845954792);
+
+	if ('seedx' in getdata) {
+		gotoform.seedx.value = getdata['seedx'];
 	}
+	if ('seedy' in getdata) {
+		gotoform.seedy.value = getdata['seedy'];
+	}
+    changeSeed();
 
 	if ('show' in getdata) {
 		var showstr = getdata['show'];
