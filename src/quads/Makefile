@@ -56,7 +56,7 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc \
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-MISC_EXECS := 2masstofits nomadtofits project-usnob diffractionFlag_check \
+MISC_EXECS := project-usnob diffractionFlag_check \
 	hpgrid read_nomad tycho2tostellarium
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
@@ -76,7 +76,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	solvedserver printsolved xylist2fits mergesolved rdlsinfo xylsinfo \
 	wcsinfo fits-guess-scale an-fitstopnm agreeable new-wcs get-wcs \
 	backend augment-xylist solve-field plotcat wcs-xy2rd wcs-rd2xy \
-	certifiable wcs-annotate get-healpix
+	certifiable wcs-annotate get-healpix 2masstofits nomadtofits
 
 PROSPECTUS := quadidx codeprojections quadlocations quadscales quadsperstar \
 	whynot quadcenters startree2rdls
@@ -301,7 +301,7 @@ nomadtofits: nomadtofits.o nomad_fits.o nomad.o \
 
 read_nomad: read_nomad.o nomad.o
 
-2masstofits: $(2MASSOBJ) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+2masstofits: $(2MASSOBJ) $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
 
 diffractionFlag_check: diffractionFlag_check.o usnob_fits.o usnob.o \

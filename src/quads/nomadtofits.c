@@ -186,7 +186,6 @@ int main(int argc, char** args) {
 
 			if (!nomads[hp]) {
 				char fn[256];
-				char val[256];
 				sprintf(fn, outfn, hp);
 				nomads[hp] = nomad_fits_open_for_writing(fn);
 				if (!nomads[hp]) {

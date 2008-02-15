@@ -165,7 +165,7 @@ int main(int argc, char** args) {
 		char* infn;
 		usnob_fits* usnob = NULL;
 		tycho2_fits* tycho = NULL;
-		twomass_catalog* twomass = NULL;
+		twomass_fits* twomass = NULL;
 		qfits_header* hdr;
 		bool is_usnob = FALSE;
 		bool is_tycho = FALSE;
@@ -195,7 +195,7 @@ int main(int argc, char** args) {
 			if (!usnob) {
 				tycho = tycho2_fits_open(infn);
 				if (!tycho) {
-					twomass = twomass_catalog_open(infn);
+					twomass = twomass_fits_open(infn);
 					if (!twomass) {
 						fprintf(stderr, "Couldn't figure out what catalog file %s came from.\n", infn);
 						exit(-1);
@@ -215,7 +215,7 @@ int main(int argc, char** args) {
 				exit(-1);
 			}
 		} else if (is_2mass) {
-			twomass = twomass_catalog_open(infn);
+			twomass = twomass_fits_open(infn);
 			if (!twomass) {
 				fprintf(stderr, "Couldn't open 2MASS catalog: %s\n", infn);
 				exit(-1);
@@ -381,7 +381,7 @@ int main(int argc, char** args) {
 
 		} else if (twomass) {
 			twomass_entry* entry;
-			int N = twomass_catalog_count_entries(twomass);
+			int N = twomass_fits_count_entries(twomass);
 			printf("Reading %i entries from 2MASS catalog file %s\n", N, infn);
 			twomass->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
@@ -390,7 +390,7 @@ int main(int argc, char** args) {
 					printf(".");
 					fflush(stdout);
 				}
-				entry = twomass_catalog_read_entry(twomass);
+				entry = twomass_fits_read_entry(twomass);
 				if (!entry) {
 					fprintf(stderr, "Failed to read 2MASS entry.\n");
 					exit(-1);
@@ -457,7 +457,7 @@ int main(int argc, char** args) {
 				an_catalog_write_entry(cats[hp], &an);
 				n2mass++;
 			}
-			twomass_catalog_close(twomass);
+			twomass_fits_close(twomass);
 			printf("\n");
 		}
 

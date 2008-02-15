@@ -326,7 +326,6 @@ nomad_fits* nomad_fits_open_for_writing(char* fn) {
 
 int nomad_fits_write_headers(nomad_fits* nomad) {
 	qfits_header* table_header;
-	char val[32];
 	assert(nomad->fid);
 	assert(nomad->header);
 	fits_header_mod_int(nomad->header, "NOBJS", nomad->nentries, "Number of objects in this catalog.");
