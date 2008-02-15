@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2006-2008 Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -34,7 +34,7 @@
 #include "mathutil.h"
 #include "boilerplate.h"
 #include "fitsioutils.h"
-#include "2mass_catalog.h"
+#include "2mass-fits.h"
 #include "gnu-specific.h"
 
 #define OPTIONS "ho:N:H:"
