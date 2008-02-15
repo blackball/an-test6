@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "usnob.h"
 #include "catalog.h"
 #include "idfile.h"

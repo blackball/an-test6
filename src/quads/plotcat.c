@@ -26,7 +26,7 @@
 #include "keywords.h"
 #include "starutil.h"
 #include "catalog.h"
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "usnob_fits.h"
 #include "tycho2_fits.h"
 #include "mathutil.h"

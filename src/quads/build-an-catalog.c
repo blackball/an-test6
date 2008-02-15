@@ -24,7 +24,7 @@
 #include <sys/mman.h>
 #include <assert.h>
 
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "usnob_fits.h"
 #include "tycho2_fits.h"
 #include "fitsioutils.h"
@@ -71,7 +71,7 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int 
 	fits_header_add_int(cats[hp]->header, "NSIDE", Nside, "The healpix resolution.");
 	boilerplate_add_fits_headers(cats[hp]->header);
 	qfits_header_add(cats[hp]->header, "HISTORY", "Created by the program \"build-an-catalog\"", NULL, NULL);
-	qfits_header_add(cats[hp]->header, "HISTORY", "build_an_catalog command line:", NULL, NULL);
+	qfits_header_add(cats[hp]->header, "HISTORY", "build-an-catalog command line:", NULL, NULL);
 	fits_add_args(cats[hp]->header, args, argc);
 	qfits_header_add(cats[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
 

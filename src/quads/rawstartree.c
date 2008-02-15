@@ -29,7 +29,7 @@
 #include "starutil.h"
 #include "kdtree.h"
 #include "kdtree_fits_io.h"
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "mathutil.h"
 
 #define OPTIONS "ho:l:m:"
