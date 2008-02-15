@@ -9,11 +9,11 @@
 #include "fitsfile.h"
 
 struct fitscol_t {
-    const char* colname;
+    char* colname;
 
     tfits_type fitstype;
     tfits_type ctype;
-    const char* units;
+    char* units;
     int arraysize;
 
     bool required;
@@ -90,6 +90,20 @@ tfits_type fitscolumn_float_type() {
     return TFITS_BIN_TYPE_E;
 }
 
+tfits_type fitscolumn_char_type() {
+    return TFITS_BIN_TYPE_A;
+}
+
+tfits_type fitscolumn_u8_type() {
+    return TFITS_BIN_TYPE_B;
+}
+tfits_type fitscolumn_i32_type() {
+    return TFITS_BIN_TYPE_J;
+}
+tfits_type fitscolumn_i64_type() {
+    return TFITS_BIN_TYPE_K;
+}
+
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type() {
     return (tfits_type)-1;
@@ -127,8 +141,8 @@ void fitstable_add_write_column_array_convert(fitstable_t* tab,
                                               const char* units) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
-    col.colname = name;
-    col.units = units;
+    col.colname = strdup(name);
+    col.units = strdup(units);
     col.fitstype = fits_type;
     col.ctype = c_type;
     col.arraysize = arraysize;
@@ -168,8 +182,8 @@ void fitstable_add_column_struct(fitstable_t* tab,
                                  bool required) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
-    col.colname = name;
-    col.units = units;
+    col.colname = strdup(name);
+    col.units = strdup(units);
     col.fitstype = fits_type;
     col.ctype = c_type;
     col.arraysize = arraysize;
@@ -509,6 +523,7 @@ fitstable_t* fitstable_open_for_writing(const char* fn) {
 }
 
 int fitstable_close(fitstable_t* tab) {
+    int i;
     int rtn = 0;
     if (!tab) return 0;
     if (tab->fid) {
@@ -525,6 +540,11 @@ int fitstable_close(fitstable_t* tab) {
     if (tab->table)
         qfits_table_close(tab->table);
     free(tab->fn);
+    for (i=0; i<ncols(tab); i++) {
+        fitscol_t* col = getcol(tab, i);
+        free(col->colname);
+        free(col->units);
+    }
     bl_free(tab->cols);
     free(tab);
     return rtn;

@@ -122,6 +122,10 @@ typedef struct fitstable_t fitstable_t;
 tfits_type fitscolumn_int_type();
 tfits_type fitscolumn_double_type();
 tfits_type fitscolumn_float_type();
+tfits_type fitscolumn_char_type();
+tfits_type fitscolumn_u8_type();
+tfits_type fitscolumn_i32_type();
+tfits_type fitscolumn_i64_type();
 
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type();

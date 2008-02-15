@@ -107,6 +107,7 @@ int main(int argc, char** args) {
 		an_entry* entry;
 		int oob = 0;
 		int lastgrass = 0;
+        int N;
 
 		/*
 		  int buckets[8];
@@ -118,9 +119,10 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to open Astrometry.net catalog %s\n", fn);
 			exit(-1);
 		}
-		fprintf(stderr, "Reading %i entries for catalog file %s.\n", ancat->nentries, fn);
+        N = an_catalog_count_entries(ancat);
+		fprintf(stderr, "Reading %i entries for catalog file %s.\n", N, fn);
 
-		for (j=0; j<ancat->nentries; j++) {
+		for (j=0; j<N; j++) {
 			int x, y;
 			int grass;
 			float vertscale;
@@ -130,7 +132,7 @@ int main(int argc, char** args) {
 			if (!entry)
 				break;
 
-			grass = (j * 80 / ancat->nentries);
+			grass = (j * 80 / N);
 			if (grass != lastgrass) {
 				fprintf(stderr, ".");
 				fflush(stderr);

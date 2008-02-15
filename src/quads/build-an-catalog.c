@@ -60,6 +60,7 @@ extern int optind, opterr, optopt;
 
 static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int argc, char** args) {
 	char fn[256];
+    qfits_header* hdr;
 	sprintf(fn, outfn, hp);
 	cats[hp] = an_catalog_open_for_writing(fn);
 	if (!cats[hp]) {
@@ -67,13 +68,15 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int 
 		exit(-1);
 	}
 	// header remarks...
-	fits_header_add_int(cats[hp]->header, "HEALPIX", hp, "The healpix number of this catalog.");
-	fits_header_add_int(cats[hp]->header, "NSIDE", Nside, "The healpix resolution.");
-	boilerplate_add_fits_headers(cats[hp]->header);
-	qfits_header_add(cats[hp]->header, "HISTORY", "Created by the program \"build-an-catalog\"", NULL, NULL);
-	qfits_header_add(cats[hp]->header, "HISTORY", "build-an-catalog command line:", NULL, NULL);
-	fits_add_args(cats[hp]->header, args, argc);
-	qfits_header_add(cats[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
+    hdr = an_catalog_get_primary_header(cats[hp]);
+	fits_header_add_int(hdr, "HEALPIX", hp, "The healpix number of this catalog.");
+	fits_header_add_int(hdr, "NOBJS", 0, "(filler)");
+	fits_header_add_int(hdr, "NSIDE", Nside, "The healpix resolution.");
+	boilerplate_add_fits_headers(hdr);
+	qfits_header_add(hdr, "HISTORY", "Created by the program \"build-an-catalog\"", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "build-an-catalog command line:", NULL, NULL);
+	fits_add_args(hdr, args, argc);
+	qfits_header_add(hdr, "HISTORY", "(end of command line)", NULL, NULL);
 
 	if (an_catalog_write_headers(cats[hp])) {
 		fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
@@ -459,17 +462,11 @@ int main(int argc, char** args) {
 
 		// update and sync each output file...
 		for (i=0; i<HP; i++) {
-			off_t offset;
 			if (!cats[i]) continue;
 			if (an_catalog_fix_headers(cats[i])) {
 				fprintf(stderr, "Error fixing the header or closing AN catalog for healpix %i.\n", i);
 			}
-			offset = ftello(cats[i]->fid);
-			if (fits_pad_file(cats[i]->fid) ||
-				fdatasync(fileno(cats[i]->fid))) {
-				fprintf(stderr, "Error padding and syncing AN catalog file for healpix %i.\n", i);
-			}
-			fseeko(cats[i]->fid, offset, SEEK_SET);
+            an_catalog_sync(cats[i]);
 		}
 	}
 
@@ -477,8 +474,10 @@ int main(int argc, char** args) {
 		   nusnob, ntycho, n2mass);
 
 	for (i=0; i<HP; i++) {
+        qfits_header* hdr;
 		if (!cats[i]) continue;
-		fits_header_mod_int(cats[i]->header, "NOBJS", cats[i]->nentries, "Number of objects in this catalog.");
+        hdr = an_catalog_get_primary_header(cats[hp]);
+		fits_header_mod_int(hdr, "NOBJS", an_catalog_count_entries(cats[i]), "Number of objects in this catalog.");
 		if (an_catalog_fix_headers(cats[i]) ||
 			an_catalog_close(cats[i])) {
 			fprintf(stderr, "Error fixing the header or closing AN catalog for healpix %i.\n", i);

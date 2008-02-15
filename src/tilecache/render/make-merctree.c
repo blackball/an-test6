@@ -234,6 +234,7 @@ int main(int argc, char** args) {
 		char fn[1024];
 		int hp;
 		an_catalog* cat;
+        int n;
 
 		hp = il_get(hps, i);
 		sprintf(fn, infn, hp);
@@ -244,8 +245,9 @@ int main(int argc, char** args) {
 				continue;
 			exit(-1);
 		}
-		fprintf(stderr, "  %i points in %s\n", cat->nentries, fn);
-		N += cat->nentries;
+        n = an_catalog_count_entries(cat);
+		fprintf(stderr, "  %i points in %s\n", n, fn);
+		N += n;
 		an_catalog_close(cat);
 	}
 	fprintf(stderr, "Total: %i points.\n", N);
@@ -265,6 +267,7 @@ int main(int argc, char** args) {
 		int hp;
 		an_catalog* cat;
 		int j;
+        int n;
 
 		hp = il_get(hps, i);
 		sprintf(fn, infn, hp);
@@ -276,7 +279,8 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 
-		for (j=0; j<cat->nentries; j++) {
+        n = an_catalog_count_entries(cat);
+		for (j=0; j<n; j++) {
 			float vertscale;
 			an_entry* entry;
 			double x, y;

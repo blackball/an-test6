@@ -299,8 +299,8 @@ int main(int argc, char *argv[])
 					fprintf(stderr, "Couldn't open catalog.\n");
 					exit(-1);
 				}
-				numstars = ancat->nentries;
-				ancat->br.blocksize = BLOCK;
+				numstars = an_catalog_count_entries(ancat);
+				an_catalog_set_blocksize(ancat, BLOCK);
 			}
 		}
 		if (qfits_header_getboolean(hdr, "USNOB", 0)) {

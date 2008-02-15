@@ -535,8 +535,8 @@ int main(int argc, char** args) {
 					fprintf(stderr, "Couldn't open file \"%s\" as an Astrometry.net catalog.\n", infn);
 					exit(-1);
 				}
-				N = ancat->nentries;
-				ancat->br.blocksize = BLOCK;
+				N = an_catalog_count_entries(ancat);
+				an_catalog_set_blocksize(ancat, BLOCK);
 			} else {
 				fprintf(stderr, "File \"%s\": doesn't seem to be an Astrometry.net "
 						"catalog or a cut catalog (.objs.fits file).\n", infn);

@@ -23,11 +23,12 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-typedef uint64_t uint64;
 
 #include "qfits.h"
-
 #include "ioutils.h"
+#include "fitstable.h"
+
+#define AN_FILETYPE_ANCAT "ANCAT"
 
 enum an_sources {
 	AN_SOURCE_UNKNOWN,
@@ -39,7 +40,7 @@ enum an_sources {
 struct an_observation {
 	unsigned char catalog;
 	unsigned char band;
-	unsigned int id;
+	int id;
 	float mag;
 	float sigma_mag;
 };
@@ -48,7 +49,7 @@ typedef struct an_observation an_observation;
 #define AN_N_OBSERVATIONS 5
 
 struct an_entry {
-	uint64 id;
+	uint64_t id;
     // In degrees
 	double ra;
     // In degrees
@@ -65,7 +66,7 @@ struct an_entry {
 	float sigma_motion_ra;
     // In arcsec/yr
 	float sigma_motion_dec;
-	unsigned char nobs;
+	uint8_t nobs;
 	an_observation obs[AN_N_OBSERVATIONS];
 };
 typedef struct an_entry an_entry;
@@ -73,21 +74,20 @@ typedef struct an_entry an_entry;
 #define AN_FITS_COLUMNS 35
 
 struct an_catalog {
-	qfits_table* table;
-	int columns[AN_FITS_COLUMNS];
-	unsigned int nentries;
+    //
+    fitstable_t* ft;
 	// buffered reading
 	bread br;
-	// when writing:
-	qfits_header* header;
-	FILE* fid;
-	off_t header_end;
 };
 typedef struct an_catalog an_catalog;
 
 an_catalog* an_catalog_open(char* fn);
 
 an_catalog* an_catalog_open_for_writing(char* fn);
+
+qfits_header* an_catalog_get_primary_header(const an_catalog* cat);
+
+int an_catalog_sync(an_catalog* cat);
 
 int an_catalog_write_headers(an_catalog* cat);
 
@@ -105,5 +105,7 @@ int an_catalog_close(an_catalog* cat);
 int an_catalog_write_entry(an_catalog* cat, an_entry* entry);
 
 int64_t an_catalog_get_id(int catversion, int64_t starid);
+
+void an_catalog_set_blocksize(an_catalog* cat, int block);
 
 #endif
