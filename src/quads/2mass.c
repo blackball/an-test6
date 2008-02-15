@@ -29,7 +29,7 @@ int twomass_is_value_null(float val) {
 
 // parses a value that may be null (represented by "\N" in the 2MASS data files).
 // expects the value to be followed by "|".
-static int parse_null(char** pcursor, float* dest) {
+static int parse_null(const char** pcursor, float* dest) {
 	int nchars;
 	if (!strncmp(*pcursor, "\\N|", 3)) {
 		*dest = TWOMASS_NULL;
@@ -120,8 +120,8 @@ int twomass_is_null_float(float f) {
 	return isnan(f);
 }
 
-int twomass_parse_entry(struct twomass_entry* e, char* line) {
-	char* cursor;
+int twomass_parse_entry(struct twomass_entry* e, const char* line) {
+	const char* cursor;
 	int nchars;
 	int i;
 	double vals1[5];

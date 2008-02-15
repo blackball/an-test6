@@ -168,7 +168,7 @@ solver_test.o: solver.c
 #######################################
 
 # Add the basename of your test sources here...
-ALL_TEST_FILES = test_dfind test_ctmf test_simplexy test_dsmooth
+ALL_TEST_FILES = test_dfind test_ctmf test_simplexy test_dsmooth test_2mass
 
 ALL_TEST_EXTRA_OBJS :=
 ALL_TEST_LIBS :=
@@ -192,6 +192,8 @@ test_simplexy: $(TEST_SIMPLEXY_OBJS) $(ANUTILS_LIB)
 TEST_DSMOOTH_OBJS := dsmooth.o
 ALL_TEST_EXTRA_OBJS += $(TEST_DSMOOTH_OBJS)
 test_dsmooth: $(TEST_DSMOOTH_OBJS)
+
+test_2mass: 2mass.o 2mass-fits.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 include $(COMMON)/makefile.tests
 

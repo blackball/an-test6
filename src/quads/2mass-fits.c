@@ -51,11 +51,11 @@ static twomass_fits* cat_new() {
 #define ADDARR(ctype, ftype, col, units, member, arraysize)             \
     if (write) {                                                        \
         fitstable_add_column_struct                                     \
-            (tab, ctype, 1, offsetof(twomass_entry, member),            \
+            (tab, ctype, arraysize, offsetof(twomass_entry, member),    \
              ftype, col, units, TRUE);                                  \
     } else {                                                            \
         fitstable_add_column_struct                                     \
-            (tab, ctype, 1, offsetof(twomass_entry, member),            \
+            (tab, ctype, arraysize, offsetof(twomass_entry, member),    \
              any, col, units, TRUE);                                    \
     }
 
@@ -93,13 +93,13 @@ static void add_columns(fitstable_t* tab, bool write) {
 	ADDCOL(f,  f,       "PROX",              "deg",  proximity);
 	ADDCOL(f,  u8,      "PROX_ANGLE",        "deg",  prox_angle);
 	ADDCOL(i,  j,       "PROX_KEY",          nil,    prox_key);
-	ADDCOL(i16, I,       "DATE_YEAR",         "yr",   date_year);
+	ADDCOL(i16, I,      "DATE_YEAR",         "yr",   date_year);
 	ADDCOL(u8, u8,      "DATE_MONTH",        "month", date_month);
 	ADDCOL(u8, u8,      "DATE_DAY",          "day",  date_day);
-	ADDCOL(d,  d,       "JDATE",             "day",  date_day);
-	ADDCOL(i16, i,       "SCAN",              nil,    scan);
+	ADDCOL(d,  d,       "JDATE",             "day",  jdate);
+	ADDCOL(i16, i,      "SCAN",              nil,    scan);
 	ADDCOL(b,  logical, "MINOR_PLANET",      nil,    minor_planet);
-	ADDCOL(f,  u8,      "PHI_OPT",           "deg",  phi_opt);
+	ADDCOL(f,  f,       "PHI_OPT",           "deg",  phi_opt);
 	ADDCOL(f,  f,       "GLON",              "deg",  glon);
 	ADDCOL(f,  f,       "GLAT",              "deg",  glat);
 	ADDCOL(f,  f,       "X_SCAN",            "deg",  x_scan);
@@ -115,10 +115,10 @@ static void add_columns(fitstable_t* tab, bool write) {
 	ADDCOL(b,  logical, "USE_SRC",           nil,    use_src);
 	ADDCOL(c,  c,       "ASSOCATION",        nil,    association);
 	ADDCOL(i,  j,       "COADD_KEY",         nil,    coadd_key);
-	ADDCOL(i16, I,       "COADD",             nil,    coadd);
+	ADDCOL(i16, I,      "COADD",             nil,    coadd);
 	ADDCOL(i,  j,       "SCAN_KEY",          nil,    scan_key);
 	ADDCOL(i,  j,       "XSC_KEY",           nil,    xsc_key);
-	                                                 
+
 	ADDCOL(f,  f,       "J_MAG",             "mag",  j_m);
 	ADDCOL(f,  f,       "J_CMSIG",           "mag",  j_cmsig);
 	ADDCOL(f,  f,       "J_MSIGCOM",         "mag",  j_msigcom);
@@ -171,13 +171,16 @@ twomass_fits* twomass_fits_open(char* fn) {
         return NULL;
     cat->ft = fitstable_open(fn);
     if (!cat->ft) {
-        fprintf(stderr, "2mass-catalog: failed to open table.\n");
+        fprintf(stderr, "2mass-fits: failed to open table.\n");
         twomass_fits_close(cat);
         return NULL;
     }
     add_columns(cat->ft, FALSE);
     if (fitstable_read_extension(cat->ft, 1)) {
-        fprintf(stderr, "2mass-catalog: table in extension 1 didn't contain the required columns.\n");
+        fprintf(stderr, "2mass-fits: table in extension 1 didn't contain the required columns.\n");
+        fprintf(stderr, "  missing: ");
+        fitstable_print_missing(cat->ft, stderr);
+        fprintf(stderr, "\n");
         twomass_fits_close(cat);
         return NULL;
     }
@@ -193,10 +196,11 @@ twomass_fits* twomass_fits_open_for_writing(char* fn) {
         return NULL;
     cat->ft = fitstable_open_for_writing(fn);
     if (!cat->ft) {
-        fprintf(stderr, "2mass-catalog: failed to open table.\n");
+        fprintf(stderr, "2mass-fits: failed to open table.\n");
         twomass_fits_close(cat);
         return NULL;
     }
+    add_columns(cat->ft, TRUE);
     hdr = fitstable_get_primary_header(cat->ft);
 	//qfits_header_add(hdr, "2MASS", "T", "This is a 2-MASS catalog.", NULL);
     //qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_2MASS, "Astrometry.net file type", NULL);

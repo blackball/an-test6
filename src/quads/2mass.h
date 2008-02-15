@@ -172,9 +172,9 @@ struct twomass_entry {
     // [degrees]
 	float dist_edge_ns;
 	float dist_edge_ew;
-	// 1=north
+	// TRUE=north
 	bool dist_flag_ns;
-	// 1=east
+	// TRUE=east
 	bool dist_flag_ew;
 
 	uint8_t dup_src;
@@ -189,7 +189,7 @@ struct twomass_entry {
 
 	unsigned int scan_key;
 
-	// (null)
+	// AKA ext_key (null)
 	unsigned int xsc_key;
 
 	unsigned int coadd_key;
@@ -218,7 +218,7 @@ enum twomass_quality_val {
 };
 
 enum twomass_cc_val {
-	TWOMASS_CC_NONE,
+	TWOMASS_CC_NONE,            // 0 flag
 	TWOMASS_CC_PERSISTENCE,     // p flag
 	TWOMASS_CC_CONFUSION,       // c
 	TWOMASS_CC_DIFFRACTION,     // d
@@ -228,7 +228,7 @@ enum twomass_cc_val {
 
 int twomass_is_value_null(float val);
 
-int twomass_parse_entry(struct twomass_entry* entry, char* line);
+int twomass_parse_entry(twomass_entry* entry, const char* line);
 
 int twomass_cc_flag(unsigned char val, unsigned char flag);
 
