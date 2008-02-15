@@ -123,9 +123,14 @@ tfits_type fitscolumn_int_type();
 tfits_type fitscolumn_double_type();
 tfits_type fitscolumn_float_type();
 tfits_type fitscolumn_char_type();
+tfits_type fitscolumn_boolean_type();
 tfits_type fitscolumn_u8_type();
+tfits_type fitscolumn_i16_type();
 tfits_type fitscolumn_i32_type();
 tfits_type fitscolumn_i64_type();
+
+// an-bool type.
+tfits_type fitscolumn_bool_type();
 
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type();

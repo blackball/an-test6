@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <assert.h>
+#include <math.h>
 
 #include "an-catalog.h"
 #include "usnob_fits.h"

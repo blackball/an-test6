@@ -97,11 +97,21 @@ tfits_type fitscolumn_char_type() {
 tfits_type fitscolumn_u8_type() {
     return TFITS_BIN_TYPE_B;
 }
+tfits_type fitscolumn_i16_type() {
+    return TFITS_BIN_TYPE_I;
+}
 tfits_type fitscolumn_i32_type() {
     return TFITS_BIN_TYPE_J;
 }
 tfits_type fitscolumn_i64_type() {
     return TFITS_BIN_TYPE_K;
+}
+tfits_type fitscolumn_boolean_type() {
+    return TFITS_BIN_TYPE_L;
+}
+
+tfits_type fitscolumn_bool_type() {
+    return TFITS_BIN_TYPE_L;
 }
 
 // When reading: allow this column to match to any FITS type.

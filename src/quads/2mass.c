@@ -21,6 +21,7 @@
 #include <assert.h>
 
 #include "2mass.h"
+#include "starutil.h"
 
 int twomass_is_value_null(float val) {
     return (!isfinite(val));
@@ -42,7 +43,7 @@ static int parse_null(char** pcursor, float* dest) {
 	return 0;
 }
 
-static int parse_quality_flag(char flag, unsigned char* val) {
+static int parse_quality_flag(char flag, char* val) {
 	switch (flag) {
 	case 'X':
 		*val = TWOMASS_QUALITY_NO_BRIGHTNESS;
@@ -74,7 +75,7 @@ static int parse_quality_flag(char flag, unsigned char* val) {
 	return 0;
 }
 
-static int parse_cc_flag(char flag, unsigned char* val) {
+static int parse_cc_flag(char flag, char* val) {
 	switch (flag) {
 	case 'p':
 		*val = TWOMASS_CC_PERSISTENCE;
@@ -137,9 +138,9 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	}
 	e->ra = vals1[0];
 	e->dec = vals1[1];
-	e->err_major = vals1[2];
-	e->err_minor = vals1[3];
-	e->err_angle = (unsigned char)vals1[4];
+	e->err_major = arcsec2deg(vals1[2]);
+	e->err_minor = arcsec2deg(vals1[3]);
+	e->err_angle = vals1[4];
 
 	printval("ra %g, dec %g, err_major %g, err_minor %g, err_angle %i\n", e->ra, e->dec, e->err_major, e->err_minor, e->err_angle);
 
@@ -174,7 +175,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 
 	for (i=0; i<3; i++) {
 		char bands[] = { 'j', 'h', 'k' };
-		unsigned char* quals[] = { &e->j_quality, &e->h_quality, &e->k_quality };
+		char* quals[] = { &e->j_quality, &e->h_quality, &e->k_quality };
 		if (parse_quality_flag(*cursor, quals[i])) {
 			fprintf(stderr, "Failed to parse '%c_quality' entry in 2MASS line.\n", bands[i]);
 			return -1;
@@ -215,53 +216,30 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	ensure(*cursor, "flags");
 	cursor++;
 
-	if (cursor[0] < '0' || cursor[0] > '9') {
-		fprintf(stderr, "Error parsing read_flag from 2MASS entry.\n");
-		return -1;
-	}
-	e->j_read_flag = '0' + cursor[0];
-	cursor++;
+    for (i=0; i<3; i++) {
+        uint8_t* dests[] = { &e->j_read_flag, &e->h_read_flag, &e->k_read_flag };
 
-	if (cursor[0] < '0' || cursor[0] > '9') {
-		fprintf(stderr, "Error parsing read_flag from 2MASS entry.\n");
-		return -1;
-	}
-	e->h_read_flag = '0' + cursor[0];
-	cursor++;
-
-	if (cursor[0] < '0' || cursor[0] > '9') {
-		fprintf(stderr, "Error parsing read_flag from 2MASS entry.\n");
-		return -1;
-	}
-	e->k_read_flag = '0' + cursor[0];
-	cursor++;
-
+        if (*cursor < '0' || *cursor > '9') {
+            fprintf(stderr, "Error parsing read_flag from 2MASS entry.\n");
+            return -1;
+        }
+        *(dests[i]) = *cursor - '0';
+        cursor++;
+    }
 	printval("read_flag j=%i, h=%i, k=%i.\n", e->j_read_flag, e->h_read_flag, e->k_read_flag);
 
 	ensure(*cursor, "read_flag");
 	cursor++;
 
-	if (*cursor < '0' || *cursor > '9') {
-		fprintf(stderr, "Failed to parse 'j_blend_flag' field in a 2MASS entry.\n");
-		return -1;
-	}
-	e->j_blend_flag = *cursor - '0';
-	cursor++;
-
-	if (*cursor < '0' || *cursor > '9') {
-		fprintf(stderr, "Failed to parse 'h_blend_flag' field in a 2MASS entry.\n");
-		return -1;
-	}
-	e->h_blend_flag = *cursor - '0';
-	cursor++;
-
-	if (*cursor < '0' || *cursor > '9') {
-		fprintf(stderr, "Failed to parse 'k_blend_flag' field in a 2MASS entry.\n");
-		return -1;
-	}
-	e->k_blend_flag = *cursor - '0';
-	cursor++;
-
+    for (i=0; i<3; i++) {
+        uint8_t* dests[] = { &e->j_blend_flag, &e->h_blend_flag, &e->k_blend_flag };
+        if (*cursor < '0' || *cursor > '9') {
+            fprintf(stderr, "Failed to parse blend_flag field in a 2MASS entry.\n");
+            return -1;
+        }
+        *(dests[i]) = *cursor - '0';
+        cursor++;
+    }
 	printval("blend_flag j=%i, h=%i, k=%i.\n", e->j_blend_flag, e->h_blend_flag, e->k_blend_flag);
 
 	ensure(*cursor, "blend_flag");
@@ -269,7 +247,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 
 	for (i=0; i<3; i++) {
 		char bands[] = { 'j', 'h', 'k' };
-		unsigned char* ccs[] = { &e->j_cc, &e->h_cc, &e->k_cc };
+		char* ccs[] = { &e->j_cc, &e->h_cc, &e->k_cc };
 		if (parse_cc_flag(*cursor, ccs[i])) {
 			fprintf(stderr, "Failed to parse '%c_cc' entry in 2MASS line.\n", bands[i]);
 			return -1;
@@ -330,7 +308,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	cursor += nchars;
-
+    e->proximity = arcsec2deg(e->proximity);
 	printval("proximity %g\n", e->proximity);
 
 	if (parse_null(&cursor, &val2)) {
@@ -338,9 +316,9 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	if (twomass_is_null_float(val2))
-		e->prox_angle = TWOMASS_ANGLE_NULL;
+		e->prox_angle = TWOMASS_NULL;
 	else
-		e->prox_angle = (unsigned char)val2;
+		e->prox_angle = val2;
 
 	printval("proximity_angle %i\n", e->prox_angle);
 
@@ -349,7 +327,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	cursor += nchars;
-
 	printval("proximity_key %i\n", e->prox_key);
 
 	if (*cursor < '0' || *cursor > '2') {
@@ -358,7 +335,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	}
 	e->galaxy_contam = *cursor - '0';
 	cursor ++;
-
 	printval("galaxy contamination %i\n", e->galaxy_contam);
 
 	ensure(*cursor, "galaxy_contam");
@@ -368,9 +344,8 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		fprintf(stderr, "Failed to parse 'minor_planet' entry in 2MASS line.\n");
 		return -1;
 	}
-	e->minor_planet = *cursor - '0';
-	cursor ++;
-
+	e->minor_planet = (bool)(*cursor - '0');
+	cursor++;
 	printval("minor planet %i\n", e->minor_planet);
 
 	ensure(*cursor, "minor_planet");
@@ -381,22 +356,20 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	cursor += nchars;
-
 	printval("key %i\n", e->key);
 
 	switch (*cursor) {
 	case 'n':
-		e->northern_hemisphere = 1;
+		e->northern_hemisphere = TRUE;
 		break;
 	case 's':
-		e->northern_hemisphere = 0;
+		e->northern_hemisphere = FALSE;
 		break;
 	default:
 		fprintf(stderr, "Failed to parse 'northern_hemisphere' entry in 2MASS line.\n");
 		return -1;
 	}
 	cursor ++;
-
 	printval("hemisphere %s\n", (e->northern_hemisphere ? "N" : "S"));
 
 	ensure(*cursor, "northern_hemisphere");
@@ -421,7 +394,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		e->scan = scan;
 
 	}
-
 	printval("date %i/%i/%i\n", e->date_year, e->date_month, e->date_day);
 	printval("scan %i\n", e->scan);
 
@@ -430,7 +402,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	cursor += nchars;
-
 	printval("glon %g, glat %g.\n", e->glon, e->glat);
 
 	if (sscanf(cursor, "%f|%lf|%n", &e->x_scan, &e->jdate, &nchars) != 2) {
@@ -438,7 +409,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	cursor += nchars;
-
+    e->x_scan = arcsec2deg(e->x_scan);
 	printval("x_scan %g, jdate %g.\n", e->x_scan, e->jdate);
 
 	for (i=0; i<9; i++) {
@@ -456,9 +427,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 			fprintf(stderr, "Failed to parse \"%s\" entry in 2MASS line.\n", names[i]);
 			return -1;
 		}
-
 		printval("%s: %g\n", names[i], *dests[i]);
-
 	}
 
 	{
@@ -471,14 +440,14 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 			return -1;
 		}
 		cursor += nchars;
-		e->dist_edge_ns = dist_ns;
-		e->dist_edge_ew = dist_ew;
+		e->dist_edge_ns = arcsec2deg(dist_ns);
+		e->dist_edge_ew = arcsec2deg(dist_ew);
 		switch (ns) {
 		case 'n':
-			e->dist_flag_ns = 1;
+			e->dist_flag_ns = TRUE;
 			break;
 		case 's':
-			e->dist_flag_ns = 0;
+			e->dist_flag_ns = FALSE;
 			break;
 		default:
 			fprintf(stderr, "Failed to parse 'dist_edge_flag' entry in 2MASS line.\n");
@@ -486,18 +455,17 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		}
 		switch (ew) {
 		case 'e':
-			e->dist_flag_ew = 1;
+			e->dist_flag_ew = TRUE;
 			break;
 		case 'w':
-			e->dist_flag_ew = 0;
+			e->dist_flag_ew = FALSE;
 			break;
 		default:
 			fprintf(stderr, "Failed to parse 'dist_edge_flag' entry in 2MASS line.\n");
 			return -1;
 		}
 	}
-
-	printval("dist_ns %i %c, dest_ew %i %c.\n", e->dist_edge_ns, (e->dist_flag_ns ? 'N' : 'S'),
+	printval("dist_ns %f %c, dest_ew %f %c.\n", e->dist_edge_ns, (e->dist_flag_ns ? 'N' : 'S'),
 			 e->dist_edge_ew, (e->dist_flag_ew ? 'E' : 'W'));
 
 	if ((*cursor < '0') || (*cursor > '9')) {
@@ -508,20 +476,18 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	}
 	e->dup_src = *cursor - '0';
 	cursor++;
-
 	printval("dup_src %i\n", e->dup_src);
 
 	ensure(*cursor, "dup_src");
 	cursor++;
 
 	if ((*cursor == '1') || (*cursor == '0')) {
-		e->use_src = *cursor - '0';
+		e->use_src = (bool)(*cursor - '0');
 		cursor++;
 	} else {
 		fprintf(stderr, "Failed to parse 'use_src' entry in 2MASS line.\n");
 		return -1;
 	}
-
 	printval("use_src %i\n", e->use_src);
 
 	ensure(*cursor, "use_src");
@@ -537,7 +503,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	case 'U':
 		e->association = TWOMASS_ASSOCIATION_USNOA2;
 		break;
-
 	}
 	cursor++;
 
@@ -554,11 +519,11 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	if (twomass_is_null_float(val2))
-		e->phi_opt = TWOMASS_ANGLE_NULL;
+		e->phi_opt = TWOMASS_NULL;
 	else
-		e->phi_opt = (unsigned char)val2;
+		e->phi_opt = val2;
 
-	printval("dist_opt %g, phi_opt %i, b_m_opt %g, vr_m_opt %g.\n", e->dist_opt, e->phi_opt, e->b_m_opt, e->vr_m_opt);
+	printval("dist_opt %g, phi_opt %g, b_m_opt %g, vr_m_opt %g.\n", e->dist_opt, e->phi_opt, e->b_m_opt, e->vr_m_opt);
 
 	if ((*cursor >= '0') && (*cursor <= '9')) {
 		e->nopt_mchs = *cursor - '0';
@@ -568,7 +533,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		return -1;
 	}
 	cursor++;
-
 	printval("nopt_matches %i\n", e->nopt_mchs);
 
 	if (!strncmp(cursor, "\\N|", 3)) {

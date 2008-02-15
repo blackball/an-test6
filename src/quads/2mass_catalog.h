@@ -19,25 +19,17 @@
 #ifndef TWOMASS_FITS_H
 #define TWOMASS_FITS_H
 
-#include <stdio.h>
-#include <sys/types.h>
-
 #include "qfits.h"
-#include "ioutils.h"
 #include "2mass.h"
+#include "fitstable.h"
+#include "ioutils.h"
 
-#define TWOMASS_FITS_COLUMNS 76
+#define AN_FILETYPE_2MASS "2MASS";
 
 struct twomass_catalog {
-	qfits_table* table;
-	int columns[TWOMASS_FITS_COLUMNS];
-   unsigned int nentries;
+    fitstable_t* ft;
 	// buffered reading
 	bread br;
-	// when writing:
-	qfits_header* header;
-	FILE* fid;
-	off_t header_end;
 };
 typedef struct twomass_catalog twomass_catalog;
 
@@ -59,5 +51,7 @@ int twomass_catalog_count_entries(twomass_catalog* cat);
 int twomass_catalog_close(twomass_catalog* cat);
 
 int twomass_catalog_write_entry(twomass_catalog* cat, twomass_entry* entry);
+
+qfits_header* twomass_catalog_get_primary_header(const twomass_catalog* cat);
 
 #endif

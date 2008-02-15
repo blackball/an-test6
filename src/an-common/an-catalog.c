@@ -71,14 +71,15 @@ static void add_columns(fitstable_t* tab, bool write) {
     int ob;
     char* nil = " ";
 
-    ADDCOL(d, d, "RA",  "degrees", ra);
-    ADDCOL(d, d, "DEC", "degrees", dec);
+    ADDCOL(d, d, "RA",  "deg", ra);
+    ADDCOL(d, d, "DEC", "deg", dec);
+    ADDCOL(f, f, "SIGMA_RA",  "deg", sigma_ra);
+    ADDCOL(f, f, "SIGMA_DEC", "deg", sigma_dec);
+
     ADDCOL(f, f, "MOTION_RA",  "mas/yr", motion_ra);
     ADDCOL(f, f, "MOTION_DEC", "mas/yr", motion_dec);
-    ADDCOL(f, f, "SIGMA_RA",  "mas", sigma_ra);
-    ADDCOL(f, f, "SIGMA_DEC", "mas", sigma_dec);
-    ADDCOL(f, f, "SIGMA_MOTION_RA",  "mas", sigma_motion_ra);
-    ADDCOL(f, f, "SIGMA_MOTION_DEC", "mas", sigma_motion_dec);
+    ADDCOL(f, f, "SIGMA_MOTION_RA",  "mas/yr", sigma_motion_ra);
+    ADDCOL(f, f, "SIGMA_MOTION_DEC", "mas/yr", sigma_motion_dec);
     ADDCOL(u8, u8, "NOBSERVATIONS", nil, nobs);
     ADDCOL(i64, i64, "ID", nil, id);
 
@@ -149,22 +150,18 @@ an_catalog* an_catalog_open(char* fn) {
 	cat = cat_new();
     if (!cat)
         return NULL;
-
     cat->ft = fitstable_open(fn);
     if (!cat->ft) {
         fprintf(stderr, "an-catalog: failed to open table.\n");
         an_catalog_close(cat);
         return NULL;
     }
-
     add_columns(cat->ft, FALSE);
-
     if (fitstable_read_extension(cat->ft, 1)) {
         fprintf(stderr, "an-catalog: table in extension 1 didn't contain the required columns.\n");
         an_catalog_close(cat);
         return NULL;
     }
-
 	cat->br.ntotal = fitstable_nrows(cat->ft);
 	return cat;
 }
@@ -172,11 +169,9 @@ an_catalog* an_catalog_open(char* fn) {
 an_catalog* an_catalog_open_for_writing(char* fn) {
 	an_catalog* cat;
     qfits_header* hdr;
-
 	cat = cat_new();
     if (!cat)
         return NULL;
-
     cat->ft = fitstable_open_for_writing(fn);
     if (!cat->ft) {
         fprintf(stderr, "an-catalog: failed to open table.\n");

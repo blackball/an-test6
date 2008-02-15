@@ -19,7 +19,9 @@
 #ifndef TWOMASS_H
 #define TWOMASS_H
 
-#include <math.h>
+#include <stdint.h>
+
+#include "an-bool.h"
 
 /**
 
@@ -28,169 +30,162 @@
 
 */
 struct twomass_entry {
-	// degrees, J2000 ICRS
+	// [degrees] - J2000 ICRS
 	double ra;
-	// degrees, J2000 ICRS
+	// [degrees] - J2000 ICRS
 	double dec;
 
 	// unique id of this object.
 	unsigned int key;
 
-	// arcsec, one-sigma positional error ellipse: major axis
+	// [degrees] - one-sigma positional error ellipse: major axis
 	float err_major;
-	// arcsec, one-sigma positional error ellipse: minor axis
+	// [degrees] - one-sigma positional error ellipse: minor axis
 	float err_minor;
-
-	// degrees east of north of the major axis of the error ellipse
-	unsigned char err_angle;
+	// [degrees] - rotation east of north of the major axis of the error ellipse
+    float err_angle;
 
 	// hhmmssss[+-]ddmmsss[ABC...]
 	char designation[18];
 
 	// is this in the northern hemisphere?
-	// 1=north, 0=south.
-	unsigned char northern_hemisphere;
+	// TRUE=northern, FALSE=southern.
+	bool northern_hemisphere;
 
-	// mag (null)
+	// [mag] - J magnitude
 	float j_m;
-	// mag (null): corrected photometric uncertainty
+	// [mag] - J corrected photometric uncertainty
 	float j_cmsig;
-	// mag (null): total photometric uncertainty
+	// [mag] - J total photometric uncertainty
 	float j_msigcom;
-	// (null):
+	// J signal-to-noise
 	float j_snr;
 
-	// mag (null)
+	// [mag] - H magnitude
 	float h_m;
-	// mag (null): corrected photometric uncertainty
+	// [mag] - H corrected photometric uncertainty
 	float h_cmsig;
-	// mag (null): total photometric uncertainty
+	// [mag] - H total photometric uncertainty
 	float h_msigcom;
-	// (null):
+	// H signal-to-noise
 	float h_snr;
 
-	// mag (null)
+	// [mag] - K magnitude
 	float k_m;
-	// mag (null): corrected photometric uncertainty
+	// [mag] - K corrected photometric uncertainty
 	float k_cmsig;
-	// mag (null): total photometric uncertainty
+	// [mag] - K total photometric uncertainty
 	float k_msigcom;
-	// (null):
+	// K signal-to-noise
 	float k_snr;
 
-	// photometric quality flags
-	unsigned char j_quality;
-	unsigned char h_quality;
-	unsigned char k_quality;
+	// [code: twomass_quality_val] photometric quality flags
+	char j_quality;
+	char h_quality;
+	char k_quality;
 
 	// read flags: where did the data come from?
-	unsigned char j_read_flag;
-	unsigned char h_read_flag;
-	unsigned char k_read_flag;
+	uint8_t j_read_flag;
+	uint8_t h_read_flag;
+	uint8_t k_read_flag;
 
 	// blend flags: how many source measurements were blended?
-	unsigned char h_blend_flag;
-	unsigned char j_blend_flag;
-	unsigned char k_blend_flag;
+	uint8_t h_blend_flag;
+	uint8_t j_blend_flag;
+	uint8_t k_blend_flag;
 
-	// contamination and confusion flags: object detection.
-	unsigned char j_cc;
-	unsigned char h_cc;
-	unsigned char k_cc;
+	// [code: twomass_cc_val] contamination and confusion flags: object detection.
+	char j_cc;
+	char h_cc;
+	char k_cc;
 
 	// number of detections (seen, possible)
-	unsigned char j_ndet_M;
-	unsigned char j_ndet_N;
-	unsigned char h_ndet_M;
-	unsigned char h_ndet_N;
-	unsigned char k_ndet_M;
-	unsigned char k_ndet_N;
+	uint8_t j_ndet_M;
+	uint8_t j_ndet_N;
+	uint8_t h_ndet_M;
+	uint8_t h_ndet_N;
+	uint8_t k_ndet_M;
+	uint8_t k_ndet_N;
 
 	// may be a foreground star superimposed on a galaxy.
-	unsigned char galaxy_contam;
+	uint8_t galaxy_contam;
 
-	// (null) angle (degrees east of north) to the nearest object
-	unsigned char prox_angle;
-
-	// arcsec: proximity to the nearest other source in the catalog.
+	// [degrees] - proximity to the nearest other source in the catalog.
 	float proximity;
-
-	// : key of the nearest neighbour.
+	// [degrees] - angle east of north to the nearest object
+    float prox_angle;
+	// key of the nearest neighbour.
 	unsigned int prox_key;
 
 	// day the observation run was started
-	unsigned short date_year;
-	unsigned char date_month;
-	unsigned char date_day;
+	uint16_t date_year;
+	uint8_t date_month;
+	uint8_t date_day;
 
 	// in days: Julian date (+- 30 seconds) of the measurement.
 	double jdate;
 
 	// nightly scan number
-	unsigned short scan;
+	uint16_t scan;
 	// may be a minor planet, comet, asteroid, etc.
-	unsigned char minor_planet;
+	bool minor_planet;
 
-	// degrees east of north (null)
-	unsigned char phi_opt;
+	// [degrees] - angle east of north to optical counterpart
+    float phi_opt;
 
-
-
-	// degrees: galactic longitude
+	// [degrees] - galactic longitude
 	float glon;
-	// degrees: galactic latitude
+	// [degrees] - galactic latitude
 	float glat;
 
-	// arcsec
+	// [degrees]
 	float x_scan;
 
 	// (null)
 	float j_psfchi;
-	// mag (null)
+	// [mag] (null)
 	float j_m_stdap;
-	// mag (null)
+	// [mag] (null)
 	float j_msig_stdap;
 
 	// (null)
 	float h_psfchi;
-	// mag (null)
+	// [mag] (null)
 	float h_m_stdap;
-	// mag (null)
+	// [mag] (null)
 	float h_msig_stdap;
 
 	// (null)
 	float k_psfchi;
-	// mag (null)
+	// [mag] (null)
 	float k_m_stdap;
-	// mag (null)
+	// [mag] (null)
 	float k_msig_stdap;
 
-	// arcsec (null):
+	// [degrees] (null):
 	float dist_opt;
-	// mag (null)
+	// [mag] (null)
 	float b_m_opt;
-	// mag (null)
+	// [mag] (null)
 	float vr_m_opt;
 
-
-
-	  // arcsec:
-	unsigned int dist_edge_ns;
-	unsigned int dist_edge_ew;
+    // [degrees]
+	float dist_edge_ns;
+	float dist_edge_ew;
 	// 1=north
-	unsigned char dist_flag_ns;
+	bool dist_flag_ns;
 	// 1=east
-	unsigned char dist_flag_ew;
+	bool dist_flag_ew;
 
-	unsigned char dup_src;
-	unsigned char use_src;
+	uint8_t dup_src;
+	bool use_src;
 
+    // [code: twomass_association_val]
+    char association;
 
-	unsigned char association;
+	uint8_t nopt_mchs;
 
-	unsigned char nopt_mchs;
-
-	unsigned short coadd;
+	uint16_t coadd;
 
 	unsigned int scan_key;
 
@@ -204,8 +199,6 @@ typedef struct twomass_entry twomass_entry;
 #define TWOMASS_NULL NAN
 
 #define TWOMASS_KEY_NULL 0xffffff
-
-#define TWOMASS_ANGLE_NULL 0xff
 
 enum twomass_association_val {
 	TWOMASS_ASSOCIATION_NONE,

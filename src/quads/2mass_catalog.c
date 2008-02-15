@@ -21,297 +21,19 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #include "2mass_catalog.h"
 #include "fitsioutils.h"
 #include "starutil.h"
 
-static qfits_table* twomass_catalog_get_table();
-static twomass_catalog* twomass_catalog_new();
-
-// mapping between a struct field and FITS field.
-struct fits_struct_pair {
-	char* fieldname;
-	char* units;
-	int offset;
-	int size;
-	int ncopies;
-	tfits_type fitstype;
-	bool can_be_null;
-};
-typedef struct fits_struct_pair fitstruct;
-
-static fitstruct twomass_fitstruct[TWOMASS_FITS_COLUMNS];
-static bool twomass_fitstruct_inited = 0;
-
- //assert(sizeof(x.fld) == fits_get_atom_size(t)*na);
-
-#define SET_ARRAY(A, i, t, n, u, fld, na, nul) { \
- twomass_entry x; \
- if ((int)sizeof(x.fld) != fits_get_atom_size(t)*na) \
-    fprintf(stderr, "Warning, 2MASS field \"%s\" has size %i in the struct but %i * %i in FITS.\n", \
-	    #fld, (int)sizeof(x.fld), fits_get_atom_size(t), na);	\
- A[i].fieldname=n; \
- A[i].units=u; \
- A[i].offset=offsetof(twomass_entry, fld); \
- A[i].size=sizeof(x.fld); \
- A[i].fitstype=t; \
- A[i].ncopies=na; \
- A[i].can_be_null=nul; \
- i++; \
-}
-#define SET_FIELD(A, i, t, n, u, fld) SET_ARRAY(A,i,t,n,u,fld,1,0)
-
-#define SET_NULLFIELD(A, i, t, n, u, fld) SET_ARRAY(A,i,t,n,u,fld,1,1)
-/*
-  #define SET_SPECIAL(A, i, t, n, u) { \
-  A[i].fieldname=n; \
-  A[i].units=u; \
-  A[i].offset=-1; \
-  A[i].size=-1; \
-  A[i].fitstype=t; \
-  A[i].ncopies=1; \
-  i++; \
-  }
-  static int START_SPECIAL = -1;
-*/
-
-static void init_twomass_fitstruct() {
-	fitstruct* fs = twomass_fitstruct;
-	int i = 0;
-	char* nil = " ";
-
- 	SET_FIELD(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_D, "DEC", "degrees", dec);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_J, "KEY", nil, key);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_E, "ERR_MAJOR", "arcsec", err_major);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_E, "ERR_MINOR", "arcsec", err_minor);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "ERR_ANGLE", "degrees", err_angle);
-
-	SET_ARRAY (fs, i, TFITS_BIN_TYPE_A, "DESIGNATION", nil, designation, 17, 0);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "NORTHERN_HEMI", nil, northern_hemisphere);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_MAG", "mag", j_m);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_CMSIG", "mag", j_cmsig);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_MSIGCOM", "mag", j_msigcom);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_SNR", nil, j_snr);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_MAG", "mag", h_m);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_CMSIG", "mag", h_cmsig);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_MSIGCOM", "mag", h_msigcom);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_SNR", nil, h_snr);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_MAG", "mag", k_m);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_CMSIG", "mag", k_cmsig);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_MSIGCOM", "mag", k_msigcom);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_SNR", nil, k_snr);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "J_QUALITY", nil, j_quality);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "H_QUALITY", nil, h_quality);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "K_QUALITY", nil, k_quality);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "J_READ", nil, j_read_flag);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "H_READ", nil, h_read_flag);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "K_READ", nil, k_read_flag);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "J_BLEND", nil, j_blend_flag);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "H_BLEND", nil, h_blend_flag);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "K_BLEND", nil, k_blend_flag);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "J_CC", nil, j_cc);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "H_CC", nil, h_cc);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "K_CC", nil, k_cc);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "J_NDET_M", nil, j_ndet_M);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "J_NDET_N", nil, j_ndet_N);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "H_NDET_M", nil, h_ndet_M);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "H_NDET_N", nil, h_ndet_N);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "K_NDET_M", nil, k_ndet_M);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "K_NDET_N", nil, k_ndet_N);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "GALAXY_CONTAM", nil, galaxy_contam);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_E, "PROX", "arcsec", proximity);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_J, "PROX_KEY", nil, prox_key);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_B, "PROX_ANGLE", nil, prox_angle);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_I, "DATE_YEAR", "years", date_year);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "DATE_MONTH", "months", date_month);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "DATE_DAY", "days", date_day);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_D, "JDATE", "julian date", jdate);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_I, "SCAN", nil, scan);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "MINOR_PLANET", nil, minor_planet);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_B, "PHI_OPT", "degrees", phi_opt);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_E, "GLON", "degrees", glon);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_E, "GLAT", "degrees", glat);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_E, "X_SCAN", "arcsec", x_scan);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_PSFCHI", nil, j_psfchi);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_M_STDAP", "mag", j_m_stdap);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "J_MSIG_STDAP", "mag", j_msig_stdap);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_PSFCHI", nil, h_psfchi);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_M_STDAP", "mag", h_m_stdap);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "H_MSIG_STDAP", "mag", h_msig_stdap);
-
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_PSFCHI", nil, k_psfchi);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_M_STDAP", "mag", k_m_stdap);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "K_MSIG_STDAP", "mag", k_msig_stdap);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "N_OPT_MATCHES", nil, nopt_mchs);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "DIST_OPT", "arcsec", dist_opt);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "B_M_OPT", "mag", b_m_opt);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_E, "VR_M_OPT", "mag", vr_m_opt);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_J, "DIST_EDGE_NS", nil, dist_edge_ns);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_J, "DIST_EDGE_EW", nil, dist_edge_ew);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "DIST_FLAG_NS", nil, dist_flag_ns);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "DIST_FLAG_EW", nil, dist_flag_ew);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "DUP_SRC", nil, dup_src);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "USE_SRC", nil, use_src);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_B, "ASSOCIATION", nil, association);
-
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_J, "COADD_KEY", nil, coadd_key);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_I, "COADD", nil, coadd);
-	SET_FIELD(fs, i, TFITS_BIN_TYPE_J, "SCAN_KEY", nil, scan_key);
-	SET_NULLFIELD(fs, i, TFITS_BIN_TYPE_J, "XSC_KEY", nil, xsc_key);
-
-	assert(i == TWOMASS_FITS_COLUMNS);
-	twomass_fitstruct_inited = 1;
-}
-
-
-twomass_catalog* twomass_catalog_open(char* fn) {
-	int i, nextens;
-	qfits_table* table;
-	int c;
-	twomass_catalog* cat = NULL;
-	int good = 0;
-
-	if (!twomass_fitstruct_inited)
-		init_twomass_fitstruct();
-
-	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-		return NULL;
-	}
-
-	cat = twomass_catalog_new();
-
-	// find a table containing all the columns needed...
-	// (and find the indices of the columns we need.)
-	nextens = qfits_query_n_ext(fn);
-	if (nextens == -1) {
-		fprintf(stderr, "Couldn't find the number of extensions in file %s.\n", fn);
-		return NULL;
-	}
-	for (i=0; i<=nextens; i++) {
-		if (!qfits_is_table(fn, i))
-			continue;
-		table = qfits_table_open(fn, i);
-
-		for (c=0; c<TWOMASS_FITS_COLUMNS; c++)
-			cat->columns[c] = fits_find_column(table, twomass_fitstruct[c].fieldname);
-		good = 1;
-		for (c=0; c<TWOMASS_FITS_COLUMNS; c++) {
-			if (cat->columns[c] == -1) {
-				good = 0;
-				break;
-			}
-		}
-		if (good) {
-			cat->table = table;
-			break;
-		}
-		qfits_table_close(table);
-	}
-	if (!good) {
-		fprintf(stderr, "twomass_catalog: didn't find the following required columns:\n    ");
-		for (c=0; c<TWOMASS_FITS_COLUMNS; c++)
-			if (cat->columns[c] == -1)
-				fprintf(stderr, "%s  ", twomass_fitstruct[c].fieldname);
-		fprintf(stderr, "\n");
-		free(cat);
-		return NULL;
-	}
-	cat->nentries = cat->table->nr;
-	cat->br.ntotal = cat->nentries;
-	return cat;
-}
-
-twomass_catalog* twomass_catalog_open_for_writing(char* fn) {
-	twomass_catalog* cat;
-	cat = twomass_catalog_new();
-	cat->fid = fopen(fn, "wb");
-	if (!cat->fid) {
-		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
-	cat->table = twomass_catalog_get_table();
-	cat->header = qfits_table_prim_header_default();
-	qfits_header_add(cat->header, "2MASS", "T", "This is the 2-MASS catalog.", NULL);
-	qfits_header_add(cat->header, "NOBJS", "0", "(filler)", NULL);
-	return cat;
- bailout:
-	if (cat) {
-		free(cat);
-	}
-	return NULL;
-}
-
-int twomass_catalog_write_headers(twomass_catalog* cat) {
-	qfits_header* table_header;
-	assert(cat->fid!=NULL);
-	assert(cat->header!=NULL);
-	fits_header_mod_int(cat->header, "NOBJS", cat->nentries, "Number of objects in this catalog.");
-	qfits_header_dump(cat->header, cat->fid);
-	cat->table->nr = cat->nentries;
-	table_header = qfits_table_ext_header_default(cat->table);
-	qfits_header_dump(table_header, cat->fid);
-	qfits_header_destroy(table_header);
-	cat->header_end = ftello(cat->fid);
-	return 0;
-}
-
-int twomass_catalog_fix_headers(twomass_catalog* cat) {
- 	off_t offset;
-	off_t old_header_end;
-
-	if (!cat->fid) {
-		fprintf(stderr, "twomass_catalog_fix_headers: fid is null.\n");
-		return -1;
-	}
-	offset = ftello(cat->fid);
-	fseeko(cat->fid, 0, SEEK_SET);
-	old_header_end = cat->header_end;
-
-	twomass_catalog_write_headers(cat);
-
-	if (old_header_end != cat->header_end) {
-		fprintf(stderr, "Warning: twomass_catalog header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)old_header_end,
-				(unsigned long)cat->header_end);
-		return -1;
-	}
-	fseek(cat->fid, offset, SEEK_SET);
-	return 0;
-}
-
-static int twomass_catalog_refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
 	twomass_catalog* cat = userdata;
 	twomass_entry* en = buffer;
 	return twomass_catalog_read_entries(cat, offset, n, en);
 }
 
-twomass_catalog* twomass_catalog_new() {
+static twomass_catalog* cat_new() {
 	twomass_catalog* cat = calloc(1, sizeof(twomass_catalog));
 	if (!cat) {
 		fprintf(stderr, "Couldn't allocate memory for a twomass_catalog structure.\n");
@@ -319,100 +41,213 @@ twomass_catalog* twomass_catalog_new() {
 	}
 	cat->br.blocksize = 1000;
 	cat->br.elementsize = sizeof(twomass_entry);
-	cat->br.refill_buffer = twomass_catalog_refill_buffer;
+	cat->br.refill_buffer = refill_buffer;
 	cat->br.userdata = cat;
 	return cat;
 }
 
-static qfits_table* twomass_catalog_get_table() {
-	uint datasize;
-	uint ncols, nrows, tablesize;
-	int col;
-	qfits_table* table;
+// This is a naughty preprocessor function because it uses variables
+// declared in the scope from which it is called.
+#define ADDARR(ctype, ftype, col, units, member, arraysize)             \
+    if (write) {                                                        \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, 1, offsetof(twomass_entry, member),            \
+             ftype, col, units, TRUE);                                  \
+    } else {                                                            \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, 1, offsetof(twomass_entry, member),            \
+             any, col, units, TRUE);                                    \
+    }
 
-	if (!twomass_fitstruct_inited)
-		init_twomass_fitstruct();
+#define ADDCOL(ctype, ftype, col, units, member) \
+ADDARR(ctype, ftype, col, units, member, 1)
 
-	// one big table: the sources.
-	// dummy values here...
-	datasize = 0;
-	ncols = TWOMASS_FITS_COLUMNS;
-	nrows = 0;
-	tablesize = datasize * nrows * ncols;
-	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	table->tab_w = 0;
-	for (col=0; col<TWOMASS_FITS_COLUMNS; col++) {
-		fitstruct* fs = twomass_fitstruct + col;
-		fits_add_column(table, col, fs->fitstype, fs->ncopies,
-						fs->units, fs->fieldname);
-	}
-	table->tab_w = qfits_compute_table_width(table);
-	return table;
+static void add_columns(fitstable_t* tab, bool write) {
+    tfits_type any = fitscolumn_any_type();
+    tfits_type d = fitscolumn_double_type();
+    tfits_type f = fitscolumn_float_type();
+    tfits_type u8 = fitscolumn_u8_type();
+    tfits_type b = fitscolumn_bool_type();
+    //tfits_type i32 = fitscolumn_i32_type();
+    tfits_type i16 = fitscolumn_i16_type();
+    tfits_type j = TFITS_BIN_TYPE_J;
+    tfits_type I = TFITS_BIN_TYPE_I;
+    tfits_type i = fitscolumn_int_type();
+    //tfits_type i64 = fitscolumn_i64_type();
+    tfits_type c = fitscolumn_char_type();
+    tfits_type logical = fitscolumn_boolean_type();
+    char* nil = " ";
+
+    // gawk '{printf("\t%-10s %-8s %-20s %-7s %s\n", $1, $2, $3, $4, $5);}'
+
+	ADDCOL(d,  d,       "RA",                "deg",  ra);
+	ADDCOL(d,  d,       "DEC",               "deg",  dec);
+	ADDCOL(i,  j,       "KEY",               nil,    key);
+	ADDCOL(f,  f,       "ERR_MAJOR",         "deg",  err_major);
+	ADDCOL(f,  f,       "ERR_MINOR",         "deg",  err_minor);
+	ADDCOL(f,  u8,      "ERR_ANGLE",         "deg",  err_angle);
+
+    // FIXME - be sure to NULL-terminate this.
+	ADDARR(c,  c,       "DESIGNATION",       nil,    designation, 17);
+
+	ADDCOL(b,  logical, "NORTHERN_HEMI",     nil,    northern_hemisphere);
+	ADDCOL(u8, u8,      "GALAXY_CONTAM",     nil,    galaxy_contam);
+	ADDCOL(f,  f,       "PROX",              "deg",  proximity);
+	ADDCOL(f,  u8,      "PROX_ANGLE",        "deg",  prox_angle);
+	ADDCOL(i,  j,       "PROX_KEY",          nil,    prox_key);
+	ADDCOL(i16, I,       "DATE_YEAR",         "yr",   date_year);
+	ADDCOL(u8, u8,      "DATE_MONTH",        "month", date_month);
+	ADDCOL(u8, u8,      "DATE_DAY",          "day",  date_day);
+	ADDCOL(d,  d,       "JDATE",             "day",  date_day);
+	ADDCOL(i16, i,       "SCAN",              nil,    scan);
+	ADDCOL(b,  logical, "MINOR_PLANET",      nil,    minor_planet);
+	ADDCOL(f,  u8,      "PHI_OPT",           "deg",  phi_opt);
+	ADDCOL(f,  f,       "GLON",              "deg",  glon);
+	ADDCOL(f,  f,       "GLAT",              "deg",  glat);
+	ADDCOL(f,  f,       "X_SCAN",            "deg",  x_scan);
+	ADDCOL(u8, u8,      "N_OPT_MATCHES",     nil,    nopt_mchs);
+	ADDCOL(f,  f,       "DIST_OPT",          "deg",  dist_opt);
+	ADDCOL(f,  f,       "B_M_OPT",           "mag",  b_m_opt);
+	ADDCOL(f,  f,       "VR_M_OPT",          "mag",  vr_m_opt);
+	ADDCOL(f,  f,       "DIST_EDGE_NS",      "deg",  dist_edge_ns);
+	ADDCOL(f,  f,       "DIST_EDGE_EW",      "deg",  dist_edge_ew);
+	ADDCOL(b,  logical, "DIST_FLAG_NS",      nil,    dist_flag_ns);
+	ADDCOL(b,  logical, "DIST_FLAG_EW",      nil,    dist_flag_ew);
+	ADDCOL(u8, u8,      "DUP_SRC",           nil,    dup_src);
+	ADDCOL(b,  logical, "USE_SRC",           nil,    use_src);
+	ADDCOL(c,  c,       "ASSOCATION",        nil,    association);
+	ADDCOL(i,  j,       "COADD_KEY",         nil,    coadd_key);
+	ADDCOL(i16, I,       "COADD",             nil,    coadd);
+	ADDCOL(i,  j,       "SCAN_KEY",          nil,    scan_key);
+	ADDCOL(i,  j,       "XSC_KEY",           nil,    xsc_key);
+	                                                 
+	ADDCOL(f,  f,       "J_MAG",             "mag",  j_m);
+	ADDCOL(f,  f,       "J_CMSIG",           "mag",  j_cmsig);
+	ADDCOL(f,  f,       "J_MSIGCOM",         "mag",  j_msigcom);
+	ADDCOL(f,  f,       "J_M_STDAP",         "mag",  j_m_stdap);
+	ADDCOL(f,  f,       "J_MSIG_STDAP",      "mag",  j_msig_stdap);
+	ADDCOL(f,  f,       "J_SNR",             nil,    j_snr);
+	ADDCOL(c,  c,       "J_QUALITY",         nil,    j_quality);
+	ADDCOL(u8, u8,      "J_READ",            nil,    j_read_flag);
+	ADDCOL(u8, u8,      "J_BLEND",           nil,    j_blend_flag);
+	ADDCOL(c,  c,       "J_CC",              nil,    j_cc);
+	ADDCOL(u8, u8,      "J_NDET_M",          nil,    j_ndet_M);
+	ADDCOL(u8, u8,      "J_NDET_N",          nil,    j_ndet_N);
+	ADDCOL(f,  f,       "J_PSFCHI",          nil,    j_psfchi);
+
+	ADDCOL(f,  f,       "H_MAG",             "mag",  h_m);
+	ADDCOL(f,  f,       "H_CMSIG",           "mag",  h_cmsig);
+	ADDCOL(f,  f,       "H_MSIGCOM",         "mag",  h_msigcom);
+	ADDCOL(f,  f,       "H_M_STDAP",         "mag",  h_m_stdap);
+	ADDCOL(f,  f,       "H_MSIG_STDAP",      "mag",  h_msig_stdap);
+	ADDCOL(f,  f,       "H_SNR",             nil,    h_snr);
+	ADDCOL(c,  c,       "H_QUALITY",         nil,    h_quality);
+	ADDCOL(u8, u8,      "H_READ",            nil,    h_read_flag);
+	ADDCOL(u8, u8,      "H_BLEND",           nil,    h_blend_flag);
+	ADDCOL(c,  c,       "H_CC",              nil,    h_cc);
+	ADDCOL(u8, u8,      "H_NDET_M",          nil,    h_ndet_M);
+	ADDCOL(u8, u8,      "H_NDET_N",          nil,    h_ndet_N);
+	ADDCOL(f,  f,       "H_PSFCHI",          nil,    h_psfchi);
+
+	ADDCOL(f,  f,       "K_MAG",             "mag",  k_m);
+	ADDCOL(f,  f,       "K_CMSIG",           "mag",  k_cmsig);
+	ADDCOL(f,  f,       "K_MSIGCOM",         "mag",  k_msigcom);
+	ADDCOL(f,  f,       "K_M_STDAP",         "mag",  k_m_stdap);
+	ADDCOL(f,  f,       "K_MSIG_STDAP",      "mag",  k_msig_stdap);
+	ADDCOL(f,  f,       "K_SNR",             nil,    k_snr);
+	ADDCOL(c,  c,       "K_QUALITY",         nil,    k_quality);
+	ADDCOL(u8, u8,      "K_READ",            nil,    k_read_flag);
+	ADDCOL(u8, u8,      "K_BLEND",           nil,    k_blend_flag);
+	ADDCOL(c,  c,       "K_CC",              nil,    k_cc);
+	ADDCOL(u8, u8,      "K_NDET_M",          nil,    k_ndet_M);
+	ADDCOL(u8, u8,      "K_NDET_N",          nil,    k_ndet_N);
+	ADDCOL(f,  f,       "K_PSFCHI",          nil,    k_psfchi);
+}
+#undef ADDCOL
+#undef ADDARR
+
+twomass_catalog* twomass_catalog_open(char* fn) {
+	twomass_catalog* cat = NULL;
+	cat = cat_new();
+    if (!cat)
+        return NULL;
+    cat->ft = fitstable_open(fn);
+    if (!cat->ft) {
+        fprintf(stderr, "2mass-catalog: failed to open table.\n");
+        twomass_catalog_close(cat);
+        return NULL;
+    }
+    add_columns(cat->ft, FALSE);
+    if (fitstable_read_extension(cat->ft, 1)) {
+        fprintf(stderr, "2mass-catalog: table in extension 1 didn't contain the required columns.\n");
+        twomass_catalog_close(cat);
+        return NULL;
+    }
+	cat->br.ntotal = fitstable_nrows(cat->ft);
+	return cat;
+}
+
+twomass_catalog* twomass_catalog_open_for_writing(char* fn) {
+	twomass_catalog* cat;
+    qfits_header* hdr;
+	cat = cat_new();
+    if (!cat)
+        return NULL;
+    cat->ft = fitstable_open_for_writing(fn);
+    if (!cat->ft) {
+        fprintf(stderr, "2mass-catalog: failed to open table.\n");
+        twomass_catalog_close(cat);
+        return NULL;
+    }
+    hdr = fitstable_get_primary_header(cat->ft);
+	//qfits_header_add(hdr, "2MASS", "T", "This is a 2-MASS catalog.", NULL);
+    //qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_2MASS, "Astrometry.net file type", NULL);
+    return cat;
+}
+
+int twomass_catalog_write_headers(twomass_catalog* cat) {
+    if (fitstable_write_primary_header(cat->ft))
+        return -1;
+    return fitstable_write_header(cat->ft);
+}
+
+int twomass_catalog_fix_headers(twomass_catalog* cat) {
+    if (fitstable_fix_primary_header(cat->ft))
+        return -1;
+    return fitstable_fix_header(cat->ft);
 }
 
 int twomass_catalog_read_entries(twomass_catalog* cat, uint offset,
 								 uint count, twomass_entry* entries) {
-	int c;
-	if (!twomass_fitstruct_inited)
-		init_twomass_fitstruct();
-	for (c=0; c<TWOMASS_FITS_COLUMNS; c++) {
-		assert(cat->columns[c] != -1);
-		assert(cat->table!=NULL);
-		assert(cat->table->col[cat->columns[c]].atom_size ==
-			   twomass_fitstruct[c].size / twomass_fitstruct[c].ncopies);
-		qfits_query_column_seq_to_array
-			(cat->table, cat->columns[c], offset, count,
-			 ((unsigned char*)entries) + twomass_fitstruct[c].offset,
-			 sizeof(twomass_entry));
-	}
-	return 0;
+    return fitstable_read_structs(cat->ft, entries, sizeof(twomass_entry),
+                                  offset, count);
 }
 
 twomass_entry* twomass_catalog_read_entry(twomass_catalog* cat) {
 	twomass_entry* e = buffered_read(&cat->br);
 	if (!e)
-		fprintf(stderr, "Failed to read an Astrometry.net catalog entry.\n");
+		fprintf(stderr, "Failed to read an 2MASS catalog entry.\n");
 	return e;
 }
 
 int twomass_catalog_count_entries(twomass_catalog* cat) {
-	return cat->table->nr;
+	return fitstable_nrows(cat->ft);
 }
 
 int twomass_catalog_close(twomass_catalog* cat) {
-	if (cat->fid) {
-		fits_pad_file(cat->fid);
-		if (fclose(cat->fid)) {
-			fprintf(stderr, "Error closing AN FITS file: %s\n", strerror(errno));
-			return -1;
-		}
-	}
-	if (cat->table) {
-		qfits_table_close(cat->table);
-	}
-	if (cat->header) {
-		qfits_header_destroy(cat->header);
-	}
+    if (fitstable_close(cat->ft)) {
+        fprintf(stderr, "Error closing AN catalog file: %s\n", strerror(errno));
+        return -1;
+    }
 	buffered_read_free(&cat->br);
 	free(cat);
 	return 0;
 }
 
+qfits_header* twomass_catalog_get_primary_header(const twomass_catalog* cat) {
+    return fitstable_get_primary_header(cat->ft);
+}
+
 int twomass_catalog_write_entry(twomass_catalog* cat, twomass_entry* entry) {
-	int c;
-	if (!twomass_fitstruct_inited)
-		init_twomass_fitstruct();
-	for (c=0; c<TWOMASS_FITS_COLUMNS; c++) {
-		int i;
-		int atomsize;
-		fitstruct* fs = twomass_fitstruct + c;
-		atomsize = fs->size / fs->ncopies;
-		for (i=0; i<fs->ncopies; i++)
-			if (fits_write_data(cat->fid, ((unsigned char*)entry) +
-								fs->offset + (i * atomsize),
-								fs->fitstype))
-				return -1;
-	}
-	cat->nentries++;
-	return 0;
+    return fitstable_write_struct(cat->ft, entry);
 }
