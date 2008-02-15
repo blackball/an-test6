@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "fitsioutils.h"
 #include "starutil.h"
 
