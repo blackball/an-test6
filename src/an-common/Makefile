@@ -65,8 +65,9 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
 
-ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o \
-	sip.o sip-utils.o md5.o constellations.o gnu-specific.o an-endian.o
+ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o \
+	qsort_reentrant.o ioutils.o sip.o sip-utils.o md5.o constellations.o \
+	gnu-specific.o an-endian.o
 ifndef NO_QFITS
 ANUTILS_OBJ += fitsioutils.o sip_qfits.o
 ANUTILS_DEPS += $(QFITS_LIB)

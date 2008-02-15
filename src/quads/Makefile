@@ -94,11 +94,11 @@ PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
 FITS_UTILS_MAIN_OBJ := $(addsuffix .o,$(FITS_UTILS))
 
 SIMPLEXY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
-	dselip.o dsigma.o dsmooth.o image2xy.o simplexy.o radix.o qsort_reentrant.o \
+	dselip.o dsigma.o dsmooth.o image2xy.o simplexy.o radix.o \
 	ctmf.o
 
 SIMPLEXY2_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
-	dselip.o dsigma.o dsmooth.o image2xy.o simplexy2.o radix.o qsort_reentrant.o \
+	dselip.o dsigma.o dsmooth.o image2xy.o simplexy2.o radix.o \
 	ctmf.o
 
 SIMPLEXY_SHARED_OBJ := simplexy.o dsigma.o dmedsmooth.o dallpeaks.o dpeaks.o \
@@ -184,7 +184,7 @@ ALL_TEST_EXTRA_OBJS += $(TEST_CTMF_OBJS)
 test_ctmf: $(TEST_CTMF_OBJS)
 
 TEST_SIMPLEXY_OBJS := simplexy.o ctmf.o dsigma.o dobjects.o dselip.o \
-		dallpeaks.o qsort_reentrant.o radix.o dsmooth.o dfind.o \
+		dallpeaks.o radix.o dsmooth.o dfind.o \
 		dmedsmooth.o dpeaks.o dcen3x3.o
 ALL_TEST_EXTRA_OBJS += $(TEST_SIMPLEXY_OBJS)
 test_simplexy: $(TEST_SIMPLEXY_OBJS) $(ANUTILS_LIB)
@@ -207,7 +207,7 @@ ALL_EXECS += $(ALL_TEST_FILES) test
 
 # This is Jon ignoring the awesome testing framework
 demo_simplexy: demo_simplexy.o dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o ctmf.o\
-	dselip.o dsigma.o dsmooth.o simplexy.o radix.o qsort_reentrant.o  \
+	dselip.o dsigma.o dsmooth.o simplexy.o radix.o \
 	$(COMMON)/cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
 
@@ -219,7 +219,7 @@ demo_dsmooth: demo_dsmooth.o dsmooth.o \
 
 image2xy: $(SIMPLEXY2_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
 PNG2XY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
-	dselip.o dsigma.o dsmooth.o png2xy.o simplexy.o radix.o qsort_reentrant.o \
+	dselip.o dsigma.o dsmooth.o png2xy.o simplexy.o radix.o \
 	ctmf.o $(COMMON)/cairoutils.o
 png2xy: $(PNG2XY_OBJ) $(CFITS_LIB) svn.o $(ANUTILS_LIB)
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB) -pg
