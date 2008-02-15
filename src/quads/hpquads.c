@@ -646,8 +646,8 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	// find permutation that sorts by index...
 	for (j=0; j<N; j++)
 		perm[j] = j;
-	permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
-	permuted_sort(perm, N);
+	permuted_sort(res->inds, sizeof(int), compare_ints, perm, N);
+
 	// apply the permutation...
 	for (j=0; j<N; j++) {
 		inds[j] = res->inds[perm[j]];

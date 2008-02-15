@@ -239,8 +239,7 @@ int main(int argc, char *args[]) {
 							 dl_get(coords, i*(2*dimquads) + j*2 + 0)-cx);
 			perm[j] = j;
 		}
-		permuted_sort_set_params(theta, sizeof(double), compare_doubles);
-		permuted_sort(perm, dimquads);
+		permuted_sort(theta, sizeof(double), compare_doubles, perm, dimquads);
 
 		if (randomcolor) {
 			r = ((rand() % 128) + 127) / 255.0;

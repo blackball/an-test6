@@ -19,31 +19,46 @@
 #include <stdlib.h>
 
 #include "permutedsort.h"
+#include "qsort_reentrant.h"
 
-static void* qsort_array;
-static int qsort_array_stride;
-static int (*qsort_compare)(const void*, const void*);
+struct permuted_sort_t {
+    int (*compare)(const void*, const void*);
+    void* data_array;
+    int data_array_stride;
+};
+typedef struct permuted_sort_t permsort_t;
 
-static int compare_permuted(const void* v1, const void* v2) {
+// This is the comparison function we use.
+static int compare_permuted(void* user, const void* v1, const void* v2) {
+    permsort_t* ps = user;
 	int i1 = *(int*)v1;
 	int i2 = *(int*)v2;
 	void* val1, *val2;
-	val1 = ((char*)qsort_array) + i1 * qsort_array_stride;
-	val2 = ((char*)qsort_array) + i2 * qsort_array_stride;
-	return qsort_compare(val1, val2);
+    char* darray = ps->data_array;
+	val1 = darray + i1 * ps->data_array_stride;
+	val2 = darray + i2 * ps->data_array_stride;
+	return ps->compare(val1, val2);
 }
 
-void permuted_sort_set_params(void* realarray, int array_stride,
-							  int (*compare)(const void*, const void*)) {
-	qsort_array = realarray;
-	qsort_array_stride = array_stride;
-	qsort_compare = compare;
-}
+int* permuted_sort(void* realarray, int array_stride,
+                   int (*compare)(const void*, const void*),
+                   int* perm, int N) {
+    permsort_t ps;
+    if (!perm) {
+        int i;
+        perm = malloc(sizeof(int) * N);
+        for (i=0; i<N; i++)
+            perm[i] = i;
+    }
 
-void permuted_sort(int* perm, int Nperm) {
-	qsort(perm, Nperm, sizeof(int), compare_permuted);
-}
+    ps.compare = compare;
+    ps.data_array = realarray;
+    ps.data_array_stride = array_stride;
 
+    qsort_r(perm, N, sizeof(int), &ps, compare_permuted);
+
+    return perm;
+}
 
 int compare_doubles(const void* v1, const void* v2) {
 	const double d1 = *(double*)v1;

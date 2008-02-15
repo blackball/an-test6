@@ -218,12 +218,7 @@ int main(int argc, char *argv[]) {
 		qfits_query_column_seq_to_array(table, c, 0, table->nr,
 										buffer, atomsize);
 
-		perm = malloc(table->nr * sizeof(int));
-		for (i=0; i<table->nr; i++)
-			perm[i] = i;
-
-		permuted_sort_set_params(buffer, atomsize, sort_func);
-		permuted_sort(perm, table->nr);
+		permuted_sort(buffer, atomsize, sort_func, NULL, table->nr);
 
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart, &hdrsize) ||
 			qfits_get_datinfo(infn, ext, &datstart, &datsize)) {

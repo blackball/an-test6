@@ -136,12 +136,7 @@ int main(int argc, char *argv[]) {
 		int i;
 		int np = nx*ny;
 
-		perm = malloc(np * sizeof(int));
-		for (i=0; i<np; i++)
-			perm[i] = i;
-
-		permuted_sort_set_params(img, sizeof(float), compare_floats);
-		permuted_sort(perm, np);
+		perm = permuted_sort(img, sizeof(float), compare_floats, NULL, np);
 
 		qfitsloader_free_buffers(&ldr);
 

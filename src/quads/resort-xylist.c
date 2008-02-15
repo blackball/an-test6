@@ -202,12 +202,10 @@ int main(int argc, char** args) {
             back[i] += flux[i];
 
         // Sort by flux...
-		permuted_sort_set_params(flux, sizeof(double), compare);
-		permuted_sort(perm1, table->nr);
+		permuted_sort(flux, sizeof(double), compare, perm1, table->nr);
 
         // Sort by non-background-subtracted flux...
-		permuted_sort_set_params(back, sizeof(double), compare);
-		permuted_sort(perm2, table->nr);
+		permuted_sort(back, sizeof(double), compare, perm2, table->nr);
 
         // Copy the header as-is.
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart, &hdrsize) ||

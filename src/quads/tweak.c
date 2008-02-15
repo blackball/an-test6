@@ -726,14 +726,9 @@ void tweak_print_rms_curve(tweak_t* t) {
 
     N = dl_size(t->dist2);
     dists = malloc(N * sizeof(double));
-    perm = malloc(N * sizeof(int));
-
-    for (i=0; i<N; i++)
-        perm[i] = i;
     dl_copy(t->dist2, 0, N, dists);
 
-    permuted_sort_set_params(dists, sizeof(double), compare_doubles);
-    permuted_sort(perm, N);
+    perm = permuted_sort(dists, sizeof(double), compare_doubles, NULL, N);
 
     allvals = dl_new(256);
 
