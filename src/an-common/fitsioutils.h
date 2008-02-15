@@ -21,6 +21,7 @@
 
 #include "qfits.h"
 #include "keywords.h"
+#include "an-bool.h"
 
 double fits_get_double_val(const qfits_table* table, int column,
                            const void* rowdata);
@@ -133,13 +134,14 @@ int fits_convert_data(void* dest, int deststride, tfits_type desttype,
                       int arraysize, int N);
 
 // write single column fields:
-int fits_write_data_A(FILE* fid, unsigned char value);
+int fits_write_data_A(FILE* fid, char value);
 int fits_write_data_B(FILE* fid, unsigned char value);
 int fits_write_data_D(FILE* fid, double value);
 int fits_write_data_E(FILE* fid, float value);
 int fits_write_data_I(FILE* fid, int16_t value);
 int fits_write_data_J(FILE* fid, int32_t value);
 int fits_write_data_K(FILE* fid, int64_t value);
+int fits_write_data_L(FILE* fid, char value);
 int fits_write_data_X(FILE* fid, unsigned char value);
 
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type);

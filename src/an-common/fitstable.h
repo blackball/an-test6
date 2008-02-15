@@ -256,4 +256,6 @@ int fitstable_fix_header(fitstable_t* t);
 void fitstable_close_table(fitstable_t* tab);
 
 
+void fitstable_print_missing(fitstable_t* tab, FILE* f);
+
 #endif

@@ -112,7 +112,7 @@ tfits_type fitscolumn_boolean_type() {
 }
 
 tfits_type fitscolumn_bool_type() {
-    return TFITS_BIN_TYPE_L;
+    return TFITS_BIN_TYPE_B;
 }
 
 // When reading: allow this column to match to any FITS type.
@@ -751,22 +751,21 @@ void fitstable_close_table(fitstable_t* tab) {
 }
 
 int fitstable_nrows(fitstable_t* t) {
+    if (!t->table) return 0;
     return t->table->nr;
 }
 
-/*
- void fitstable_print_missing(fitstable_t* tab, FILE* f) {
- int i;
- fprintf(f, "Missing required rows: ");
- for (i=0; i<ncols(tab); i++) {
- fitscol_t* col = getcol(tab, i);
- if (col->col == -1 && col->required) {
- fprintf(f, "%s ", col->colname);
- }
- }
- fprintf(f, "\n");
- }
- */
+void fitstable_print_missing(fitstable_t* tab, FILE* f) {
+    int i;
+    fprintf(f, "Missing required rows: ");
+    for (i=0; i<ncols(tab); i++) {
+        fitscol_t* col = getcol(tab, i);
+        if (col->col == -1 && col->required) {
+            fprintf(f, "%s ", col->colname);
+        }
+    }
+    //fprintf(f, "\n");
+}
 
 /*
  int fitstable_read_array(const fitstable_t* tab,

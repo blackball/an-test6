@@ -55,9 +55,16 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
             switch (srctype) {
             case TFITS_BIN_TYPE_A:
             case TFITS_BIN_TYPE_X:
-            case TFITS_BIN_TYPE_L:
             case TFITS_BIN_TYPE_B:
                 ival = *((uint8_t*)asrc);
+                break;
+            case TFITS_BIN_TYPE_L:
+                // these are actually the characters 'T' and 'F'.
+                ival = *((uint8_t*)asrc);
+                if (ival == 'T')
+                    ival = 1;
+                else
+                    ival = 0;
                 break;
             case TFITS_BIN_TYPE_I:
                 ival = *((int16_t*)asrc);
@@ -77,6 +84,7 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
                 src_is_int = FALSE;
                 break;
             default:
+                fprintf(stderr, "fits_convert_data: unknown source type %i\n", srctype);
                 assert(0);
                 return -1;
             }
@@ -84,9 +92,11 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
             switch (desttype) {
             case TFITS_BIN_TYPE_A:
             case TFITS_BIN_TYPE_X:
-            case TFITS_BIN_TYPE_L:
             case TFITS_BIN_TYPE_B:
                 *((uint8_t*)adest) = (src_is_int ? ival : dval);
+                break;
+            case TFITS_BIN_TYPE_L:
+                *((char*)adest) = (src_is_int ? ival : dval) ? 'T' : 'F';
                 break;
             case TFITS_BIN_TYPE_I:
                 *((int16_t*)adest) = (src_is_int ? ival : dval);
@@ -104,6 +114,7 @@ int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
                 *((double*)adest) = (src_is_int ? ival : dval);
                 break;
             default:
+                fprintf(stderr, "fits_convert_data: unknown destination type %i\n", desttype);
                 assert(0);
                 return -1;
             }
@@ -452,7 +463,11 @@ int fits_write_data_B(FILE* fid, unsigned char value) {
 	return 0;
 }
 
-int fits_write_data_A(FILE* fid, unsigned char value) {
+int fits_write_data_L(FILE* fid, char value) {
+    return fits_write_data_A(fid, value);
+}
+
+int fits_write_data_A(FILE* fid, char value) {
 	return fits_write_data_B(fid, value);
 }
 
@@ -511,6 +526,10 @@ int fits_write_data_array(FILE* fid, const void* vvalue, tfits_type type,
         case TFITS_BIN_TYPE_B:
             rtn = fits_write_data_B(fid, *(unsigned char*)pvalue);
             pvalue += sizeof(unsigned char);
+            break;
+        case TFITS_BIN_TYPE_L:
+            rtn = fits_write_data_L(fid, *(bool*)pvalue);
+            pvalue += sizeof(bool);
             break;
         case TFITS_BIN_TYPE_D:
             rtn = fits_write_data_D(fid, *(double*)pvalue);
