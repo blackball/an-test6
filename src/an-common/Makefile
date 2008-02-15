@@ -65,7 +65,7 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
 
-ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o \
+ANUTILS_OBJ := starutil.o mathutil.o bl.o bt.o healpix.o permutedsort.o \
 	qsort_reentrant.o ioutils.o sip.o sip-utils.o md5.o constellations.o \
 	gnu-specific.o an-endian.o
 ifndef NO_QFITS
@@ -131,7 +131,7 @@ grab-stellarium-constellations: grab-stellarium-constellations.o \
 
 ### TESTS
 
-ALL_TEST_FILES = test_bl test_endian test_fitstable test_xylist \
+ALL_TEST_FILES = test_bl test_bt test_endian test_fitstable test_xylist \
 	test_rdlist
 ALL_TEST_EXTRA_OBJS = 
 ALL_TEST_LIBS = $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -147,6 +147,8 @@ test_xylist: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 test_rdlist: $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 test_bl: $(ANUTILS_LIB)
+
+test_bt: $(ANUTILS_LIB)
 
 test_endian: $(ANUTILS_LIB)
 

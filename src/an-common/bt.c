@@ -80,37 +80,46 @@ static int height_slow(bt_node* node) {
 	return 1 + (hl > hr ? hl : hr);
 }
 
-static void bt_check_node(bt* tree, bt_node* node) {
+#define CHECK(expr) {  \
+int truthval = (expr); \
+assert(truthval); \
+if (!truthval) return -1; \
+}
+
+static int bt_check_node(bt* tree, bt_node* node) {
 	int hl, hr;
 	bt_node* leftmost;
 	if (isleaf(node)) {
-		assert(node->leaf.N <= tree->blocksize);
-		return;
+		CHECK(node->leaf.N <= tree->blocksize);
+		return 0;
 	}
 
-	assert(sum_childN(&node->branch) == node->branch.N);
+	CHECK(sum_childN(&node->branch) == node->branch.N);
 
 	leftmost = node;
 	while (!isleaf(leftmost))
 		leftmost = leftmost->branch.children[0];
-	assert(&leftmost->leaf == node->branch.firstleaf);
+	CHECK(&leftmost->leaf == node->branch.firstleaf);
 
 	hl = height_slow(node->branch.children[0]);
 	hr = height_slow(node->branch.children[1]);
-	assert(node->branch.balance == (hr - hl));
-	assert((node->branch.balance == 0) ||
-		   (node->branch.balance == 1) ||
-		   (node->branch.balance == -1));
+	CHECK(node->branch.balance == (hr - hl));
+	CHECK((node->branch.balance == 0) ||
+          (node->branch.balance == 1) ||
+          (node->branch.balance == -1));
 
-	bt_check_node(tree, node->branch.children[0]);
-	bt_check_node(tree, node->branch.children[1]);
+    if (bt_check_node(tree, node->branch.children[0]) ||
+        bt_check_node(tree, node->branch.children[1]))
+        return -1;
+    return 0;
 }
 
-void bt_check(bt* tree) {
+int bt_check(bt* tree) {
 	if (tree->root) {
-		assert(node_N(tree->root) == tree->N);
-		bt_check_node(tree, tree->root);
+		CHECK(node_N(tree->root) == tree->N);
+        return bt_check_node(tree, tree->root);
 	}
+    return 0;
 }
 
 bt* bt_new(int datasize, int blocksize) {

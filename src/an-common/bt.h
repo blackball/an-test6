@@ -102,6 +102,6 @@ int bt_height(bt* tree);
 
 int bt_count_leaves(bt* tree);
 
-void bt_check(bt* tree);
+int bt_check(bt* tree);
 
 #endif

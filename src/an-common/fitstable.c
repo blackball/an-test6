@@ -7,6 +7,7 @@
 #include "fitstable.h"
 #include "fitsioutils.h"
 #include "fitsfile.h"
+#include "ioutils.h"
 
 struct fitscol_t {
     char* colname;
@@ -151,8 +152,8 @@ void fitstable_add_write_column_array_convert(fitstable_t* tab,
                                               const char* units) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
-    col.colname = strdup(name);
-    col.units = strdup(units);
+    col.colname = strdup_safe(name);
+    col.units = strdup_safe(units);
     col.fitstype = fits_type;
     col.ctype = c_type;
     col.arraysize = arraysize;
@@ -192,8 +193,8 @@ void fitstable_add_column_struct(fitstable_t* tab,
                                  bool required) {
     fitscol_t col;
     memset(&col, 0, sizeof(fitscol_t));
-    col.colname = strdup(name);
-    col.units = strdup(units);
+    col.colname = strdup_safe(name);
+    col.units = strdup_safe(units);
     col.fitstype = fits_type;
     col.ctype = c_type;
     col.arraysize = arraysize;
@@ -493,7 +494,7 @@ fitstable_t* fitstable_open(const char* fn) {
         goto bailout;
 	}
     tab->extension = 1;
-    tab->fn = strdup(fn);
+    tab->fn = strdup_safe(fn);
     tab->primheader = qfits_header_read(fn);
     if (!tab->primheader) {
         fprintf(stderr, "Failed to read primary FITS header from %s.\n", fn);
@@ -516,7 +517,7 @@ fitstable_t* fitstable_open_for_writing(const char* fn) {
     tab = fitstable_new();
     if (!tab)
         goto bailout;
-    tab->fn = strdup(fn);
+    tab->fn = strdup_safe(fn);
     tab->fid = fopen(fn, "wb");
 	if (!tab->fid) {
 		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));

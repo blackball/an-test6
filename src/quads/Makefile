@@ -328,7 +328,7 @@ cut-an: cut-an.o catalog.o idfile.o usnob.o \
 startree: startree.o catalog.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-hpquads: hpquads.o codefile.o bt.o pnpoly.o histogram.o tic.o \
+hpquads: hpquads.o codefile.o pnpoly.o histogram.o tic.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codetree: codetree.o codekd.o codefile.o \
