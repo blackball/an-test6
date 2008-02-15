@@ -27,7 +27,7 @@
 
 #include "merctree.h"
 #include "starutil.h"
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "mathutil.h"
 #include "healpix.h"
 #include "merc.h"

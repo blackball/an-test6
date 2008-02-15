@@ -23,7 +23,7 @@
 #include <time.h>
 
 #include "starutil.h"
-#include "an_catalog.h"
+#include "an-catalog.h"
 #include "mathutil.h"
 
 #define OPTIONS "hW:H:m:M:T"
