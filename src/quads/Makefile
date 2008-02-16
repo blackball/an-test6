@@ -176,7 +176,6 @@ ALL_TEST_LIBS :=
 # Add the dependencies here...
 TEST_DFIND_OBJS := dfind.o
 ALL_TEST_EXTRA_OBJS += $(TEST_DFIND_OBJS)
-ALL_TEST_LIBS += $(ANUTILS_LIB)
 test_dfind: $(TEST_DFIND_OBJS) $(ANUTILS_LIB)
 
 TEST_CTMF_OBJS := ctmf.o
@@ -194,6 +193,9 @@ ALL_TEST_EXTRA_OBJS += $(TEST_DSMOOTH_OBJS)
 test_dsmooth: $(TEST_DSMOOTH_OBJS)
 
 test_2mass: 2mass.o 2mass-fits.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+ALL_TEST_EXTRA_OBJS += 2mass-fits.o 2mass.o
+
+ALL_TEST_LIBS += $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 include $(COMMON)/makefile.tests
 
