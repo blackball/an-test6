@@ -57,59 +57,59 @@ struct tycho2_entry {
 	// flag "H" (in supplements)
 	bool hipparcos_star;
 
-	// degrees
-	double RA;         // RAdeg
-	double DEC;        // DEdeg
-	double meanRA;     // mRAdeg
-	double meanDEC;    // mDEdeg
-	// mas/yr
-	float pmRA;        // pmRA*
-	float pmDEC;       // pmDE
-	// mas
-	float sigma_RA;    // e_RA*
-	float sigma_DEC;   // e_DE
-	float sigma_mRA;   // e_mRA*
-	float sigma_mDEC;  // e_mDE
-	// mas/yr
-	float sigma_pmRA;  // e_pmRA*
-	float sigma_pmDEC; // e_pmDE
-	// yr
-	float epoch_RA;    // epRA
-	float epoch_DEC;   // epDE
-	float epoch_mRA;   // mepRA
-	float epoch_mDEC;  // mepDE
+	// [degrees]
+	double ra;         // RAdeg
+	double dec;        // DEdeg
+	double mean_ra;     // mRAdeg
+	double mean_dec;    // mDEdeg
+	// [arcsec/yr]
+	float pm_ra;        // pmRA* / 1000
+	float pm_dec;       // pmDE / 1000
+	// [degrees]
+	float sigma_ra;    // mas2deg(e_RA*)
+	float sigma_dec;   // mas2deg(e_DE)
+	float sigma_mean_ra;   // mas2deg(e_mRA*)
+	float sigma_mean_dec;  // mas2deg(e_mDE)
+	// [arcsec/yr]
+	float sigma_pm_ra;  // e_pmRA* / 1000
+	float sigma_pm_dec; // e_pmDE / 1000
+	// [yr]
+	float epoch_ra;    // epRA + 1990
+	float epoch_dec;   // epDE + 1990
+	float epoch_mean_ra;   // mepRA
+	float epoch_mean_dec;  // mepDE
 	//
-	unsigned char nobs; // Num
+	uint8_t nobs; // Num
 	// "goodness"
-	float goodness_mRA;  // g_mRA
-	float goodness_mDEC; // g_mDEC
-	float goodness_pmRA;  // g_pmRA
-	float goodness_pmDEC; // g_pmDEC
-	// mag (0.0 means unavailable)
+	float goodness_mean_ra;  // g_mRA
+	float goodness_mean_dec; // g_mDEC
+	float goodness_pm_ra;  // g_pmRA
+	float goodness_pm_dec; // g_pmDEC
+	// [mag] (0.0 means unavailable)
 	float mag_BT;        // BT
 	float mag_VT;        // VT
 	float sigma_BT;      // e_BT
 	float sigma_VT;      // e_VT
 
-	// supplements only: Hp magnitude
+	// [mag] supplements only: Hp magnitude
 	float mag_HP;        // HP
 	float sigma_HP;      // e_HP
 
-	// arcsec
+	// [degrees], -1.0 for null.
 	float prox;
 
 	float correlation;
 
-	int32_t hipparcos_id;    // [1, 120404] (or zero)
+	int32_t hipparcos_id;    // [1, 120404] (or zero for null)
 	char hip_ccdm[4];     // (up to three chars; null-terminated.)
 };
 typedef struct tycho2_entry tycho2_entry;
 
-int tycho2_guess_is_supplement(char* line);
+int tycho2_guess_is_supplement(const char* line);
 
-int tycho2_parse_entry(char* line, tycho2_entry* entry);
+int tycho2_parse_entry(const char* line, tycho2_entry* entry);
 
-int tycho2_supplement_parse_entry(char* line, tycho2_entry* entry);
+int tycho2_supplement_parse_entry(const char* line, tycho2_entry* entry);
 
 #endif
 

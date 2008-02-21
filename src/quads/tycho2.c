@@ -22,12 +22,12 @@
 
 #include "tycho2.h"
 
-static void grab_substring(char* dst, char* src, int n) {
+static void grab_substring(char* dst, const char* src, int n) {
 	memset(dst, 0, n+1);
 	strncpy(dst, src, n);
 }
 
-static int parse_uint(char* src, int n, uint* data) {
+static int parse_uint(const char* src, int n, uint* data) {
 	char buf[256];
 	grab_substring(buf, src, n);
 	if (sscanf(buf, " %u", data) != 1) {
@@ -37,7 +37,7 @@ static int parse_uint(char* src, int n, uint* data) {
 	return 0;
 }
 
-static int parse_double(char* src, int n, double* data) {
+static int parse_double(const char* src, int n, double* data) {
 	char buf[256];
 	grab_substring(buf, src, n);
 	if (sscanf(buf, " %lf", data) != 1) {
@@ -47,7 +47,7 @@ static int parse_double(char* src, int n, double* data) {
 	return 0;
 }
 
-static int parse_optional_double(char* src, int n, double* data, double defaultval) {
+static int parse_optional_double(const char* src, int n, double* data, double defaultval) {
 	char buf[256];
 	int i;
 	grab_substring(buf, src, n);
@@ -65,7 +65,7 @@ static int parse_optional_double(char* src, int n, double* data, double defaultv
 	return 0;
 }
 
-static int parse_optional_uint(char* src, int n, uint* data, uint defaultval) {
+static int parse_optional_uint(const char* src, int n, uint* data, uint defaultval) {
 	char buf[256];
 	int i;
 	grab_substring(buf, src, n);
@@ -83,7 +83,7 @@ static int parse_optional_uint(char* src, int n, uint* data, uint defaultval) {
 	return 0;
 }
 
-int tycho2_guess_is_supplement(char* line) {
+int tycho2_guess_is_supplement(const char* line) {
 	return (line[12] == '|' &&
 			line[14] == '|' &&
 			line[27] == '|' &&
@@ -103,7 +103,7 @@ int tycho2_guess_is_supplement(char* line) {
 			line[114]);
 }
 
-int tycho2_parse_entry(char* line, tycho2_entry* entry) {
+int tycho2_parse_entry(const char* line, tycho2_entry* entry) {
 	int len;
 	uint t1, t2, t3;
 	char pxflag, tycho1, posflag;
@@ -191,21 +191,21 @@ int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 	assert(d15 == 0.0 || (d15 >= 1.905 && d15 <= 15.193));
 	assert(d16 == 0.0 || (d16 >= 0.009 && d16 <= 1.468));
 
-	entry->meanRA = d1;
-	entry->meanDEC = d2;
-	entry->pmRA = d3;
-	entry->pmDEC = d4;
-	entry->sigma_mRA = (float)u1;
-	entry->sigma_mDEC = (float)u2;
-	entry->sigma_pmRA = d5;
-	entry->sigma_pmDEC = d6;
-	entry->epoch_mRA = d7;
-	entry->epoch_mDEC = d8;
+	entry->mean_ra = d1;
+	entry->mean_dec = d2;
+	entry->pm_ra = d3 / 1000.0; // milli-arcsec per yr in the raw files, arcsec per yr in the struct.
+	entry->pm_dec = d4 / 1000.0;
+	entry->sigma_mean_ra  = arcsec2deg((float)u1 / 1000.0);
+	entry->sigma_mean_dec = arcsec2deg((float)u2 / 1000.0);
+	entry->sigma_pm_ra = d5 / 1000.0;
+	entry->sigma_pm_dec = d6 / 1000.0;
+	entry->epoch_mean_ra = d7;
+	entry->epoch_mean_dec = d8;
 	entry->nobs = u3;
-	entry->goodness_mRA = d9;
-	entry->goodness_mDEC = d10;
-	entry->goodness_pmRA = d11;
-	entry->goodness_pmDEC = d12;
+	entry->goodness_mean_ra = d9;
+	entry->goodness_mean_dec = d10;
+	entry->goodness_pm_ra = d11;
+	entry->goodness_pm_dec = d12;
 	entry->mag_BT = d13;
 	entry->sigma_BT = d14;
 	entry->mag_VT = d15;
@@ -223,6 +223,9 @@ int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 		return -1;
 	}
 	grab_substring(entry->hip_ccdm, line + 148, 3);
+    if (strcmp(entry->hip_ccdm, "   ") == 0) {
+        memset(entry->hip_ccdm, 0, sizeof(entry->hip_ccdm));
+    }
 	tycho1 = line[140];
 	posflag = line[200];
 
@@ -233,24 +236,27 @@ int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 	assert(d3 >= 0.81 && d3 <= 2.13);
 	assert(d4 >= 0.72 && d4 <= 2.36);
 
-	entry->prox = u1 * 0.1;
+    if (u1 == 999)
+        entry->prox = -1.0;
+    else
+        entry->prox = u1 * 0.1;
 	entry->tycho1_star = (tycho1 == 'T') ? TRUE : FALSE;
 	entry->double_star = (posflag == 'D') ? TRUE : FALSE;
 	entry->photo_center_treatment = (posflag == 'P') ? TRUE : FALSE;
 	entry->hipparcos_id = u2;
 
-	entry->RA = d1;
-	entry->DEC = d2;
-	entry->epoch_RA  = 1990.0 + d3;
-	entry->epoch_DEC = 1990.0 + d4;
-	entry->sigma_RA = d5;
-	entry->sigma_DEC = d6;
+	entry->ra = d1;
+	entry->dec = d2;
+	entry->epoch_ra  = 1990.0 + d3;
+	entry->epoch_dec = 1990.0 + d4;
+	entry->sigma_ra  = arcsec2deg(d5 / 1000.0);
+	entry->sigma_dec = arcsec2deg(d6 / 1000.0);
 	entry->correlation = d7;
 
 	return 0;
 }
 
-int tycho2_supplement_parse_entry(char* line, tycho2_entry* entry) {
+int tycho2_supplement_parse_entry(const char* line, tycho2_entry* entry) {
 	int len;
 	uint t1, t2, t3;
 	char htflag, tycho1, bvhflag;
@@ -335,14 +341,14 @@ int tycho2_supplement_parse_entry(char* line, tycho2_entry* entry) {
 
 	assert(u2 == 0 || (u2 >= 1 && u2 <= 120404));
 
-	entry->RA = d1;
-	entry->DEC = d2;
-	entry->pmRA = d3;
-	entry->pmDEC = d4;
-	entry->sigma_RA = d5;
-	entry->sigma_DEC = d6;
-	entry->sigma_pmRA = d7;
-	entry->sigma_pmDEC = d8;
+	entry->ra = d1;
+	entry->dec = d2;
+	entry->pm_ra = d3;
+	entry->pm_dec = d4;
+	entry->sigma_ra = d5;
+	entry->sigma_dec = d6;
+	entry->sigma_pm_ra = d7;
+	entry->sigma_pm_dec = d8;
 	if (bvhflag == 'H') {
 		entry->mag_HP = d11;
 		entry->sigma_HP = d12;

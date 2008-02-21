@@ -171,7 +171,7 @@ int main(int argc, char** args) {
 				i++;
 
 			if (do_hp) {
-				hp = radectohealpix(deg2rad(entry.RA), deg2rad(entry.DEC), Nside);
+				hp = radectohealpix(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
 			} else {
 				hp = 0;
 			}

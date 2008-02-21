@@ -6,6 +6,10 @@ int main() {
     int W=1;
     int H=1;
 
+    float x=20;
+    float mag=100;
+    float back=0;
+
     img[0] = 0;
     img[1] = 0;
     img[2] = 0;

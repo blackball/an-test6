@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
 			  radecdeg2xyzarr(entry->ra, entry->dec, xyz);
 			} else if (tycho) {
 			  tycho2_entry* entry = tycho2_fits_read_entry(tycho);
-			  radecdeg2xyzarr(entry->RA, entry->DEC, xyz);
+			  radecdeg2xyzarr(entry->ra, entry->dec, xyz);
 			}
 
 			add_ink(xyz, hammer, reverse, &backside, W, H, projection, 0);

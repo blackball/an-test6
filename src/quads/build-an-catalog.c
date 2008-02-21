@@ -318,23 +318,22 @@ int main(int argc, char** args) {
 					exit(-1);
 				}
 
-				hp = radecdegtohealpix(entry->RA, entry->DEC, Nside);
+				hp = radecdegtohealpix(entry->ra, entry->dec, Nside);
 				if (allowed_hps && !il_contains(allowed_hps, hp))
 					continue;
 
 				memset(&an, 0, sizeof(an));
 
-				an.ra = entry->RA;
-				an.dec = entry->DEC;
+				an.ra = entry->ra;
+				an.dec = entry->dec;
                 // Tycho-2 sigmas are in milli-arcsec/yr
-				an.sigma_ra = entry->sigma_RA / 1000.0;
-				an.sigma_dec = entry->sigma_DEC / 1000.0;
-                // Tycho-2 proper motions are in milli-arcsec/yr
-				an.motion_ra = entry->pmRA / 1000.0;
-				an.motion_dec = entry->pmDEC / 1000.0;
-                // Tycho-2 stores these in milli-arcsec/yr
-				an.sigma_motion_ra = entry->sigma_pmRA / 1000.0;
-				an.sigma_motion_dec = entry->sigma_pmDEC / 1000.0;
+				an.sigma_ra = entry->sigma_ra / 1000.0;
+				an.sigma_dec = entry->sigma_dec / 1000.0;
+
+				an.motion_ra = entry->pm_ra;
+				an.motion_dec = entry->pm_dec;
+				an.sigma_motion_ra = entry->sigma_pm_ra;
+				an.sigma_motion_dec = entry->sigma_pm_dec;
 
 				an.id = an_catalog_get_id(version, starid);
 				starid++;
