@@ -74,7 +74,7 @@ void test_read_raw(CuTest* tc) {
         "  2.31754222|  2.23186444|1.67|1.54|"
         " 88.0|100.8|"
         " |-0.2\r\n";
-    //char* fn = "/tmp/test-2mass-0";
+    char* fn = "/tmp/test-tycho2-0";
     tycho2_entry entry;
     tycho2_fits* out;
     tycho2_fits* in;
@@ -104,7 +104,7 @@ void test_read_raw(CuTest* tc) {
     CuAssertIntEquals(tc, 1, tycho2_fits_count_entries(in));
     ein = tycho2_fits_read_entry(in);
     CuAssertPtrNotNull(tc, ein);
-    check_entry1(tc, ein);
+    check_line1(tc, ein);
     CuAssertIntEquals(tc, 0, tycho2_fits_close(in));
     in = NULL;
 

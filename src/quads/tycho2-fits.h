@@ -36,7 +36,6 @@ struct tycho2_fits {
 	qfits_header* header;
 	FILE* fid;
 	off_t header_end;
-	uint nentries;
 };
 typedef struct tycho2_fits tycho2_fits;
 

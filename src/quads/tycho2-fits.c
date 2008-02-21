@@ -204,7 +204,7 @@ int tycho2_fits_write_entry(tycho2_fits* tycho2, tycho2_entry* entry) {
 			return -1;
 		}
 	}
-	tycho2->nentries++;
+	tycho2->table->nr++;
 	return 0;
 }
 
@@ -281,8 +281,7 @@ tycho2_fits* tycho2_fits_open(char* fn) {
 		free(tycho2);
 		return NULL;
 	}
-	tycho2->nentries = tycho2->table->nr;
-	tycho2->br.ntotal = tycho2->nentries;
+	tycho2->br.ntotal = tycho2->table->nr;
 	return tycho2;
 }
 
@@ -312,9 +311,8 @@ int tycho2_fits_write_headers(tycho2_fits* tycho2) {
 	qfits_header* table_header;
 	assert(tycho2->fid);
 	assert(tycho2->header);
-	fits_header_mod_int(tycho2->header, "NOBJS", tycho2->nentries, "Number of objects in this catalog.");
+	fits_header_mod_int(tycho2->header, "NOBJS", tycho2_fits_count_entries(tycho2), "Number of objects in this catalog.");
 	qfits_header_dump(tycho2->header, tycho2->fid);
-	tycho2->table->nr = tycho2->nentries;
 	table_header = qfits_table_ext_header_default(tycho2->table);
 	qfits_header_dump(table_header, tycho2->fid);
 	qfits_header_destroy(table_header);

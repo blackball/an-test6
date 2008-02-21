@@ -319,7 +319,7 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "Couldn't open catalog.\n");
 				exit(-1);
 			}
-			numstars = tycho->nentries;
+			numstars = tycho2_fits_count_entries(tycho);
 			tycho->br.blocksize = BLOCK;
 		}
 		qfits_header_destroy(hdr);
