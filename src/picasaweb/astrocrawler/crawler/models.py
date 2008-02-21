@@ -1,13 +1,14 @@
 from django.db import models
 
 class UserURL(models.Model):
-    url = models.CharField()
+    url = models.CharField(maxlength=400)
 
 class Image(models.Model):
-    md5sum = models.CharField()
-    local_copy = models.CharField()
-    first_downloaded = models.DateTimeField()
-    first_downloaded_from = models.ForeignKey()
+    md5sum = models.CharField(maxlength=32)
+    local_copy = models.CharField(maxlength=400)
+    first_downloaded = models.DateTimeField("Date image first downloaded")
+    first_downloaded_from = models.ForeignKey("From")
+"""
 
 class GalleryEntry(models.Model):
     image = models.ForeignKey(Image)
@@ -38,3 +39,4 @@ class Solve(models.Model):
     entry = models.ForeignKey(GalleryEntry)
     # TODO - add other stuff.
 
+"""
