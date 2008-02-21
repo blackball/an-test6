@@ -4,6 +4,7 @@
 
 #include "cutest.h"
 #include "tycho2.h"
+#include "tycho2-fits.h"
 #include "an-bool.h"
 #include "starutil.h"
 
@@ -75,11 +76,36 @@ void test_read_raw(CuTest* tc) {
         " |-0.2\r\n";
     //char* fn = "/tmp/test-2mass-0";
     tycho2_entry entry;
+    tycho2_fits* out;
+    tycho2_fits* in;
+    tycho2_entry* ein;
+
     memset(&entry, 0, sizeof(tycho2_entry));
 
     CuAssertIntEquals(tc, 0, tycho2_guess_is_supplement(line1));
     CuAssertIntEquals(tc, 0, tycho2_parse_entry(line1, &entry));
 
     check_line1(tc, &entry);
+
+    out = tycho2_fits_open_for_writing(fn);
+    CuAssertPtrNotNull(tc, out);
+    CuAssertIntEquals(tc, 0, tycho2_fits_count_entries(out));
+    CuAssertIntEquals(tc, 0, tycho2_fits_write_headers(out));
+    CuAssertIntEquals(tc, 0, tycho2_fits_write_entry(out, &entry));
+    CuAssertIntEquals(tc, 1, tycho2_fits_count_entries(out));
+    CuAssertIntEquals(tc, 0, tycho2_fits_fix_headers(out));
+    CuAssertIntEquals(tc, 0, tycho2_fits_close(out));
+    out = NULL;
+
+    memset(&entry, 0, sizeof(tycho2_entry));
+
+    in = tycho2_fits_open(fn);
+    CuAssertPtrNotNull(tc, in);
+    CuAssertIntEquals(tc, 1, tycho2_fits_count_entries(in));
+    ein = tycho2_fits_read_entry(in);
+    CuAssertPtrNotNull(tc, ein);
+    check_entry1(tc, ein);
+    CuAssertIntEquals(tc, 0, tycho2_fits_close(in));
+    in = NULL;
 
 }
