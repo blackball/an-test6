@@ -28,7 +28,7 @@
 #include "catalog.h"
 #include "an-catalog.h"
 #include "usnob_fits.h"
-#include "tycho2_fits.h"
+#include "tycho2-fits.h"
 #include "mathutil.h"
 #include "rdlist.h"
 #include "boilerplate.h"

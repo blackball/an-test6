@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <math.h>
 
-#include "tycho2_fits.h"
+#include "tycho2-fits.h"
 #include "starutil.h"
 #include "mathutil.h"
 #include "an-endian.h"

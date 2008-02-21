@@ -21,7 +21,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "tycho2_fits.h"
+#include "tycho2-fits.h"
 #include "fitsioutils.h"
 
 static qfits_table* tycho2_fits_get_table();

@@ -61,7 +61,7 @@ MISC_EXECS := project-usnob diffractionFlag_check \
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
-OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o catalog.o \
+OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2-fits.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
@@ -196,8 +196,8 @@ test_dsmooth: $(TEST_DSMOOTH_OBJS)
 test_2mass: 2mass.o 2mass-fits.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 ALL_TEST_EXTRA_OBJS += 2mass-fits.o 2mass.o
 
-test_tycho2: tycho2.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-ALL_TEST_EXTRA_OBJS += tycho2.o
+test_tycho2: tycho2-fits.o tycho2.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+ALL_TEST_EXTRA_OBJS += tycho2-fits.o tycho2.o
 
 ALL_TEST_LIBS += $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -321,12 +321,12 @@ project-usnob: project-usnob.o usnob_fits.o usnob.o \
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o \
+tycho2tofits: tycho2tofits.o tycho2-fits.o tycho2.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 hpowned: hpowned.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-build-an-catalog: build-an-catalog.o usnob_fits.o tycho2_fits.o \
+build-an-catalog: build-an-catalog.o usnob_fits.o tycho2-fits.o \
 		tycho2.o usnob.o 2mass-fits.o 2mass.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -394,7 +394,7 @@ solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) \
 		$(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
+plotcat: plotcat.o catalog.o tycho2-fits.o tycho2.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) \
 		$(QFITS_LIB)
 
@@ -459,7 +459,7 @@ resort-xylist: resort-xylist.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LI
 bgsubtract: bgsubtract.o ctmf.o $(COMMON)/cairoutils.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_LIB) $(JPEG_LIB)
 
-tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) \
+tycho2tostellarium: tycho2tostellarium.o tycho2-fits.o $(UTIL_OBJS) $(ANUTILS_LIB) \
 		$(QFITS_LIB)
 
 DEP_OBJ := $(ALL_OBJ)

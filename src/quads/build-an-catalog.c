@@ -27,7 +27,7 @@
 
 #include "an-catalog.h"
 #include "usnob_fits.h"
-#include "tycho2_fits.h"
+#include "tycho2-fits.h"
 #include "fitsioutils.h"
 #include "starutil.h"
 #include "healpix.h"

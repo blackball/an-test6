@@ -25,7 +25,7 @@
 #include <assert.h>
 
 #include "tycho2.h"
-#include "tycho2_fits.h"
+#include "tycho2-fits.h"
 #include "starutil.h"
 #include "healpix.h"
 #include "boilerplate.h"
