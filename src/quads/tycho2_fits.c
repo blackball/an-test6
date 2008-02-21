@@ -81,8 +81,8 @@ static void init_tycho2_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "MEAN_DEC", "deg", mean_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_RA",   "arcsec/yr", pm_ra);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_DEC",  "arcsec/yr", pm_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA",   "mas", sigma_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC",  "mas", sigma_dec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA",   "deg", sigma_ra);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC",  "deg", sigma_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MEAN_RA",   "deg", sigma_mean_ra);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MEAN_DEC",  "deg", sigma_mean_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_RA",   "arcsec/yr", sigma_pm_ra);

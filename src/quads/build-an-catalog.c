@@ -326,10 +326,8 @@ int main(int argc, char** args) {
 
 				an.ra = entry->ra;
 				an.dec = entry->dec;
-                // Tycho-2 sigmas are in milli-arcsec/yr
-				an.sigma_ra = entry->sigma_ra / 1000.0;
-				an.sigma_dec = entry->sigma_dec / 1000.0;
-
+				an.sigma_ra = entry->sigma_ra;
+				an.sigma_dec = entry->sigma_dec;
 				an.motion_ra = entry->pm_ra;
 				an.motion_dec = entry->pm_dec;
 				an.sigma_motion_ra = entry->sigma_pm_ra;
