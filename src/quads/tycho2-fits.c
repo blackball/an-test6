@@ -297,7 +297,6 @@ tycho2_fits* tycho2_fits_open_for_writing(char* fn) {
 	tycho2->table = tycho2_fits_get_table();
 	tycho2->header = qfits_table_prim_header_default();
 	qfits_header_add(tycho2->header, "TYCHO_2", "T", "This is a Tycho-2 catalog.", NULL);
-	qfits_header_add(tycho2->header, "NOBJS", "0", "", NULL);
 	return tycho2;
 
  bailout:
@@ -311,7 +310,6 @@ int tycho2_fits_write_headers(tycho2_fits* tycho2) {
 	qfits_header* table_header;
 	assert(tycho2->fid);
 	assert(tycho2->header);
-	fits_header_mod_int(tycho2->header, "NOBJS", tycho2_fits_count_entries(tycho2), "Number of objects in this catalog.");
 	qfits_header_dump(tycho2->header, tycho2->fid);
 	table_header = qfits_table_ext_header_default(tycho2->table);
 	qfits_header_dump(table_header, tycho2->fid);
