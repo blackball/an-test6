@@ -244,7 +244,7 @@ int tycho2_parse_entry(const char* line, tycho2_entry* entry) {
     if (u1 == 999)
         entry->prox = -1.0;
     else
-        entry->prox = u1 * 0.1;
+        entry->prox = arcsec2deg(u1 * 0.1);
 	entry->tycho1_star = (tycho1 == 'T') ? TRUE : FALSE;
 	entry->double_star = (posflag == 'D') ? TRUE : FALSE;
 	entry->photo_center_treatment = (posflag == 'P') ? TRUE : FALSE;
@@ -348,12 +348,12 @@ int tycho2_supplement_parse_entry(const char* line, tycho2_entry* entry) {
 
 	entry->ra = d1;
 	entry->dec = d2;
-	entry->pm_ra = d3;
-	entry->pm_dec = d4;
-	entry->sigma_ra = d5;
-	entry->sigma_dec = d6;
-	entry->sigma_pm_ra = d7;
-	entry->sigma_pm_dec = d8;
+	entry->pm_ra  = d3 / 1000.0;
+	entry->pm_dec = d4 / 1000.0;
+	entry->sigma_ra  = arcsec2deg(d5 / 1000.0);
+	entry->sigma_dec = arcsec2deg(d6 / 1000.0);
+	entry->sigma_pm_ra  = d7 / 1000.0;
+	entry->sigma_pm_dec = d8 / 1000.0;
 	if (bvhflag == 'H') {
 		entry->mag_HP = d11;
 		entry->sigma_HP = d12;
@@ -363,7 +363,7 @@ int tycho2_supplement_parse_entry(const char* line, tycho2_entry* entry) {
 		entry->mag_VT = d11;
 		entry->sigma_VT = d12;
 	}
-	entry->prox = u1 * 0.1;
+	entry->prox = arcsec2deg(u1 * 0.1);
 	entry->hipparcos_id = u2;
 
 	return 0;
