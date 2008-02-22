@@ -307,7 +307,7 @@ $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 
 catalog_analysis: catalog_analysis.o pnpoly.o $(ANUTILS_LIB)
 
-nomadtofits: nomadtofits.o nomad_fits.o nomad.o \
+nomadtofits: nomadtofits.o nomad-fits.o nomad.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 read_nomad: read_nomad.o nomad.o

@@ -21,7 +21,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "nomad_fits.h"
+#include "nomad-fits.h"
 #include "fitsioutils.h"
 
 static qfits_table* nomad_fits_get_table();

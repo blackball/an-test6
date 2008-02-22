@@ -29,7 +29,7 @@
 #include <assert.h>
 
 #include "nomad.h"
-#include "nomad_fits.h"
+#include "nomad-fits.h"
 #include "qfits.h"
 #include "healpix.h"
 #include "starutil.h"
