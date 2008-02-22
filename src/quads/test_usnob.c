@@ -4,7 +4,7 @@
 
 #include "cutest.h"
 #include "usnob.h"
-#include "usnob_fits.h"
+#include "usnob-fits.h"
 #include "an-bool.h"
 #include "starutil.h"
 

@@ -32,7 +32,7 @@
 #include "qfits.h"
 #include "healpix.h"
 #include "starutil.h"
-#include "usnob_fits.h"
+#include "usnob-fits.h"
 #include "fitsioutils.h"
 #include "boilerplate.h"
 

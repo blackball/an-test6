@@ -21,7 +21,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "usnob_fits.h"
+#include "usnob-fits.h"
 #include "fitsioutils.h"
 
 static qfits_table* usnob_fits_get_table();

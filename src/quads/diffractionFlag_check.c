@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-#include "usnob_fits.h"
+#include "usnob-fits.h"
 #include "usnob.h"
 #include "starutil.h"
 #include "healpix.h"
