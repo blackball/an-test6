@@ -26,14 +26,6 @@
 
 #define AN_FILETYPE_2MASS "2MASS"
 
-/*
- struct twomass_fits {
- fitstable_t* ft;
- // buffered reading
- bread br;
- };
- typedef struct twomass_fits twomass_fits;
- */
 typedef fitstable_t twomass_fits;
 
 twomass_fits* twomass_fits_open(char* fn);
