@@ -111,6 +111,7 @@ static int postprocess_read_structs(fitstable_t* table, void* struc,
     tycho2_fits* cat = table;
     tycho2_entry* entries = struc;
 
+    // HACK?  Use staging area instead?
     flags = fitstable_read_column_offset(cat, "FLAGS", fitscolumn_u8_type(), offset, N);
                                          
     if (!flags)
