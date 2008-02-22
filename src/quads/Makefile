@@ -199,8 +199,8 @@ ALL_TEST_EXTRA_OBJS += 2mass-fits.o 2mass.o
 test_tycho2: tycho2-fits.o tycho2.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 ALL_TEST_EXTRA_OBJS += tycho2-fits.o tycho2.o
 
-test_usnob: usnob_fits.o usnob.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-ALL_TEST_EXTRA_OBJS += usnob_fits.o usnob.o
+test_usnob: usnob-fits.o usnob.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+ALL_TEST_EXTRA_OBJS += usnob-fits.o usnob.o
 
 ALL_TEST_LIBS += $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -315,13 +315,13 @@ read_nomad: read_nomad.o nomad.o
 2masstofits: $(2MASSOBJ) $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
 
-diffractionFlag_check: diffractionFlag_check.o usnob_fits.o usnob.o \
+diffractionFlag_check: diffractionFlag_check.o usnob-fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-project-usnob: project-usnob.o usnob_fits.o usnob.o \
+project-usnob: project-usnob.o usnob-fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-usnobtofits: usnobtofits.o usnob_fits.o usnob.o \
+usnobtofits: usnobtofits.o usnob-fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 tycho2tofits: tycho2tofits.o tycho2-fits.o tycho2.o \
@@ -329,7 +329,7 @@ tycho2tofits: tycho2tofits.o tycho2-fits.o tycho2.o \
 
 hpowned: hpowned.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-build-an-catalog: build-an-catalog.o usnob_fits.o tycho2-fits.o \
+build-an-catalog: build-an-catalog.o usnob-fits.o tycho2-fits.o \
 		tycho2.o usnob.o 2mass-fits.o 2mass.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -397,7 +397,7 @@ solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) \
 		$(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-plotcat: plotcat.o catalog.o tycho2-fits.o tycho2.o usnob_fits.o usnob.o \
+plotcat: plotcat.o catalog.o tycho2-fits.o tycho2.o usnob-fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) \
 		$(QFITS_LIB)
 
