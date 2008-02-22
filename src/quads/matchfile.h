@@ -46,7 +46,7 @@ struct matchfile {
 	int columns[MATCHFILE_FITS_COLUMNS];
 
 	// for buffered reading:
-	bread br;
+	bread_t br;
 };
 typedef struct matchfile matchfile;
 

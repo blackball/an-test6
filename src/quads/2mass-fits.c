@@ -27,24 +27,26 @@
 #include "fitsioutils.h"
 #include "starutil.h"
 
-static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
-	twomass_fits* cat = userdata;
-	twomass_entry* en = buffer;
-	return twomass_fits_read_entries(cat, offset, n, en);
-}
+/*
+ static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+ twomass_fits* cat = userdata;
+ twomass_entry* en = buffer;
+ return twomass_fits_read_entries(cat, offset, n, en);
+ }
 
-static twomass_fits* cat_new() {
-	twomass_fits* cat = calloc(1, sizeof(twomass_fits));
-	if (!cat) {
-		fprintf(stderr, "Couldn't allocate memory for a twomass_fits structure.\n");
-		exit(-1);
-	}
-	cat->br.blocksize = 1000;
-	cat->br.elementsize = sizeof(twomass_entry);
-	cat->br.refill_buffer = refill_buffer;
-	cat->br.userdata = cat;
-	return cat;
-}
+ static twomass_fits* cat_new() {
+ twomass_fits* cat = calloc(1, sizeof(twomass_fits));
+ if (!cat) {
+ fprintf(stderr, "Couldn't allocate memory for a twomass_fits structure.\n");
+ exit(-1);
+ }
+ cat->br.blocksize = 1000;
+ cat->br.elementsize = sizeof(twomass_entry);
+ cat->br.refill_buffer = refill_buffer;
+ cat->br.userdata = cat;
+ return cat;
+ }
+ */
 
 // This is a naughty preprocessor function because it uses variables
 // declared in the scope from which it is called.
@@ -166,90 +168,94 @@ static void add_columns(fitstable_t* tab, bool write) {
 
 twomass_fits* twomass_fits_open(char* fn) {
 	twomass_fits* cat = NULL;
-	cat = cat_new();
-    if (!cat)
-        return NULL;
-    cat->ft = fitstable_open(fn);
-    if (!cat->ft) {
+    /*
+     cat = cat_new();
+     if (!cat)
+     return NULL;
+     cat->ft = fitstable_open(fn);
+     */
+    cat = fitstable_open(fn);
+    if (!cat) {
         fprintf(stderr, "2mass-fits: failed to open table.\n");
         twomass_fits_close(cat);
         return NULL;
     }
-    add_columns(cat->ft, FALSE);
-    if (fitstable_read_extension(cat->ft, 1)) {
+    add_columns(cat, FALSE);
+
+    fitstable_use_buffered_reading(cat, sizeof(twomass_entry), 1000);
+
+    if (fitstable_read_extension(cat, 1)) {
         fprintf(stderr, "2mass-fits: table in extension 1 didn't contain the required columns.\n");
         fprintf(stderr, "  missing: ");
-        fitstable_print_missing(cat->ft, stderr);
+        fitstable_print_missing(cat, stderr);
         fprintf(stderr, "\n");
         twomass_fits_close(cat);
         return NULL;
     }
-	cat->br.ntotal = fitstable_nrows(cat->ft);
+	//cat->br.ntotal = fitstable_nrows(cat->ft);
 	return cat;
 }
 
 twomass_fits* twomass_fits_open_for_writing(char* fn) {
 	twomass_fits* cat;
     qfits_header* hdr;
-	cat = cat_new();
-    if (!cat)
-        return NULL;
-    cat->ft = fitstable_open_for_writing(fn);
-    if (!cat->ft) {
+    /*
+     cat = cat_new();
+     if (!cat)
+     return NULL;
+     cat->ft = fitstable_open_for_writing(fn);
+     */
+    cat = fitstable_open_for_writing(fn);
+    if (!cat) {
         fprintf(stderr, "2mass-fits: failed to open table.\n");
         twomass_fits_close(cat);
         return NULL;
     }
-    add_columns(cat->ft, TRUE);
-    hdr = fitstable_get_primary_header(cat->ft);
-	//qfits_header_add(hdr, "2MASS", "T", "This is a 2-MASS catalog.", NULL);
-    //qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_2MASS, "Astrometry.net file type", NULL);
+    add_columns(cat, TRUE);
+    hdr = fitstable_get_primary_header(cat);
+	qfits_header_add(hdr, "2MASS", "T", "This is a 2-MASS catalog.", NULL);
+    qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_2MASS, "Astrometry.net file type", NULL);
     return cat;
 }
 
 int twomass_fits_write_headers(twomass_fits* cat) {
-    if (fitstable_write_primary_header(cat->ft))
+    if (fitstable_write_primary_header(cat))
         return -1;
-    return fitstable_write_header(cat->ft);
+    return fitstable_write_header(cat);
 }
 
 int twomass_fits_fix_headers(twomass_fits* cat) {
-    if (fitstable_fix_primary_header(cat->ft))
+    if (fitstable_fix_primary_header(cat))
         return -1;
-    return fitstable_fix_header(cat->ft);
+    return fitstable_fix_header(cat);
 }
 
 int twomass_fits_read_entries(twomass_fits* cat, uint offset,
                               uint count, twomass_entry* entries) {
-    return fitstable_read_structs(cat->ft, entries, sizeof(twomass_entry),
+    return fitstable_read_structs(cat, entries, sizeof(twomass_entry),
                                   offset, count);
 }
 
 twomass_entry* twomass_fits_read_entry(twomass_fits* cat) {
-	twomass_entry* e = buffered_read(&cat->br);
-	if (!e)
-		fprintf(stderr, "Failed to read an 2MASS catalog entry.\n");
-	return e;
+    return (twomass_entry*)fitstable_next_struct(cat);
 }
 
 int twomass_fits_count_entries(twomass_fits* cat) {
-	return fitstable_nrows(cat->ft);
+	return fitstable_nrows(cat);
 }
 
 int twomass_fits_close(twomass_fits* cat) {
-    if (fitstable_close(cat->ft)) {
-        fprintf(stderr, "Error closing AN catalog file: %s\n", strerror(errno));
+    if (fitstable_close(cat)) {
+        fprintf(stderr, "Error closing 2MASS catalog file: %s\n", strerror(errno));
         return -1;
     }
-	buffered_read_free(&cat->br);
-	free(cat);
 	return 0;
 }
 
 qfits_header* twomass_fits_get_primary_header(const twomass_fits* cat) {
-    return fitstable_get_primary_header(cat->ft);
+    return fitstable_get_primary_header(cat);
 }
 
 int twomass_fits_write_entry(twomass_fits* cat, twomass_entry* entry) {
-    return fitstable_write_struct(cat->ft, entry);
+    return fitstable_write_struct(cat, entry);
 }

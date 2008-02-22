@@ -32,7 +32,7 @@ struct usnob_fits {
 	int columns[USNOB_FITS_COLUMNS];
 	qfits_header* header;
 	// buffered reading
-	bread br;
+	bread_t br;
 	// when writing:
 	FILE* fid;
 	off_t header_end;

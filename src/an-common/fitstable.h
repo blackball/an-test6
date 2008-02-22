@@ -8,6 +8,7 @@
 #include "qfits_table.h"
 #include "an-bool.h"
 #include "bl.h"
+#include "ioutils.h"
 
 /**
  For quick-n-easy(-ish) access to a column of data in a FITS BINTABLE.
@@ -114,6 +115,9 @@ struct fitstable_t {
     off_t table_offset;
     // end of the current table (including FITS padding)
     off_t end_table_offset;
+
+    // Buffered reading.
+    bread_t* br;
 };
 typedef struct fitstable_t fitstable_t;
 
@@ -236,7 +240,7 @@ int fitstable_read_struct(fitstable_t* table, int index, void* struc);
 int fitstable_read_structs(fitstable_t* table, void* struc,
                            int stride, int offset, int N);
 
-qfits_header* fitstable_get_primary_header(fitstable_t* t);
+qfits_header* fitstable_get_primary_header(const fitstable_t* t);
 
 // Write primary header.
 int fitstable_write_primary_header(fitstable_t* t);
@@ -255,6 +259,17 @@ int fitstable_fix_header(fitstable_t* t);
 // When reading: close the current table and reset all fields that refer to it.
 void fitstable_close_table(fitstable_t* tab);
 
+// When reading: start using buffered reading, or set the buffer size.
+// Do this before calling "fitstable_read_extension()".
+// WARNING, this has undefined results if you do it after elements have already
+// been read.
+void fitstable_use_buffered_reading(fitstable_t* tab, int elementsize, int Nbuffer);
+
+// Returns a pointer to the next struct, when using buffered reading.
+// The pointer points to data owned by the fitstable_t; you shouldn't free it.
+// The pointed-to data may get overwritten by the next call to
+// fitstable_next_struct().
+void* fitstable_next_struct(fitstable_t* tab);
 
 void fitstable_print_missing(fitstable_t* tab, FILE* f);
 

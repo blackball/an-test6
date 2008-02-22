@@ -737,7 +737,7 @@ int write_uints(FILE* fout, unsigned int* val, int n) {
     }
 }
 
-void* buffered_read(bread* br) {
+void* buffered_read(bread_t* br) {
 	void* rtn;
 	if (!br->buffer) {
 		br->buffer = malloc(br->blocksize * br->elementsize);
@@ -765,11 +765,11 @@ void* buffered_read(bread* br) {
 	return rtn;
 }
 
-void buffered_read_reset(bread* br) {
+void buffered_read_reset(bread_t* br) {
 	br->nbuff = br->off = br->buffind = 0;
 }
 
-void buffered_read_pushback(bread* br) {
+void buffered_read_pushback(bread_t* br) {
 	if (!br->buffind) {
 		fprintf(stderr, "buffered_read_pushback: Can't push back any further!\n");
 		return;
@@ -777,6 +777,6 @@ void buffered_read_pushback(bread* br) {
 	br->buffind--;
 }
 
-void buffered_read_free(bread* br) {
+void buffered_read_free(bread_t* br) {
 	free(br->buffer);
 }

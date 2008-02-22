@@ -81,7 +81,7 @@ struct an_catalog {
     //
     fitstable_t* ft;
 	// buffered reading
-	bread br;
+	bread_t br;
 };
 typedef struct an_catalog an_catalog;
 

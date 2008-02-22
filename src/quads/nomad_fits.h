@@ -31,7 +31,7 @@ struct nomad_fits {
 	qfits_table* table;
 	int columns[NOMAD_FITS_COLUMNS];
 	// buffered reading
-	bread br;
+	bread_t br;
 	// when writing:
 	qfits_header* header;
 	FILE* fid;

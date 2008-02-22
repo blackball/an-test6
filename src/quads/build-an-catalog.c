@@ -380,7 +380,7 @@ int main(int argc, char** args) {
 			twomass_entry* entry;
 			int N = twomass_fits_count_entries(twomass);
 			printf("Reading %i entries from 2MASS catalog file %s\n", N, infn);
-			twomass->br.blocksize = BLOCK;
+			//twomass->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
 				int ob;
 				if (!(i % 100000)) {

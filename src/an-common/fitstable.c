@@ -456,7 +456,7 @@ void* fitstable_read_column_array(const fitstable_t* tab,
     return read_array(tab, colname, t, TRUE);
 }
 
-qfits_header* fitstable_get_primary_header(fitstable_t* t) {
+qfits_header* fitstable_get_primary_header(const fitstable_t* t) {
     return t->primheader;
 }
 
@@ -557,6 +557,10 @@ int fitstable_close(fitstable_t* tab) {
         free(col->units);
     }
     bl_free(tab->cols);
+    if (tab->br) {
+        buffered_read_free(tab->br);
+        free(tab->br);
+    }
     free(tab);
     return rtn;
 }
@@ -667,6 +671,11 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
             continue;
         }
         col->arraysize = qcol->atom_nb;
+    }
+
+    if (tab->br) {
+        buffered_read_reset(tab->br);
+        tab->br->ntotal = tab->table->nr;
     }
 
     for (i=0; i<ncols(tab); i++) {
@@ -894,5 +903,30 @@ static void fitstable_create_table(fitstable_t* tab) {
         fits_add_column(qt, i, col->fitstype, col->arraysize,
 						col->units ? col->units : nil, col->colname);
     }
+}
+
+static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+    fitstable_t* tab = userdata;
+    if (fitstable_read_structs(tab, buffer, tab->br->elementsize, offset, n)) {
+        fprintf(stderr, "Error refilling FITS table read buffer.\n");
+        return -1;
+    }
+    return 0;
+}
+
+void fitstable_use_buffered_reading(fitstable_t* tab, int elementsize, int Nbuffer) {
+    if (tab->br) {
+        buffered_read_free(tab->br);
+    }
+    tab->br = calloc(1, sizeof(bread_t));
+    tab->br->blocksize = Nbuffer;
+    tab->br->elementsize = elementsize;
+    tab->br->refill_buffer = refill_buffer;
+    tab->br->userdata = tab;
+}
+
+void* fitstable_next_struct(fitstable_t* tab) {
+    if (!tab->br) return NULL;
+    return buffered_read(tab->br);
 }
 

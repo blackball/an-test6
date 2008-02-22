@@ -114,14 +114,14 @@ struct buffered_read_data {
 	int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems);
 	void* userdata;
 };
-typedef struct buffered_read_data bread;
+typedef struct buffered_read_data bread_t;
 
-void* buffered_read(bread* buff);
+void* buffered_read(bread_t* buff);
 
-void buffered_read_pushback(bread* br);
+void buffered_read_pushback(bread_t* br);
 
-void buffered_read_reset(bread* br);
+void buffered_read_reset(bread_t* br);
 
-void buffered_read_free(bread* br);
+void buffered_read_free(bread_t* br);
 
 #endif
