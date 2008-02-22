@@ -737,6 +737,19 @@ int write_uints(FILE* fout, unsigned int* val, int n) {
     }
 }
 
+bread_t* buffered_read_new(int elementsize, int Nbuffer, int Ntotal,
+                           int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems),
+                           void* userdata) {
+    bread_t* br;
+    br = calloc(1, sizeof(bread_t));
+    br->blocksize = Nbuffer;
+    br->elementsize = elementsize;
+    br->ntotal = Ntotal;
+    br->refill_buffer = refill_buffer;
+    br->userdata = userdata;
+    return br;
+}
+
 void* buffered_read(bread_t* br) {
 	void* rtn;
 	if (!br->buffer) {
@@ -763,6 +776,12 @@ void* buffered_read(bread_t* br) {
 	rtn = (char*)br->buffer + (br->buffind * br->elementsize);
 	br->buffind++;
 	return rtn;
+}
+
+void buffered_read_resize(bread_t* br, int newsize) {
+    br->blocksize = newsize;
+    if (br->buffer)
+        br->buffer = realloc(br->buffer, br->blocksize * br->elementsize);
 }
 
 void buffered_read_reset(bread_t* br) {

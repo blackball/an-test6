@@ -27,25 +27,6 @@
 #include "fitsioutils.h"
 #include "starutil.h"
 
-static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
-	an_catalog* cat = userdata;
-	an_entry* en = buffer;
-	return an_catalog_read_entries(cat, offset, n, en);
-}
-
-an_catalog* cat_new() {
-	an_catalog* cat = calloc(1, sizeof(an_catalog));
-	if (!cat) {
-		fprintf(stderr, "Couldn't allocate memory for a an_catalog structure.\n");
-        return NULL;
-	}
-	cat->br.blocksize = 1000;
-	cat->br.elementsize = sizeof(an_entry);
-	cat->br.refill_buffer = refill_buffer;
-	cat->br.userdata = cat;
-	return cat;
-}
-
 // This is a naughty preprocessor function because it uses variables
 // declared in the scope from which it is called.
 #define ADDCOL(ctype, ftype, col, units, member)                        \
@@ -101,45 +82,40 @@ static void add_columns(fitstable_t* tab, bool write) {
 
 int an_catalog_read_entries(an_catalog* cat, uint offset,
 							uint count, an_entry* entries) {
-    return fitstable_read_structs(cat->ft, entries, sizeof(an_entry),
+    return fitstable_read_structs(cat, entries, sizeof(an_entry),
                                   offset, count);
 }
 
 an_entry* an_catalog_read_entry(an_catalog* cat) {
-	an_entry* e = buffered_read(&cat->br);
-	if (!e)
-		fprintf(stderr, "Failed to read an Astrometry.net catalog entry.\n");
-	return e;
+    return (an_entry*)fitstable_next_struct(cat);
 }
 
 int an_catalog_write_entry(an_catalog* cat, an_entry* entry) {
-    return fitstable_write_struct(cat->ft, entry);
+    return fitstable_write_struct(cat, entry);
 }
 
 int an_catalog_count_entries(an_catalog* cat) {
-	return fitstable_nrows(cat->ft);
+	return fitstable_nrows(cat);
 }
 
 int an_catalog_close(an_catalog* cat) {
-    if (fitstable_close(cat->ft)) {
+    if (fitstable_close(cat)) {
         fprintf(stderr, "Error closing AN catalog file: %s\n", strerror(errno));
         return -1;
     }
-	buffered_read_free(&cat->br);
-	free(cat);
 	return 0;
 }
 
 qfits_header* an_catalog_get_primary_header(const an_catalog* cat) {
-    return fitstable_get_primary_header(cat->ft);
+    return fitstable_get_primary_header(cat);
 }
 
 int an_catalog_sync(an_catalog* cat) {
-    FILE* fid = cat->ft->fid;
+    FILE* fid = cat->fid;
     off_t offset = ftello(fid);
     if (fits_pad_file(fid) ||
         fdatasync(fileno(fid))) {
-        fprintf(stderr, "Error padding and syncing AN catalog file for file %s\n", cat->ft->fn);
+        fprintf(stderr, "Error padding and syncing AN catalog file for file %s\n", cat->fn);
     }
     fseeko(fid, offset, SEEK_SET);
     return 0;
@@ -147,57 +123,51 @@ int an_catalog_sync(an_catalog* cat) {
 
 an_catalog* an_catalog_open(char* fn) {
 	an_catalog* cat = NULL;
-	cat = cat_new();
-    if (!cat)
-        return NULL;
-    cat->ft = fitstable_open(fn);
-    if (!cat->ft) {
+    cat = fitstable_open(fn);
+    if (!cat) {
         fprintf(stderr, "an-catalog: failed to open table.\n");
         an_catalog_close(cat);
         return NULL;
     }
-    add_columns(cat->ft, FALSE);
-    if (fitstable_read_extension(cat->ft, 1)) {
+    add_columns(cat, FALSE);
+    an_catalog_set_blocksize(cat, 1000);
+    if (fitstable_read_extension(cat, 1)) {
         fprintf(stderr, "an-catalog: table in extension 1 didn't contain the required columns.\n");
         an_catalog_close(cat);
         return NULL;
     }
-	cat->br.ntotal = fitstable_nrows(cat->ft);
 	return cat;
 }
 
 an_catalog* an_catalog_open_for_writing(char* fn) {
 	an_catalog* cat;
     qfits_header* hdr;
-	cat = cat_new();
-    if (!cat)
-        return NULL;
-    cat->ft = fitstable_open_for_writing(fn);
-    if (!cat->ft) {
+    cat = fitstable_open_for_writing(fn);
+    if (!cat) {
         fprintf(stderr, "an-catalog: failed to open table.\n");
         an_catalog_close(cat);
         return NULL;
     }
-    hdr = fitstable_get_primary_header(cat->ft);
+    hdr = fitstable_get_primary_header(cat);
 	qfits_header_add(hdr, "AN_CAT", "T", "This is an Astrometry.net catalog.", NULL);
     qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_ANCAT, "Astrometry.net file type", NULL);
     return cat;
 }
 
 int an_catalog_write_headers(an_catalog* cat) {
-    if (fitstable_write_primary_header(cat->ft))
+    if (fitstable_write_primary_header(cat))
         return -1;
-    return fitstable_write_header(cat->ft);
+    return fitstable_write_header(cat);
 }
 
 int an_catalog_fix_headers(an_catalog* cat) {
-    if (fitstable_fix_primary_header(cat->ft))
+    if (fitstable_fix_primary_header(cat))
         return -1;
-    return fitstable_fix_header(cat->ft);
+    return fitstable_fix_header(cat);
 }
 
 void an_catalog_set_blocksize(an_catalog* cat, int block) {
-    cat->br.blocksize = block;
+    fitstable_use_buffered_reading(cat, sizeof(an_entry), block);
 }
 
 int64_t an_catalog_get_id(int catversion, int64_t starid) {

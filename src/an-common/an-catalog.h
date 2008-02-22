@@ -75,15 +75,7 @@ struct an_entry {
 };
 typedef struct an_entry an_entry;
 
-#define AN_FITS_COLUMNS 35
-
-struct an_catalog {
-    //
-    fitstable_t* ft;
-	// buffered reading
-	bread_t br;
-};
-typedef struct an_catalog an_catalog;
+typedef fitstable_t an_catalog;
 
 an_catalog* an_catalog_open(char* fn);
 

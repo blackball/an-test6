@@ -116,6 +116,10 @@ struct buffered_read_data {
 };
 typedef struct buffered_read_data bread_t;
 
+bread_t* buffered_read_new(int elementsize, int Nbuffer, int Ntotal,
+                           int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems),
+                           void* userdata);
+
 void* buffered_read(bread_t* buff);
 
 void buffered_read_pushback(bread_t* br);
@@ -123,5 +127,7 @@ void buffered_read_pushback(bread_t* br);
 void buffered_read_reset(bread_t* br);
 
 void buffered_read_free(bread_t* br);
+
+void buffered_read_resize(bread_t* br, int newsize);
 
 #endif

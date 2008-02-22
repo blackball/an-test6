@@ -916,13 +916,11 @@ static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
 
 void fitstable_use_buffered_reading(fitstable_t* tab, int elementsize, int Nbuffer) {
     if (tab->br) {
-        buffered_read_free(tab->br);
+        assert(tab->br->elementsize == elementsize);
+        buffered_read_resize(tab->br, Nbuffer);
+    } else {
+        tab->br = buffered_read_new(elementsize, Nbuffer, 0, refill_buffer, tab);
     }
-    tab->br = calloc(1, sizeof(bread_t));
-    tab->br->blocksize = Nbuffer;
-    tab->br->elementsize = elementsize;
-    tab->br->refill_buffer = refill_buffer;
-    tab->br->userdata = tab;
 }
 
 void* fitstable_next_struct(fitstable_t* tab) {
