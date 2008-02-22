@@ -118,6 +118,11 @@ struct fitstable_t {
 
     // Buffered reading.
     bread_t* br;
+
+    // When reading: an optional postprocessing function to run after
+    // fitstable_read_structs().
+    int (*postprocess_read_structs)(struct fitstable_t* table, void* struc,
+                                    int stride, int offset, int N);
 };
 typedef struct fitstable_t fitstable_t;
 

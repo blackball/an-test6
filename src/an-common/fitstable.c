@@ -251,6 +251,10 @@ int fitstable_read_structs(fitstable_t* tab, void* struc,
         }
     }
     free(tempdata);
+
+    if (tab->postprocess_read_structs)
+        return tab->postprocess_read_structs(tab, struc, strucstride, offset, N);
+
     return 0;
 }
 
