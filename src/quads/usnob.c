@@ -194,10 +194,10 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	usnob->sigma_mu_dec = 0.001 * y;
 
 	// Q: sigma_RA_fit, in units of 0.1 arcsec.
-	usnob->sigma_ra_fit = 0.1 * Q;
+	usnob->sigma_ra_fit = arcsec2deg(0.1 * Q);
 
 	// R: sigma_SPD_fit, in units of 0.1 arcsec.
-	usnob->sigma_dec_fit = 0.1 * R;
+	usnob->sigma_dec_fit = arcsec2deg(0.1 * R);
 
 	// M: number of detections; in [2, 5] for USNOB stars,
 	//   1 for rejected USNOB stars,
@@ -220,11 +220,11 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	k = (ival % 10);
 
 	// u: sigma_RA, in units of 0.001 arcsec.
-	usnob->sigma_ra = 0.001 * u;
+	usnob->sigma_ra = arcsec2deg(0.001 * u);
 
 	// v: sigma_SPD, in units of 0.001 arcsec.
 	// Again, equal to sigma_DEC.
-	usnob->sigma_dec = 0.001 * v;
+	usnob->sigma_dec = arcsec2deg(0.001 * v);
 
 	// e: mean epoch, in 0.1 yr, offset by -1950.
 	usnob->epoch = 1950.0 + 0.1 * e;
@@ -281,11 +281,16 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		ival     /= 10000;
 		C = (ival % 10);
 
-		// R: xi residual, in units of 0.01 arcsec, offset by -50 arcsec.
-		usnob->obs[obs].xi_resid = -50.0 + 0.01 * R;
-
-		// r: eta residual, in units of 0.01 arcesc, offset by -50.
-		usnob->obs[obs].eta_resid = -50.0 + 0.01 * r;
+        if (M >= 2 && F == 0) {
+            // empty observation.
+            usnob->obs[obs].xi_resid  = 0.0;
+            usnob->obs[obs].eta_resid = 0.0;
+        } else {
+            // R: xi residual, in units of 0.01 arcsec, offset by -50 arcsec.
+            usnob->obs[obs].xi_resid = arcsec2deg(-50.0 + 0.01 * R);
+            // r: eta residual, in units of 0.01 arcesc, offset by -50.
+            usnob->obs[obs].eta_resid = arcsec2deg(-50.0 + 0.01 * r);
+        }
 
 		// C: source of photometric calibration.
 		usnob->obs[obs].calibration = C;

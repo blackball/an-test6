@@ -169,7 +169,7 @@ solver_test.o: solver.c
 
 # Add the basename of your test sources here...
 ALL_TEST_FILES = test_dfind test_ctmf test_simplexy test_dsmooth test_2mass \
-	test_tycho2
+	test_tycho2 test_usnob
 
 ALL_TEST_EXTRA_OBJS :=
 ALL_TEST_LIBS :=
@@ -198,6 +198,9 @@ ALL_TEST_EXTRA_OBJS += 2mass-fits.o 2mass.o
 
 test_tycho2: tycho2-fits.o tycho2.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 ALL_TEST_EXTRA_OBJS += tycho2-fits.o tycho2.o
+
+test_usnob: usnob_fits.o usnob.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+ALL_TEST_EXTRA_OBJS += usnob_fits.o usnob.o
 
 ALL_TEST_LIBS += $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 

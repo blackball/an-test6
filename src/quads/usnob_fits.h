@@ -36,7 +36,6 @@ struct usnob_fits {
 	// when writing:
 	FILE* fid;
 	off_t header_end;
-	uint nentries;
 };
 typedef struct usnob_fits usnob_fits;
 

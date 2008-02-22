@@ -48,18 +48,18 @@ struct observation {
 
 	// the original survey. (S:1)
 	// (eg USNOB_SURVEY_POSS_I_O)
-	unsigned char survey;
+	uint8_t survey;
 
 	// star/galaxy estimate.  0=galaxy, 11=star. 19=no value computed.
 	//     (GG:2)
     // (but note, in fact values 12, 13, 14, 15 and possibly others exist
     //  in the data files as well!)
-	unsigned char star_galaxy;
+	uint8_t star_galaxy;
 
-	// in arcsec (R:4)
+	// [degrees] (R:4)
 	float xi_resid;
 
-	// in arcsec (r:4)
+	// [degrees] (r:4)
 	float eta_resid;
 
 	// source of photometric calibration: (C:1)
@@ -67,7 +67,7 @@ struct observation {
 	//  1=faint pm standard on this plate
 	//  2=faint " " one plate away
 	//  etc
-	unsigned char calibration;
+	uint8_t calibration;
 
 	// back-pointer to PMM file. (i:7)
 	uint pmmscan;
@@ -102,16 +102,16 @@ struct usnob_entry {
 	// in arcsec / yr. (y:3)
 	float sigma_mu_dec;
 
-	// in arcsec. (Q:1)
+	// [degrees] (Q:1)
 	float sigma_ra_fit;
 
-	// in arcsec. (R:1)
+	// [degrees] (R:1)
 	float sigma_dec_fit;
 
-	// in arcsec. (u:3)
+	// [degrees] (u:3)
 	float sigma_ra;
 
-	// in arcsec. (v:3)
+	// [degrees] (v:3)
 	float sigma_dec;
 
 	// in years; 1950-2050. (e:3)

@@ -186,7 +186,7 @@ int usnob_fits_write_entry(usnob_fits* usnob, usnob_entry* entry) {
 			return -1;
 		}
 	}
-	usnob->nentries++;
+	usnob->table->nr++;
 	return 0;
 }
 
@@ -287,7 +287,7 @@ usnob_fits* usnob_fits_open(char* fn) {
 		return NULL;
 	}
 
-	usnob->br.ntotal = usnob->nentries = usnob->table->nr;
+	usnob->br.ntotal = usnob->table->nr;
 
 	return usnob;
 }
@@ -318,9 +318,8 @@ int usnob_fits_write_headers(usnob_fits* usnob) {
 	qfits_header* table_header;
 	assert(usnob->fid);
 	assert(usnob->header);
-	fits_header_mod_int(usnob->header, "NOBJS", usnob->nentries, "Number of objects in this catalog.");
+	fits_header_mod_int(usnob->header, "NOBJS", usnob_fits_count_entries(usnob), "Number of objects in this catalog.");
 	qfits_header_dump(usnob->header, usnob->fid);
-	usnob->table->nr = usnob->nentries;
 	table_header = qfits_table_ext_header_default(usnob->table);
 	qfits_header_dump(table_header, usnob->fid);
 	qfits_header_destroy(table_header);
