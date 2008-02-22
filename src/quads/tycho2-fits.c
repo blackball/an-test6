@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2006-2008 Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -104,6 +104,7 @@ static void add_columns(fitstable_t* tab, bool write) {
 #undef ADDCOL
 #undef ADDARR
 
+// We need this because we do special handling of FLAGS and CCDM.
 static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
     tycho2_fits* cat = userdata;
     tycho2_entry* entries = buffer;
@@ -206,6 +207,7 @@ int tycho2_fits_write_entry(tycho2_fits* cat, tycho2_entry* entry) {
 		(entry->double_star            ? (1 << 4) : 0) |
 		(entry->photo_center_treatment ? (1 << 3) : 0) |
 		(entry->hipparcos_star         ? (1 << 2) : 0);
+    // Can't just write_data() because write_struct() skips over
     //return fits_write_data_X(cat->fid, flags);
     return fitstable_write_one_column(cat, bl_size(cat->cols)-1,
                                       fitstable_nrows(cat)-1, 1, &flags, 0);
