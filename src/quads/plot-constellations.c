@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2007-2008 Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -74,7 +74,7 @@ void print_help(char* progname) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-int sort_by_mag(const void* v1, const void* v2) {
+static int sort_by_mag(const void* v1, const void* v2) {
 	const brightstar_t* s1 = v1;
 	const brightstar_t* s2 = v2;
 	if (s1->Vmag > s2->Vmag)
@@ -82,6 +82,23 @@ int sort_by_mag(const void* v1, const void* v2) {
 	if (s1->Vmag == s2->Vmag)
 		return 0;
 	return -1;
+}
+
+static void add_text(cairo_t* cairo, const char* txt, double px, double py) {
+    int dx, dy;
+    cairo_save(cairo);
+    cairo_set_source_rgba(cairo, 0, 0, 0, 1);
+    for (dy=-1; dy<=1; dy++) {
+        for (dx=-1; dx<=1; dx++) {
+            cairo_move_to(cairo, px+dx, py+dy);
+            cairo_show_text(cairo, txt);
+        }
+    }
+    cairo_stroke(cairo);
+    cairo_restore(cairo);
+    cairo_move_to(cairo, px, py);
+    cairo_show_text(cairo, txt);
+    cairo_stroke(cairo);
 }
 
 int main(int argc, char** args) {
@@ -380,10 +397,7 @@ int main(int argc, char** args) {
 				py = H/scale - textents.height;
 			//fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
 
-            cairo_move_to(cairo, px, py);
-            //cairo_show_text(cairo, shortname);
-            cairo_show_text(cairo, longname);
-			cairo_stroke(cairo);
+            add_text(cairo, longname, px, py);
 
 			// Draw the lines.
             cairo_set_line_width(cairo, lw);
@@ -479,13 +493,13 @@ int main(int argc, char** args) {
 			printf("%s\n", text);
 
 			if (!justlist) {
-				cairo_move_to(cairo, px + label_offset, py + dy);
-				cairo_show_text(cairo, text);
 				pixsize = ngc->size * 60.0 / imscale;
 				cairo_move_to(cairo, px + pixsize/2.0, py);
 				cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
 				//fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
 				cairo_stroke(cairo);
+
+                add_text(cairo, text, px + label_offset, py + dy);
 			}
 			free(text);
 			sl_free2(str);
@@ -549,11 +563,9 @@ int main(int argc, char** args) {
 			else
 				printf("The star %s\n", bs->name);
 
-			if (!justlist) {
-				cairo_move_to(cairo, px + label_offset, py + dy);
-				cairo_show_text(cairo, text);
-				cairo_stroke(cairo);
-			}
+			if (!justlist)
+                add_text(cairo, text, px + label_offset, py + dy);
+
 			free(text);
 
 			if (!justlist) {
