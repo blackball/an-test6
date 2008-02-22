@@ -310,8 +310,8 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "Couldn't open catalog.\n");
 				exit(-1);
 			}
-			numstars = usnob->nentries;
-			usnob->br.blocksize = BLOCK;
+			numstars = usnob_fits_count_entries(usnob);
+			//usnob->br.blocksize = BLOCK;
 		} else if (qfits_header_getboolean(hdr, "TYCHO_2", 0)) {
 			fprintf(stderr, "File has TYCHO_2 = T header.\n");
 			tycho = tycho2_fits_open(fname);
