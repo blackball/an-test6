@@ -148,11 +148,8 @@ static void add_columns(fitstable_t* tab, bool write) {
 twomass_fits* twomass_fits_open(char* fn) {
 	twomass_fits* cat = NULL;
     cat = fitstable_open(fn);
-    if (!cat) {
-        fprintf(stderr, "2mass-fits: failed to open table.\n");
-        twomass_fits_close(cat);
+    if (!cat)
         return NULL;
-    }
     add_columns(cat, FALSE);
     fitstable_use_buffered_reading(cat, sizeof(twomass_entry), 1000);
     if (fitstable_read_extension(cat, 1)) {
@@ -170,11 +167,8 @@ twomass_fits* twomass_fits_open_for_writing(char* fn) {
 	twomass_fits* cat;
     qfits_header* hdr;
     cat = fitstable_open_for_writing(fn);
-    if (!cat) {
-        fprintf(stderr, "2mass-fits: failed to open table.\n");
-        twomass_fits_close(cat);
+    if (!cat)
         return NULL;
-    }
     add_columns(cat, TRUE);
     hdr = fitstable_get_primary_header(cat);
 	qfits_header_add(hdr, "2MASS", "T", "This is a 2-MASS catalog.", NULL);

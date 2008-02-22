@@ -115,6 +115,10 @@ tfits_type fitscolumn_bool_type() {
     return TFITS_BIN_TYPE_B;
 }
 
+tfits_type fitscolumn_bitfield_type() {
+    return TFITS_BIN_TYPE_X;
+}
+
 // When reading: allow this column to match to any FITS type.
 tfits_type fitscolumn_any_type() {
     return (tfits_type)-1;
@@ -394,7 +398,7 @@ void fitstable_clear_table(fitstable_t* tab) {
 
 static void* read_array(const fitstable_t* tab,
                         const char* colname, tfits_type ctype,
-                        bool array_ok) {
+                        bool array_ok, int offset, int Nread) {
     int colnum;
     qfits_col* col;
     int fitssize;
@@ -421,26 +425,29 @@ static void* read_array(const fitstable_t* tab,
     fitssize = fits_get_atom_size(fitstype);
     csize = fits_get_atom_size(ctype);
     N = tab->table->nr;
-    data = calloc(MAX(csize, fitssize), N * arraysize);
+    if (Nread == -1)
+        Nread = N;
+    if (offset == -1)
+        offset = 0;
+    data = calloc(MAX(csize, fitssize), Nread * arraysize);
 
-    qfits_query_column_seq_to_array(tab->table, colnum, 0, N, data, 
+    qfits_query_column_seq_to_array(tab->table, colnum, offset, Nread, data, 
                                     fitssize * arraysize);
 
     if (fitstype != ctype) {
         if (csize <= fitssize) {
             fits_convert_data(data, csize * arraysize, ctype,
                               data, fitssize * arraysize, fitstype,
-                              arraysize, N);
+                              arraysize, Nread);
             if (csize < fitssize)
-                data = realloc(data, csize * N * arraysize);
+                data = realloc(data, csize * Nread * arraysize);
         } else if (csize > fitssize) {
             // HACK - stride backwards from the end of the array
-            fits_convert_data(((char*)data) + ((N*arraysize)-1) * csize,
+            fits_convert_data(((char*)data) + ((Nread*arraysize)-1) * csize,
                               -csize, ctype,
-                              ((char*)data) + ((N*arraysize)-1) * fitssize,
+                              ((char*)data) + ((Nread*arraysize)-1) * fitssize,
                               -fitssize, fitstype,
-                              1, N * arraysize);
-
+                              1, Nread * arraysize);
         }
     }
 	return data;
@@ -448,12 +455,18 @@ static void* read_array(const fitstable_t* tab,
 
 void* fitstable_read_column(const fitstable_t* tab,
                             const char* colname, tfits_type ctype) {
-    return read_array(tab, colname, ctype, FALSE);
+    return read_array(tab, colname, ctype, FALSE, -1, -1);
 }
 
 void* fitstable_read_column_array(const fitstable_t* tab,
                                   const char* colname, tfits_type t) {
-    return read_array(tab, colname, t, TRUE);
+    return read_array(tab, colname, t, TRUE, -1, -1);
+}
+
+void* fitstable_read_column_offset(const fitstable_t* tab,
+                                   const char* colname, tfits_type ctype,
+                                   int offset, int N) {
+    return read_array(tab, colname, ctype, FALSE, offset, N);
 }
 
 qfits_header* fitstable_get_primary_header(const fitstable_t* t) {
@@ -921,6 +934,14 @@ void fitstable_use_buffered_reading(fitstable_t* tab, int elementsize, int Nbuff
     } else {
         tab->br = buffered_read_new(elementsize, Nbuffer, 0, refill_buffer, tab);
     }
+}
+
+void fitstable_set_buffer_fill_function(fitstable_t* tab,
+                                        int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems),
+                                        void* userdata) {
+    assert(tab->br);
+    tab->br->refill_buffer = refill_buffer;
+    tab->br->userdata = userdata;
 }
 
 void* fitstable_next_struct(fitstable_t* tab) {

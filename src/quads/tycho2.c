@@ -110,6 +110,7 @@ int tycho2_parse_entry(const char* line, tycho2_entry* entry) {
 	double d1, d2, d3, d4, d5, d6, d7, d8, d9, d10;
 	double d11, d12, d13, d14, d15, d16;
 	uint u1, u2, u3;
+    int i;
 
 	memset(entry, 0, sizeof(tycho2_entry));
 
@@ -222,9 +223,13 @@ int tycho2_parse_entry(const char* line, tycho2_entry* entry) {
 		parse_double(line + 202, 4, &d7)) {
 		return -1;
 	}
-	grab_substring(entry->hip_ccdm, line + 148, 3);
-    if (strcmp(entry->hip_ccdm, "   ") == 0) {
-        memset(entry->hip_ccdm, 0, sizeof(entry->hip_ccdm));
+
+    memset(entry->hip_ccdm, 0, sizeof(entry->hip_ccdm));
+    for (i=0; i<3; i++) {
+        char c = line[148 + i];
+        if (c == ' ')
+            break;
+        entry->hip_ccdm[i] = c;
     }
 	tycho1 = line[140];
 	posflag = line[200];

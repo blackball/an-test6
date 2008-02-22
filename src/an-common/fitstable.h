@@ -132,6 +132,7 @@ tfits_type fitscolumn_u8_type();
 tfits_type fitscolumn_i16_type();
 tfits_type fitscolumn_i32_type();
 tfits_type fitscolumn_i64_type();
+tfits_type fitscolumn_bitfield_type();
 
 // an-bool type.
 tfits_type fitscolumn_bool_type();
@@ -223,6 +224,10 @@ void* fitstable_read_column(const fitstable_t* tab,
 void* fitstable_read_column_array(const fitstable_t* tab,
                                   const char* colname, tfits_type t);
 
+void* fitstable_read_column_offset(const fitstable_t* tab,
+                                   const char* colname, tfits_type ctype,
+                                   int offset, int N);
+
 int fitstable_write_row(fitstable_t* table, ...);
 
 // Writes one row, with data drawn from the given structure.
@@ -270,6 +275,10 @@ void fitstable_use_buffered_reading(fitstable_t* tab, int elementsize, int Nbuff
 // The pointed-to data may get overwritten by the next call to
 // fitstable_next_struct().
 void* fitstable_next_struct(fitstable_t* tab);
+
+void fitstable_set_buffer_fill_function(fitstable_t* tab,
+                                        int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems),
+                                        void* userdata);
 
 void fitstable_print_missing(fitstable_t* tab, FILE* f);
 

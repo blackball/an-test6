@@ -322,7 +322,7 @@ usnobtofits: usnobtofits.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 tycho2tofits: tycho2tofits.o tycho2-fits.o tycho2.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 hpowned: hpowned.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 

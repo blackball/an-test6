@@ -42,7 +42,7 @@ struct tycho2_entry {
 	// together these form the star ID.
 	int16_t tyc1;  // [1, 9537] in main catalog; [2, 9529] in suppl.
 	int16_t tyc2;  // [1, 12121] main; [1,12112] suppl.
-	uchar  tyc3;  // [1, 3] main, [1, 4] suppl.
+	uint8_t tyc3;  // [1, 3] main, [1, 4] suppl.
 
 	// flag "P": photo-center of two stars was used for position
 	bool photo_center;
@@ -62,17 +62,21 @@ struct tycho2_entry {
 	double dec;        // DEdeg
 	double mean_ra;     // mRAdeg
 	double mean_dec;    // mDEdeg
-	// [arcsec/yr]
-	float pm_ra;        // pmRA* / 1000
-	float pm_dec;       // pmDE / 1000
+
 	// [degrees]
 	float sigma_ra;    // mas2deg(e_RA*)
 	float sigma_dec;   // mas2deg(e_DE)
 	float sigma_mean_ra;   // mas2deg(e_mRA*)
 	float sigma_mean_dec;  // mas2deg(e_mDE)
+
+	// [arcsec/yr]
+	float pm_ra;        // pmRA* / 1000
+	float pm_dec;       // pmDE / 1000
+
 	// [arcsec/yr]
 	float sigma_pm_ra;  // e_pmRA* / 1000
 	float sigma_pm_dec; // e_pmDE / 1000
+
 	// [yr]
 	float epoch_ra;    // epRA + 1990
 	float epoch_dec;   // epDE + 1990
@@ -80,11 +84,13 @@ struct tycho2_entry {
 	float epoch_mean_dec;  // mepDE
 	//
 	uint8_t nobs; // Num
+
 	// "goodness"
 	float goodness_mean_ra;  // g_mRA
 	float goodness_mean_dec; // g_mDEC
 	float goodness_pm_ra;  // g_pmRA
 	float goodness_pm_dec; // g_pmDEC
+
 	// [mag] (0.0 means unavailable)
 	float mag_BT;        // BT
 	float mag_VT;        // VT

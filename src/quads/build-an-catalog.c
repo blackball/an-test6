@@ -305,7 +305,7 @@ int main(int argc, char** args) {
 			tycho2_entry* entry;
 			int N = tycho2_fits_count_entries(tycho);
 			printf("Reading %i entries from Tycho-2 catalog file %s\n", N, infn);
-			tycho->br.blocksize = BLOCK;
+			//tycho->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
 				int ob;
 				if (!(i % 100000)) {

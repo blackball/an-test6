@@ -24,367 +24,210 @@
 #include "tycho2-fits.h"
 #include "fitsioutils.h"
 
-static qfits_table* tycho2_fits_get_table();
-static tycho2_fits* tycho2_fits_new();
+// This is a naughty preprocessor function because it uses variables
+// declared in the scope from which it is called.
+#define ADDARR(ctype, ftype, col, units, member, arraysize)             \
+    if (write) {                                                        \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, arraysize, offsetof(tycho2_entry, member),     \
+             ftype, col, units, TRUE);                                  \
+    } else {                                                            \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, arraysize, offsetof(tycho2_entry, member),     \
+             any, col, units, TRUE);                                    \
+    }
 
-// mapping between a struct field and FITS field.
-struct fits_struct_pair {
-	char* fieldname;
-	char* units;
-	int offset;
-	int size;
-	tfits_type fitstype;
-};
-typedef struct fits_struct_pair fitstruct;
+#define ADDCOL(ctype, ftype, col, units, member) \
+ADDARR(ctype, ftype, col, units, member, 1)
 
-static fitstruct tycho2_fitstruct[TYCHO2_FITS_COLUMNS];
-static bool tycho2_fitstruct_inited = 0;
-static int TYCHO2_FLAGS_INDEX;
-static int TYCHO2_CCDM_INDEX;
+static void add_columns(fitstable_t* tab, bool write) {
+    tfits_type any = fitscolumn_any_type();
+    tfits_type d = fitscolumn_double_type();
+    tfits_type f = fitscolumn_float_type();
+    tfits_type u8 = fitscolumn_u8_type();
+    tfits_type i16 = fitscolumn_i16_type();
+    tfits_type i32 = fitscolumn_i32_type();
+    tfits_type J = TFITS_BIN_TYPE_J;
+    tfits_type I = TFITS_BIN_TYPE_I;
+    tfits_type c = fitscolumn_char_type();
+    tfits_type bitfield = fitscolumn_bitfield_type();
+    char* nil = " ";
 
-#define SET_FIELDS(A, i, t, n, u, fld) { \
- tycho2_entry x; \
- A[i].fieldname=n; \
- A[i].units=u; \
- A[i].offset=offsetof(tycho2_entry, fld); \
- A[i].size=sizeof(x.fld); \
- A[i].fitstype=t; \
- i++; \
+	ADDCOL(i16, I,      "TYC1",              nil,  tyc1);
+	ADDCOL(i16, I,      "TYC2",              nil,  tyc2);
+	ADDCOL(u8, u8,      "TYC3",              nil,  tyc3);
+
+	ADDCOL(d,  d,       "RA",                "deg",  ra);
+	ADDCOL(d,  d,       "DEC",               "deg",  dec);
+	ADDCOL(d,  d,       "MEAN_RA",           "deg",  mean_ra);
+	ADDCOL(d,  d,       "MEAN_DEC",          "deg",  mean_dec);
+
+	ADDCOL(f,  f,       "SIGMA_RA",          "deg",  sigma_ra);
+	ADDCOL(f,  f,       "SIGMA_DEC",         "deg",  sigma_dec);
+	ADDCOL(f,  f,       "SIGMA_MEAN_RA",     "deg",  sigma_mean_ra);
+	ADDCOL(f,  f,       "SIGMA_MEAN_DEC",    "deg",  sigma_mean_dec);
+
+	ADDCOL(f,  f,       "PM_RA",             "arcsec/yr", pm_ra);
+	ADDCOL(f,  f,       "PM_DEC",            "arcsyc/yr", pm_dec);
+
+	ADDCOL(f,  f,       "SIGMA_PM_RA",       "arcsec/yr", sigma_pm_ra);
+	ADDCOL(f,  f,       "SIGMA_PM_DEC",      "arcsyc/yr", sigma_pm_dec);
+
+	ADDCOL(f,  f,       "EPOCH_RA",          "yr", epoch_ra);
+	ADDCOL(f,  f,       "EPOCH_DEC",         "yr", epoch_dec);
+	ADDCOL(f,  f,       "EPOCH_MEAN_RA",     "yr", epoch_mean_ra);
+	ADDCOL(f,  f,       "EPOCH_MEAN_DEC",    "yr", epoch_mean_dec);
+
+	ADDCOL(u8, u8,      "NOBSERVATIONS",     nil, nobs);
+
+	ADDCOL(f,  f,       "GOODNESS_MEAN_RA",  nil, goodness_mean_ra);
+	ADDCOL(f,  f,       "GOODNESS_MEAN_DEC", nil, goodness_mean_dec);
+	ADDCOL(f,  f,       "GOODNESS_PM_RA",    nil, goodness_pm_ra);
+	ADDCOL(f,  f,       "GOODNESS_PM_DEC",   nil, goodness_pm_dec);
+
+	ADDCOL(f,  f,       "MAG_BT",            "mag", mag_BT);
+	ADDCOL(f,  f,       "SIGMA_MAG_BT",      "mag", sigma_BT);
+	ADDCOL(f,  f,       "MAG_VT",            "mag", mag_VT);
+	ADDCOL(f,  f,       "SIGMA_MAG_VT",      "mag", sigma_VT);
+	ADDCOL(f,  f,       "MAG_HP",            "mag", mag_HP);
+	ADDCOL(f,  f,       "SIGMA_MAG_HP",      "mag", sigma_HP);
+
+	ADDCOL(f,  f,       "PROX",              "deg", prox);
+	ADDCOL(f,  f,       "CORRELATION",       nil, correlation);
+	ADDCOL(i32,J,       "HIPPARCOS_ID",      nil, hipparcos_id);
+
+	ADDARR(c,  c,       "CCDM",              nil, hip_ccdm, 3);
+
+    if (write)
+        fitstable_add_write_column(tab, bitfield, "FLAGS", nil);
 }
+#undef ADDCOL
+#undef ADDARR
 
-static void init_tycho2_fitstruct() {
-	fitstruct* fs = tycho2_fitstruct;
-	int i = 0;
-	char* nil = " ";
-
- 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "degrees", dec);
-	TYCHO2_FLAGS_INDEX = i;
-	fs[i].fieldname = "FLAGS";
-	fs[i].units = nil;
-	fs[i].offset = -1;
-	fs[i].size = 0;
-	fs[i].fitstype = TFITS_BIN_TYPE_UNKNOWN;
-	i++;
-	TYCHO2_CCDM_INDEX = i;
-	fs[i].fieldname = "CCDM";
-	fs[i].units = nil;
-	fs[i].offset = -1;
-	fs[i].size = 0;
-	fs[i].fitstype = TFITS_BIN_TYPE_UNKNOWN;
-	i++;
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "TYC1", nil, tyc1);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "TYC2", nil, tyc2);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "TYC3", nil, tyc3);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "NOBSERVATIONS", nil, nobs);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "MEAN_RA",  "deg", mean_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "MEAN_DEC", "deg", mean_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_RA",   "arcsec/yr", pm_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_DEC",  "arcsec/yr", pm_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA",   "deg", sigma_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC",  "deg", sigma_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MEAN_RA",   "deg", sigma_mean_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MEAN_DEC",  "deg", sigma_mean_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_RA",   "arcsec/yr", sigma_pm_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_DEC",  "arcsec/yr", sigma_pm_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_RA", "yr", epoch_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_DEC", "yr", epoch_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_MEAN_RA", "yr", epoch_mean_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_MEAN_DEC", "yr", epoch_mean_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "GOODNESS_MEAN_RA", nil, goodness_mean_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "GOODNESS_MEAN_DEC", nil, goodness_mean_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "GOODNESS_PM_RA", nil, goodness_pm_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "GOODNESS_PM_DEC", nil, goodness_pm_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_BT", nil, mag_BT);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_VT", nil, mag_VT);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_HP", nil, mag_HP);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MAG_BT", nil, sigma_BT);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MAG_VT", nil, sigma_VT);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MAG_HP", nil, sigma_HP);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PROX", "arcsec", prox);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "CORRELATION", nil, correlation);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "HIPPARCOS_ID", nil, hipparcos_id);
-
-	assert(i == TYCHO2_FITS_COLUMNS);
-	tycho2_fitstruct_inited = 1;
-}
-
-tycho2_entry* tycho2_fits_read_entry(tycho2_fits* t) {
-	tycho2_entry* e = buffered_read(&t->br);
-	if (!e)
-		fprintf(stderr, "Failed to read a Tycho-2 catalog entry.\n");
-	return e;
-}
-
-int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
-							uint count, tycho2_entry* entries) {
-	int i=-1, c;
-	unsigned char* rawdata;
-
-	if (!tycho2_fitstruct_inited)
-		init_tycho2_fitstruct();
-
-	for (c=0; c<TYCHO2_FITS_COLUMNS; c++) {
-		assert(tycho2->columns[c] != -1);
-		assert(tycho2->table);
-
-		// special-cases
-		if ((c == TYCHO2_FLAGS_INDEX) ||
-			(c == TYCHO2_CCDM_INDEX)) {
-
-			rawdata = qfits_query_column_seq(tycho2->table, tycho2->columns[c],
-											 offset, count);
-			assert(rawdata);
-
-			if (c == TYCHO2_FLAGS_INDEX) {
-				unsigned char flags;
-				for (i=0; i<count; i++) {
-					flags = rawdata[i];
-					entries[i].photo_center           = (flags >> 7) & 0x1;
-					entries[i].no_motion              = (flags >> 6) & 0x1;
-					entries[i].tycho1_star            = (flags >> 5) & 0x1;
-					entries[i].double_star            = (flags >> 4) & 0x1;
-					entries[i].photo_center_treatment = (flags >> 3) & 0x1;
-					entries[i].hipparcos_star         = (flags >> 2) & 0x1;
-				}
-			}
-			if (c == TYCHO2_CCDM_INDEX) {
-				for (i=0; i<count; i++) {
-					memcpy(entries[i].hip_ccdm, rawdata + i*3, 3);
-					entries[i].hip_ccdm[3] = '\0';
-				}
-			}
-			qfits_free(rawdata);
-			continue;
-		}
-		assert(tycho2->table->col[tycho2->columns[c]].atom_size == tycho2_fitstruct[c].size);
-
-		qfits_query_column_seq_to_array
-			(tycho2->table, tycho2->columns[c], offset, count,
-			 ((unsigned char*)entries) + tycho2_fitstruct[c].offset,
-			 sizeof(tycho2_entry));
-	}
-	return 0;
-}
-
-int tycho2_fits_write_entry(tycho2_fits* tycho2, tycho2_entry* entry) {
-	int c;
-	unsigned char flags;
-	FILE* fid = tycho2->fid;
-
-	if (!tycho2_fitstruct_inited)
-		init_tycho2_fitstruct();
-
-	flags =
-		(entry->photo_center           << 7) |
-		(entry->no_motion              << 6) |
-		(entry->tycho1_star            << 5) |
-		(entry->double_star            << 4) |
-		(entry->photo_center_treatment << 3) |
-		(entry->hipparcos_star         << 2);
-
-	for (c=0; c<TYCHO2_FITS_COLUMNS; c++) {
-		fitstruct* fs = tycho2_fitstruct + c;
-		if (c == TYCHO2_FLAGS_INDEX) {
-			if (fits_write_data_X(fid, flags)) {
-				return -1;
-			}
-			continue;
-		}
-		if (c == TYCHO2_CCDM_INDEX) {
-			if (fits_write_data_A(fid, entry->hip_ccdm[0]) ||
-				fits_write_data_A(fid, entry->hip_ccdm[1]) ||
-				fits_write_data_A(fid, entry->hip_ccdm[2])) {
-				return -1;
-			}
-			continue;
-		}
-		if (fits_write_data(fid, ((unsigned char*)entry) + fs->offset,
-							fs->fitstype)) {
-			return -1;
-		}
-	}
-	tycho2->table->nr++;
-	return 0;
-}
-
-int tycho2_fits_count_entries(tycho2_fits* tycho2) {
-	return tycho2->table->nr;
-}
-
-int tycho2_fits_close(tycho2_fits* tycho2) {
-	if (tycho2->fid) {
-		fits_pad_file(tycho2->fid);
-		if (fclose(tycho2->fid)) {
-			fprintf(stderr, "Error closing Tycho-2 FITS file: %s\n", strerror(errno));
-			return -1;
-		}
-	}
-	if (tycho2->table) {
-		qfits_table_close(tycho2->table);
-	}
-	if (tycho2->header) {
-		qfits_header_destroy(tycho2->header);
-	}
-	buffered_read_free(&tycho2->br);
-	free(tycho2);
-	return 0;
+static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+    tycho2_fits* cat = userdata;
+    tycho2_entry* entries = buffer;
+    if (tycho2_fits_read_entries(cat, offset, n, entries)) {
+        fprintf(stderr, "Tycho-2: Error refilling FITS table read buffer.\n");
+        return -1;
+    }
+    return 0;
 }
 
 tycho2_fits* tycho2_fits_open(char* fn) {
-	int i, nextens;
-	qfits_table* table;
-	int c;
-	tycho2_fits* tycho2 = NULL;
-	int good = 0;
-
-	if (!tycho2_fitstruct_inited)
-		init_tycho2_fitstruct();
-
-	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-		return NULL;
-	}
-
-	tycho2 = tycho2_fits_new();
-
-	// find a table containing all the columns needed...
-	// (and find the indices of the columns we need.)
-	nextens = qfits_query_n_ext(fn);
-	for (i=0; i<=nextens; i++) {
-		if (!qfits_is_table(fn, i))
-			continue;
-		table = qfits_table_open(fn, i);
-
-		good = 1;
-		for (c=0; c<TYCHO2_FITS_COLUMNS; c++) {
-			tycho2->columns[c] = fits_find_column(table, tycho2_fitstruct[c].fieldname);
-			if (tycho2->columns[c] == -1) {
-				good = 0;
-				break;
-			}
-		}
-		if (good) {
-			tycho2->table = table;
-			break;
-		}
-		qfits_table_close(table);
-	}
-
-	if (!good) {
-		fprintf(stderr, "tycho2_fits: didn't find the following required columns:\n    ");
-		for (c=0; c<TYCHO2_FITS_COLUMNS; c++)
-			if (tycho2->columns[c] == -1)
-				fprintf(stderr, "%s  ", tycho2_fitstruct[c].fieldname);
-		fprintf(stderr, "\n");
-
-		free(tycho2);
-		return NULL;
-	}
-	tycho2->br.ntotal = tycho2->table->nr;
-	return tycho2;
+	tycho2_fits* cat = NULL;
+    cat = fitstable_open(fn);
+    if (!cat)
+        return NULL;
+    add_columns(cat, FALSE);
+    fitstable_use_buffered_reading(cat, sizeof(tycho2_entry), 1000);
+    fitstable_set_buffer_fill_function(cat, refill_buffer, cat);
+    if (fitstable_read_extension(cat, 1)) {
+        fprintf(stderr, "tycho2-fits: table in extension 1 didn't contain the required columns.\n");
+        fprintf(stderr, "  missing: ");
+        fitstable_print_missing(cat, stderr);
+        fprintf(stderr, "\n");
+        tycho2_fits_close(cat);
+        return NULL;
+    }
+	return cat;
 }
 
 tycho2_fits* tycho2_fits_open_for_writing(char* fn) {
-	tycho2_fits* tycho2;
-
-	tycho2 = tycho2_fits_new();
-	tycho2->fid = fopen(fn, "wb");
-	if (!tycho2->fid) {
-		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
-	tycho2->table = tycho2_fits_get_table();
-	tycho2->header = qfits_table_prim_header_default();
-	qfits_header_add(tycho2->header, "TYCHO_2", "T", "This is a Tycho-2 catalog.", NULL);
-	return tycho2;
-
- bailout:
-	if (tycho2) {
-		free(tycho2);
-	}
-	return NULL;
+	tycho2_fits* cat;
+    qfits_header* hdr;
+    cat = fitstable_open_for_writing(fn);
+    if (!cat)
+        return NULL;
+    add_columns(cat, TRUE);
+    hdr = fitstable_get_primary_header(cat);
+	qfits_header_add(hdr, "TYCHO_2", "T", "This is a Tycho-2 catalog.", NULL);
+    qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_TYCHO2, "Astrometry.net file type", NULL);
+    return cat;
 }
 
-int tycho2_fits_write_headers(tycho2_fits* tycho2) {
-	qfits_header* table_header;
-	assert(tycho2->fid);
-	assert(tycho2->header);
-	qfits_header_dump(tycho2->header, tycho2->fid);
-	table_header = qfits_table_ext_header_default(tycho2->table);
-	qfits_header_dump(table_header, tycho2->fid);
-	qfits_header_destroy(table_header);
-	tycho2->header_end = ftello(tycho2->fid);
-	return 0;
+tycho2_entry* tycho2_fits_read_entry(tycho2_fits* cat) {
+    return (tycho2_entry*)fitstable_next_struct(cat);
 }
 
-int tycho2_fits_fix_headers(tycho2_fits* tycho2) {
- 	off_t offset;
-	off_t old_header_end;
-	offset = ftello(tycho2->fid);
-	fseeko(tycho2->fid, 0, SEEK_SET);
-	old_header_end = tycho2->header_end;
-	tycho2_fits_write_headers(tycho2);
-	if (old_header_end != tycho2->header_end) {
-		fprintf(stderr, "Warning: TYCHO-2 FITS header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)old_header_end,
-				(unsigned long)tycho2->header_end);
-		return -1;
-	}
-	fseek(tycho2->fid, offset, SEEK_SET);
-	return 0;
+int tycho2_fits_read_entries(tycho2_fits* cat, uint offset,
+                             uint count, tycho2_entry* entries) {
+    uint8_t* flags;
+    int i;
+    int rtn = fitstable_read_structs(cat, entries, sizeof(tycho2_entry),
+                                     offset, count);
+    if (rtn)
+        return rtn;
+    flags = fitstable_read_column_offset(cat, "FLAGS", fitscolumn_u8_type(),
+                                         offset, count);
+    if (!flags)
+        return -1;
+
+    for (i=0; i<count; i++) {
+        uint8_t flag = flags[i];
+        entries[i].photo_center           = (flag >> 7) & 0x1;
+        entries[i].no_motion              = (flag >> 6) & 0x1;
+        entries[i].tycho1_star            = (flag >> 5) & 0x1;
+        entries[i].double_star            = (flag >> 4) & 0x1;
+        entries[i].photo_center_treatment = (flag >> 3) & 0x1;
+        entries[i].hipparcos_star         = (flag >> 2) & 0x1;
+    }
+    free(flags);
+
+    // Replace trailing spaces by \0.
+    for (i=0; i<count; i++) {
+        if (!entries[i].hip_ccdm[0])
+            continue;
+        if (entries[i].hip_ccdm[2] != ' ')
+            continue;
+        entries[i].hip_ccdm[2] = '\0';
+        if (entries[i].hip_ccdm[1] != ' ')
+            continue;
+        entries[i].hip_ccdm[1] = '\0';
+        if (entries[i].hip_ccdm[0] != ' ')
+            continue;
+        entries[i].hip_ccdm[0] = '\0';
+    }
+
+    return 0;
 }
 
-static int tycho2_fits_refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
-	tycho2_fits* cat = userdata;
-	tycho2_entry* en = buffer;
-	return tycho2_fits_read_entries(cat, offset, n, en);
+int tycho2_fits_write_entry(tycho2_fits* cat, tycho2_entry* entry) {
+    uint8_t flags;
+
+    int rtn = fitstable_write_struct(cat, entry);
+    if (rtn)
+        return rtn;
+
+    flags =
+		(entry->photo_center           ? (1 << 7) : 0) |
+		(entry->no_motion              ? (1 << 6) : 0) |
+		(entry->tycho1_star            ? (1 << 5) : 0) |
+		(entry->double_star            ? (1 << 4) : 0) |
+		(entry->photo_center_treatment ? (1 << 3) : 0) |
+		(entry->hipparcos_star         ? (1 << 2) : 0);
+    //return fits_write_data_X(cat->fid, flags);
+    return fitstable_write_one_column(cat, bl_size(cat->cols)-1,
+                                      fitstable_nrows(cat)-1, 1, &flags, 0);
 }
 
-tycho2_fits* tycho2_fits_new() {
-	tycho2_fits* rtn = calloc(1, sizeof(tycho2_fits));
-	if (!rtn) {
-		fprintf(stderr, "Couldn't allocate memory for a tycho2_fits structure.\n");
-		exit(-1);
-	}
-	rtn->br.blocksize = 1000;
-	rtn->br.elementsize = sizeof(tycho2_entry);
-	rtn->br.refill_buffer = tycho2_fits_refill_buffer;
-	rtn->br.userdata = rtn;
-	return rtn;
+int tycho2_fits_count_entries(tycho2_fits* cat) {
+	return fitstable_nrows(cat);
 }
 
-static qfits_table* tycho2_fits_get_table() {
-	uint datasize;
-	uint ncols, nrows, tablesize;
-	int col;
-	qfits_table* table;
-	char* nil = " ";
+int tycho2_fits_close(tycho2_fits* cat) {
+    return (fitstable_close(cat));
+}
 
-	if (!tycho2_fitstruct_inited)
-		init_tycho2_fitstruct();
+int tycho2_fits_write_headers(tycho2_fits* cat) {
+    if (fitstable_write_primary_header(cat))
+        return -1;
+    return fitstable_write_header(cat);
+}
 
-	// one big table: the sources.
-	// dummy values here...
-	datasize = 0;
-	ncols = TYCHO2_FITS_COLUMNS;
-	nrows = 0;
-	tablesize = datasize * nrows * ncols;
-	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	table->tab_w = 0;
-	for (col=0; col<TYCHO2_FITS_COLUMNS; col++) {
-		fitstruct* fs = tycho2_fitstruct + col;
-		if (col == TYCHO2_FLAGS_INDEX) {
-			fits_add_column(table, col, TFITS_BIN_TYPE_X, 6, nil, fs->fieldname);
-			continue;
-		}
-		if (col == TYCHO2_CCDM_INDEX) {
-			fits_add_column(table, col, TFITS_BIN_TYPE_A, 3, nil, fs->fieldname);
-			continue;
-		}
-		fits_add_column(table, col, fs->fitstype, 1, fs->units, fs->fieldname);
-	}
-	table->tab_w = qfits_compute_table_width(table);
-	return table;
+int tycho2_fits_fix_headers(tycho2_fits* cat) {
+    if (fitstable_fix_primary_header(cat))
+        return -1;
+    return fitstable_fix_header(cat);
 }
 

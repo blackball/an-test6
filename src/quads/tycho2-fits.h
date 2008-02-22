@@ -23,21 +23,11 @@
 
 #include "qfits.h"
 #include "tycho2.h"
-#include "ioutils.h"
+#include "fitstable.h"
 
-#define TYCHO2_FITS_COLUMNS 35
+#define AN_FILETYPE_TYCHO2 "TYCHO2"
 
-struct tycho2_fits {
-	qfits_table* table;
-	int columns[TYCHO2_FITS_COLUMNS];
-	// buffered reading
-	bread_t br;
-	// when writing:
-	qfits_header* header;
-	FILE* fid;
-	off_t header_end;
-};
-typedef struct tycho2_fits tycho2_fits;
+typedef struct fitstable_t tycho2_fits;
 
 tycho2_fits* tycho2_fits_open(char* fn);
 

@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
 				exit(-1);
 			}
 			numstars = tycho2_fits_count_entries(tycho);
-			tycho->br.blocksize = BLOCK;
+			//tycho->br.blocksize = BLOCK;
 		}
 		qfits_header_destroy(hdr);
 		if (!(cat || skdt || ancat || usnob || tycho || rd)) {
