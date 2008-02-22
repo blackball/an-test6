@@ -104,13 +104,42 @@ static void add_columns(fitstable_t* tab, bool write) {
 #undef ADDCOL
 #undef ADDARR
 
-// We need this because we do special handling of FLAGS and CCDM.
-static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
-    tycho2_fits* cat = userdata;
-    tycho2_entry* entries = buffer;
-    if (tycho2_fits_read_entries(cat, offset, n, entries)) {
-        fprintf(stderr, "Tycho-2: Error refilling FITS table read buffer.\n");
+static int postprocess_read_structs(fitstable_t* table, void* struc,
+                                    int stride, int offset, int N) {
+    uint8_t* flags;
+    int i;
+    tycho2_fits* cat = table;
+    tycho2_entry* entries = struc;
+
+    flags = fitstable_read_column_offset(cat, "FLAGS", fitscolumn_u8_type(), offset, N);
+                                         
+    if (!flags)
         return -1;
+
+    for (i=0; i<N; i++) {
+        uint8_t flag = flags[i];
+        entries[i].photo_center           = (flag >> 7) & 0x1;
+        entries[i].no_motion              = (flag >> 6) & 0x1;
+        entries[i].tycho1_star            = (flag >> 5) & 0x1;
+        entries[i].double_star            = (flag >> 4) & 0x1;
+        entries[i].photo_center_treatment = (flag >> 3) & 0x1;
+        entries[i].hipparcos_star         = (flag >> 2) & 0x1;
+    }
+    free(flags);
+
+    // Replace trailing spaces by \0.
+    for (i=0; i<N; i++) {
+        if (!entries[i].hip_ccdm[0])
+            continue;
+        if (entries[i].hip_ccdm[2] != ' ')
+            continue;
+        entries[i].hip_ccdm[2] = '\0';
+        if (entries[i].hip_ccdm[1] != ' ')
+            continue;
+        entries[i].hip_ccdm[1] = '\0';
+        if (entries[i].hip_ccdm[0] != ' ')
+            continue;
+        entries[i].hip_ccdm[0] = '\0';
     }
     return 0;
 }
@@ -122,7 +151,7 @@ tycho2_fits* tycho2_fits_open(char* fn) {
         return NULL;
     add_columns(cat, FALSE);
     fitstable_use_buffered_reading(cat, sizeof(tycho2_entry), 1000);
-    fitstable_set_buffer_fill_function(cat, refill_buffer, cat);
+    cat->postprocess_read_structs = postprocess_read_structs;
     if (fitstable_read_extension(cat, 1)) {
         fprintf(stderr, "tycho2-fits: table in extension 1 didn't contain the required columns.\n");
         fprintf(stderr, "  missing: ");
@@ -153,44 +182,7 @@ tycho2_entry* tycho2_fits_read_entry(tycho2_fits* cat) {
 
 int tycho2_fits_read_entries(tycho2_fits* cat, uint offset,
                              uint count, tycho2_entry* entries) {
-    uint8_t* flags;
-    int i;
-    int rtn = fitstable_read_structs(cat, entries, sizeof(tycho2_entry),
-                                     offset, count);
-    if (rtn)
-        return rtn;
-    flags = fitstable_read_column_offset(cat, "FLAGS", fitscolumn_u8_type(),
-                                         offset, count);
-    if (!flags)
-        return -1;
-
-    for (i=0; i<count; i++) {
-        uint8_t flag = flags[i];
-        entries[i].photo_center           = (flag >> 7) & 0x1;
-        entries[i].no_motion              = (flag >> 6) & 0x1;
-        entries[i].tycho1_star            = (flag >> 5) & 0x1;
-        entries[i].double_star            = (flag >> 4) & 0x1;
-        entries[i].photo_center_treatment = (flag >> 3) & 0x1;
-        entries[i].hipparcos_star         = (flag >> 2) & 0x1;
-    }
-    free(flags);
-
-    // Replace trailing spaces by \0.
-    for (i=0; i<count; i++) {
-        if (!entries[i].hip_ccdm[0])
-            continue;
-        if (entries[i].hip_ccdm[2] != ' ')
-            continue;
-        entries[i].hip_ccdm[2] = '\0';
-        if (entries[i].hip_ccdm[1] != ' ')
-            continue;
-        entries[i].hip_ccdm[1] = '\0';
-        if (entries[i].hip_ccdm[0] != ' ')
-            continue;
-        entries[i].hip_ccdm[0] = '\0';
-    }
-
-    return 0;
+    return fitstable_read_structs(cat, entries, sizeof(tycho2_entry), offset, count);
 }
 
 int tycho2_fits_write_entry(tycho2_fits* cat, tycho2_entry* entry) {
