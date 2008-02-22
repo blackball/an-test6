@@ -108,7 +108,7 @@ void check_entry1(CuTest* tc, twomass_entry* entry) {
     CuAssertIntEquals(tc, 267, entry->coadd);
 }
 
-void test_read_raw(CuTest* tc) {
+void test_read_2mass(CuTest* tc) {
     // Read some sample lines from the raw 2MASS catalog.
     // psc_aaa.gz line 1.
     char* line1 = "1.119851|-89.91861|0.11|0.06|90|00042876-8955069 |"
