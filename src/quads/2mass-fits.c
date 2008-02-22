@@ -27,27 +27,6 @@
 #include "fitsioutils.h"
 #include "starutil.h"
 
-/*
- static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
- twomass_fits* cat = userdata;
- twomass_entry* en = buffer;
- return twomass_fits_read_entries(cat, offset, n, en);
- }
-
- static twomass_fits* cat_new() {
- twomass_fits* cat = calloc(1, sizeof(twomass_fits));
- if (!cat) {
- fprintf(stderr, "Couldn't allocate memory for a twomass_fits structure.\n");
- exit(-1);
- }
- cat->br.blocksize = 1000;
- cat->br.elementsize = sizeof(twomass_entry);
- cat->br.refill_buffer = refill_buffer;
- cat->br.userdata = cat;
- return cat;
- }
- */
-
 // This is a naughty preprocessor function because it uses variables
 // declared in the scope from which it is called.
 #define ADDARR(ctype, ftype, col, units, member, arraysize)             \
@@ -168,12 +147,6 @@ static void add_columns(fitstable_t* tab, bool write) {
 
 twomass_fits* twomass_fits_open(char* fn) {
 	twomass_fits* cat = NULL;
-    /*
-     cat = cat_new();
-     if (!cat)
-     return NULL;
-     cat->ft = fitstable_open(fn);
-     */
     cat = fitstable_open(fn);
     if (!cat) {
         fprintf(stderr, "2mass-fits: failed to open table.\n");
@@ -181,9 +154,7 @@ twomass_fits* twomass_fits_open(char* fn) {
         return NULL;
     }
     add_columns(cat, FALSE);
-
     fitstable_use_buffered_reading(cat, sizeof(twomass_entry), 1000);
-
     if (fitstable_read_extension(cat, 1)) {
         fprintf(stderr, "2mass-fits: table in extension 1 didn't contain the required columns.\n");
         fprintf(stderr, "  missing: ");
@@ -192,19 +163,12 @@ twomass_fits* twomass_fits_open(char* fn) {
         twomass_fits_close(cat);
         return NULL;
     }
-	//cat->br.ntotal = fitstable_nrows(cat->ft);
 	return cat;
 }
 
 twomass_fits* twomass_fits_open_for_writing(char* fn) {
 	twomass_fits* cat;
     qfits_header* hdr;
-    /*
-     cat = cat_new();
-     if (!cat)
-     return NULL;
-     cat->ft = fitstable_open_for_writing(fn);
-     */
     cat = fitstable_open_for_writing(fn);
     if (!cat) {
         fprintf(stderr, "2mass-fits: failed to open table.\n");
