@@ -109,7 +109,7 @@ int main(int argc, char** args) {
 	int version = 0;
 	int nusnob = 0, ntycho = 0;
 	int n2mass = 0;
-	int BLOCK = 100000;
+	//int BLOCK = 100000;
 	il* allowed_hps = NULL;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
@@ -234,7 +234,7 @@ int main(int argc, char** args) {
 			int N = usnob_fits_count_entries(usnob);
 			int spikesFound = 0;
 			printf("Reading %i entries from USNO-B catalog file %s\n", N, infn);
-			usnob->br.blocksize = BLOCK;
+			//usnob->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
 				int ob, j;
 
@@ -266,12 +266,12 @@ int main(int argc, char** args) {
 
 				an.ra = entry->ra;
 				an.dec = entry->dec;
-				an.motion_ra = entry->mu_ra;
-				an.motion_dec = entry->mu_dec;
+				an.motion_ra = entry->pm_ra;
+				an.motion_dec = entry->pm_dec;
 				an.sigma_ra = entry->sigma_ra;
 				an.sigma_dec = entry->sigma_dec;
-				an.sigma_motion_ra = entry->sigma_mu_ra;
-				an.sigma_motion_dec = entry->sigma_mu_dec;
+				an.sigma_motion_ra = entry->sigma_pm_ra;
+				an.sigma_motion_dec = entry->sigma_pm_dec;
 
 				an.id = an_catalog_get_id(version, starid);
 				starid++;

@@ -211,7 +211,7 @@ int tycho2_fits_count_entries(tycho2_fits* cat) {
 }
 
 int tycho2_fits_close(tycho2_fits* cat) {
-    return (fitstable_close(cat));
+    return fitstable_close(cat);
 }
 
 int tycho2_fits_write_headers(tycho2_fits* cat) {

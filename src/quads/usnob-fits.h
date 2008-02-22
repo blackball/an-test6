@@ -23,21 +23,11 @@
 
 #include "qfits.h"
 #include "usnob.h"
-#include "ioutils.h"
+#include "fitstable.h"
 
-#define USNOB_FITS_COLUMNS 56
+#define AN_FILETYPE_USNOB "USNOB"
 
-struct usnob_fits {
-	qfits_table* table;
-	int columns[USNOB_FITS_COLUMNS];
-	qfits_header* header;
-	// buffered reading
-	bread_t br;
-	// when writing:
-	FILE* fid;
-	off_t header_end;
-};
-typedef struct usnob_fits usnob_fits;
+typedef fitstable_t usnob_fits;
 
 usnob_fits* usnob_fits_open(char* fn);
 

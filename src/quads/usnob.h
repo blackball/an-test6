@@ -44,7 +44,7 @@ struct observation {
 	float mag;
 
 	// field number in the original survey. 1-937 (F:3)
-	unsigned short field;
+	int16_t field;
 
 	// the original survey. (S:1)
 	// (eg USNOB_SURVEY_POSS_I_O)
@@ -70,7 +70,7 @@ struct observation {
 	uint8_t calibration;
 
 	// back-pointer to PMM file. (i:7)
-	uint pmmscan;
+	int32_t pmmscan;
 };
 
 #define OBS_BLUE1 0
@@ -83,38 +83,33 @@ struct usnob_entry {
 	// (numbers in brackets are number of digits used in USNOB format)
 	// in degrees (a:9)
 	double ra;
-
 	// in degrees (s:8)
 	double dec;
 
-	// in arcsec / yr. (A:3)
-	float mu_ra;
-
-	// in arcsec / yr. (S:3)
-	float mu_dec;
-
-	// motion probability. (P:1)
-	float mu_prob;
-
-	// in arcsec / yr. (x:3)
-	float sigma_mu_ra;
-
-	// in arcsec / yr. (y:3)
-	float sigma_mu_dec;
-
-	// [degrees] (Q:1)
-	float sigma_ra_fit;
-
-	// [degrees] (R:1)
-	float sigma_dec_fit;
-
 	// [degrees] (u:3)
 	float sigma_ra;
-
 	// [degrees] (v:3)
 	float sigma_dec;
 
-	// in years; 1950-2050. (e:3)
+	// [degrees] (Q:1)
+	float sigma_ra_fit;
+	// [degrees] (R:1)
+	float sigma_dec_fit;
+
+	// proper motion [arcsec/yr] (A:3) 
+	float pm_ra;
+	// [arcsec/yr] (S:3)
+	float pm_dec;
+
+	// [arcsec/yr] (x:3)
+	float sigma_pm_ra;
+	// [arcsec/yr] (y:3)
+	float sigma_pm_dec;
+
+	// motion probability. (P:1)
+	float pm_prob;
+
+	// [yr] 1950-2050. (e:3)
 	float epoch;
 
 	// number of detections; (M:1)
@@ -124,7 +119,7 @@ struct usnob_entry {
 	//                          format to store Tycho-2 stars.
 	// M=1 means it's a reject USNOB star.
 	// M>=2 means it's a valid USNOB star.
-	unsigned char ndetections;
+	uint8_t ndetections;
 
 	bool diffraction_spike;
 	bool motion_catalog;
@@ -139,6 +134,9 @@ struct usnob_entry {
 	// top byte: [0,180): south-polar distance slice.
 	// bottom 24 bits: [0, 12,271,141): index within slice.
 	uint usnob_id;
+
+    // this is a "staging" variable used by the FITS i/o routines.
+    uint8_t flags;
 
 	// the observations for this object.  These are stored in a fixed
 	// order (same as the raw USNOB data):

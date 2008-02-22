@@ -27,16 +27,16 @@ static void check_line1(CuTest* tc, const usnob_entry* e) {
     CuAssertIntEquals(tc,  29304, rint(deg2arcsec(e->dec + 90) / 0.01));
 
     CuAssertIntEquals(tc,     0, e->motion_catalog);
-    CuAssertIntEquals(tc,     8, rint(e->mu_prob / 0.1));
-    CuAssertIntEquals(tc,  4997, rint((e->mu_dec + 10.0) / 0.002));
-    CuAssertIntEquals(tc,  4999, rint((e->mu_ra  + 10.0) / 0.002));
+    CuAssertIntEquals(tc,     8, rint(e->pm_prob / 0.1));
+    CuAssertIntEquals(tc,  4997, rint((e->pm_dec + 10.0) / 0.002));
+    CuAssertIntEquals(tc,  4999, rint((e->pm_ra  + 10.0) / 0.002));
 
     CuAssertIntEquals(tc,     0, e->diffraction_spike);
     CuAssertIntEquals(tc,     3, e->ndetections);
     CuAssertIntEquals(tc,     0, rint(deg2arcsec(e->sigma_dec_fit) / 0.1));
     CuAssertIntEquals(tc,     0, rint(deg2arcsec(e->sigma_ra_fit) / 0.1));
-    CuAssertIntEquals(tc,     0, rint(e->sigma_mu_dec / 0.001));
-    CuAssertIntEquals(tc,     4, rint(e->sigma_mu_ra  / 0.001));
+    CuAssertIntEquals(tc,     0, rint(e->sigma_pm_dec / 0.001));
+    CuAssertIntEquals(tc,     4, rint(e->sigma_pm_ra  / 0.001));
 
     CuAssertIntEquals(tc,     1, e->ys4);
     CuAssertIntEquals(tc,   369, rint((e->epoch - 1950) / 0.1));

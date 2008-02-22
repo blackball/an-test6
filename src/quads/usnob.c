@@ -157,15 +157,15 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 
 	// A: mu_RA, in units of 0.002 arcsec per year, offset by
 	//    -10 arcsec per year.
-	usnob->mu_ra = -10.0 + (0.002 * A);
+	usnob->pm_ra = -10.0 + (0.002 * A);
 
 	// S: mu_SPD, in units of 0.002 arcsec per year, offset by
 	//    -10 arcsec per year.
 	// This is a derivative of SPD which is equal to a derivative of DEC.
-	usnob->mu_dec = -10.0 + (0.002 * S);
+	usnob->pm_dec = -10.0 + (0.002 * S);
 
 	// P: total mu probability, in units of 0.1.
-	usnob->mu_prob = 0.1 * P;
+	usnob->pm_prob = 0.1 * P;
 
 	// i: motion catalog flag: 0=no, 1=yes.
 	assert((i == 0) || (i == 1));
@@ -187,11 +187,11 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	j = (ival % 10);
 
 	// x: sigma_mu_RA, in units of 0.001 arcsec per year.
-	usnob->sigma_mu_ra = 0.001 * x;
+	usnob->sigma_pm_ra = 0.001 * x;
 
 	// y: sigma_mu_SPD, in units of 0.001 arcsec per year.
 	// Again, a derivative of SPD = derivate of DEC.
-	usnob->sigma_mu_dec = 0.001 * y;
+	usnob->sigma_pm_dec = 0.001 * y;
 
 	// Q: sigma_RA_fit, in units of 0.1 arcsec.
 	usnob->sigma_ra_fit = arcsec2deg(0.1 * Q);
