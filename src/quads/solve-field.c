@@ -797,7 +797,7 @@ int main(int argc, char** args) {
                     exit(-1);
                 }
                 // just read the first match...
-                mo = matchfile_buffered_read_match(mf);
+                mo = matchfile_read_match(mf);
                 if (!mo) {
                     fprintf(stderr, "Failed to read a match from matchfile %s.\n", matchfn);
                     exit(-1);

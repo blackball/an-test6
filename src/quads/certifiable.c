@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Failed to open file %s for writing matches.\n", truematchfn);
             exit(-1);
         }
-        if (matchfile_write_header(truematch)) {
+        if (matchfile_write_headers(truematch)) {
             fprintf(stderr, "Failed to write header for %s\n", truematchfn);
             exit(-1);
         }
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Failed to open file %s for writing matches.\n", falsematchfn);
             exit(-1);
         }
-        if (matchfile_write_header(falsematch)) {
+        if (matchfile_write_headers(falsematch)) {
             fprintf(stderr, "Failed to write header for %s\n", falsematchfn);
             exit(-1);
         }
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
                 lastfield = nfields;
             }
 
-            for (; mfcursors[i]<mf->nrows; mfcursors[i]++) {
+            for (; mfcursors[i]<matchfile_count(mf); mfcursors[i]++) {
                 int filenum;
                 int fieldnum;
                 double xyzc[3];
@@ -230,12 +230,12 @@ int main(int argc, char *argv[]) {
                 int k;
                 bool err = FALSE;
 
-                mo = matchfile_buffered_read_match(mf);
+                mo = matchfile_read_match(mf);
                 filenum = mo->fieldfile;
                 if (filenum < fileid)
                     continue;
                 if (filenum > fileid) {
-                    matchfile_buffered_read_pushback(mf);
+                    matchfile_pushback_match(mf);
                     break;
                 }
                 fieldnum = mo->fieldnum;
@@ -328,14 +328,14 @@ int main(int argc, char *argv[]) {
         solvedfile_setsize(fpsolved, nfields_total);
 
     if (truematch) {
-        if (matchfile_fix_header(truematch) ||
+        if (matchfile_fix_headers(truematch) ||
             matchfile_close(truematch)) {
             fprintf(stderr, "Failed to fix header for %s\n", truematchfn);
             exit(-1);
         }
     }
     if (falsematch) {
-        if (matchfile_fix_header(falsematch) ||
+        if (matchfile_fix_headers(falsematch) ||
             matchfile_close(falsematch)) {
             fprintf(stderr, "Failed to fix header for %s\n", falsematchfn);
             exit(-1);

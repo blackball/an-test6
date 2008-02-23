@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
 		}
 		boilerplate_add_fits_headers(leftovermf->header);
 		qfits_header_add(leftovermf->header, "HISTORY", "This file was created by the program \"agreeable\".", NULL, NULL);
-		if (matchfile_write_header(leftovermf)) {
+		if (matchfile_write_headers(leftovermf)) {
 			fprintf(stderr, "Failed to write leftovers matchfile header.\n");
 			exit(-1);
 		}
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
 		}
 		boilerplate_add_fits_headers(agreemf->header);
 		qfits_header_add(agreemf->header, "HISTORY", "This file was created by the program \"agreeable\".", NULL, NULL);
-		if (matchfile_write_header(agreemf)) {
+		if (matchfile_write_headers(agreemf)) {
 			fprintf(stderr, "Failed to write agreeing matchfile header.\n");
 			exit(-1);
 		}
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
 					if (eofs[i])
 						break;
 					if (!mos[i])
-						mos[i] = matchfile_buffered_read_match(mfs[i]);
+						mos[i] = matchfile_read_match(mfs[i]);
 					if (unlikely(!mos[i])) {
 						eofs[i] = TRUE;
 						break;
@@ -381,12 +381,12 @@ int main(int argc, char *argv[]) {
 	il_free(unsolved);
 
 	if (leftovermf) {
-		matchfile_fix_header(leftovermf);
+		matchfile_fix_headers(leftovermf);
 		matchfile_close(leftovermf);
 	}
 
 	if (agreemf) {
-		matchfile_fix_header(agreemf);
+		matchfile_fix_headers(agreemf);
 		matchfile_close(agreemf);
 	}
 

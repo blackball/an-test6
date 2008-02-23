@@ -228,7 +228,7 @@ void verify_hit(startree* skdt,
 		//fprintf(stderr, "Freakishly, NI=0.\n");
 		mo->nfield = 0;
 		mo->noverlap = 0;
-		matchobj_compute_overlap(mo);
+		matchobj_compute_derived(mo);
 		mo->logodds = -HUGE_VAL;
 		kdtree_free_query(res);
 		free(indexpix);
@@ -461,6 +461,6 @@ void verify_hit(startree* skdt,
 	mo->nconflict = bestnconflict;
 	mo->nfield = bestnmatch + bestnnomatch + bestnconflict;
 	mo->nindex = NI;
-	matchobj_compute_overlap(mo);
+    matchobj_compute_derived(mo);
 }
 

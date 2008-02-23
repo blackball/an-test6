@@ -1246,7 +1246,7 @@ static int write_solutions(blind_t* bp) {
 		qfits_header_add(bp->mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
 		qfits_header_add(bp->mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
 		add_blind_params(bp, bp->mf->header);
-		if (matchfile_write_header(bp->mf)) {
+		if (matchfile_write_headers(bp->mf)) {
 			logerr("Failed to write matchfile header.\n");
             return -1;
 		}
@@ -1260,7 +1260,7 @@ static int write_solutions(blind_t* bp) {
             }
         }
 
-		if (matchfile_fix_header(bp->mf) ||
+		if (matchfile_fix_headers(bp->mf) ||
 			matchfile_close(bp->mf)) {
 			logerr("Error closing matchfile.\n");
             return -1;

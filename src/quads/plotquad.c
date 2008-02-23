@@ -161,7 +161,7 @@ int main(int argc, char *args[]) {
             exit(-1);
         }
         while (1) {
-            mo = matchfile_buffered_read_match(mf);
+            mo = matchfile_read_match(mf);
             if (!mo)
                 break;
             for (i=0; i<2*dimquads; i++) {
