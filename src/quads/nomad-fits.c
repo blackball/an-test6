@@ -56,14 +56,14 @@ static void init_nomad_fitstruct() {
 	int i = 0;
 	char* nil = " ";
 
- 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "degrees", dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RACOSDEC",    "arcsec", sigma_racosdec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC",         "arcsec", sigma_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_RACOSDEC",       "arcsec/yr", mu_racosdec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_DEC",            "arcsec/yr", mu_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_RACOSDEC", "arcsec/yr", sigma_mu_racosdec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_DEC",      "arcsec/yr", sigma_mu_dec);
+ 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "deg", ra);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "deg", dec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RACOSDEC",    "deg", sigma_racosdec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC",         "deg", sigma_dec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_RACOSDEC",       "arcsec/yr", pm_racosdec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_DEC",            "arcsec/yr", pm_dec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_RACOSDEC", "arcsec/yr", sigma_pm_racosdec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_DEC",      "arcsec/yr", sigma_pm_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_RA",          "yr", epoch_ra);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_DEC",         "yr", epoch_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_B",             nil,  mag_B);
@@ -199,7 +199,7 @@ int nomad_fits_write_entry(nomad_fits* nomad, nomad_entry* entry) {
 			return -1;
 		}
 	}
-	nomad->nentries++;
+	nomad->table->nr++;
 	return 0;
 }
 
@@ -276,8 +276,7 @@ nomad_fits* nomad_fits_open(char* fn) {
 		free(nomad);
 		return NULL;
 	}
-	nomad->nentries = nomad->table->nr;
-	nomad->br.ntotal = nomad->nentries;
+	nomad->br.ntotal = nomad->table->nr;
 	return nomad;
 }
 
@@ -328,9 +327,8 @@ int nomad_fits_write_headers(nomad_fits* nomad) {
 	qfits_header* table_header;
 	assert(nomad->fid);
 	assert(nomad->header);
-	fits_header_mod_int(nomad->header, "NOBJS", nomad->nentries, "Number of objects in this catalog.");
+	fits_header_mod_int(nomad->header, "NOBJS", nomad_fits_count_entries(nomad), "Number of objects in this catalog.");
 	qfits_header_dump(nomad->header, nomad->fid);
-	nomad->table->nr = nomad->nentries;
 	table_header = qfits_table_ext_header_default(nomad->table);
 	qfits_header_dump(table_header, nomad->fid);
 	qfits_header_destroy(table_header);

@@ -21,37 +21,36 @@
 
 #include "nomad.h"
 #include "an-endian.h"
+#include "starutil.h"
 
-typedef uint32_t u32;
-
-int nomad_parse_entry(struct nomad_entry* entry, void* encoded) {
-	u32* udata = encoded;
-	u32 uval;
+int nomad_parse_entry(nomad_entry* entry, const void* encoded) {
+	const uint32_t* udata = encoded;
+	uint32_t uval;
 	int32_t ival;
 
 	ival = uval = u32_letoh(udata[0]);
-	entry->ra = uval * 0.001 / (60.0 * 60.0);
+	entry->ra = arcsec2deg(uval * 0.001);
 
 	ival = uval = u32_letoh(udata[1]);
-	entry->dec = -90.0 + uval * 0.001 / (60.0 * 60.0);
-
+	entry->dec = arcsec2deg(uval * 0.001) - 90.0;
+    
 	ival = uval = u32_letoh(udata[2]);
-	entry->sigma_racosdec = uval * 0.001;
+	entry->sigma_racosdec = arcsec2deg(uval * 0.001);
 
 	ival = uval = u32_letoh(udata[3]);
-	entry->sigma_dec = uval * 0.001;
+	entry->sigma_dec = arcsec2deg(uval * 0.001);
 
 	ival = uval = u32_letoh(udata[4]);
-	entry->mu_racosdec = ival * 0.0001;
+	entry->pm_racosdec = ival * 0.0001;
 
 	ival = uval = u32_letoh(udata[5]);
-	entry->mu_dec = ival * 0.0001;
+	entry->pm_dec = ival * 0.0001;
 
 	ival = uval = u32_letoh(udata[6]);
-	entry->sigma_mu_racosdec = uval * 0.0001;
+	entry->sigma_pm_racosdec = uval * 0.0001;
 
 	ival = uval = u32_letoh(udata[7]);
-	entry->sigma_mu_dec = uval * 0.0001;
+	entry->sigma_pm_dec = uval * 0.0001;
 
 	ival = uval = u32_letoh(udata[8]);
 	entry->epoch_ra = uval * 0.001;

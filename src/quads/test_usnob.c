@@ -6,6 +6,7 @@
 #include "usnob.h"
 #include "usnob-fits.h"
 #include "an-bool.h"
+#include "an-endian.h"
 #include "starutil.h"
 
 static void assertZeroObs(CuTest* tc, const struct observation* o) {
@@ -109,7 +110,7 @@ void test_read_usnob(CuTest* tc) {
 
     for (i=0; i<sizeof(line1)/sizeof(uint32_t); i++) {
         uint32_t* ul = (uint32_t*)line1;
-        printf("byte %2i: %010u\n", 4*i, ul[i]);
+        printf("byte %2i: %010u\n", 4*i, u32_letoh(ul[i]));
     }
 
     usnob_entry entry1;

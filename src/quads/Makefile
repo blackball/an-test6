@@ -66,7 +66,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2-fits.o catalog.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
 	plot-constellations.o quadcenters.o startree2rdls.o \
-	brightstars.o ngcic-accurate.o \
+	brightstars.o ngcic-accurate.o nomad.o nomad-fits.o \
 	ngc2000.o noisesim.o noise.o scriptutils.o
 
 2MASSOBJ := 2masstofits.o 2mass-fits.o 2mass.o
@@ -169,7 +169,7 @@ solver_test.o: solver.c
 
 # Add the basename of your test sources here...
 ALL_TEST_FILES = test_dfind test_ctmf test_simplexy test_dsmooth test_2mass \
-	test_tycho2 test_usnob
+	test_tycho2 test_usnob test_nomad
 
 ALL_TEST_EXTRA_OBJS :=
 ALL_TEST_LIBS :=
@@ -201,6 +201,9 @@ ALL_TEST_EXTRA_OBJS += tycho2-fits.o tycho2.o
 
 test_usnob: usnob-fits.o usnob.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 ALL_TEST_EXTRA_OBJS += usnob-fits.o usnob.o
+
+test_nomad: nomad-fits.o nomad.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+ALL_TEST_EXTRA_OBJS += nomad-fits.o nomad.o
 
 ALL_TEST_LIBS += $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 

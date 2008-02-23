@@ -25,24 +25,28 @@
 
 #define NOMAD_RECORD_SIZE 88
 
+/*
+ See: http://www.nofs.navy.mil/nomad/nomad_readme.html
+ */
+
 struct nomad_entry {
-	// degrees
+	// [degrees]
 	double ra;
 	double dec;
 
-	// arcsec
+	// [degrees]
 	float sigma_racosdec;
 	float sigma_dec;
 
-	// arcsec/yr
-	float mu_racosdec;
-	float mu_dec;
+	// [arcsec/yr]
+	float pm_racosdec;
+	float pm_dec;
 
-	// arcsec/yr
-	float sigma_mu_racosdec;
-	float sigma_mu_dec;
+	// [arcsec/yr]
+	float sigma_pm_racosdec;
+	float sigma_pm_dec;
 
-	// yr
+	// [yr]
 	float epoch_ra;
 	float epoch_dec;
 
@@ -56,17 +60,17 @@ struct nomad_entry {
 	float mag_H;
 	float mag_K;
 
-	uint usnob_id;
-	uint twomass_id;
-	uint yb6_id;
-	uint ucac2_id;
-	uint tycho2_id;
+	uint32_t usnob_id;
+	uint32_t twomass_id;
+	uint32_t yb6_id;
+	uint32_t ucac2_id;
+	uint32_t tycho2_id;
 
 	// all these take values from the "nomad_src" enum.
-	unsigned char astrometry_src;
-	unsigned char blue_src;
-	unsigned char visual_src;
-	unsigned char red_src;
+	uint8_t astrometry_src;
+	uint8_t blue_src;
+	uint8_t visual_src;
+	uint8_t red_src;
 
 	bool usnob_fail;       // UBBIT   "Fails Blaise's test for USNO-B1.0 star"
 	bool twomass_fail;     // TMBIT   "Fails Roc's test for clean 2MASS star"
@@ -91,7 +95,7 @@ struct nomad_entry {
 	// sequence number assigned by us (it's not in the original catalogue),
 	// composed of the 1/10 degree DEC zone (top 11 bits) and the sequence
 	// number within the zone (bottom 21 bits).
-	uint nomad_id;
+	uint32_t nomad_id;
 };
 typedef struct nomad_entry nomad_entry;
 
@@ -102,10 +106,10 @@ enum nomad_src {
 	NOMAD_SRC_YB6,
 	NOMAD_SRC_UCAC2,
 	NOMAD_SRC_TYCHO2,
-	NOMAD_SRC_HIPPARCOS
+	NOMAD_SRC_HIPPARCOS,
 };
 
-int nomad_parse_entry(struct nomad_entry* entry, void* encoded);
+int nomad_parse_entry(nomad_entry* entry, const void* encoded);
 
 #endif
 
