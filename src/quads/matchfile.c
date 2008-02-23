@@ -108,11 +108,10 @@ matchfile* matchfile_open_for_writing(char* fn) {
 	return NULL;
 }
 
-int matchfile_write_header(matchfile* mf) {
+int matchfile_write_headers(matchfile* mf) {
 	qfits_header* tablehdr;
 	// the main file header:
     qfits_header_dump(mf->header, mf->fid);
-	mf->table->nr = mf->nrows;
 	tablehdr = qfits_table_ext_header_default(mf->table);
     qfits_header_dump(tablehdr, mf->fid);
     qfits_header_destroy(tablehdr);
@@ -120,13 +119,13 @@ int matchfile_write_header(matchfile* mf) {
 	return 0;
 }
 
-int matchfile_fix_header(matchfile* mf) {
+int matchfile_fix_headers(matchfile* mf) {
 	off_t offset;
 	off_t old_offset;
 	offset = ftello(mf->fid);
 	fseeko(mf->fid, 0, SEEK_SET);
 	old_offset = mf->header_end;
-	matchfile_write_header(mf);
+	matchfile_write_headers(mf);
 	if (mf->header_end != old_offset) {
 		fprintf(stderr, "Error: matchfile %s: header used to end at %i, but now it ends at %i.  Data corruction is likely to have resulted.\n",
 				mf->fn, (int)old_offset, (int)mf->header_end);
@@ -246,7 +245,7 @@ int matchfile_write_match(matchfile* mf, MatchObj* mo) {
 			}
 		}
 	}
-	mf->nrows++;
+	mf->table->nr++;
 	return 0;
 }
 
@@ -300,8 +299,7 @@ matchfile* matchfile_open(char* fn) {
 		fprintf(stderr, "Couldn't find an appropriate FITS table in %s.\n", fn);
 		goto bailout;
 	}
-	mf->nrows = mf->table->nr;
-	mf->br.ntotal = mf->nrows;
+	mf->br.ntotal = mf->table->nr;
 	return mf;
 
  bailout:
@@ -357,9 +355,8 @@ static int find_table(matchfile* mf) {
 		fprintf(stderr, "\n");
 		return -1;
 	}
-	mf->nrows = mf->table->nr;
 	// reset buffered reading data
-	mf->br.ntotal = mf->nrows;
+	mf->br.ntotal = mf->table->nr;
 	buffered_read_reset(&mf->br);
 	return 0;
 }
@@ -391,12 +388,12 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 	pl* list = pl_new(256);
 	for (;;) {
-		MatchObj* mo = matchfile_buffered_read_match(mf);
+		MatchObj* mo = matchfile_read_match(mf);
 		MatchObj* copy;
 		if (!mo) break;
 		if (mo->fieldnum != field) {
 			// push back the newly-read entry...
-			matchfile_buffered_read_pushback(mf);
+			matchfile_pushback_match(mf);
 			break;
 		}
 		copy = malloc(sizeof(MatchObj));
@@ -406,12 +403,16 @@ pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 	return list;
 }
 
-MatchObj* matchfile_buffered_read_match(matchfile* mf) {
+MatchObj* matchfile_read_match(matchfile* mf) {
 	MatchObj* mo = buffered_read(&mf->br);
 	return mo;
 }
 
-int matchfile_buffered_read_pushback(matchfile* mf) {
+int matchfile_pushback_match(matchfile* mf) {
 	buffered_read_pushback(&mf->br);
 	return 0;
+}
+
+int matchfile_count(matchfile* m) {
+    return m->table->nr;
 }
