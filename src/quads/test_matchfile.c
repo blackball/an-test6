@@ -84,7 +84,7 @@ void test_read_matchfile(CuTest* tc) {
     entry1.nconflict = 1;
     entry1.nfield = 20;
     entry1.nindex = 100;
-    entry1.logodds = 1e50;
+    entry1.logodds = 450.0;
     entry1.nagree = 1;
     //entry1.scale = 1e100;
     entry1.fieldnum = 7;
