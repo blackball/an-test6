@@ -60,11 +60,11 @@ struct nomad_entry {
 	float mag_H;
 	float mag_K;
 
-	uint32_t usnob_id;
-	uint32_t twomass_id;
-	uint32_t yb6_id;
-	uint32_t ucac2_id;
-	uint32_t tycho2_id;
+	int32_t usnob_id;
+	int32_t twomass_id;
+	int32_t yb6_id;
+	int32_t ucac2_id;
+	int32_t tycho2_id;
 
 	// all these take values from the "nomad_src" enum.
 	uint8_t astrometry_src;
@@ -91,6 +91,9 @@ struct nomad_entry {
 	bool standard;         // USEME   "Recommended astrometric standard"
 	// This bit is NEVER set in NOMAD.
 	//bool external;         // EXCAT   "External, non-astrometric object"
+
+    // this is a staging area for FITS i/o.
+    uint8_t flags[2];
 
 	// sequence number assigned by us (it's not in the original catalogue),
 	// composed of the 1/10 degree DEC zone (top 11 bits) and the sequence

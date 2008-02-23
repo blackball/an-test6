@@ -24,149 +24,101 @@
 #include "nomad-fits.h"
 #include "fitsioutils.h"
 
-static qfits_table* nomad_fits_get_table();
-static nomad_fits* nomad_fits_new();
+// This is a naughty preprocessor function because it uses variables
+// declared in the scope from which it is called.
+#define ADDARR(ctype, ftype, col, units, member, arraysize)             \
+    if (write) {                                                        \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, arraysize, offsetof(nomad_entry, member),     \
+             ftype, col, units, TRUE);                                  \
+    } else {                                                            \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, arraysize, offsetof(nomad_entry, member),     \
+             any, col, units, TRUE);                                    \
+    }
 
-// mapping between a struct field and FITS field.
-struct fits_struct_pair {
-	char* fieldname;
-	char* units;
-	int offset;
-	int size;
-	tfits_type fitstype;
-};
-typedef struct fits_struct_pair fitstruct;
+#define ADDCOL(ctype, ftype, col, units, member) \
+ADDARR(ctype, ftype, col, units, member, 1)
 
-static fitstruct nomad_fitstruct[NOMAD_FITS_COLUMNS];
-static bool nomad_fitstruct_inited = 0;
-static int NOMAD_FLAGS_INDEX;
+static void add_columns(fitstable_t* tab, bool write) {
+    tfits_type any = fitscolumn_any_type();
+    tfits_type d = fitscolumn_double_type();
+    tfits_type f = fitscolumn_float_type();
+    tfits_type u8 = fitscolumn_u8_type();
+    tfits_type i32 = fitscolumn_i32_type();
+    tfits_type J = TFITS_BIN_TYPE_J;
+    tfits_type bitfield = fitscolumn_bitfield_type();
+    char* nil = " ";
 
-#define SET_FIELDS(A, i, t, n, u, fld) { \
- nomad_entry x; \
- A[i].fieldname=n; \
- A[i].units=u; \
- A[i].offset=offsetof(nomad_entry, fld); \
- A[i].size=sizeof(x.fld); \
- A[i].fitstype=t; \
- i++; \
+	ADDCOL(d,  d,   "RA",                "deg",  ra);
+	ADDCOL(d,  d,   "DEC",               "deg",  dec);
+	ADDCOL(f,  f,   "SIGMA_RACOSDEC",    "deg",  sigma_racosdec);
+	ADDCOL(f,  f,   "SIGMA_DEC",         "deg",  sigma_dec);
+	ADDCOL(f,  f,   "PM_RACOSDEC",       "arcsec/yr", pm_racosdec);
+	ADDCOL(f,  f,   "PM_DEC",            "arcsyc/yr", pm_dec);
+	ADDCOL(f,  f,   "SIGMA_PM_RACOSDEC", "arcsec/yr", sigma_pm_racosdec);
+	ADDCOL(f,  f,   "SIGMA_PM_DEC",      "arcsyc/yr", sigma_pm_dec);
+	ADDCOL(f,  f,   "EPOCH_RA",          "yr", epoch_ra);
+	ADDCOL(f,  f,   "EPOCH_DEC",         "yr", epoch_dec);
+    ADDCOL(f,  f,   "MAG_B",             "mag", mag_B);
+    ADDCOL(f,  f,   "MAG_V",             "mag", mag_V);
+    ADDCOL(f,  f,   "MAG_R",             "mag", mag_R);
+    ADDCOL(f,  f,   "MAG_J",             "mag", mag_J);
+    ADDCOL(f,  f,   "MAG_H",             "mag", mag_H);
+    ADDCOL(f,  f,   "MAG_K",             "mag", mag_K);
+	ADDCOL(i32,J,   "USNOB_ID",           nil, usnob_id);
+	ADDCOL(i32,J,   "TWOMASS_ID",         nil, twomass_id);
+	ADDCOL(i32,J,   "YB6_ID",             nil, yb6_id);
+	ADDCOL(i32,J,   "UCAC2_ID",           nil, ucac2_id);
+	ADDCOL(i32,J,   "TYCHO2_ID",          nil, tycho2_id);
+    ADDCOL(u8, u8,  "ASTROMETRY_SRC",     nil, astrometry_src);
+    ADDCOL(u8, u8,  "BLUE_SRC",           nil, blue_src);
+    ADDCOL(u8, u8,  "VISUAL_SRC",         nil, visual_src);
+    ADDCOL(u8, u8,  "RED_SRC",            nil, red_src);
+	ADDCOL(i32, J,  "NOMAD_ID",           nil, nomad_id);
+    ADDARR(bitfield, bitfield, "FLAGS",   nil, flags, 16);
+}
+#undef ADDCOL
+#undef ADDARR
+
+static int postprocess_read_structs(fitstable_t* table, void* struc,
+                                    int stride, int offset, int N) {
+    int i;
+    nomad_entry* entries = struc;
+    for (i=0; i<N; i++) {
+        uint8_t flag;
+        flag = entries[i].flags[0];
+        entries[i].usnob_fail         = (flag >> 7) & 0x1;
+        entries[i].twomass_fail       = (flag >> 6) & 0x1;
+        entries[i].tycho_astrometry   = (flag >> 5) & 0x1;
+        entries[i].alt_radec          = (flag >> 4) & 0x1;
+        entries[i].alt_ucac           = (flag >> 3) & 0x1;
+        entries[i].alt_tycho          = (flag >> 2) & 0x1;
+        entries[i].blue_o             = (flag >> 1) & 0x1;
+        entries[i].red_e              = (flag >> 0) & 0x1;
+        flag = entries[i].flags[1];
+        entries[i].twomass_only       = (flag >> 7) & 0x1;
+        entries[i].hipp_astrometry    = (flag >> 6) & 0x1;
+        entries[i].diffraction        = (flag >> 5) & 0x1;
+        entries[i].confusion          = (flag >> 4) & 0x1;
+        entries[i].bright_confusion   = (flag >> 3) & 0x1;
+        entries[i].bright_artifact    = (flag >> 2) & 0x1;
+        entries[i].standard           = (flag >> 1) & 0x1;
+    }
+    return 0;
 }
 
-static void init_nomad_fitstruct() {
-	fitstruct* fs = nomad_fitstruct;
-	int i = 0;
-	char* nil = " ";
-
- 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "deg", ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "deg", dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RACOSDEC",    "deg", sigma_racosdec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC",         "deg", sigma_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_RACOSDEC",       "arcsec/yr", pm_racosdec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PM_DEC",            "arcsec/yr", pm_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_RACOSDEC", "arcsec/yr", sigma_pm_racosdec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_PM_DEC",      "arcsec/yr", sigma_pm_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_RA",          "yr", epoch_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_DEC",         "yr", epoch_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_B",             nil,  mag_B);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_V",             nil,  mag_V);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_R",             nil,  mag_R);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_J",             nil,  mag_J);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_H",             nil,  mag_H);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_K",             nil,  mag_K);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "USNOB_ID",          nil,  usnob_id);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "TWOMASS_ID",        nil,  twomass_id);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "YB6_ID",            nil,  yb6_id);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "UCAC2_ID",          nil,  ucac2_id);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "TYCHO2_ID",         nil,  tycho2_id);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "ASTROMETRY_SRC",    nil,  astrometry_src);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "BLUE_SRC",          nil,  blue_src);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "VISUAL_SRC",        nil,  visual_src);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "RED_SRC",           nil,  red_src);
-
-	NOMAD_FLAGS_INDEX = i;
-	fs[i].fieldname = "FLAGS";
-	fs[i].units = nil;
-	fs[i].offset = -1;
-	fs[i].size = 0;
-	fs[i].fitstype = TFITS_BIN_TYPE_UNKNOWN;
-	i++;
-
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "NOMAD_ID",         nil, nomad_id);
-
-	assert(i == NOMAD_FITS_COLUMNS);
-	nomad_fitstruct_inited = 1;
+nomad_entry* nomad_fits_read_entry(nomad_fits* cat) {
+    return (nomad_entry*)fitstable_next_struct(cat);
 }
 
-nomad_entry* nomad_fits_read_entry(nomad_fits* t) {
-	nomad_entry* e = buffered_read(&t->br);
-	if (!e)
-		fprintf(stderr, "Failed to read a NOMAD catalog entry.\n");
-	return e;
-}
-
-int nomad_fits_read_entries(nomad_fits* nomad, uint offset,
+int nomad_fits_read_entries(nomad_fits* cat, uint offset,
 							uint count, nomad_entry* entries) {
-	int i=-1, c;
-	unsigned char* rawdata;
-
-	if (!nomad_fitstruct_inited)
-		init_nomad_fitstruct();
-
-	for (c=0; c<NOMAD_FITS_COLUMNS; c++) {
-		assert(nomad->columns[c] != -1);
-		assert(nomad->table);
-
-		// special-case
-		if (c == NOMAD_FLAGS_INDEX) {
-			rawdata = qfits_query_column_seq(nomad->table, nomad->columns[c],
-											 offset, count);
-			assert(rawdata);
-
-			for (i=0; i<count; i++) {
-				unsigned char flags1;
-				unsigned char flags2;
-
-				flags1 = rawdata[2*i + 0];
-				flags2 = rawdata[2*i + 1];
-
-				entries[i].usnob_fail         = (flags1 >> 7) & 0x1;
-				entries[i].twomass_fail       = (flags1 >> 6) & 0x1;
-				entries[i].tycho_astrometry   = (flags1 >> 5) & 0x1;
-				entries[i].alt_radec          = (flags1 >> 4) & 0x1;
-				entries[i].alt_ucac           = (flags1 >> 3) & 0x1;
-				entries[i].alt_tycho          = (flags1 >> 2) & 0x1;
-				entries[i].blue_o             = (flags1 >> 1) & 0x1;
-				entries[i].red_e              = (flags1 >> 0) & 0x1;
-
-				entries[i].twomass_only       = (flags2 >> 7) & 0x1;
-				entries[i].hipp_astrometry    = (flags2 >> 6) & 0x1;
-				entries[i].diffraction        = (flags2 >> 5) & 0x1;
-				entries[i].confusion          = (flags2 >> 4) & 0x1;
-				entries[i].bright_confusion   = (flags2 >> 3) & 0x1;
-				entries[i].bright_artifact    = (flags2 >> 2) & 0x1;
-				entries[i].standard           = (flags2 >> 1) & 0x1;
-			}
-			qfits_free(rawdata);
-			continue;
-		}
-		assert(nomad->table->col[nomad->columns[c]].atom_size == nomad_fitstruct[c].size);
-
-		qfits_query_column_seq_to_array
-			(nomad->table, nomad->columns[c], offset, count,
-			 ((unsigned char*)entries) + nomad_fitstruct[c].offset,
-			 sizeof(nomad_entry));
-	}
-	return 0;
+    return fitstable_read_structs(cat, entries, sizeof(nomad_entry), offset, count);
 }
 
-int nomad_fits_write_entry(nomad_fits* nomad, nomad_entry* entry) {
-	int c;
-	unsigned char flags[3];
-	FILE* fid = nomad->fid;
-
-	if (!nomad_fitstruct_inited)
-		init_nomad_fitstruct();
-
-	flags[0] =
+int nomad_fits_write_entry(nomad_fits* cat, nomad_entry* entry) {
+	entry->flags[0] =
 		(entry->usnob_fail        ? (1 << 7) : 0) |
 		(entry->twomass_fail      ? (1 << 6) : 0) |
 		(entry->tycho_astrometry  ? (1 << 5) : 0) |
@@ -175,8 +127,7 @@ int nomad_fits_write_entry(nomad_fits* nomad, nomad_entry* entry) {
 		(entry->alt_tycho         ? (1 << 2) : 0) |
 		(entry->blue_o            ? (1 << 1) : 0) |
 		(entry->red_e             ? (1 << 0) : 0);
-
-	flags[1] =
+    entry->flags[1] = 
 		(entry->twomass_only      ? (1 << 7) : 0) |
 		(entry->hipp_astrometry   ? (1 << 6) : 0) |
 		(entry->diffraction       ? (1 << 5) : 0) |
@@ -184,223 +135,79 @@ int nomad_fits_write_entry(nomad_fits* nomad, nomad_entry* entry) {
 		(entry->bright_confusion  ? (1 << 3) : 0) |
 		(entry->bright_artifact   ? (1 << 2) : 0) |
 		(entry->standard          ? (1 << 1) : 0);
-
-	for (c=0; c<NOMAD_FITS_COLUMNS; c++) {
-		fitstruct* fs = nomad_fitstruct + c;
-		if (c == NOMAD_FLAGS_INDEX) {
-			if (fits_write_data_X(fid, flags[0]) ||
-				fits_write_data_X(fid, flags[1])) {
-				return -1;
-			}
-			continue;
-		}
-		if (fits_write_data(fid, ((unsigned char*)entry) + fs->offset,
-							fs->fitstype)) {
-			return -1;
-		}
-	}
-	nomad->table->nr++;
-	return 0;
+    return fitstable_write_struct(cat, entry);
 }
 
-int nomad_fits_count_entries(nomad_fits* nomad) {
-	return nomad->table->nr;
+int nomad_fits_count_entries(nomad_fits* cat) {
+	return fitstable_nrows(cat);
 }
 
 int nomad_fits_close(nomad_fits* nomad) {
-	if (nomad->fid) {
-		fits_pad_file(nomad->fid);
-		if (fclose(nomad->fid)) {
-			fprintf(stderr, "Error closing NOMAD FITS file: %s\n", strerror(errno));
-			return -1;
-		}
-	}
-	if (nomad->table) {
-		qfits_table_close(nomad->table);
-	}
-	if (nomad->header) {
-		qfits_header_destroy(nomad->header);
-	}
-	buffered_read_free(&nomad->br);
-	free(nomad);
-	return 0;
+    return fitstable_close(nomad);
 }
 
 nomad_fits* nomad_fits_open(char* fn) {
-	int i, nextens;
-	qfits_table* table;
-	int c;
-	nomad_fits* nomad = NULL;
-	int good = 0;
-
-	if (!nomad_fitstruct_inited)
-		init_nomad_fitstruct();
-
-	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-		return NULL;
-	}
-
-	nomad = nomad_fits_new();
-
-	// find a table containing all the columns needed...
-	// (and find the indices of the columns we need.)
-	nextens = qfits_query_n_ext(fn);
-	for (i=0; i<=nextens; i++) {
-		if (!qfits_is_table(fn, i))
-			continue;
-		table = qfits_table_open(fn, i);
-
-		good = 1;
-		for (c=0; c<NOMAD_FITS_COLUMNS; c++) {
-			nomad->columns[c] = fits_find_column(table, nomad_fitstruct[c].fieldname);
-			if (nomad->columns[c] == -1) {
-				good = 0;
-				break;
-			}
-		}
-		if (good) {
-			nomad->table = table;
-			break;
-		}
-		qfits_table_close(table);
-	}
-
-	if (!good) {
-		fprintf(stderr, "nomad_fits: didn't find the following required columns:\n    ");
-		for (c=0; c<NOMAD_FITS_COLUMNS; c++)
-			if (nomad->columns[c] == -1)
-				fprintf(stderr, "%s  ", nomad_fitstruct[c].fieldname);
-		fprintf(stderr, "\n");
-
-		free(nomad);
-		return NULL;
-	}
-	nomad->br.ntotal = nomad->table->nr;
-	return nomad;
+	nomad_fits* cat = NULL;
+    cat = fitstable_open(fn);
+    if (!cat)
+        return NULL;
+    add_columns(cat, FALSE);
+    fitstable_use_buffered_reading(cat, sizeof(nomad_entry), 1000);
+    cat->postprocess_read_structs = postprocess_read_structs;
+    if (fitstable_read_extension(cat, 1)) {
+        fprintf(stderr, "nomad-fits: table in extension 1 didn't contain the required columns.\n");
+        fprintf(stderr, "  missing: ");
+        fitstable_print_missing(cat, stderr);
+        fprintf(stderr, "\n");
+        nomad_fits_close(cat);
+        return NULL;
+    }
+	return cat;
 }
 
 nomad_fits* nomad_fits_open_for_writing(char* fn) {
-	nomad_fits* nomad;
-
-	nomad = nomad_fits_new();
-	nomad->fid = fopen(fn, "wb");
-	if (!nomad->fid) {
-		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
-	nomad->table = nomad_fits_get_table();
-	nomad->header = qfits_table_prim_header_default();
-	qfits_header_add(nomad->header, "NOMAD", "T", "This is a NOMAD catalog.", NULL);
-	qfits_header_add(nomad->header, "NOBJS", "0", "", NULL);
-	qfits_header_add(nomad->header, "COMMENT", "The FLAGS variable is composed of 15 boolean values packed into 2 bytes.", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "  Byte 0:", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x80: UBBIT / usnob_fail", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x40: TMBIT / twomass_fail", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x20: TYBIT / tycho_astrometry", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x10: XRBIT / alt_radec", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x08: IUCBIT / alt_ucac", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x04: ITYBIT / alt_tycho", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x02: OMAGBIT / blue_o", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x01: EMAGBIT / red_e", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "  Byte 1:", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x80: TMONLY / twomass_only", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x40: HIPAST / hipp_astrometry", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x20: SPIKE / diffraction", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x10: TYCONF / confusion", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x08: BSCONF / bright_confusion", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x04: BSART / bright_artifact", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x02: USEME / standard", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "    0x01: unused", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "  Note that the ITMBIT and EXCAT bits were not set for any entry in the ", NULL, NULL);
-	qfits_header_add(nomad->header, "COMMENT", "  released NOMAD catalog, so were not included here.", NULL, NULL);
-	return nomad;
-
- bailout:
-	if (nomad) {
-		free(nomad);
-	}
-	return NULL;
+	nomad_fits* cat;
+    qfits_header* hdr;
+    cat = fitstable_open_for_writing(fn);
+    if (!cat)
+        return NULL;
+    add_columns(cat, TRUE);
+    hdr = fitstable_get_primary_header(cat);
+	qfits_header_add(hdr, "NOMAD", "T", "This is a NOMAD 1.0 catalog.", NULL);
+    qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_NOMAD, "Astrometry.net file type", NULL);
+	qfits_header_add(hdr, "COMMENT", "The FLAGS variable is composed of 15 boolean values packed into 2 bytes.", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "  Byte 0:", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x80: UBBIT / usnob_fail", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x40: TMBIT / twomass_fail", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x20: TYBIT / tycho_astrometry", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x10: XRBIT / alt_radec", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x08: IUCBIT / alt_ucac", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x04: ITYBIT / alt_tycho", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x02: OMAGBIT / blue_o", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x01: EMAGBIT / red_e", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "  Byte 1:", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x80: TMONLY / twomass_only", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x40: HIPAST / hipp_astrometry", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x20: SPIKE / diffraction", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x10: TYCONF / confusion", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x08: BSCONF / bright_confusion", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x04: BSART / bright_artifact", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x02: USEME / standard", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "    0x01: unused", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "  Note that the ITMBIT and EXCAT bits were not set for any entry in the ", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "  released NOMAD catalog, so were not included here.", NULL, NULL);
+    return cat;
 }
 
-int nomad_fits_write_headers(nomad_fits* nomad) {
-	qfits_header* table_header;
-	assert(nomad->fid);
-	assert(nomad->header);
-	fits_header_mod_int(nomad->header, "NOBJS", nomad_fits_count_entries(nomad), "Number of objects in this catalog.");
-	qfits_header_dump(nomad->header, nomad->fid);
-	table_header = qfits_table_ext_header_default(nomad->table);
-	qfits_header_dump(table_header, nomad->fid);
-	qfits_header_destroy(table_header);
-	nomad->header_end = ftello(nomad->fid);
-	return 0;
+int nomad_fits_write_headers(nomad_fits* cat) {
+    if (fitstable_write_primary_header(cat))
+        return -1;
+    return fitstable_write_header(cat);
 }
 
-int nomad_fits_fix_headers(nomad_fits* nomad) {
- 	off_t offset;
-	off_t old_header_end;
-	offset = ftello(nomad->fid);
-	fseeko(nomad->fid, 0, SEEK_SET);
-	old_header_end = nomad->header_end;
-	nomad_fits_write_headers(nomad);
-	if (old_header_end != nomad->header_end) {
-		fprintf(stderr, "Warning: NOMAD FITS header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)old_header_end,
-				(unsigned long)nomad->header_end);
-		return -1;
-	}
-	fseek(nomad->fid, offset, SEEK_SET);
-	return 0;
-}
-
-static int nomad_fits_refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
-	nomad_fits* cat = userdata;
-	nomad_entry* en = buffer;
-	return nomad_fits_read_entries(cat, offset, n, en);
-}
-
-nomad_fits* nomad_fits_new() {
-	nomad_fits* rtn = calloc(1, sizeof(nomad_fits));
-	if (!rtn) {
-		fprintf(stderr, "Couldn't allocate memory for a nomad_fits structure.\n");
-		exit(-1);
-	}
-	rtn->br.blocksize = 1000;
-	rtn->br.elementsize = sizeof(nomad_entry);
-	rtn->br.refill_buffer = nomad_fits_refill_buffer;
-	rtn->br.userdata = rtn;
-	return rtn;
-}
-
-static qfits_table* nomad_fits_get_table() {
-	uint datasize;
-	uint ncols, nrows, tablesize;
-	int col;
-	qfits_table* table;
-	char* nil = " ";
-
-	if (!nomad_fitstruct_inited)
-		init_nomad_fitstruct();
-
-	// one big table: the sources.
-	// dummy values here...
-	datasize = 0;
-	ncols = NOMAD_FITS_COLUMNS;
-	nrows = 0;
-	tablesize = datasize * nrows * ncols;
-	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	table->tab_w = 0;
-	for (col=0; col<NOMAD_FITS_COLUMNS; col++) {
-		fitstruct* fs = nomad_fitstruct + col;
-		if (col == NOMAD_FLAGS_INDEX) {
-			// "15" in the function call below is the number of BIT values
-			// in the flags array.
-			fits_add_column(table, col, TFITS_BIN_TYPE_X, 15, nil, fs->fieldname);
-			continue;
-		}
-		fits_add_column(table, col, fs->fitstype, 1, fs->units, fs->fieldname);
-	}
-	table->tab_w = qfits_compute_table_width(table);
-	return table;
+int nomad_fits_fix_headers(nomad_fits* cat) {
+    if (fitstable_fix_primary_header(cat))
+        return -1;
+    return fitstable_fix_header(cat);
 }
 

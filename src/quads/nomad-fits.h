@@ -23,22 +23,11 @@
 
 #include "qfits.h"
 #include "nomad.h"
-#include "ioutils.h"
+#include "fitstable.h"
 
-#define NOMAD_FITS_COLUMNS 27
+#define AN_FILETYPE_NOMAD "NOMAD"
 
-struct nomad_fits {
-	qfits_table* table;
-	int columns[NOMAD_FITS_COLUMNS];
-	// buffered reading
-	bread_t br;
-	// when writing:
-	qfits_header* header;
-	FILE* fid;
-	off_t header_end;
-	uint nentries;
-};
-typedef struct nomad_fits nomad_fits;
+typedef fitstable_t nomad_fits;
 
 nomad_fits* nomad_fits_open(char* fn);
 
