@@ -281,6 +281,8 @@ void fitstable_use_buffered_reading(fitstable_t* tab, int elementsize, int Nbuff
 // fitstable_next_struct().
 void* fitstable_next_struct(fitstable_t* tab);
 
+int fitstable_pushback(fitstable_t* tab);
+
 void fitstable_set_buffer_fill_function(fitstable_t* tab,
                                         int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems),
                                         void* userdata);

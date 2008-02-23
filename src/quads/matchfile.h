@@ -26,31 +26,9 @@
 #include "qfits.h"
 #include "fitstable.h"
 
-#define MATCHFILE_AN_FILETYPE "MATCH"
+#define AN_FILETYPE_MATCH "MATCH"
 
-//typedef fitstable_t matchfile;
-
-#define MATCHFILE_FITS_COLUMNS 32
-struct matchfile {
-       // when writing:
-       FILE* fid;
-       qfits_header* header;
-       off_t header_end;
- 
-       // the current matchfile_entry
-       qfits_table* table;
-    //int nrows;
- 
-       // when reading:
-       char* fn;
-       int columns[MATCHFILE_FITS_COLUMNS];
-
-       // for buffered reading:
-       bread_t br;
-};
-typedef struct matchfile matchfile;
-
-void matchobj_compute_overlap(MatchObj* mo);
+typedef fitstable_t matchfile;
 
 pl* matchfile_get_matches_for_field(matchfile* m, uint field);
 

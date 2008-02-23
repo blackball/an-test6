@@ -965,3 +965,9 @@ void* fitstable_next_struct(fitstable_t* tab) {
     return buffered_read(tab->br);
 }
 
+int fitstable_pushback(fitstable_t* tab) {
+    if (!tab->br) return -1;
+    buffered_read_pushback(tab->br);
+    return 0;
+}
+

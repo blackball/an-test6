@@ -8,6 +8,10 @@
 #include "an-bool.h"
 #include "starutil.h"
 
+#define SAME(X) CuAssertIntEquals(tc, entry1.X, ein1->X)
+#define SAMEF(X) CuAssertDblEquals(tc, entry1.X, ein1->X, 1e-10)
+#define SAMESAME(X) CuAssertIntEquals(tc, 0, memcmp(ein1->X, entry1.X, sizeof(entry1.X)))
+
 void test_read_matchfile(CuTest* tc) {
     char* fn = "/tmp/test-matchfile-0";
 
@@ -113,6 +117,41 @@ void test_read_matchfile(CuTest* tc) {
 
     ein1 = matchfile_read_match(in);
     CuAssertPtrNotNull(tc, ein1);
+
+    SAME(quadno);
+    SAMESAME(star);
+    SAMESAME(field);
+    SAMESAME(ids);
+    SAMESAME(sMin);
+    SAMESAME(sMax);
+    SAMESAME(quadpix);
+    SAMESAME(quadxyz);
+    SAME(dimquads);
+    SAME(quad_npeers);
+    SAME(noverlap);
+    SAME(nconflict);
+    SAME(nfield);
+    SAME(nindex);
+    SAME(nagree);
+    SAME(wcs_valid);
+    SAME(fieldnum);
+    SAME(fieldfile);
+    SAME(indexid);
+    SAME(healpix);
+    SAMESAME(fieldname);
+    SAME(parity);
+    SAME(quads_tried);
+    SAME(quads_matched);
+    SAME(quads_scaleok);
+    SAME(objs_tried);
+    SAME(nverified);
+
+    SAMEF(timeused);
+    SAMEF(radius);
+    SAMEF(scale);
+    SAMEF(logodds);
+    SAMEF(code_err);
+    SAMESAME(center);
 
     CuAssertIntEquals(tc, 0, memcmp(ein1, &entry1, sizeof(MatchObj)));
 

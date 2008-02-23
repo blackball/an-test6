@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include <sys/param.h>
 
 #include "matchfile.h"
 #include "fitsioutils.h"
@@ -29,360 +30,162 @@
 #include "sip.h"
 #include "mathutil.h"
 
-static int find_table(matchfile* mf);
-static qfits_table* matchfile_get_table();
+// This is a naughty preprocessor function because it uses variables
+// declared in the scope from which it is called.
+#define ADDARR(ctype, ftype, col, units, member, arraysize)             \
+    if (write) {                                                        \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, arraysize, offsetof(MatchObj, member),     \
+             ftype, col, units, TRUE);                                  \
+    } else {                                                            \
+        fitstable_add_column_struct                                     \
+            (tab, ctype, arraysize, offsetof(MatchObj, member),     \
+             any, col, units, TRUE);                                    \
+    }
 
-void matchobj_compute_derived(MatchObj* mo) {
-	int mx;
-	int i;
-	matchobj_compute_overlap(mo);
-	mx = 0;
-	// DIMQUADS
-	for (i=0; i<4; i++)
-		if (mo->field[i] > mx) mx = mo->field[i];
-	mo->objs_tried = mx+1;
-	if (mo->wcs_valid)
-		mo->scale = tan_pixel_scale(&(mo->wcstan));
-	star_midpoint(mo->center, mo->sMin, mo->sMax);
-	mo->radius = sqrt(distsq(mo->center, mo->sMin, 3));
+#define ADDCOL(ctype, ftype, col, units, member) \
+ADDARR(ctype, ftype, col, units, member, 1)
+
+static void add_columns(fitstable_t* tab, bool write) {
+    tfits_type any = fitscolumn_any_type();
+    tfits_type d = fitscolumn_double_type();
+    tfits_type f = fitscolumn_float_type();
+    tfits_type u8 = fitscolumn_u8_type();
+    tfits_type i16 = fitscolumn_i16_type();
+    tfits_type i32 = fitscolumn_i32_type();
+    tfits_type i64 = fitscolumn_i64_type();
+    tfits_type i = fitscolumn_int_type();
+    tfits_type logical = fitscolumn_boolean_type();
+    tfits_type b = fitscolumn_bool_type();
+    tfits_type c = fitscolumn_char_type();
+    char* nil = " ";
+    MatchObj mo;
+
+    ADDCOL(i,  i32, "QUAD",            nil, quadno);
+    ADDCOL(u8, u8,  "DIMQUADS",        nil, dimquads);
+    ADDARR(i,  i32, "STARS",           nil, star, DQMAX);
+    ADDARR(i,  i32, "FIELDOBJS",       nil, field, DQMAX);
+    ADDARR(i64,i64, "IDS",             nil, ids, DQMAX);
+    ADDCOL(f,  f,   "CODEERR",         nil, code_err);
+    ADDARR(d,  d,   "QUADPIX",         nil, quadpix, 2*DQMAX);
+    ADDARR(d,  d,   "QUADXYZ",         nil, quadxyz, 3*DQMAX);
+    ADDARR(d,  d,   "MINCORNER",       nil, sMin, 3);
+    ADDARR(d,  d,   "MAXCORNER",       nil, sMax, 3);
+    ADDCOL(i16,i16, "NOVERLAP",        nil, noverlap);
+    ADDCOL(i16,i16, "NCONFLICT",       nil, nconflict);
+    ADDCOL(i16,i16, "NFIELD",          nil, nfield);
+    ADDCOL(i16,i16, "NINDEX",          nil, nindex);
+    ADDCOL(i16,i16, "NAGREE",          nil, nagree);
+    ADDARR(d,  d,   "CRVAL",           nil, wcstan.crval, 2);
+    ADDARR(d,  d,   "CRPIX",           nil, wcstan.crpix, 2);
+    ADDARR(d,  d,   "CD",              nil, wcstan.cd, 4);
+    ADDCOL(b, logical, "WCS_VALID",    nil, wcs_valid);
+    ADDCOL(i,i32,   "FIELDNUM",        nil, fieldnum);
+    ADDCOL(i,i32,   "FIELDID",         nil, fieldfile);
+    ADDCOL(i16,i16, "INDEXID",         nil, indexid);
+    ADDCOL(i16,i16, "HEALPIX",         nil, healpix);
+    ADDARR(c,  c,   "FIELDNAME",       nil, fieldname, sizeof(mo.fieldname)-1);
+    ADDCOL(b, logical, "PARITY",       nil, parity);
+    ADDCOL(i,i32,   "QTRIED",          nil, quads_tried);
+    ADDCOL(i,i32,   "QMATCHED",        nil, quads_matched);
+    ADDCOL(i,i32,   "QSCALEOK",        nil, quads_scaleok);
+    ADDCOL(i16,i16, "QPEERS",          nil, quad_npeers);
+    ADDCOL(i,i32,   "NVERIFIED",       nil, nverified);
+    ADDCOL(f,  f,   "TIMEUSED",        "s", timeused);
+    ADDCOL(f,  f,   "LOGODDS",         nil, logodds);
+}
+#undef ADDCOL
+#undef ADDARR
+
+static int postprocess_read_structs(fitstable_t* table, void* struc,
+                                    int stride, int offset, int N) {
+    MatchObj* mo = struc;
+    int i;
+    for (i=0; i<N; i++) {
+		matchobj_compute_derived(mo + i);
+    }
+    return 0;
 }
 
-void matchobj_compute_overlap(MatchObj* mo) {
-	/*
-	  if (!mo->nfield) {
-	  fprintf(stderr, "Warning: matchobj_compute_overlap: nfield = 0.\n");
-	  return;
-	  }
-	  if (mo->ninfield < 4) {
-	  mo->overlap = 0.0;
-	  return;
-	  }
-	*/
+MatchObj* matchfile_read_match(matchfile* mf) {
+    return (MatchObj*)fitstable_next_struct(mf);
 }
 
-static int matchfile_refill_buffer(void* userdata, void* buffer,
-								   uint offset, uint n) {
-	matchfile* mf = userdata;
-	MatchObj* mo = buffer;
-	return matchfile_read_matches(mf, mo, offset, n);
+int matchfile_pushback_match(matchfile* m) {
+    return fitstable_pushback(m);
 }
 
-matchfile* new_matchfile() {
-	matchfile* mf = calloc(1, sizeof(matchfile));
-	if (!mf) {
-		fprintf(stderr, "Couldn't allocate a new matchfile.");
-		return NULL;
-	}
-	mf->br.blocksize = 1000;
-	mf->br.elementsize = sizeof(MatchObj);
-	mf->br.refill_buffer = matchfile_refill_buffer;
-	mf->br.userdata = mf;
+int matchfile_read_matches(matchfile* mf, MatchObj* entries,
+                           uint offset, uint count) {
+    return fitstable_read_structs(mf, entries, sizeof(MatchObj), offset, count);
+}
+
+int matchfile_write_match(matchfile* mf, MatchObj* entry) {
+    return fitstable_write_struct(mf, entry);
+}
+
+int matchfile_count(matchfile* mf) {
+	return fitstable_nrows(mf);
+}
+
+int matchfile_close(matchfile* nomad) {
+    return fitstable_close(nomad);
+}
+
+matchfile* matchfile_open(char* fn) {
+	matchfile* mf = NULL;
+    mf = fitstable_open(fn);
+    if (!mf)
+        return NULL;
+    add_columns(mf, FALSE);
+    fitstable_use_buffered_reading(mf, sizeof(MatchObj), 1000);
+    mf->postprocess_read_structs = postprocess_read_structs;
+    if (fitstable_read_extension(mf, 1)) {
+        fprintf(stderr, "matchfile: table in extension 1 didn't contain the required columns.\n");
+        fprintf(stderr, "  missing: ");
+        fitstable_print_missing(mf, stderr);
+        fprintf(stderr, "\n");
+        matchfile_close(mf);
+        return NULL;
+    }
 	return mf;
 }
 
 matchfile* matchfile_open_for_writing(char* fn) {
 	matchfile* mf;
-
-	mf = new_matchfile();
-	if (!mf)
-		goto bailout;
-	mf->fid = fopen(fn, "wb");
-	if (!mf->fid) {
-		fprintf(stderr, "Couldn't open file %s for quad FITS output: %s\n", fn, strerror(errno));
-		goto bailout;
-	}
-
-    // the header
-    mf->header = qfits_table_prim_header_default();
-	qfits_header_add(mf->header, "AN_FILE", MATCHFILE_AN_FILETYPE,
-					 "This is a list of quad matches.", NULL);
-	mf->table = matchfile_get_table();
-	return mf;
-
- bailout:
-	if (mf) {
-		if (mf->fid)
-			fclose(mf->fid);
-		free(mf);
-	}
-	return NULL;
+    qfits_header* hdr;
+    mf = fitstable_open_for_writing(fn);
+    if (!mf)
+        return NULL;
+    add_columns(mf, TRUE);
+    hdr = fitstable_get_primary_header(mf);
+    qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_MATCH, "Astrometry.net file type", NULL);
+    return mf;
 }
 
 int matchfile_write_headers(matchfile* mf) {
-	qfits_header* tablehdr;
-	// the main file header:
-    qfits_header_dump(mf->header, mf->fid);
-	tablehdr = qfits_table_ext_header_default(mf->table);
-    qfits_header_dump(tablehdr, mf->fid);
-    qfits_header_destroy(tablehdr);
-	mf->header_end = ftello(mf->fid);
-	return 0;
+    if (fitstable_write_primary_header(mf))
+        return -1;
+    return fitstable_write_header(mf);
 }
 
 int matchfile_fix_headers(matchfile* mf) {
-	off_t offset;
-	off_t old_offset;
-	offset = ftello(mf->fid);
-	fseeko(mf->fid, 0, SEEK_SET);
-	old_offset = mf->header_end;
-	matchfile_write_headers(mf);
-	if (mf->header_end != old_offset) {
-		fprintf(stderr, "Error: matchfile %s: header used to end at %i, but now it ends at %i.  Data corruction is likely to have resulted.\n",
-				mf->fn, (int)old_offset, (int)mf->header_end);
-		return -1;
-	}
-	fseeko(mf->fid, offset, SEEK_SET);
-	return 0;
+    if (fitstable_fix_primary_header(mf))
+        return -1;
+    return fitstable_fix_header(mf);
 }
 
-// mapping between a struct field and FITS field.
-struct fits_struct_pair {
-	const char* fieldname;
-	const char* units;
-	int offset;
-	int size;
-	int ncopies;
-	tfits_type fitstype;
-	bool required;
-};
-typedef struct fits_struct_pair fitstruct;
-
-static fitstruct matchfile_fitstruct[MATCHFILE_FITS_COLUMNS];
-static bool matchfile_fitstruct_inited = 0;
-
-#define SET_FIELDS(A, i, t, n, u, fld, nc, req) { \
- MatchObj x; \
- A[i].fieldname=n; \
- A[i].units=u; \
- A[i].offset=offsetof(MatchObj, fld); \
- A[i].size=sizeof(x.fld); \
- A[i].ncopies=nc; \
- A[i].fitstype=t; \
- A[i].required = req; \
- i++; \
-}
-
-static void init_matchfile_fitstruct() {
-	MatchObj mo;
-	fitstruct* fs = matchfile_fitstruct;
-	int i = 0;
-	const char* nil = " ";
-
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "dimquads", nil, dimquads, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, DQMAX, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, DQMAX, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_K, "ids", nil, ids, DQMAX, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "quadpix", nil, quadpix, 2*DQMAX, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "quadxyz", nil, quadxyz, 3*DQMAX, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "noverlap", nil, noverlap, 1, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nconflict", nil, nconflict, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nfield", nil, nfield, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nindex", nil, nindex, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nagree", nil, nagree, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crval", nil, wcstan.crval, 2, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crpix", nil, wcstan.crpix, 2, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "CD", nil, wcstan.cd, 4, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "wcs_valid", nil, wcs_valid, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldnum", nil, fieldnum, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldid", nil, fieldfile, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "indexid", nil, indexid, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_A, "fieldname", nil, fieldname, sizeof(mo.fieldname), FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "healpix", nil, healpix, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "parity", nil, parity, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qtried", nil, quads_tried, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qmatched", nil, quads_matched, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qscaleok", nil, quads_scaleok, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "qpeers", nil, quad_npeers, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "nverified", nil, nverified, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "timeused", nil, timeused, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "logodds", nil, logodds, 1, FALSE);
-
-	assert(i == MATCHFILE_FITS_COLUMNS);
-	matchfile_fitstruct_inited = 1;
-}
-
-static qfits_table* matchfile_get_table() {
-	uint datasize;
-	uint ncols, nrows, tablesize;
-	int col;
-	qfits_table* table;
-
-	if (!matchfile_fitstruct_inited)
-		init_matchfile_fitstruct();
-	// dummy values here...
-	datasize = 0;
-	ncols = MATCHFILE_FITS_COLUMNS;
-	nrows = 0;
-	tablesize = datasize * nrows * ncols;
-	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	table->tab_w = 0;
-
-	for (col=0; col<MATCHFILE_FITS_COLUMNS; col++) {
-		fitstruct* fs = matchfile_fitstruct + col;
-		fits_add_column(table, col, fs->fitstype, fs->ncopies,
-						fs->units, fs->fieldname);
-	}
-	table->tab_w = qfits_compute_table_width(table);
-	return table;
-}
-
-int matchfile_write_match(matchfile* mf, MatchObj* mo) {
-	int c;
-	if (!matchfile_fitstruct_inited)
-		init_matchfile_fitstruct();
-	for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
-		int i;
-		int atomsize;
-		fitstruct* fs = matchfile_fitstruct + c;
-		atomsize = fs->size / fs->ncopies;
-		for (i=0; i<fs->ncopies; i++) {
-			if (fits_write_data(mf->fid, ((unsigned char*)mo) + fs->offset + (i * atomsize), fs->fitstype)) {
-				return -1;
-			}
-		}
-	}
-	mf->table->nr++;
-	return 0;
-}
-
-int matchfile_close(matchfile* mf) {
-	if (mf->fid) {
-		fits_pad_file(mf->fid);
-		if (fclose(mf->fid)) {
-			fprintf(stderr, "Error closing matchfile FITS file: %s\n", strerror(errno));
-			return -1;
-		}
-	}
-	if (mf->table)
-		qfits_table_close(mf->table);
-	if (mf->header)
-		qfits_header_destroy(mf->header);
-	if (mf->fn)
-		free(mf->fn);
-	buffered_read_free(&mf->br);
-	free(mf);
-	return 0;
-}
-
-matchfile* matchfile_open(char* fn) {
-	matchfile* mf = NULL;
-	qfits_header* header;
-	FILE* fid;
-
-	if (!matchfile_fitstruct_inited)
-		init_matchfile_fitstruct();
-	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
-		return NULL;
-	}
-
-	fid = fopen(fn, "rb");
-	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s to read matches: %s\n", fn, strerror(errno));
-		return NULL;
-	}
-	header = qfits_header_read(fn);
-	if (!header) {
-		fprintf(stderr, "Couldn't read FITS quad header from %s.\n", fn);
-		goto bailout;
-	}
-
-	mf = new_matchfile();
-	mf->fid = fid;
-	mf->header = header;
-	mf->fn = strdup(fn);
-	if (find_table(mf)) {
-		fprintf(stderr, "Couldn't find an appropriate FITS table in %s.\n", fn);
-		goto bailout;
-	}
-	mf->br.ntotal = mf->table->nr;
-	return mf;
-
- bailout:
-	if (mf && mf->fn)
-		free(mf->fn);
-	if (mf)
-		free(mf);
-	if (fid)
-		fclose(fid);
-	return NULL;
-}
-
-static int find_table(matchfile* mf) {
-	// find a table containing all the columns needed...
-	// (and find the indices of the columns we need.)
-	qfits_table* table;
-	int good = 0;
-	int c;
-	int nextens = qfits_query_n_ext(mf->fn);
-	int ext;
-
-	for (ext=1; ext<=nextens; ext++) {
-		if (!qfits_is_table(mf->fn, ext)) {
-			fprintf(stderr, "matchfile: extention %i isn't a table.\n", ext);
-			continue;
-		}
-		table = qfits_table_open(mf->fn, ext);
-		if (!table) {
-			fprintf(stderr, "matchfile: failed to open table: file %s, extension %i.\n", mf->fn, ext);
-			return -1;
-		}
-		good = 1;
-		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
-			mf->columns[c] = fits_find_column(table, matchfile_fitstruct[c].fieldname);
-			if (matchfile_fitstruct[c].required && (mf->columns[c] == -1)) {
-				fprintf(stderr, "matchfile: didn't find column \"%s\"", matchfile_fitstruct[c].fieldname);
-				good = 0;
-				break;
-			}
-		}
-		if (good) {
-			mf->table = table;
-			break;
-		}
-		qfits_table_close(table);
-	}
-	if (!good) {
-		fprintf(stderr, "matchfile: didn't find the following required columns:\n    ");
-		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
-			if (matchfile_fitstruct[c].required &&
-				(mf->columns[c] == -1))
-				fprintf(stderr, "%s  ", matchfile_fitstruct[c].fieldname);
-		fprintf(stderr, "\n");
-		return -1;
-	}
-	// reset buffered reading data
-	mf->br.ntotal = mf->table->nr;
-	buffered_read_reset(&mf->br);
-	return 0;
-}
-
-int matchfile_read_matches(matchfile* mf, MatchObj* mo, 
-						   uint offset, uint n) {
-	int c;
+void matchobj_compute_derived(MatchObj* mo) {
+	int mx;
 	int i;
-	if (!matchfile_fitstruct_inited)
-		init_matchfile_fitstruct();
-
-	for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
-		if (mf->columns[c] == -1)
-			continue;
-		assert(mf->table);
-		assert(mf->table->col[mf->columns[c]].atom_size ==
-			   matchfile_fitstruct[c].size / matchfile_fitstruct[c].ncopies);
-
-		qfits_query_column_seq_to_array
-			(mf->table, mf->columns[c], offset, n,
-			 ((unsigned char*)mo) + matchfile_fitstruct[c].offset,
-			 sizeof(MatchObj));
-	}
-	for (i=0; i<n; i++)
-		matchobj_compute_derived(mo + i);
-	return 0;
+	mx = 0;
+	for (i=0; i<mo->dimquads; i++)
+		mx = MAX(mx, mo->field[i]);
+	mo->objs_tried = mx+1;
+	if (mo->wcs_valid)
+		mo->scale = tan_pixel_scale(&(mo->wcstan));
+	star_midpoint(mo->center, mo->sMin, mo->sMax);
+	mo->radius = sqrt(distsq(mo->center, mo->sMin, 3));
 }
 
 pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
@@ -403,16 +206,3 @@ pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 	return list;
 }
 
-MatchObj* matchfile_read_match(matchfile* mf) {
-	MatchObj* mo = buffered_read(&mf->br);
-	return mo;
-}
-
-int matchfile_pushback_match(matchfile* mf) {
-	buffered_read_pushback(&mf->br);
-	return 0;
-}
-
-int matchfile_count(matchfile* m) {
-    return m->table->nr;
-}
