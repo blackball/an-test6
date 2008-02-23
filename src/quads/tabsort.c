@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
 		qfits_query_column_seq_to_array(table, c, 0, table->nr,
 										buffer, atomsize);
 
-		permuted_sort(buffer, atomsize, sort_func, NULL, table->nr);
+		perm = permuted_sort(buffer, atomsize, sort_func, NULL, table->nr);
 
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart, &hdrsize) ||
 			qfits_get_datinfo(infn, ext, &datstart, &datsize)) {
@@ -259,6 +259,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to add padding to extension %i.\n", ext);
 			exit(-1);
 		}
+
+        qfits_table_close(table);
 	}
 	free(buffer);
 
