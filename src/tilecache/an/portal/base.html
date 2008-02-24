@@ -31,7 +31,7 @@
 <div id="username">
 {% if user.is_authenticated %}
 {% block loggedin %}
-{% include "portal/logout.html" %}
+{% include "portal/menu.html" %}
 {% endblock %}
 {% else %}
 {% block notloggedin %}{% endblock %}
