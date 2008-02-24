@@ -65,10 +65,12 @@ INTERNALS_NOIO := \
 all: $(REMAKE_ANUTILS) $(LIBKD) $(LIBKD_NOIO) checktree fix-bb
 
 $(LIBKD): $(KD) $(KD_FITS) $(INTERNALS)
+	-rm -f $@
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
 $(LIBKD_NOIO): $(KD) $(INTERNALS_NOIO)
+	-rm -f $@
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
