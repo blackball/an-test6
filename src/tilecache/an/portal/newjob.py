@@ -86,6 +86,11 @@ class FullForm(forms.Form):
                                   initial='ul')
     parity = forms.ChoiceField(choices=Submission.parity_CHOICES,
                                initial=2)
+
+    description = forms.CharField(widget=forms.Textarea(
+        attrs={'rows':2,}
+        ))
+
     scalelower = forms.DecimalField(widget=forms.TextInput(
         attrs={'onfocus':'setFsUl()',
                'onkeyup':'scalechanged()',
@@ -327,6 +332,7 @@ def newlong(request):
 
         submission = Submission(
             user = request.user,
+            description = form.getclean('description'),
             datasrc = form.getclean('datasrc'),
             filetype = form.getclean('filetype'),
             uploaded = uploaded,

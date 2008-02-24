@@ -232,6 +232,8 @@ class Submission(models.Model):
     batch = models.ForeignKey(BatchSubmission, null=True)
     web = models.ForeignKey(WebSubmission, null=True)
 
+    description = models.CharField(max_length=1024, null=True)
+
     # url / file / etc.
     datasrc = models.CharField(max_length=10, choices=datasrc_CHOICES)
 
@@ -356,6 +358,8 @@ class Job(models.Model):
 
     submission = models.ForeignKey(Submission, related_name='jobs', null=True)
 
+    description = models.CharField(max_length=1024, null=True)
+
     # The file that goes with this job
     diskfile = models.ForeignKey(DiskFile, related_name='jobs', null=True)
 
@@ -395,6 +399,11 @@ class Job(models.Model):
         s += ' ' + str(self.diskfile)
         s += '>'
         return s
+
+    def get_description(self):
+        if self.description:
+            return self.description
+        return self.submission.description
 
     # status is "Solved" or "Failed"
     def is_finished(self):

@@ -153,7 +153,7 @@ def jobstatus(request):
         'jobfile' : (submission.datasrc == 'file') and submission.uploaded.userfilename or None,
         'jobscale' : job.friendly_scale(),
         'jobparity' : job.friendly_parity(),
-        'needs_medium_scale' : job.needs_medium_scale(),
+        'needs_medium_scale' : job.diskfile.needs_medium_size(),
         'sources' : get_url(job, 'sources-medium'),
         'sources_big' : get_url(job, 'sources-big'),
         'sources_small' : get_url(job, 'sources-small'),

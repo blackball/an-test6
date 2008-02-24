@@ -3,6 +3,7 @@
 {% block moreinlinecss %}
 table.c { margin-left:auto; margin-right:auto; }
 td.l { text-align:right; }
+td.lt { text-align:right; vertical-align:top; }
 #formtable { margin-left:auto; margin-right:auto; border-style:solid; border-color:gray; border-width:thin; }
 #formtable > tbody > tr > td { padding:10px; }
 .explain { color:blue; font-size:80%; }
@@ -458,6 +459,17 @@ Parity:
 {{ form.parity }}
 </td>
 </tr>
+
+
+<tr>
+<td class="lt">
+Description of this submission:
+</td>
+<td>
+{{ form.description }}
+</td>
+</tr>
+
 
 <tr>
 <td colspan="2" id="tdsubmit">
