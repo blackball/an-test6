@@ -42,17 +42,24 @@ tr.odd td {}
 <table id="summarytable">
 <tr>
 <th>Job Id</th>
+<th>Description</th>
 <th>Submitted</th>
 <th>Status</th>
 <th>Field</th>
-<th>Field<br />Redistributable?</th>
-<th>Job open to<br />anyone?</th>
+<th>Expose Field <br />to the web?</th>
+<th>Expose Job <br />to the web?</th>
 </tr>
 {% for job in jobs %}
 
 <tr class="{% cycle even,odd %}">
 
 <td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
+
+<td>
+{% if job.get_description %}
+{{ job.get_description }}
+{% endif %}
+</td>
 
 <td> {{ job.submission.format_submittime_brief }} </td>
 

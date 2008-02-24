@@ -36,6 +36,12 @@ from an import settings
 
 import sip
 
+
+class SetDescriptionForm(forms.Form):
+    description = forms.CharField(widget=forms.Textarea(
+        attrs={'rows':2, 'cols':40,}
+        ))
+
 def get_status_url(jobid):
     return reverse(jobstatus) + '?jobid=' + jobid
 
@@ -89,6 +95,23 @@ def submission_status(request, submission):
 
 def run_variant(request):
     return HttpResponse('Not implemented')
+
+@login_required
+def job_set_description(request):
+    if not 'jobid' in request.POST:
+        return HttpResponse('no jobid')
+    jobid = request.POST['jobid']
+    job = get_job(jobid)
+    if not job:
+        return HttpResponse('no such jobid')
+    if job.get_user() != request.user:
+        return HttpResponse('not your job')
+    if not 'desc' in request.POST:
+        return HttpResponse('no desc')
+    desc = request.POST['desc']
+    job.description = desc
+    job.save()
+    return HttpResponseRedirect(get_status_url(jobid))
 
 def jobstatus(request):
     if not request.GET:
@@ -160,6 +183,7 @@ def jobstatus(request):
         #'otherxylists' : otherxylists,
         'jobowner' : jobowner,
         'allowanon' : anonymous,
+        'set_description_url' : reverse(job_set_description),
         }
 
     if job.solved():
