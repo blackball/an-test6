@@ -91,10 +91,12 @@ MISC_OBJ := grab-stellarium-constellations.o
 ALL_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ) $(MISC_OBJ)
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ) $(ANUTILS_DEPS)
+	-rm -f $@
 	$(AR) rc $@ $(ANUTILS_OBJ)
 	$(RANLIB) $@
 
 $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
+	-rm -f $@
 	$(AR) rc $@ $(ANFILES_OBJ)
 	$(RANLIB) $@
 
