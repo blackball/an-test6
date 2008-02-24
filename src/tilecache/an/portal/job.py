@@ -106,6 +106,10 @@ class DiskFile(models.Model):
     def delete_file(self):
         os.unlink(self.get_path())
 
+    def needs_medium_size(self):
+        (scale, mw, mh) = self.get_medium_scale()
+        return (scale != 1.0)
+
     @staticmethod
     def get_hash(fn):
         h = sha.new()
@@ -162,8 +166,8 @@ class Calibration(models.Model):
     sip = models.ForeignKey(SipWCS, null=True)
 
     # RA,Dec bounding box.
-    ramin =      models.FloatField()
-    ramax =      models.FloatField()
+    ramin  = models.FloatField()
+    ramax  = models.FloatField()
     decmin = models.FloatField()
     decmax = models.FloatField()
 
@@ -176,7 +180,10 @@ class Calibration(models.Model):
     # zeropoint
     # psf
 
-
+    def save(self):
+        if self.ramin is None:
+            (self.ramin, self.ramax, self.decmin, self.decmax) = self.raw_tan.radec_bounds()
+        super(Calibration,self).save()
 
 class BatchSubmission(models.Model):
     pass
@@ -294,6 +301,22 @@ class Submission(models.Model):
         s += '>'
         return s
 
+    def check_if_finished(self):
+        alljobs = self.jobs.all()
+        for job in alljobs:
+            if not job.is_finished():
+                return
+        self.set_status('Finished')
+        self.save()
+
+    def set_status(self, stat, reason=None):
+        if stat in ['Queued', 'Running', 'Finished']:
+            self.status = stat
+        else:
+            raise ValueError('Invalid status "%s"' % stat)
+        if stat == 'Failed' and reason is not None:
+            job.failurereason = reason[:256]
+
     def get_id(self):
         return self.subid
 
@@ -372,6 +395,22 @@ class Job(models.Model):
         s += ' ' + str(self.diskfile)
         s += '>'
         return s
+
+    # status is "Solved" or "Failed"
+    def is_finished(self):
+        return self.status in ['Solved', 'Failed']
+
+    def set_status(self, stat, reason=None):
+        if stat in ['Queued', 'Running', 'Solved', 'Failed']:
+            self.status = stat
+        else:
+            raise ValueError('Invalid status "%s"' % stat)
+        if stat == 'Failed' and reason is not None:
+            self.failurereason = reason[:256]
+        if stat == 'Solved' or stat == 'Failed':
+            self.submission.check_if_finished()
+        if stat == 'Running':
+            self.submission.set_status('Running')
 
     def get_id(self):
         return self.jobid

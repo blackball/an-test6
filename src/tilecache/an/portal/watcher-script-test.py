@@ -27,7 +27,7 @@ import shutil
 
 from django.db import models
 
-from an.portal.models import Job, Submission, DiskFile
+from an.portal.models import Job, Submission, DiskFile, Calibration
 from an.upload.models import UploadedFile
 from an.portal.log import log
 from an.portal.convert import convert, is_tarball, FileConversionError
@@ -38,8 +38,7 @@ from an.util.run_command import run_command
 import sip
 
 def bailout(job, reason):
-    job.status = 'Failed'
-    job.failurereason = reason
+    job.set_status('Failed', reason)
     job.save()
 
 blindlog = 'blind.log'
@@ -59,14 +58,13 @@ def handle_job(job, sshconfig):
     try:
         real_handle_job(job, sshconfig)
     except Exception,e:
-        job.status = 'Failed'
         errstr = str(e)
-        job.failurereason = errstr[:256]
-        job.save()
         log('Failed with exception: ', str(e))
         log('--------------')
         log(traceback.format_exc())
         log('--------------')
+        job.set_status('Failed', errstr)
+        job.save()
 
 def produce_alternate_xylists(job):
     log("I'm producing alternate xylists like nobody's bidness.")
@@ -81,7 +79,7 @@ def produce_alternate_xylists(job):
 def real_handle_job(job, sshconfig):
     log('handle_job: ' + str(job))
 
-    job.status = 'Running'
+    job.set_status('Running')
     job.save()
 
     df = job.diskfile
@@ -266,7 +264,7 @@ def real_handle_job(job, sshconfig):
            + '; chmod 664 *; chgrp www-data *')
     # --group G --mode M --owner O ?
 
-    job.status = 'Running'
+    job.set_status('Running')
     job.set_starttime_now()
     job.save()
 
@@ -292,7 +290,7 @@ def real_handle_job(job, sshconfig):
     # Record results in the job database.
 
     if os.path.exists(job.get_filename('solved')):
-        job.status = 'Solved'
+        job.set_status('Solved')
 
         # BIG HACK! - look through LD_LIBRARY_PATH if this is still needed...
         if not sip.libraryloaded():
@@ -310,8 +308,8 @@ def real_handle_job(job, sshconfig):
         job.calibration = calib
         
     else:
-        job.status = 'Failed'
-        job.failurereason = 'Did not solve.'
+        job.set_status('Failed', 'Did not solve.')
+
     job.save()
 
 
@@ -367,7 +365,7 @@ def handle_tarball(basedir, filenames, submission):
                 return rtn
             break
 
-        job.status = 'Queued'
+        job.set_status('Queued')
         job.save()
         submission.save()
         log('Enqueuing Job: ' + str(job))

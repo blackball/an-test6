@@ -45,6 +45,10 @@ class TanWCS(models.Model):
     def get_pixscale(self):
         return 3600.0 * math.sqrt(abs(self.cd11 * self.cd22 - self.cd12 * self.cd21))
 
+    def radec_bounds(self, nsteps=10):
+        tanwcs = self.to_tanwcs()
+        return tanwcs.radec_bounds(nsteps)
+
     def to_tanwcs(self):
         tan = sip.Tan()
         tan.crval[0] = self.crval1

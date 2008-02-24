@@ -164,7 +164,9 @@ switch to solving using that list of sources.</p>
 <tr><td>Finished:</td><td> {{ jobfinishtime }} </td></tr>
 {% endif %}
 <tr><td>Source extraction:</td><td><a href="{{ sources }}">sources.png</a></td></tr>
-<tr><td>Source extraction (big):</td><td><a href="{{ sources_big }}">sources-big.png</a></td></tr>
+{% if needs_medium_scale %}
+<tr><td>Source extraction (full size):</td><td><a href="{{ sources_big }}">sources-big.png</a></td></tr>
+{% endif %}
 {% if jobsolved %}
 <tr><td>(RA, Dec) center:</td><td> ({{ racenter }}, {{ deccenter }}) degrees</td></tr>
 <tr><td>(RA, Dec) center (H:M:S, D:M:S):</td><td> ({{ racenter_hms }}, {{ deccenter_dms }}) </td></tr>

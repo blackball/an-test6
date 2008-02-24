@@ -205,8 +205,8 @@ def jobstatus(request):
         smallstyle = '&w=300&h=300&lw=3'
         largestyle = '&w=1024&h=1024&lw=5'
         steps = [ {              'gain':0,    'dashbox':0.1,   'center':False },
-                  {'limit':18,   'gain':-0.5, 'dashbox':0.01,  'center':True, 'dm':0.05 },
-                  {'limit':1.8,  'gain':0.25,                   'center':True, 'dm':0.005 },
+                  {'limit':18,   'gain':-0.5, 'dashbox':0.01,  'center':True, 'dm':0.05  },
+                  {'limit':1.8,  'gain':0.25,                  'center':True, 'dm':0.005 },
                   ]
         zlist = []
         for last_s in range(len(steps)):
@@ -230,7 +230,7 @@ def jobstatus(request):
             else:
                 bb = [0, -85, 360, 85]
             urlargs = ('&gain=%g' % s['gain']) + ('&bb=' + ','.join(map(str, bb)))
-            if (ind < last_s) and ('dashbox' in s):
+            if (ind < (last_s-1)) and ('dashbox' in s):
                 urlargs += '&dashbox=%g' % s['dashbox']
 
             zlist.append([url + smallstyle + urlargs,
