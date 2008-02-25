@@ -170,6 +170,14 @@ class Tag(models.Model):
     def can_remove_tag(self, user):
         return user in [self.user, self.job.get_user()]
 
+    # check if this user has already tagged this image with this text...
+    def is_duplicate(self):
+        tags = Tag.objects.all().filter(job=self.job,
+                                        user=self.user,
+                                        machineTag=self.machineTag,
+                                        text=self.text)
+        return (tags.count() > 0)
+        
 
 class Calibration(models.Model):
     # TAN WCS, straight from the quad match
@@ -455,6 +463,9 @@ class Job(models.Model):
 
     def is_exposed(self):
         return self.exposejob
+
+    def can_add_tag(self, user):
+        return self.is_exposed() or (self.get_user() == user)
 
     def solved(self):
         calib = self.calibration

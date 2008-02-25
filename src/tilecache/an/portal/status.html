@@ -98,7 +98,7 @@ and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
 This field contains:
 <ul>
 {% for obj in objsinfield %}
-<li> {{ obj }} </li>
+<li><a href="{{ view_tagtxt_url }}txt={{obj}}">{{ obj }}</a></li>
 {% endfor %}
 </ul>
 </p>
@@ -135,7 +135,7 @@ This field contains:
 
 <div id="tags">
 <p>
-{% if tags|length %}
+{% if tags %}
 This field has been tagged with:
 <ul>
 {% for tag in tags %}

@@ -25,7 +25,7 @@ from an.portal.models import UserPreferences
 
 from an.portal.job import Job, Submission, DiskFile, Tag
 
-from an.portal.convert import convert
+from an.portal.convert import convert, get_objs_in_field
 from an.portal.log import log
 
 from an.util.file import file_size
@@ -122,17 +122,20 @@ def job_add_tag(request):
     job = get_job(jobid)
     if not job:
         return HttpResponse('no such jobid')
-    if not job.is_exposed():
+    if not job.can_add_tag(request.user):
         return HttpResponse('not permitted')
     if not 'tag' in request.POST:
         return HttpResponse('no tag')
     txt = request.POST['tag']
+    if not len(txt):
+        return HttpResponse('empty tag')
     tag = Tag(job=job,
               user=request.user,
               machineTag=False,
               text=txt,
               addedtime=Job.timenow())
-    tag.save()
+    if not tag.is_duplicate():
+        tag.save()
     #job.tags.add(tag)
     #job.save()
     return HttpResponseRedirect(get_status_url(jobid))
@@ -152,10 +155,15 @@ def job_remove_tag(request):
     return HttpResponseRedirect(get_status_url(tag.job.jobid))
 
 def tag_summary(request):
-    if not 'tag' in request.GET:
+    if 'tag' in request.GET:
+        tagid = request.GET['tag']
+        tag = Tag.objects.all().filter(id=tagid)
+    elif 'txt' in request.GET:
+        tagtxt = request.GET['txt']
+        log('Searching for tag text: "%s"' % repr(tagtxt))
+        tag = Tag.objects.all().filter(text=tagtxt)
+    else:
         return HttpResponse('no tag')
-    tagid = request.GET['tag']
-    tag = Tag.objects.all().filter(id=tagid)
     if not len(tag):
         return HttpResponse('no such tag')
     tag = tag[0]
@@ -252,6 +260,8 @@ def jobstatus(request):
 
     taglist = []
     for tag in job.tags.all().order_by('addedtime'):
+        if tag.machineTag:
+            continue
         tag.canremove = tag.can_remove_tag(request.user)
         taglist.append(tag)
 
@@ -277,6 +287,7 @@ def jobstatus(request):
         'jobowner' : jobowner,
         'allowanon' : anonymous,
         'tags' : taglist,
+        'view_tagtxt_url' : reverse(tag_summary) + '?',
         'set_description_url' : reverse(job_set_description),
         'add_tag_url' : reverse(job_add_tag),
         'remove_tag_url' : reverse(job_remove_tag) + '?',
@@ -308,16 +319,7 @@ def jobstatus(request):
                      'wcsurl' : get_url(job, 'wcs.fits'),
                      })
 
-        objsfn = convert(job, df, 'objsinfield')
-        f = open(objsfn)
-        objtxt = f.read()
-        f.close()
-        objs = objtxt.strip()
-        if len(objs):
-            objs = objs.split('\n')
-        else:
-            objs = []
-        ctxt['objsinfield'] = objs
+        ctxt['objsinfield'] = get_objs_in_field(job, df)
 
         # deg
         fldsz = math.sqrt(df.imagew * df.imageh) * float(wcsinfo['pixscale']) / 3600.0

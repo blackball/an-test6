@@ -53,6 +53,18 @@ def is_tarball(fn):
     log('file type: "%s"' % typeinfo)
     return typeinfo == 'POSIX tar archive'
 
+def get_objs_in_field(job, df):
+    objsfn = convert(job, df, 'objsinfield')
+    f = open(objsfn)
+    objtxt = f.read()
+    f.close()
+    objs = objtxt.strip()
+    if len(objs):
+        objs = objs.split('\n')
+    else:
+        objs = []
+    return objs
+
 def convert(job, df, fn, args=None):
     if args is None:
         args = {}

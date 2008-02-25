@@ -89,7 +89,7 @@ class FullForm(forms.Form):
 
     description = forms.CharField(widget=forms.Textarea(
         attrs={'rows':2,}
-        ))
+        ), required=False)
 
     scalelower = forms.DecimalField(widget=forms.TextInput(
         attrs={'onfocus':'setFsUl()',

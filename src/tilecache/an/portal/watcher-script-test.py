@@ -27,10 +27,10 @@ import shutil
 
 from django.db import models
 
-from an.portal.models import Job, Submission, DiskFile, Calibration
+from an.portal.models import Job, Submission, DiskFile, Calibration, Tag
 from an.upload.models import UploadedFile
 from an.portal.log import log
-from an.portal.convert import convert, is_tarball, FileConversionError
+from an.portal.convert import convert, is_tarball, get_objs_in_field, FileConversionError
 from an.portal.wcs import TanWCS
 from an.util.run_command import run_command
 
@@ -306,6 +306,18 @@ def real_handle_job(job, sshconfig):
         calib.save()
 
         job.calibration = calib
+
+        # Find the list of objects in the field and add them as
+        # machine tags to the Job.
+        objs = get_objs_in_field(job, df)
+        for obj in objs:
+            tag = Tag(job=job,
+                      user=job.get_user(),
+                      machineTag=True,
+                      text=obj,
+                      addedtime=Job.timenow())
+            tag.save()
+            
         
     else:
         job.set_status('Failed', 'Did not solve.')
