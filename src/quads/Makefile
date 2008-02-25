@@ -61,7 +61,7 @@ MISC_EXECS := project-usnob diffractionFlag_check \
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
-OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2-fits.o catalog.o \
+OTHER_OBJS := usnob.o usnob-fits.o tycho2.o tycho2-fits.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
