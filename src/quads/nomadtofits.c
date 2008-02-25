@@ -23,9 +23,6 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
-#include <endian.h>
-#include <netinet/in.h>
-#include <byteswap.h>
 #include <assert.h>
 
 #include "nomad.h"
@@ -157,12 +154,6 @@ int main(int argc, char** args) {
 			int hp;
 			int slice;
 
-			/*
-			  if (i && (i % 10000000 * NOMAD_RECORD_SIZE == 0)) {
-			  printf("o");
-			  fflush(stdout);
-			  }
-			*/
 			if ((i * 80 / map_size) != lastgrass) {
 				printf(".");
 				fflush(stdout);
@@ -220,7 +211,6 @@ int main(int argc, char** args) {
 
 		nfiles++;
 		printf("\n");
-		//fflush(stdout);
 	}
 	printf("\n");
 
