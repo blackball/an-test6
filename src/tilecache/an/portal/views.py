@@ -10,6 +10,7 @@ import time
 
 import django.contrib.auth as auth
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 from django import newforms as forms
 from django.db import models
@@ -22,7 +23,7 @@ import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
 
-from an.portal.job import Job, Submission, DiskFile
+from an.portal.job import Job, Submission, DiskFile, Tag
 
 from an.portal.convert import convert
 from an.portal.log import log
@@ -113,6 +114,94 @@ def job_set_description(request):
     job.save()
     return HttpResponseRedirect(get_status_url(jobid))
 
+@login_required
+def job_add_tag(request):
+    if not 'jobid' in request.POST:
+        return HttpResponse('no jobid')
+    jobid = request.POST['jobid']
+    job = get_job(jobid)
+    if not job:
+        return HttpResponse('no such jobid')
+    if not job.is_exposed():
+        return HttpResponse('not permitted')
+    if not 'tag' in request.POST:
+        return HttpResponse('no tag')
+    txt = request.POST['tag']
+    tag = Tag(job=job,
+              user=request.user,
+              machineTag=False,
+              text=txt,
+              addedtime=Job.timenow())
+    tag.save()
+    #job.tags.add(tag)
+    #job.save()
+    return HttpResponseRedirect(get_status_url(jobid))
+
+@login_required
+def job_remove_tag(request):
+    if not 'tag' in request.GET:
+        return HttpResponse('no tag')
+    tagid = request.GET['tag']
+    tag = Tag.objects.all().filter(id=tagid)
+    if not len(tag):
+        return HttpResponse('no such tag')
+    tag = tag[0]
+    if not tag.can_remove_tag(request.user):
+        return HttpResponse('not permitted')
+    tag.delete()
+    return HttpResponseRedirect(get_status_url(tag.job.jobid))
+
+def tag_summary(request):
+    if not 'tag' in request.GET:
+        return HttpResponse('no tag')
+    tagid = request.GET['tag']
+    tag = Tag.objects.all().filter(id=tagid)
+    if not len(tag):
+        return HttpResponse('no such tag')
+    tag = tag[0]
+
+    alltags = Tag.objects.all().filter(text=tag.text)
+    jobs = [tag.job for tag in alltags]
+
+    ctxt = {
+        'tag': tag,
+        'jobs': jobs,
+        'imageurl' : reverse(getfile) + '?fieldid=',
+        'thumbnailurl': reverse(getfile) + '?f=thumbnail&jobid=',
+        'statusurl' : get_status_url(''),
+        'usersummaryurl' : reverse(user_summary) + '?user='
+        }
+    t = loader.get_template('portal/tag-summary.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
+def user_summary(request):
+    if not 'user' in request.GET:
+        return HttpResponse('no user')
+    userid = request.GET['user']
+    user = User.objects.all().filter(id=userid)
+    if not len(user):
+        return HttpResponse('no such user')
+    user = user[0]
+
+    jobs = []
+    for sub in user.submission_set.all():
+        for job in sub.jobs.all():
+            if job.is_exposed():
+                jobs.append(job)
+
+    ctxt = {
+        'user': user,
+        'jobs': jobs,
+        'imageurl' : reverse(getfile) + '?fieldid=',
+        'thumbnailurl': reverse(getfile) + '?f=thumbnail&jobid=',
+        'statusurl' : get_status_url(''),
+        }
+    t = loader.get_template('portal/user-summary.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
+
 def jobstatus(request):
     if not request.GET:
         return HttpResponse('no GET')
@@ -161,6 +250,10 @@ def jobstatus(request):
                              reverse(run_variant) + '?jobid=%s&variant=%i' % (job.jobid, n)))
                              #get_status_url(job.jobid) + '&run-xyls&variant=%i' % n))
 
+    taglist = []
+    for tag in job.tags.all().order_by('addedtime'):
+        tag.canremove = tag.can_remove_tag(request.user)
+        taglist.append(tag)
 
     ctxt = {
         'jobid' : job.jobid,
@@ -183,7 +276,12 @@ def jobstatus(request):
         #'otherxylists' : otherxylists,
         'jobowner' : jobowner,
         'allowanon' : anonymous,
+        'tags' : taglist,
         'set_description_url' : reverse(job_set_description),
+        'add_tag_url' : reverse(job_add_tag),
+        'remove_tag_url' : reverse(job_remove_tag) + '?',
+        'view_tag_url' : reverse(tag_summary) + '?',
+        'view_user_url' : reverse(user_summary) + '?',
         }
 
     if job.solved():
@@ -353,7 +451,7 @@ def getfile(request):
 
     pngimages = [ 'annotation', 'annotation-big',
                   'sources-small', 'sources-medium', 'sources-big',
-                  'redgreen', 'redgreen-big',
+                  'redgreen', 'redgreen-big', 'thumbnail',
                   ]
 
     convertargs = {}

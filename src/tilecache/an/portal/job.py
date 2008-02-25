@@ -139,11 +139,22 @@ class DiskFile(models.Model):
         displayh = int(round(h / scale))
         return (scale, displayw, displayh)
 
+    def get_thumbnail_scale(self):
+        w = self.imagew
+        h = self.imageh
+        scale = float(max(1.0, max(w, h) / 150.))
+        displayw = int(round(w / scale))
+        displayh = int(round(h / scale))
+        return (scale, displayw, displayh)
+
 
 class License(models.Model):
     pass
 
 class Tag(models.Model):
+    # To which job has this Tag been applied?
+    job = models.ForeignKey('Job', related_name='tags')
+
     # Who added this tag?
     user = models.ForeignKey(User)
 
@@ -155,6 +166,9 @@ class Tag(models.Model):
 
     # When was this tag added?
     addedtime = models.DateTimeField()
+
+    def can_remove_tag(self, user):
+        return user in [self.user, self.job.get_user()]
 
 
 class Calibration(models.Model):
@@ -389,7 +403,7 @@ class Job(models.Model):
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
 
-    tags = models.ManyToManyField(Tag)
+    #tags = models.ManyToManyField(Tag)
 
     def __str__(self):
         s = '<Job %s, ' % self.get_id()
@@ -526,6 +540,9 @@ class Job(models.Model):
 
     def get_user(self):
         return self.submission.user
+
+    def get_fieldid(self):
+        return self.diskfile.filehash
 
     def create_job_dir(self):
         Job.create_dir_for_jobid(self.get_id())

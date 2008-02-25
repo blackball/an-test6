@@ -280,12 +280,23 @@ def convert(job, df, fn, args=None):
         run_convert_command(cmd)
         return fullfn
 
-    elif (fn == 'pnm-small') or (fn == 'pnm-medium'):
+    elif fn == 'thumbnail':
+        imgfn = convert(job, df, 'pnm-thumb')
+        cmd = 'pnmtopng %s > %s' % (imgfn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
+    elif ((fn == 'pnm-small') or
+          (fn == 'pnm-medium') or
+          (fn == 'pnm-thumb')):
         small = (fn == 'pnm-small')
+        thumb = (fn == 'pnm-thumb')
         imgfn = convert(job, df, 'pnm')
         log('in convert(%s): df = %s' % (fn, str(df)))
         if small:
             (scale, w, h) = df.get_small_scale()
+        elif thumb:
+            (scale, w, h) = df.get_thumbnail_scale()
         else:
             (scale, w, h) = df.get_medium_scale()
         if scale == 1:

@@ -23,6 +23,7 @@ td {border-width: 0;}
 #annotation > a:hover { color:gray; }
 #annotation > a:active { color:yellow; }
 #description { margin-left:auto; margin-right:auto; text-align:center; }
+#tags { margin-left:auto; margin-right:auto; text-align:center; }
 #sources { margin-left:auto; margin-right:auto; text-align:center; }
 #sources > a:link { color:white; }
 #sources > a:visited { color:white; }
@@ -84,7 +85,7 @@ Job owner: {{ job.get_user.username }}
 <hr />
 
 {% if jobsolved %}
-<h3 class="c">Your field is at (RA, Dec) = ( {{ racenter }}, {{ deccenter }} ) degrees
+<h3 class="c">This field is at (RA, Dec) = ( {{ racenter }}, {{ deccenter }} ) degrees
 <br />
 and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
 </h3>
@@ -94,7 +95,7 @@ and spans {{ fieldw }} x {{ fieldh }} {{ fieldunits }}.
 {% if objsinfield %}
 <div id="objs2">
 <p>
-Your field contains:
+This field contains:
 <ul>
 {% for obj in objsinfield %}
 <li> {{ obj }} </li>
@@ -105,7 +106,7 @@ Your field contains:
 <hr />
 
 <div id="annotation">
-<p>Your field plus annotations:</p>
+<p>Field plus annotations:</p>
 <a href="{{ annotation_big }}"><img src="{{ annotation }}" alt="your image plus our annotations" /></a>
 </div>
 
@@ -132,11 +133,47 @@ Your field contains:
 
 <hr />
 
+<div id="tags">
+<p>
+{% if tags|length %}
+This field has been tagged with:
+<ul>
+{% for tag in tags %}
+{% if tag.machineTag %}
+{% else %}
+<li>
+<b><a href="{{view_tag_url}}tag={{tag.id}}">{{ tag.text }}</a></b>
+by
+<a href="{{view_user_url}}user={{tag.user.id}}">{{ tag.user.username }}</a>
+{% if tag.canremove %}
+&nbsp;&nbsp;
+<a href="{{ remove_tag_url }}tag={{ tag.id }}">remove</a>
+{% endif %}
+</li>
+{% endif %}
+{% endfor %}
+</ul>
+{% else %}
+This field has not been tagged yet.
+{% endif %}
+</p>
+<form method="post" action="{{ add_tag_url }}">
+<p>
+Tag with:
+<input type="hidden" name="jobid" value="{{ job.jobid }}" />
+<input type="text" name="tag" size="32" />
+<input type="submit" value="Add Tag" />
+</p>
+</form>
+</div>
+
+<hr />
+
 {% endif %}
 {# (endif objsinfield) #}
 
 <div id="onsky">
-<p>Your field on the sky:</p>
+<p>This field on the sky:</p>
 {% for zimg,zlink in zoomimgs %}
 <a href="{{ zlink }}"><img src="{{ zimg }}" alt="your field on the sky" /></a>
 {% endfor %}
