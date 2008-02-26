@@ -466,7 +466,7 @@ uint healpix_get_neighbours(uint pix, uint* neighbour, uint Nside)
 		}
 	} else
 		nbase = base;
-
+    
 	//printf("(0 +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);

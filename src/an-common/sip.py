@@ -60,6 +60,7 @@ class Tan(ctypes.Structure):
                 ' Image size (%f, %f)>' % (self.imagew, self.imageh)
                 )
 
+    # returns (ra,dec) in degrees.
     def pixelxy2radec(self, px,py):
         'Return ra,dec of px,py'
         ra = ctypes.c_double(3.14159)
