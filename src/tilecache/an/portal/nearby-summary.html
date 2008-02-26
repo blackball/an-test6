@@ -1,0 +1,57 @@
+{% extends "portal/base.html" %}
+
+{% block inlinecss %}
+#summarytable { margin-left:auto; margin-right:auto; border-collapse:collapse; border-style:solid; border-width:medium; border-color:black; }
+#summarytable td { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:none solid; border-width:thin; border-color:gray; }
+#summarytable th { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:solid; border-width:thin; border-color:gray; }
+td.c { text-align:center; }
+tr.even td { background-color:#EEE; }
+tr.odd td {}
+.smalllink { font-size:80%; }
+{% endblock inlinecss %}
+
+{% block content %}
+
+<h3>Jobs near <i>{{ jobid }}</i></h3>
+
+<table id="summarytable">
+<tr>
+<th>Thumbnail</th>
+<th>Job Id</th>
+<th>User</th>
+<th>Description</th>
+<th>Submitted</th>
+<th>Status</th>
+</tr>
+
+{% for job in jobs %}
+<tr class="{% cycle even,odd %}">
+
+<td><a href="{{ imageurl }}{{ job.get_fieldid }}"><img src="{{ thumbnailurl }}{{ job.jobid }}" /></a></td>
+
+<td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
+
+<td><a href="{{ usersummaryurl }}{{ job.get_user.id }}"> {{ job.get_user.username }} </a></td>
+
+<td>
+{% if job.get_description %}
+{{ job.get_description }}
+{% endif %}
+</td>
+
+<td> {{ job.submission.format_submittime_brief }} </td>
+
+<td class="c">{{ job.status }}
+{% if job.failurereason %}
+: {{ job.failurereason }}
+{% endif %}
+</td>
+
+
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock content %}
+

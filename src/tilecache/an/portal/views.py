@@ -36,6 +36,7 @@ from an import gmaps_config
 from an import settings
 
 import sip
+import healpix
 
 
 class SetDescriptionForm(forms.Form):
@@ -153,6 +154,65 @@ def job_remove_tag(request):
         return HttpResponse('not permitted')
     tag.delete()
     return HttpResponseRedirect(get_status_url(tag.job.jobid))
+
+def nearby_summary(request):
+    if not 'jobid' in request.GET:
+        return HttpResponse('no jobid')
+    jobid = request.GET['jobid']
+    job = get_job(jobid)
+    if not job:
+        return HttpResponse('no such jobid')
+    tags = job.tags.all().filter(machineTag=True, text__startswith='hp:')
+    if len(tags) != 1:
+        return HttpResponse('no such tag')
+    tag = tags[0]
+    parts = tag.text.split(':')
+    if len(parts) != 3:
+        return HttpResponse('bad tag')
+    nside = int(parts[1])
+    hp = int(parts[2])
+
+    log('nside %i, hp %i' % (nside, hp))
+
+    hps = [ (nside, hp) ]
+
+    # neighbours at this scale.
+    neigh = healpix.get_neighbours(hp, nside)
+    log('neighbours: %s' % (str(neigh)))
+    for n in neigh:
+        hps.append((nside, n))
+
+    # the next bigger scale.
+    hps.append((nside-1, n/4))
+
+    # the next smaller scale, plus neighbours.
+    allneigh = set()
+    for i in range(4):
+        n = healpix.get_neighbours(hp*4 + i, nside+1)
+        allneigh.update(n)
+    for i in allneigh:
+        hps.append((nside+1, i))
+
+
+    jobs = []
+    for (nside,hp) in hps:
+        tags = Tag.objects.all().filter(machineTag=True, text='hp:%i:%i'%(nside,hp))
+        for t in tags:
+            if t.job.jobid != jobid:
+                jobs.append(t.job)
+
+    ctxt = {
+        'jobid' : jobid,
+        'jobs': jobs,
+        'imageurl' : reverse(getfile) + '?fieldid=',
+        'thumbnailurl': reverse(getfile) + '?f=thumbnail&jobid=',
+        'statusurl' : get_status_url(''),
+        'usersummaryurl' : reverse(user_summary) + '?user='
+        }
+    t = loader.get_template('portal/nearby-summary.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
 
 def tag_summary(request):
     if 'tag' in request.GET:
@@ -288,6 +348,7 @@ def jobstatus(request):
         'allowanon' : anonymous,
         'tags' : taglist,
         'view_tagtxt_url' : reverse(tag_summary) + '?',
+        'view_nearby_url' : reverse(nearby_summary) + '?jobid=' + job.jobid,
         'set_description_url' : reverse(job_set_description),
         'add_tag_url' : reverse(job_add_tag),
         'remove_tag_url' : reverse(job_remove_tag) + '?',

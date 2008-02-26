@@ -54,6 +54,11 @@ class TanWCS(models.Model):
         area = self.get_field_area()
         return math.sqrt(area) / 2.;
 
+    # returns (ra,dec) in degrees
+    def get_field_center(self):
+        tan = self.to_tanwcs()
+        return tan.pixelxy2radec(self.imagew/2., self.imageh/2.)
+
     def radec_bounds(self, nsteps=10):
         tanwcs = self.to_tanwcs()
         return tanwcs.radec_bounds(nsteps)

@@ -36,7 +36,7 @@ from an.util.run_command import run_command
 
 # HACK
 import sip
-from healpix import healpix
+import healpix
 
 def bailout(job, reason):
     job.set_status('Failed', reason)
@@ -321,11 +321,21 @@ def real_handle_job(job, sshconfig):
 
         # Find the field size:
         radiusdeg = wcs.get_field_radius()
-        hpnside = healpix.get_closest_pow2_nside(radiusdeg)
+        nside = healpix.get_closest_pow2_nside(radiusdeg)
         log('Field has radius %g deg.' % radiusdeg)
-        log('Closest power-of-2 healpix Nside is %i.' % hpnside)
-            
-        
+        log('Closest power-of-2 healpix Nside is %i.' % nside)
+        (ra,dec) = wcs.get_field_center()
+        log('Field center: (%g, %g)' % (ra,dec))
+        hp = healpix.radectohealpix(ra, dec, nside)
+        log('Healpix: %i' % hp)
+        # Add healpix machine tag.
+        tag = Tag(job=job,
+                  user=job.get_user(),
+                  machineTag=True,
+                  text='hp:%i:%i' % (nside, hp),
+                  addedtime=Job.timenow())
+        tag.save()
+
     else:
         job.set_status('Failed', 'Did not solve.')
 
