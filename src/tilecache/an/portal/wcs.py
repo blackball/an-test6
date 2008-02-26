@@ -45,6 +45,15 @@ class TanWCS(models.Model):
     def get_pixscale(self):
         return 3600.0 * math.sqrt(abs(self.cd11 * self.cd22 - self.cd12 * self.cd21))
 
+    # returns the field area in square degrees.
+    def get_field_area(self):
+        scale = self.get_pixscale() / 3600.0
+        return self.imagew * self.imageh * (scale**2)
+
+    def get_field_radius(self):
+        area = self.get_field_area()
+        return math.sqrt(area) / 2.;
+
     def radec_bounds(self, nsteps=10):
         tanwcs = self.to_tanwcs()
         return tanwcs.radec_bounds(nsteps)

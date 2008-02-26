@@ -107,6 +107,8 @@ class DiskFile(models.Model):
         os.unlink(self.get_path())
 
     def needs_medium_size(self):
+        if self.imagew is None or self.imageh is None:
+            return None
         (scale, mw, mh) = self.get_medium_scale()
         return (scale != 1.0)
 

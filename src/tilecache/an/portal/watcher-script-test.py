@@ -36,6 +36,7 @@ from an.util.run_command import run_command
 
 # HACK
 import sip
+from healpix import healpix
 
 def bailout(job, reason):
     job.set_status('Failed', reason)
@@ -317,6 +318,12 @@ def real_handle_job(job, sshconfig):
                       text=obj,
                       addedtime=Job.timenow())
             tag.save()
+
+        # Find the field size:
+        radiusdeg = wcs.get_field_radius()
+        hpnside = healpix.get_closest_pow2_nside(radiusdeg)
+        log('Field has radius %g deg.' % radiusdeg)
+        log('Closest power-of-2 healpix Nside is %i.' % hpnside)
             
         
     else:

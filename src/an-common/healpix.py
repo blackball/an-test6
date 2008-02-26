@@ -1,3 +1,4 @@
+import math
 from math import pi, sqrt, log
 
 class healpix(object):
@@ -9,7 +10,7 @@ class healpix(object):
         area = 4. * pi / 12.
         # in radians:
         baselen = sqrt(area)
-        n = baselen / (radians(radius*2.))
+        n = baselen / (math.radians(radius*2.))
         p = int(round(log(n, 2.0)))
         return 2**p
 
