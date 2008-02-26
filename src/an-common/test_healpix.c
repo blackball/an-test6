@@ -37,11 +37,11 @@ static void tst_neighbours(CuTest* ct, uint pix, uint* true_neigh, uint true_nn,
 	nn = healpix_get_neighbours(pix, neigh, Nside);
 	printf("true(%i) : [ ", pix);
 	for (i=0; i<true_nn; i++)
-		printf("%u ", healpix_nested_to_xy(true_neigh[i], Nside));
+		printf("%u, ", true_neigh[i]);
 	printf("]\n");
 	printf("got (%i) : [ ", pix);
 	for (i=0; i<nn; i++)
-		printf("%u ", neigh[i]);
+		printf("%u, ", neigh[i]);
 	printf("]\n");
 
 	CuAssertIntEquals(ct, nn, true_nn);

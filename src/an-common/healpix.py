@@ -1,6 +1,8 @@
 from math import *
 from starutil import *
 
+import unittest
+
 # returns (base hp, x, y)
 def decompose_xy(hp, nside):
     finehp = hp % (nside**2)
@@ -357,3 +359,40 @@ def xyztohealpix(x, y, z, nside):
 def radectohealpix(ra, dec, nside):
     (x,y,z) = radectoxyz(ra, dec)
     return xyztohealpix(x,y,z, nside)
+
+
+
+
+class testhealpix(unittest.TestCase):
+    def check_neighbours(self, hp, nside, truen):
+        neigh = get_neighbours(hp, nside)
+        print 'True(%3i): [ %s ]' % (hp, ', '.join([str(n) for n in truen]))
+        print 'Got (%3i): [ %s ]' % (hp, ', '.join([str(n) for n in neigh]))
+        self.assertEqual(len(neigh), len(truen))
+        for n in truen:
+            self.assert_(n in neigh)
+        
+    def test_neighbours(self):
+        # from test_healpix.c's output.
+        self.check_neighbours(0, 4, [ 4, 5, 1, 77, 76, 143, 83, 87, ])
+        self.check_neighbours(12, 4, [ 19, 23, 13, 9, 8, 91, 95, ])
+        self.check_neighbours(14, 4, [ 27, 31, 15, 11, 10, 9, 13, 23, ])
+        self.check_neighbours(15, 4, [ 31, 47, 63, 62, 11, 10, 14, 27, ])
+        self.check_neighbours(27, 4, [ 31, 15, 14, 13, 23, 22, 26, 30, ])
+        self.check_neighbours(108, 4, [ 32, 33, 109, 105, 104, 171, 175, 115, ])
+        self.check_neighbours(127, 4, [ 51, 44, 40, 123, 122, 126, 50, ])
+        self.check_neighbours(64, 4, [ 68, 69, 65, 189, 188, 131, 135, ])
+        self.check_neighbours(140, 4, [ 80, 81, 141, 137, 136, 146, 147, ])
+        self.check_neighbours(152, 4, [ 156, 157, 153, 149, 148, 161, 162, 163, ])
+        self.check_neighbours(160, 4, [ 164, 165, 161, 148, 144, 128, 176, 177, ])
+        self.check_neighbours(18, 4, [ 22, 23, 19, 95, 94, 93, 17, 21, ])
+        self.check_neighbours(35, 4, [ 39, 29, 28, 111, 110, 34, 38, ])
+        self.check_neighbours(55, 4, [ 59, 46, 45, 44, 51, 50, 54, 58, ])
+        self.check_neighbours(191, 4, [ 67, 48, 124, 120, 187, 186, 190, 66, ])
+        self.check_neighbours(187, 4, [ 191, 124, 120, 116, 183, 182, 186, 190, ])
+        self.check_neighbours(179, 4, [ 183, 116, 112, 172, 168, 178, 182, ])
+        self.check_neighbours(178, 4, [ 182, 183, 179, 172, 168, 164, 177, 181, ])
+
+
+if __name__ == '__main__':
+    unittest.main()
