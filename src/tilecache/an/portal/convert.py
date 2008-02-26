@@ -386,11 +386,23 @@ def convert(job, df, fn, args=None):
             red = args['red']
         else:
             red = 'brightred'
+
+        if 'rmarker' in args:
+            rmarker = args['rmarker']
+        else:
+            rmarker = 'circle'
+
         if 'green' in args:
             green = args['green']
         else:
             green = 'green'
-        fullfn = basename + 'redgreen-' + red + '-' + green
+
+        if 'gmarker' in args:
+            gmarker = args['gmarker']
+        else:
+            gmarker = 'circle'
+
+        fullfn = basename + 'redgreen-' + red + '-' + rmarker + '-' + green + '-' + gmarker
         if os.path.exists(fullfn):
             return fullfn
 
@@ -405,9 +417,13 @@ def convert(job, df, fn, args=None):
         ixy = convert(job, df, 'index-xy')
         commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
         logfn = 'blind.log'
-        cmd = ('plotxy -i %s -I %s -r 6 -C %s -N 50 -P' % (fxy, imgfn, red) + commonargs
-               + '| plotxy -i %s -I - -r 4 -C %s -n 50 -P' % (fxy, red) + commonargs
-               + '| plotxy -i %s -I - -r 4 -C %s' % (ixy, green) + commonargs
+        if 0:
+            cmd = ('plotxy -i %s -I %s -r 6 -C %s -s %s -N 50 -P' % (fxy, imgfn, red, rmarker) + commonargs
+                   + '| plotxy -i %s -I - -r 4 -C %s -s %s -n 50 -P' % (fxy, red, rmarker) + commonargs
+                   + '| plotxy -i %s -I - -r 4 -C %s -s %s' % (ixy, green, gmarker) + commonargs
+                   + ' > %s' % (fullfn))
+        cmd = ('plotxy -i %s -I %s -r 5 -C %s -s %s -P' % (fxy, imgfn, red, rmarker) + commonargs
+               + '| plotxy -i %s -I - -r 5 -C %s -s %s' % (ixy, green, gmarker) + commonargs
                + ' > %s' % (fullfn))
         run_convert_command(cmd, fullfn)
         return fullfn

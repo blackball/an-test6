@@ -48,10 +48,15 @@ class SetDescriptionForm(forms.Form):
 culurs=[(c,c) for c in ['red','green', 'blue', 'white',
                         'black', 'cyan', 'magenta', 'yellow',
                         'brightred', 'skyblue', 'orange']]
+markurs=[(m,m) for m in [ 'circle', 'crosshair', 'square', 'diamond' ]]
 
 class RedGreenForm(forms.Form):
-    red = forms.ChoiceField(choices=culurs, initial='red')
+    red   = forms.ChoiceField(choices=culurs, initial='red')
     green = forms.ChoiceField(choices=culurs, initial='green')
+    rmarker = forms.ChoiceField(choices=markurs, initial='circle')
+    gmarker = forms.ChoiceField(choices=markurs, initial='circle')
+    redhex   = forms.CharField(required=False)#, attrs={'size':6})
+    greenhex = forms.CharField(required=False)#, attrs={'size':6})
 
 def redgreen(request):
     if request.GET:
@@ -59,7 +64,12 @@ def redgreen(request):
     else:
         form = RedGreenForm()
     if form.is_valid():
-        return HttpResponseRedirect(reverse(getfile) + '?jobid=%s&f=redgreen&red=%s&green=%s' % ('test-200802-02380922', form.cleaned_data['red'], form.cleaned_data['green']))
+        red = form.cleaned_data['redhex'] or form.cleaned_data['red']
+        green = form.cleaned_data['greenhex'] or form.cleaned_data['green']
+        return HttpResponseRedirect(reverse(getfile) + '?jobid=%s&f=redgreen&red=%s&green=%s&rmarker=%s&gmarker=%s' %
+                                    ('test-200802-02380922', red, green,
+                                     form.cleaned_data['rmarker'], form.cleaned_data['gmarker']))
+                                     
     ctxt = {
         'form' : form,
         }
@@ -548,10 +558,9 @@ def getfile(request):
 
     ### DEBUG - play with red-green colours.
     if f.startswith('redgreen'):
-        if 'red' in request.GET:
-            convertargs['red'] = request.GET['red']
-        if 'green' in request.GET:
-            convertargs['green'] = request.GET['green']
+        for x in ['red', 'green', 'rmarker', 'gmarker']:
+            if x in request.GET:
+                convertargs[x] = request.GET[x]
 
     if f in pngimages:
         fn = convert(job, job.diskfile, f, convertargs)

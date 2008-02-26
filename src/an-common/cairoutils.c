@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <cairo.h>
 #include <png.h>
@@ -63,6 +64,16 @@ const char* cairoutils_get_color_name(int i) {
     return mycolors[i].name;
 }
 
+static int hexval(char c) {
+    if ((c >= '0') && (c <= '9'))
+        return c - '0';
+    if ((c >= 'A') && (c <= 'F'))
+        return 0xA + (c - 'A');
+    if ((c >= 'a') && (c <= 'f'))
+        return 0xa + (c - 'a');
+    return 0;
+}
+
 int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
     int i;
     for (i=0; i<nmycolors; i++) {
@@ -73,7 +84,101 @@ int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
             return 0;
         }
     }
+    if (strlen(color) == 6) {
+        *r = (float)(hexval(color[0]) * 0x10 + hexval(color[1])) / 255.0;
+        *g = (float)(hexval(color[2]) * 0x10 + hexval(color[3])) / 255.0;
+        *b = (float)(hexval(color[4]) * 0x10 + hexval(color[5])) / 255.0;
+        return 0;
+    }
     return -1;
+}
+
+struct mymarker {
+    const char* name;
+    void (*drawit)(cairo_t* cairo, double x, double y, double rad, const char* name);
+};
+typedef struct mymarker mymarker;
+
+static void drawcircle(cairo_t* cairo, double x, double y, double rad, const char* name) {
+    cairo_arc(cairo, x, y, rad, 0.0, 2.0*M_PI);
+}
+static void drawcrosshair(cairo_t* cairo, double x, double y, double rad, const char* name) {
+    double in = 0.5;
+    double out = 1.5;
+    cairo_move_to(cairo, x - rad*out, y);
+    cairo_line_to(cairo, x - rad*in,  y);
+    cairo_move_to(cairo, x + rad*out, y);
+    cairo_line_to(cairo, x + rad*in,  y);
+    cairo_move_to(cairo, x, y + rad*out);
+    cairo_line_to(cairo, x, y + rad*in );
+    cairo_move_to(cairo, x, y - rad*out);
+    cairo_line_to(cairo, x, y - rad*in );
+}
+static void drawsquare(cairo_t* cairo, double x, double y, double rad, const char* name) {
+    cairo_move_to(cairo, x - rad, y - rad);
+    cairo_line_to(cairo, x - rad, y + rad);
+    cairo_line_to(cairo, x + rad, y + rad);
+    cairo_line_to(cairo, x + rad, y - rad);
+    cairo_line_to(cairo, x - rad, y - rad);
+}
+static void drawdiamond(cairo_t* cairo, double x, double y, double rad, const char* name) {
+    cairo_move_to(cairo, x - rad, y);
+    cairo_line_to(cairo, x, y + rad);
+    cairo_line_to(cairo, x + rad, y);
+    cairo_line_to(cairo, x, y - rad);
+    cairo_line_to(cairo, x - rad, y);
+}
+
+static mymarker mymarkers[] = {
+    { "circle",    drawcircle },
+    { "crosshair", drawcrosshair },
+    { "square",    drawsquare },
+    { "diamond",   drawdiamond },
+};
+static const int nmymarkers = sizeof(mymarkers)/sizeof(mymarker);
+
+const char* cairoutils_get_marker_name(int i) {
+    if ((i < 0)  || (i >= nmymarkers))
+        return NULL;
+    return mymarkers[i].name;
+}
+
+int cairoutils_parse_marker(const char* name) {
+    int i;
+    for (i=0; i<nmymarkers; i++)
+        if (!strcmp(name, mymarkers[i].name))
+            return i;
+    return -1;
+}
+
+void cairoutils_draw_marker(cairo_t* cairo, int id,
+                            double x, double y, double radius) {
+    if ((id < 0)  || (id >= nmymarkers))
+        return;
+    mymarkers[id].drawit(cairo, x, y, radius, mymarkers[id].name);
+    //cairo_stroke(cairo);
+}
+
+void cairoutils_print_marker_names(const char* prefix) {
+    int i;
+    for (i=0;; i++) {
+        const char* marker = cairoutils_get_marker_name(i);
+        if (!marker) break;
+        if (prefix)
+            printf("%s", prefix);
+        printf("%s", marker);
+    }
+}
+
+void cairoutils_print_color_names(const char* prefix) {
+    int i;
+    for (i=0;; i++) {
+        const char* color = cairoutils_get_color_name(i);
+        if (!color) break;
+        if (prefix)
+            printf("%s", prefix);
+        printf("%s", color);
+    }
 }
 
 unsigned char* cairoutils_read_jpeg(const char* fn, int* pW, int* pH) {

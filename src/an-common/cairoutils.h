@@ -56,5 +56,14 @@ int cairoutils_parse_color(const char* color, float* r, float* g, float* b);
 
 const char* cairoutils_get_color_name(int i);
 
+int cairoutils_parse_marker(const char* name);
+
+void cairoutils_draw_marker(cairo_t* cairo, int id, double x, double y, double radius);
+
+const char* cairoutils_get_marker_name(int i);
+
+void cairoutils_print_color_names(const char* prefix);
+void cairoutils_print_marker_names(const char* prefix);
+
 #endif
 

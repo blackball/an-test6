@@ -32,7 +32,6 @@
 #define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:X:Y:"
 
 static void printHelp(char* progname) {
-    int i;
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s [options] > output.png\n"
 		   "  -i <input-file>   Input file (xylist)\n"
@@ -48,15 +47,13 @@ static void printHelp(char* progname) {
 		   "  [-N <num-objs>]   Number of objects to plot (default: all).\n"
 		   "  [-r <radius>]     Size of markers to plot (default: 5.0).\n"
 		   "  [-w <linewidth>]  Linewidth (default: 1.0).\n"
-		   "  [-s <shape>]      Shape of markers (default: c):\n"
-		   "                      c = circle\n"
-           "  [-C <color>]      Color to plot in: (default: white)\n",
+		   "  [-s <shape>]      Shape of markers (default: circle):",
            progname);
-    for (i=0;; i++) {
-        char* color = cairoutils_get_color_name(i);
-        if (!color) break;
-        printf("                       %s\n", color);
-    }
+    cairoutils_print_marker_names("\n                 ");
+    printf("\n");
+    printf("  [-C <color>]      Color to plot in: (default: white)\n");
+    cairoutils_print_color_names("\n                 ");
+    printf("\n");
     printf("  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
 		   "  [-e <extension>]  FITS extension to read (default 0).\n"
 		   "\n");
@@ -76,7 +73,7 @@ int main(int argc, char *args[]) {
 	int ext = 1;
 	double rad = 5.0;
 	double lw = 1.0;
-	char shape = 'c';
+	char* shape = "circle";
 	xylist_t* xyls;
 	xy_t* xy;
 	int Nxy;
@@ -89,6 +86,7 @@ int main(int argc, char *args[]) {
     float r=1.0, g=1.0, b=1.0;
     char* xcol = NULL;
     char* ycol = NULL;
+    int marker;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
@@ -144,7 +142,7 @@ int main(int argc, char *args[]) {
 			lw = atof(optarg);
 			break;
 		case 's':
-			shape = optarg[0];
+			shape = optarg;
 			break;
 		case 'h':
 		case '?':
@@ -235,31 +233,18 @@ int main(int argc, char *args[]) {
 	cairo_set_line_width(cairo, lw);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
 	cairo_set_source_rgb(cairo, r, g, b);
+    
+    marker = cairoutils_parse_marker(shape);
+    if (marker == -1) {
+        fprintf(stderr, "No such marker: %s\n", shape);
+        marker = 0;
+    }
 
 	// Draw markers.
 	for (i=n; i<Nxy; i++) {
 		double x = xy_getx(xy, i) + 0.5 - xoff;
 		double y = xy_gety(xy, i) + 0.5 - yoff;
-		switch (shape) {
-		case 'c':
-			cairo_arc(cairo, x, y, rad, 0.0, 2.0*M_PI);
-			break;
-		case '+':
-			cairo_move_to(cairo, x - rad, y);
-			cairo_line_to(cairo, x - rad*0.5, y);
-			cairo_move_to(cairo, x + rad, y);
-			cairo_line_to(cairo, x + rad*0.5, y);
-			cairo_move_to(cairo, x, y + rad);
-			cairo_line_to(cairo, x, y + rad*0.5);
-			cairo_move_to(cairo, x, y - rad);
-			cairo_line_to(cairo, x, y - rad*0.5);
-		case 's':
-			cairo_move_to(cairo, x - rad, y - rad);
-			cairo_line_to(cairo, x - rad, y + rad);
-			cairo_line_to(cairo, x + rad, y + rad);
-			cairo_line_to(cairo, x + rad, y - rad);
-			cairo_line_to(cairo, x - rad, y - rad);
-		}
+        cairoutils_draw_marker(cairo, marker, x, y, rad);
 		cairo_stroke(cairo);
 	}
 
