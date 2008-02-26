@@ -134,6 +134,8 @@ rdlist_t* rdlist_open(const char* fn) {
 	if (!rtn) return NULL;
     rdlist_set_raname(rtn, "RA");
     rdlist_set_decname(rtn, "DEC");
+    xylist_set_include_flux(rtn, FALSE);
+    xylist_set_include_background(rtn, FALSE);
 	return rtn;
 }
 
@@ -199,12 +201,14 @@ int rdlist_write_one_radec(rdlist_t* ls, double ra, double dec) {
 rdlist_t* rdlist_open_for_writing(const char* fn) {
 	rdlist_t* rtn = xylist_open_for_writing(fn);
     xylist_set_antype(rtn, AN_FILETYPE_RDLS);
-    rdlist_set_raname(rtn, "RA");
+    rdlist_set_raname (rtn, "RA");
     rdlist_set_decname(rtn, "DEC");
-    rdlist_set_raunits(rtn, "degrees");
-    rdlist_set_decunits(rtn, "degrees");
-    rdlist_set_ratype(rtn, TFITS_BIN_TYPE_D);
+    rdlist_set_raunits (rtn, "deg");
+    rdlist_set_decunits(rtn, "deg");
+    rdlist_set_ratype (rtn, TFITS_BIN_TYPE_D);
     rdlist_set_dectype(rtn, TFITS_BIN_TYPE_D);
+    xylist_set_include_flux(rtn, FALSE);
+    xylist_set_include_background(rtn, FALSE);
 	return rtn;
 }
 

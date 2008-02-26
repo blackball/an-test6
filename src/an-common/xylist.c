@@ -221,6 +221,8 @@ xylist_t* xylist_open(const char* fn) {
     hdr = fitstable_get_primary_header(ls->table);
 	ls->antype = fits_get_dupstring(hdr, "AN_FILE");
 	ls->nfields = qfits_query_n_ext(fn);
+    ls->include_flux = TRUE;
+    ls->include_background = TRUE;
     //ls->field = -1;
 	return ls;
 }
@@ -312,6 +314,10 @@ void xylist_set_include_flux(xylist_t* ls, bool inc) {
     ls->include_flux = inc;
 }
 
+void xylist_set_include_background(xylist_t* ls, bool inc) {
+    ls->include_background = inc;
+}
+
 int xylist_n_fields(xylist_t* ls) {
     return ls->nfields;
 }
@@ -351,9 +357,14 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
     fld->N = fitstable_nrows(ls->table);
     fld->x = fitstable_read_column(ls->table, ls->xname, dubl);
     fld->y = fitstable_read_column(ls->table, ls->yname, dubl);
-    // umm, HACK
-    fld->flux = fitstable_read_column(ls->table, "FLUX", dubl);
-    fld->background = fitstable_read_column(ls->table, "BACKGROUND", dubl);
+    if (ls->include_flux)
+        fld->flux = fitstable_read_column(ls->table, "FLUX", dubl);
+    else
+        fld->flux = NULL;
+    if (ls->include_background)
+        fld->background = fitstable_read_column(ls->table, "BACKGROUND", dubl);
+    else
+        fld->background = NULL;
 
     if (!(fld->x && fld->y)) {
         free(fld->x);

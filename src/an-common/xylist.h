@@ -98,6 +98,7 @@ void xylist_set_xunits(xylist_t* ls, const char* units);
 void xylist_set_yunits(xylist_t* ls, const char* units);
 
 void xylist_set_include_flux(xylist_t* ls, bool inc);
+void xylist_set_include_background(xylist_t* ls, bool inc);
 
 
 // when writing.
