@@ -1,0 +1,15 @@
+{% extends "portal/base.html" %}
+
+{% block content %}
+
+<form method="get">
+<div style="margin-left:auto; margin-right:auto; text-align:center;">
+Red (image sources): {{ form.red }}
+<br />
+Green (catalog stars): {{ form.green }}
+<br />
+<input type="submit" value="Go" />
+</div>
+</form>
+
+{% endblock content %}

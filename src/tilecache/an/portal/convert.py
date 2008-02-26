@@ -405,10 +405,10 @@ def convert(job, df, fn, args=None):
         ixy = convert(job, df, 'index-xy')
         commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
         logfn = 'blind.log'
-        cmd = ('plotxy -i %s -I %s -r 4 -C %s -P' % (ixy, imgfn, green) + commonargs 
-               + '| plotxy -i %s -I - -P -r 6 -C %s -N 50' % (fxy, red) + commonargs 
-               + '| plotxy -i %s -I - -r 4 -C %s -n 50 > %s' %
-               (fxy, red, fullfn) + commonargs)
+        cmd = ('plotxy -i %s -I %s -r 6 -C %s -N 50 -P' % (fxy, imgfn, red) + commonargs
+               + '| plotxy -i %s -I - -r 4 -C %s -n 50 -P' % (fxy, red) + commonargs
+               + '| plotxy -i %s -I - -r 4 -C %s' % (ixy, green) + commonargs
+               + ' > %s' % (fullfn))
         run_convert_command(cmd, fullfn)
         return fullfn
 

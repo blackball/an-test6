@@ -44,6 +44,29 @@ class SetDescriptionForm(forms.Form):
         attrs={'rows':2, 'cols':40,}
         ))
 
+
+culurs=[(c,c) for c in ['red','green', 'blue', 'white',
+                        'black', 'cyan', 'magenta', 'yellow',
+                        'brightred', 'skyblue', 'orange']]
+
+class RedGreenForm(forms.Form):
+    red = forms.ChoiceField(choices=culurs, initial='red')
+    green = forms.ChoiceField(choices=culurs, initial='green')
+
+def redgreen(request):
+    if request.GET:
+        form = RedGreenForm(request.GET)
+    else:
+        form = RedGreenForm()
+    if form.is_valid():
+        return HttpResponseRedirect(reverse(getfile) + '?jobid=%s&f=redgreen&red=%s&green=%s' % ('test-200802-02380922', form.cleaned_data['red'], form.cleaned_data['green']))
+    ctxt = {
+        'form' : form,
+        }
+    t = loader.get_template('portal/redgreen.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
 def get_status_url(jobid):
     return reverse(jobstatus) + '?jobid=' + jobid
 
