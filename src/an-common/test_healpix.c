@@ -119,6 +119,9 @@ void test_healpix_neighbours(CuTest *ct) {
 	uint n186[] = { 187,113,112,165,164,184,185 };
 	uint n184[] = { 185,187,186,165,164,161,178,179 };
 
+    // These were taken (IIRC) from the Healpix paper, so the healpix
+    // numbers are all in the NESTED scheme.
+
 	tst_nested(ct, 0,   n0,   sizeof(n0)  /sizeof(uint), 4);
 	tst_nested(ct, 5,   n5,   sizeof(n5)  /sizeof(uint), 4);
 	tst_nested(ct, 13,  n13,  sizeof(n13) /sizeof(uint), 4);
