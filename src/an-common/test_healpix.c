@@ -19,39 +19,60 @@
 #include <math.h>
 #include <stdio.h>
 
-//#include "CuTest.h" //where is this file??
+#include "cutest.h"
 #include "starutil.h"
 #include "healpix.h"
 
-void print_neighbours(uint* n, uint nn) {
-	uint i;
-	printf("[ ");
-	for (i=0; i<nn; i++) {
-		printf("%u ", n[i]);
-	}
-	printf("]");
+static double square(x) {
+    return x*x;
 }
 
-void test_neighbours(CuTest* ct, uint pix, uint* true_neigh, uint true_nn, int Nside) {
+static void tst_neighbours(CuTest* ct, uint pix, uint* true_neigh, uint true_nn,
+                           int Nside) {
 	uint neigh[8];
 	uint nn;
 	uint i;
-	for (i=0; i<8; i++) {
+	for (i=0; i<8; i++)
 		neigh[i] = -1;
-	}
-	nn = healpix_get_neighbours_nside(pix, neigh, Nside);
-	printf("true(%i) : ", pix);
-	print_neighbours(true_neigh, true_nn);
-	printf("\n");
-	printf("got (%i) : ", pix);
-	print_neighbours(neigh, nn);
-	printf("\n");
+	nn = healpix_get_neighbours(pix, neigh, Nside);
+	printf("true(%i) : [ ", pix);
+	for (i=0; i<true_nn; i++)
+		printf("%u ", healpix_nested_to_xy(true_neigh[i], Nside));
+	printf("]\n");
+	printf("got (%i) : [ ", pix);
+	for (i=0; i<nn; i++)
+		printf("%u ", neigh[i]);
+	printf("]\n");
 
 	CuAssertIntEquals(ct, nn, true_nn);
 
 	for (i=0; i<true_nn; i++) {
-		CuAssertIntEquals(ct, neigh[i], true_neigh[i]);
+		//CuAssertIntEquals(ct, neigh[i], true_neigh[i]);
+		CuAssertIntEquals(ct, true_neigh[i], healpix_xy_to_nested(neigh[i], Nside));
+		CuAssertIntEquals(ct, neigh[i], healpix_nested_to_xy(true_neigh[i], Nside));
 	}
+}
+
+static void tst_nested(CuTest* ct, uint pix, uint* true_neigh, uint true_nn,
+                       int Nside) {
+    int i;
+    uint truexy[8];
+    uint xypix;
+
+	printf("nested true(%i) : [ ", pix);
+	for (i=0; i<true_nn; i++)
+		printf("%u ", true_neigh[i]);
+	printf("]\n");
+
+    CuAssert(ct, "true_nn <= 8", true_nn <= 8);
+	for (i=0; i<true_nn; i++) {
+        truexy[i] = healpix_nested_to_xy(true_neigh[i], Nside);
+        CuAssertIntEquals(ct, true_neigh[i], healpix_xy_to_nested(truexy[i], Nside));
+    }
+    xypix = healpix_nested_to_xy(pix, Nside);
+    CuAssertIntEquals(ct, pix, healpix_xy_to_nested(xypix, Nside));
+
+    tst_neighbours(ct, xypix, truexy, true_nn, Nside);
 }
 
 void print_node(double z, double phi, int Nside) {
@@ -71,9 +92,9 @@ void print_node(double z, double phi, int Nside) {
 		ra -= 2.0 * M_PI;
 
 	// find its healpix.
-	hp = radectohealpix_nside(ra, dec, Nside);
+	hp = radectohealpix(ra, dec, Nside);
 	// find its neighbourhood.
-	nn = healpix_get_neighbours_nside(hp, neigh, Nside);
+	nn = healpix_get_neighbours(hp, neigh, Nside);
 	fprintf(stderr, "  N%i [ label=\"%i\", pos=\"%g,%g!\" ];\n", hp, hp,
 			scale * ra/M_PI, scale * z);
 	for (k=0; k<nn; k++) {
@@ -101,63 +122,31 @@ void test_healpix_neighbours(CuTest *ct) {
 	uint n186[] = { 187,113,112,165,164,184,185 };
 	uint n184[] = { 185,187,186,165,164,161,178,179 };
 
-	test_neighbours(ct, 0,   n0,   sizeof(n0)  /sizeof(uint), 4);
-	test_neighbours(ct, 5,   n5,   sizeof(n5)  /sizeof(uint), 4);
-	test_neighbours(ct, 13,  n13,  sizeof(n13) /sizeof(uint), 4);
-	test_neighbours(ct, 15,  n15,  sizeof(n15) /sizeof(uint), 4);
-	test_neighbours(ct, 30,  n30,  sizeof(n30) /sizeof(uint), 4);
-	test_neighbours(ct, 101, n101, sizeof(n101)/sizeof(uint), 4);
-	test_neighbours(ct, 127, n127, sizeof(n127)/sizeof(uint), 4);
-	test_neighbours(ct, 64,  n64,  sizeof(n64) /sizeof(uint), 4);
-	test_neighbours(ct, 133, n133, sizeof(n133)/sizeof(uint), 4);
-	test_neighbours(ct, 148, n148, sizeof(n148)/sizeof(uint), 4);
-	test_neighbours(ct, 160, n160, sizeof(n160)/sizeof(uint), 4);
-	test_neighbours(ct, 24,  n24,  sizeof(n24) /sizeof(uint), 4);
-	test_neighbours(ct, 42,  n42,  sizeof(n42) /sizeof(uint), 4);
-	test_neighbours(ct, 59,  n59,  sizeof(n59) /sizeof(uint), 4);
-	test_neighbours(ct, 191, n191, sizeof(n191)/sizeof(uint), 4);
-	test_neighbours(ct, 190, n190, sizeof(n190)/sizeof(uint), 4);
-	test_neighbours(ct, 186, n186, sizeof(n186)/sizeof(uint), 4);
-	test_neighbours(ct, 184, n184, sizeof(n184)/sizeof(uint), 4);
+	tst_nested(ct, 0,   n0,   sizeof(n0)  /sizeof(uint), 4);
+	tst_nested(ct, 5,   n5,   sizeof(n5)  /sizeof(uint), 4);
+	tst_nested(ct, 13,  n13,  sizeof(n13) /sizeof(uint), 4);
+	tst_nested(ct, 15,  n15,  sizeof(n15) /sizeof(uint), 4);
+	tst_nested(ct, 30,  n30,  sizeof(n30) /sizeof(uint), 4);
+	tst_nested(ct, 101, n101, sizeof(n101)/sizeof(uint), 4);
+	tst_nested(ct, 127, n127, sizeof(n127)/sizeof(uint), 4);
+	tst_nested(ct, 64,  n64,  sizeof(n64) /sizeof(uint), 4);
+	tst_nested(ct, 133, n133, sizeof(n133)/sizeof(uint), 4);
+	tst_nested(ct, 148, n148, sizeof(n148)/sizeof(uint), 4);
+	tst_nested(ct, 160, n160, sizeof(n160)/sizeof(uint), 4);
+	tst_nested(ct, 24,  n24,  sizeof(n24) /sizeof(uint), 4);
+	tst_nested(ct, 42,  n42,  sizeof(n42) /sizeof(uint), 4);
+	tst_nested(ct, 59,  n59,  sizeof(n59) /sizeof(uint), 4);
+	tst_nested(ct, 191, n191, sizeof(n191)/sizeof(uint), 4);
+	tst_nested(ct, 190, n190, sizeof(n190)/sizeof(uint), 4);
+	tst_nested(ct, 186, n186, sizeof(n186)/sizeof(uint), 4);
+	tst_nested(ct, 184, n184, sizeof(n184)/sizeof(uint), 4);
 }
 
+/*
 void pnprime_to_xy(uint, uint*, uint*, uint);
 uint xy_to_pnprime(uint, uint, uint);
-bool ispowerof4(int);
 
-void test_healpix_ispowerof4(CuTest *ct) {
-	CuAssert(ct, "4^x", ispowerof4(1));
-	CuAssert(ct, "4^x", ispowerof4(4));
-	CuAssert(ct, "4^x", ispowerof4(16));
-	CuAssert(ct, "4^x", ispowerof4(64));
-	CuAssert(ct, "4^x", ispowerof4(256));
-	CuAssert(ct, "4^x", ispowerof4(1024));
-	CuAssert(ct, "4^x", ispowerof4(4096));
-	CuAssert(ct, "4^x", ispowerof4(16384));
-	CuAssert(ct, "4^x", ispowerof4(65536));
-	CuAssert(ct, "4^x", ispowerof4(1073741824));
-
-	CuAssert(ct, "4^x", !ispowerof4(3));
-	CuAssert(ct, "4^x", !ispowerof4(5));
-	CuAssert(ct, "4^x", !ispowerof4(36));
-	CuAssert(ct, "4^x", !ispowerof4(54));
-	CuAssert(ct, "4^x", !ispowerof4(556));
-	CuAssert(ct, "4^x", !ispowerof4(5024));
-	CuAssert(ct, "4^x", !ispowerof4(2096));
-	CuAssert(ct, "4^x", !ispowerof4(46384));
-	CuAssert(ct, "4^x", !ispowerof4(85536));
-	CuAssert(ct, "4^x", !ispowerof4(73741824));
-
-	CuAssert(ct, "4^x", !ispowerof4(2));
-	CuAssert(ct, "4^x", !ispowerof4(8));
-	CuAssert(ct, "4^x", !ispowerof4(32));
-	CuAssert(ct, "4^x", !ispowerof4(128));
-	CuAssert(ct, "4^x", !ispowerof4(512));
-	CuAssert(ct, "4^x", !ispowerof4(2048));
-	CuAssert(ct, "4^x", !ispowerof4(8192));
-}
-
-void test_healpix_pnprime_to_xy(CuTest *ct) {
+void tst_healpix_pnprime_to_xy(CuTest *ct) {
 	uint px,py;
 	pnprime_to_xy(6, &px, &py, 3);
 	CuAssertIntEquals(ct, px, 2);
@@ -176,7 +165,7 @@ void test_healpix_pnprime_to_xy(CuTest *ct) {
 	CuAssertIntEquals(ct, py, 1);
 }
 
-void test_healpix_xy_to_pnprime(CuTest *ct) {
+void tst_healpix_xy_to_pnprime(CuTest *ct) {
 	CuAssertIntEquals(ct, xy_to_pnprime(0,0,3), 0);
 	CuAssertIntEquals(ct, xy_to_pnprime(1,0,3), 3);
 	CuAssertIntEquals(ct, xy_to_pnprime(2,0,3), 6);
@@ -187,6 +176,7 @@ void test_healpix_xy_to_pnprime(CuTest *ct) {
 	CuAssertIntEquals(ct, xy_to_pnprime(1,2,3), 5);
 	CuAssertIntEquals(ct, xy_to_pnprime(2,2,3), 8);
 }
+ */
 void print_test_healpix_output(int Nside) {
 
 	int i, j;
@@ -258,7 +248,7 @@ void print_healpix_grid(int Nside) {
 	fprintf(stderr, "x%i=[", Nside);
 	for (i=0; i<N; i++) {
 		for (j=0; j<N; j++) {
-			fprintf(stderr, "%i ", radectohealpix_nside(i*2*PIl/N, PIl*(j-N/2)/N, Nside));
+			fprintf(stderr, "%i ", radectohealpix(i*2*PIl/N, PIl*(j-N/2)/N, Nside));
 		}
 		fprintf(stderr, ";");
 	}
@@ -274,7 +264,7 @@ void print_healpix_borders(int Nside) {
 	fprintf(stderr, "x%i=[", Nside);
 	for (i=0; i<N; i++) {
 		for (j=0; j<N; j++) {
-			fprintf(stderr, "%i ", radectohealpix_nside(i*2*PIl/N, PIl*(j-N/2)/N, Nside));
+			fprintf(stderr, "%i ", radectohealpix(i*2*PIl/N, PIl*(j-N/2)/N, Nside));
 		}
 		fprintf(stderr, ";");
 	}
@@ -282,7 +272,7 @@ void print_healpix_borders(int Nside) {
 	fflush(stderr);
 }
 
-
+#if defined(TEST_HEALPIX_MAIN)
 int main(int argc, char** args) {
 
 	/* Run all tests */
@@ -291,7 +281,6 @@ int main(int argc, char** args) {
 
 	/* Add new tests here */
 	SUITE_ADD_TEST(suite, test_healpix_neighbours);
-	SUITE_ADD_TEST(suite, test_healpix_ispowerof4);
 	SUITE_ADD_TEST(suite, test_healpix_pnprime_to_xy);
 	SUITE_ADD_TEST(suite, test_healpix_xy_to_pnprime);
 
@@ -334,3 +323,4 @@ int main(int argc, char** args) {
 	*/
 	return 0;
 }
+#endif

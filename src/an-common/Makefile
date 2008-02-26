@@ -45,6 +45,7 @@ CFLAGS += $(NETPBM_INC)
 CFLAGS += $(JPEG_INC)
 
 LDFLAGS += $(LDFLAGS_DEF)
+LDFLAGS += -lm
 
 ifndef NO_QFITS
 CFLAGS += $(QFITS_INC)
@@ -137,7 +138,7 @@ grab-stellarium-constellations: grab-stellarium-constellations.o \
 ### TESTS
 
 ALL_TEST_FILES = test_bl test_bt test_endian test_fitstable test_xylist \
-	test_rdlist
+	test_rdlist test_healpix
 ALL_TEST_EXTRA_OBJS = 
 ALL_TEST_LIBS = $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -156,6 +157,8 @@ test_bl: $(ANUTILS_LIB)
 test_bt: $(ANUTILS_LIB)
 
 test_endian: $(ANUTILS_LIB)
+
+test_healpix: $(ANUTILS_LIB)
 
 ### /TESTS
 
