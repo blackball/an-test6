@@ -647,21 +647,16 @@ def userprefs(request):
 @login_required
 def summary(request):
     prefs = UserPreferences.for_user(request.user)
-    submissions = Submission.objects.all().filter(user=request.user)
-    jobs = []
+    submissions = Submission.objects.all().filter(user=request.user).order_by('-submittime')
     subs = []
+    # keep track of multi-Job Submissions
     for sub in submissions:
-        jobs += sub.jobs.all()
-        # keep track of multi-Job Submissions
         if len(sub.jobs.all()) > 1:
             subs.append(sub)
 
-    for job in jobs:
-        #log('Job ', job, 'allow anon?', job.allowanonymous(prefs))
-        #log('Job.allowanon:', job.allowanon, ' forbidanon:', job.forbidanon)
-        log('prefs:', prefs)
-        #log('Redist:', job.field.redistributable())
-        #log('Field:', job.field)
+    jobs = []
+    for sub in submissions:
+        jobs += sub.jobs.all()
 
     voimgs = voImage.objects.all().filter(user=request.user)
 
