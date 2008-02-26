@@ -41,6 +41,8 @@ double xy_gety(xy_t* f, int i);
 void xy_setx(xy_t* f, int i, double x);
 void xy_sety(xy_t* f, int i, double y);
 
+void xy_set(xy_t* f, int i, double x, double y);
+
 int xy_n(xy_t* f);
 
 xy_t* xy_alloc(int N, bool flux, bool back);

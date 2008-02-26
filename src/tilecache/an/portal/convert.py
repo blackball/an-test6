@@ -79,7 +79,8 @@ def convert(job, df, fn, args=None):
         variant = int(args['variant'])
 
     # Hack
-    if exists and not variant:
+    #if exists and not variant:
+    if exists and len(args) == 0:
         return fullfn
 
     if fn == 'uncomp' or fn == 'uncomp-js':
@@ -379,7 +380,20 @@ def convert(job, df, fn, args=None):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'redgreen' or fn == 'redgreen-big':
+    elif fn.startswith('redgreen'):
+        # 'redgreen' or 'redgreen-big'
+        if 'red' in args:
+            red = args['red']
+        else:
+            red = 'brightred'
+        if 'green' in args:
+            green = args['green']
+        else:
+            green = 'green'
+        fullfn = basename + 'redgreen-' + red + '-' + green
+        if os.path.exists(fullfn):
+            return fullfn
+
         if fn == 'redgreen':
             imgfn = convert(job, df, 'ppm-medium-8bit')
             (dscale, dw, dh) = df.get_medium_scale()
@@ -391,10 +405,10 @@ def convert(job, df, fn, args=None):
         ixy = convert(job, df, 'index-xy')
         commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
         logfn = 'blind.log'
-        cmd = ('plotxy -i %s -I %s -r 4 -C green -P' % (ixy, imgfn) + commonargs 
-               + '| plotxy -i %s -I - -P -r 6 -C brightred -N 50' % (fxy) + commonargs 
-               + '| plotxy -i %s -I - -r 4 -C brightred -n 50 > %s' %
-               (fxy, fullfn) + commonargs)
+        cmd = ('plotxy -i %s -I %s -r 4 -C %s -P' % (ixy, imgfn, green) + commonargs 
+               + '| plotxy -i %s -I - -P -r 6 -C %s -N 50' % (fxy, red) + commonargs 
+               + '| plotxy -i %s -I - -r 4 -C %s -n 50 > %s' %
+               (fxy, red, fullfn) + commonargs)
         run_convert_command(cmd, fullfn)
         return fullfn
 

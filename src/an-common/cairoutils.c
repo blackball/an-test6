@@ -36,35 +36,44 @@ enum imgformat {
 };
 typedef enum imgformat imgformat;
 
-char* cairoutils_get_color_name(int i) {
-    switch (i) {
-    case 0: return "red";
-    case 1: return "green";
-    case 2: return "brightred";
-	case 3: return "black";
-    }
-    return NULL;
+struct mycolor {
+    const char* name;
+    float r,g,b;
+};
+typedef struct mycolor mycolor;
+
+static mycolor mycolors[] = {
+    { "red",          1.0, 0.0, 0.0 },
+    { "green",        0.0, 1.0, 0.0 },
+    { "blue",         0.0, 0.0, 1.0 },
+    { "white",        1.0, 1.0, 1.0 },
+    { "black",        0.0, 0.0, 0.0 },
+    { "cyan",         0.0, 1.0, 1.0 },
+    { "magenta",      1.0, 0.0, 1.0 },
+    { "yellow",       1.0, 1.0, 0.0 },
+    { "brightred",    1.0, 0.0, 0.2 },
+    { "skyblue",      0.0, 0.5, 1.0 },
+    { "orange",       1.0, 0.5, 0.0 },
+};
+static const int nmycolors = sizeof(mycolors)/sizeof(mycolor);
+
+const char* cairoutils_get_color_name(int i) {
+    if ((i < 0)  || (i >= nmycolors))
+        return NULL;
+    return mycolors[i].name;
 }
 
 int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
-    if (!strcmp(optarg, "red")) {
-        *r = 1.0;
-        *g = *b = 0.0;
-    } else if (!strcmp(optarg, "brightred")) {
-        *r = 1.0;
-        *g = 0.0;
-        *b = 0.2;
-    } else if (!strcmp(optarg, "green")) {
-        *r = *b = 0.0;
-        *g = 1.0;
-    } else if (!strcmp(optarg, "black")) {
-        *r = 0.0;
-        *g = 0.0;
-        *b = 0.0;
-    } else {
-        return -1;
+    int i;
+    for (i=0; i<nmycolors; i++) {
+        if (!strcmp(color, mycolors[i].name)) {
+            *r = mycolors[i].r;
+            *g = mycolors[i].g;
+            *b = mycolors[i].b;
+            return 0;
+        }
     }
-    return 0;
+    return -1;
 }
 
 unsigned char* cairoutils_read_jpeg(const char* fn, int* pW, int* pH) {

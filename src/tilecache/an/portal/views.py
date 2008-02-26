@@ -343,6 +343,8 @@ def jobstatus(request):
         'sources' : get_url(job, 'sources-medium'),
         'sources_big' : get_url(job, 'sources-big'),
         'sources_small' : get_url(job, 'sources-small'),
+        'redgreen_medium' : get_url(job, 'redgreen'),
+        'redgreen_big' : get_url(job, 'redgreen-big'),
         #'otherxylists' : otherxylists,
         'jobowner' : jobowner,
         'allowanon' : anonymous,
@@ -520,6 +522,13 @@ def getfile(request):
     convertargs = {}
     if variant:
         convertargs['variant'] = variant
+
+    ### DEBUG - play with red-green colours.
+    if f.startswith('redgreen'):
+        if 'red' in request.GET:
+            convertargs['red'] = request.GET['red']
+        if 'green' in request.GET:
+            convertargs['green'] = request.GET['green']
 
     if f in pngimages:
         fn = convert(job, job.diskfile, f, convertargs)

@@ -189,7 +189,7 @@ int main(int argc, char** args) {
 					continue;
 				}
 			}
-
+            xy_set(&xy, j, x, y);
 		}
         if (xylist_write_field(xyls, &xy)) {
             fprintf(stderr, "Failed to write xyls field.\n");

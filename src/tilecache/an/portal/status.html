@@ -29,6 +29,7 @@ td {border-width: 0;}
 #sources > a:visited { color:white; }
 #sources > a:hover { color:gray; }
 #sources > a:active { color:yellow; }
+#redgreen { margin-left:auto; margin-right:auto; text-align:center; }
 #currentxylist { margin-left:auto; margin-right:auto; text-align:center; }
 #otherxylists { margin-left:auto; margin-right:auto; text-align:center; }
 #gmapslink { margin-left:auto; margin-right:auto; text-align:center; }
@@ -185,6 +186,16 @@ Tag with:
 </div>
 
 <hr />
+
+<div id="redgreen">
+{% if needs_medium_scale %}
+<a href="{{ redgreen_big }}">
+{% endif %}
+<img src="{{ redgreen_medium }}" alt="your field objects plus our index objects overlaid" />
+{% if needs_medium_scale %}
+</a>
+{% endif %}
+</div>
 
 {% else %}
 
