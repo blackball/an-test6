@@ -132,6 +132,9 @@ int main(int argc, char** args) {
 
     fldw = imw * pixscale;
     fldh = imh * pixscale;
+    // area of the field, in square degrees.
+    printf("fieldarea %g\n", (arcsec2deg(fldw) * arcsec2deg(fldh)));
+
     units = "arcseconds";
     if (MIN(fldw, fldh) > 3600.0) {
         fldw /= 3600.0;
