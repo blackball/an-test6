@@ -60,7 +60,7 @@ CFLAGS += -fPIC
 ANFILES_LIB := libanfiles.a
 ANUTILS_LIB := libanutils.a
 
-all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so
+all: $(ANUTILS_LIB) $(ANFILES_LIB) _sip.so _healpix.so
 
 # Things that it depends on but which aren't linked in
 ANUTILS_DEPS :=
@@ -104,6 +104,9 @@ SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
 
 _sip.so: sip-utils.o sip.o starutil.o mathutil.o sip_qfits.o \
 		fitsioutils.o ioutils.o bl.o gnu-specific.o an-endian.o $(QFITS_LIB)
+	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
+
+_healpix.so: healpix.o starutil.o mathutil.o
 	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
 
 gnu-specific-config.h: gnu-specific-test.c
