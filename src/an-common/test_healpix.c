@@ -46,11 +46,8 @@ static void tst_neighbours(CuTest* ct, uint pix, uint* true_neigh, uint true_nn,
 
 	CuAssertIntEquals(ct, nn, true_nn);
 
-	for (i=0; i<true_nn; i++) {
-		//CuAssertIntEquals(ct, neigh[i], true_neigh[i]);
-		CuAssertIntEquals(ct, true_neigh[i], healpix_xy_to_nested(neigh[i], Nside));
-		CuAssertIntEquals(ct, neigh[i], healpix_nested_to_xy(true_neigh[i], Nside));
-	}
+	for (i=0; i<true_nn; i++)
+		CuAssertIntEquals(ct, true_neigh[i], neigh[i]);
 }
 
 static void tst_nested(CuTest* ct, uint pix, uint* true_neigh, uint true_nn,
