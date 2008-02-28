@@ -413,7 +413,21 @@ class Job(models.Model):
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
 
-    #tags = models.ManyToManyField(Tag)
+    def __init__(self, *args, **kwargs):
+        #for k,v in kwargs.items():
+        #    if v is None:
+        #        del kwargs[k]
+        super(Job, self).__init__(*args, **kwargs)
+        if not 'exposejob' in kwargs or kwargs['exposejob'] is None:
+            u = self.get_user()
+            if u:
+                prefs = UserPreferences.for_user(u)
+                if prefs:
+                    self.exposejob = prefs.anonjobstatus
+                else:
+                    log('No preferences found for user %s' % str(u))
+            else:
+                log('No user found for new Job')
 
     def __str__(self):
         s = '<Job %s, ' % self.get_id()
