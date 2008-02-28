@@ -1,5 +1,12 @@
 {% extends "portal/base.html" %}
 
+{% block extrahead %}
+{% if submission.is_finished %}
+{% else %}
+<meta http-equiv="refresh" content="{{ reload_time }}; URL=" />
+{% endif %}
+{% endblock extrahead %}
+
 {% block inlinecss %}
 #summarytable { margin-left:auto; margin-right:auto; border-collapse:collapse; border-style:solid; border-width:medium; border-color:black; }
 #summarytable td { padding-top:3px; padding-bottom:3px; padding-left:10px; padding-right:10px; border-style:none solid; border-width:thin; border-color:gray; }

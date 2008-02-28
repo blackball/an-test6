@@ -335,6 +335,9 @@ class Submission(models.Model):
         self.set_status('Finished')
         self.save()
 
+    def is_finished(self):
+        return self.status in [ 'Finished' ]
+
     def set_status(self, stat, reason=None):
         if stat in ['Queued', 'Running', 'Finished']:
             self.status = stat

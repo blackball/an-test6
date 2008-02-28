@@ -119,6 +119,7 @@ def submission_status(request, submission):
 
     ctxt = {
         'submission' : submission,
+        'reload_time' : (len(jobs) < 2) and 2 or 5,
         'jobs' : jobs,
         'statusurl' : get_status_url(''),
         'somesolved' : somesolved,
