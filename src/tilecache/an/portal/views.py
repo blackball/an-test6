@@ -48,7 +48,7 @@ class SetDescriptionForm(forms.Form):
 culurs=[(c,c) for c in ['red','green', 'blue', 'white',
                         'black', 'cyan', 'magenta', 'yellow',
                         'brightred', 'skyblue', 'orange']]
-markurs=[(m,m) for m in [ 'circle', 'crosshair', 'square', 'diamond' ]]
+markurs=[(m,m) for m in [ 'circle', 'crosshair', 'square', 'diamond', 'X', 'Xcrosshair' ]]
 
 class RedGreenForm(forms.Form):
     red   = forms.ChoiceField(choices=culurs, initial='red')
@@ -413,6 +413,10 @@ def jobstatus(request):
                      'pixscale' : '%.4g' % float(wcsinfo['pixscale']),
                      'parity' : (float(wcsinfo['det']) > 0 and 'Positive' or 'Negative'),
                      'wcsurl' : get_url(job, 'wcs.fits'),
+                     'indexxyurl' : get_url(job, 'index.xy.fits'),
+                     'indexrdurl' : get_url(job, 'index.rd.fits'),
+                     'fieldxyurl' : get_url(job, 'field.xy.fits'),
+                     'fieldrdurl' : get_url(job, 'field.rd.fits'),
                      })
 
         ctxt['objsinfield'] = get_objs_in_field(job, df)
@@ -571,11 +575,17 @@ def getfile(request):
         f.close()
         return res
 
-    binaryfiles = [ 'wcs.fits', 'match.fits' ]
+    binaryfiles = [ 'wcs.fits', 'match.fits', 'field.xy.fits', 'field.rd.fits',
+                    'index.xy.fits', 'index.rd.fits' ]
     if f in binaryfiles:
+        downloadfn = f
+        if f == 'field.xy.fits':
+            f = 'job.axy'
+        elif f in [ 'index.xy.fits', 'field.rd.fits' ]:
+            f = convert(job, job.diskfile, f, convertargs)
         fn = job.get_filename(f)
         res['Content-Type'] = 'application/octet-stream'
-        res['Content-Disposition'] = 'attachment; filename="' + f + '"'
+        res['Content-Disposition'] = 'attachment; filename="' + downloadfn + '"'
         res['Content-Length'] = file_size(fn)
         f = open(fn)
         res.write(f.read())

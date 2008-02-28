@@ -1,5 +1,12 @@
 {% extends "portal/base.html" %}
 
+{% block extrahead %}
+{% if job.is_finished %}
+{% else %}
+<meta http-equiv="refresh" content="5; URL=" />
+{% endif %}
+{% endblock extrahead %}
+
 {% block title %}
 Astrometry.net Job {{ jobid }}: {{ jobstatus }}
 {% endblock title %}
@@ -247,6 +254,10 @@ switch to solving using that list of sources.</p>
 <tr><td>Parity (sign(det(CD))):</td><td> {{ parity }}</td></tr>
 <tr><td>Field size:</td><td> {{ fieldw }} x {{ fieldh }} {{ fieldunits }}</td></tr>
 <tr><td>WCS FITS header:</td><td><a href="{{ wcsurl }}">wcs.fits</a></td></tr>
+<tr><td>Field (x,y) positions:</td><td><a href="{{ fieldxyurl }}">field.xy.fits</a></td></tr>
+<tr><td>Field (RA,Dec) positions:</td><td><a href="{{ fieldrdurl }}">field.rd.fits</a></td></tr>
+<tr><td>Index (x,y) positions:</td><td><a href="{{ indexxyurl }}">index.xy.fits</a></td></tr>
+<tr><td>Index (RA,Dec) positions:</td><td><a href="{{ indexrdurl }}">index.rd.fits</a></td></tr>
 {% endif %}
 {% if jobstarttime %}
 <tr><td>Solver log file:</td><td><a href="{{ logurl }}">blind.log</a></td></tr>

@@ -1,6 +1,5 @@
 {% include "pageheader.html" %}
 <head>
-
 {% block favicon %}
 {% include "favicon.html" %}
 {% endblock favicon %}
@@ -21,6 +20,8 @@
 {% endblock javascript %}
 
 <title>{% block title %}Astrometry.net{% endblock %}</title>
+{% block extrahead %}
+{% endblock extrahead %}
 </head>
 
 {% block bodytag %}

@@ -283,13 +283,23 @@ def convert(job, df, fn, args=None):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'indexxyls':
+    elif fn == 'indexxyls' or fn == 'index.xy.fits':
         wcsfn = job.get_filename('wcs.fits')
         indexrdfn = job.get_filename('index.rd.fits')
         if not (os.path.exists(wcsfn) and os.path.exists(indexrdfn)):
             errmsg('indexxyls: WCS and Index rdls files don\'t exist.')
             raise FileConversionError(errmsg)
         cmd = 'wcs-rd2xy -w %s -i %s -o %s' % (wcsfn, indexrdfn, fullfn)
+        run_convert_command(cmd)
+        return fullfn
+
+    elif fn == 'field.rd.fits':
+        wcsfn = job.get_filename('wcs.fits')
+        fieldxyfn = job.get_filename('job.axy')
+        if not (os.path.exists(wcsfn) and os.path.exists(fieldxyfn)):
+            errmsg('indexxyls: WCS and Index rdls files don\'t exist.')
+            raise FileConversionError(errmsg)
+        cmd = 'wcs-xy2rd -w %s -i %s -o %s' % (wcsfn, fieldxyfn, fullfn)
         run_convert_command(cmd)
         return fullfn
 
@@ -402,7 +412,7 @@ def convert(job, df, fn, args=None):
         else:
             gmarker = 'circle'
 
-        fullfn = basename + 'redgreen-' + red + '-' + rmarker + '-' + green + '-' + gmarker
+        fullfn = basename + fn + '-' + red + '-' + rmarker + '-' + green + '-' + gmarker
         if os.path.exists(fullfn):
             return fullfn
 
