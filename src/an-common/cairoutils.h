@@ -21,6 +21,8 @@
 
 #include <stdio.h>
 
+#include <cairo.h>
+
 void cairoutils_argb32_to_rgba(unsigned char* img, int W, int H);
 
 void cairoutils_rgba_to_argb32(unsigned char* img, int W, int H);

@@ -102,6 +102,7 @@ typedef struct mymarker mymarker;
 static void drawcircle(cairo_t* cairo, double x, double y, double rad, const char* name) {
     cairo_arc(cairo, x, y, rad, 0.0, 2.0*M_PI);
 }
+
 static void drawcrosshair(cairo_t* cairo, double x, double y, double rad, const char* name) {
     double in = 0.5;
     double out = 1.5;
@@ -128,12 +129,35 @@ static void drawdiamond(cairo_t* cairo, double x, double y, double rad, const ch
     cairo_line_to(cairo, x, y - rad);
     cairo_line_to(cairo, x - rad, y);
 }
+static void drawX(cairo_t* cairo, double x, double y, double rad, const char* name) {
+    cairo_move_to(cairo, x - rad, y - rad);
+    cairo_line_to(cairo, x + rad, y + rad);
+    cairo_move_to(cairo, x + rad, y - rad);
+    cairo_line_to(cairo, x - rad, y + rad);
+}
+static void drawXcrosshair(cairo_t* cairo, double x, double y, double rad, const char* name) {
+    double in = 0.3; //0.5 / sqrt(2.0);
+    double out = 1.2; //1.5 / sqrt(2.0);
+    cairo_move_to(cairo, x - rad*out, y - rad*out);
+    cairo_line_to(cairo, x - rad*in,  y - rad*in );
+    cairo_move_to(cairo, x + rad*out, y + rad*out);
+    cairo_line_to(cairo, x + rad*in,  y + rad*in );
+    cairo_move_to(cairo, x - rad*out, y + rad*out);
+    cairo_line_to(cairo, x - rad*in,  y + rad*in );
+    cairo_move_to(cairo, x + rad*out, y - rad*out);
+    cairo_line_to(cairo, x + rad*in,  y - rad*in );
+    //drawcircle(cairo, x, y, rad*0.5, "circle");
+}
+
+
 
 static mymarker mymarkers[] = {
     { "circle",    drawcircle },
     { "crosshair", drawcrosshair },
     { "square",    drawsquare },
     { "diamond",   drawdiamond },
+    { "X",   drawX },
+    { "Xcrosshair",drawXcrosshair },
 };
 static const int nmymarkers = sizeof(mymarkers)/sizeof(mymarker);
 
