@@ -22,5 +22,5 @@ urlpatterns = patterns('',
 					   (r'^redgreen$',     an.portal.views.redgreen),
                        (r'^run-variant/$', an.portal.views.run_variant),
 					   (r'^changeperms/$', an.portal.views.changeperms),
-					   (r'^publishtovo/$', an.portal.views.publishtovo),
+					   #(r'^publishtovo/$', an.portal.views.publishtovo),
 					   )

@@ -139,6 +139,8 @@ No
 <h3 style="text-align:center;">No Jobs</h3>
 {% endif %}{# jobs #}
 
+{% comment %}
+#########################
 {% if voimgs %}
 <h3 style="text-align:center;">Images Published to the VO</h3>
 <table id="summarytable">
@@ -163,6 +165,8 @@ No
 {% else %}
 <h3 style="text-align:center;">No Images Published to the VO</h3>
 {% endif %}{# voimgs #}
+#########################
+{% endcomment %}
 
 {% endblock content %}
 

@@ -395,17 +395,17 @@ def convert(job, df, fn, args=None):
         if 'red' in args:
             red = args['red']
         else:
-            red = 'brightred'
+            red = '66ccff' # '9999ff' #
 
         if 'rmarker' in args:
             rmarker = args['rmarker']
         else:
-            rmarker = 'circle'
+            rmarker = 'Xcrosshair'
 
         if 'green' in args:
             green = args['green']
         else:
-            green = 'green'
+            green = 'cc3333'
 
         if 'gmarker' in args:
             gmarker = args['gmarker']
