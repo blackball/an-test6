@@ -97,6 +97,7 @@ static void add_text(cairos_t* cairos,
     cairo_text_extents_t textents;
     double l,r,t,b;
     double margin = 2.0;
+    int dx, dy;
 
     cairo_text_extents(cairos->fg, txt, &textents);
     l = px - textents.x_bearing;
@@ -108,9 +109,24 @@ static void add_text(cairos_t* cairos,
     r += margin + 1;
     b += margin + 1;
 
-    // Blank out anything on the "shapes" and "background" layers 
-    // underneath the text.
+    // draw black text behind the white text, on the foreground layer.
+    cairo_save(cairos->fg);
+    cairo_set_source_rgba(cairos->fg, 0, 0, 0, 1);
+    for (dy=-1; dy<=1; dy++) {
+        for (dx=-1; dx<=1; dx++) {
+            cairo_move_to(cairos->fg, px+dx, py+dy);
+            cairo_show_text(cairos->fg, txt);
+        }
+    }
+    cairo_stroke(cairos->fg);
+    cairo_restore(cairos->fg);
 
+    // draw the white text.
+    cairo_move_to(cairos->fg, px, py);
+    cairo_show_text(cairos->fg, txt);
+    cairo_stroke(cairos->fg);
+
+    // blank out anything on the lower layers underneath the text.
     cairo_save(cairos->shapesmask);
     cairo_set_source_rgba(cairos->shapesmask, 0, 0, 0, 0);
     cairo_set_operator(cairos->shapesmask, CAIRO_OPERATOR_SOURCE);
@@ -123,46 +139,6 @@ static void add_text(cairos_t* cairos,
     cairo_stroke(cairos->shapesmask);
     cairo_restore(cairos->shapesmask);
 
-    /*
-    cairo_save(cairos->shapes);
-    cairo_set_source_rgba(cairos->shapes, 0,0,0,0);
-    cairo_set_operator(cairos->shapes, CAIRO_OPERATOR_SOURCE);
-    cairo_move_to(cairos->shapes, l, t);
-    cairo_line_to(cairos->shapes, l, b);
-    cairo_line_to(cairos->shapes, r, b);
-    cairo_line_to(cairos->shapes, r, t);
-    cairo_close_path(cairos->shapes);
-    cairo_fill(cairos->shapes);
-    cairo_stroke(cairos->shapes);
-    cairo_restore(cairos->shapes);
-
-    cairo_save(cairos->bg);
-    cairo_set_source_rgba(cairos->bg, 0,0,0,0);
-    cairo_set_operator(cairos->bg, CAIRO_OPERATOR_SOURCE);
-    cairo_move_to(cairos->bg, l, t);
-    cairo_line_to(cairos->bg, l, b);
-    cairo_line_to(cairos->bg, r, b);
-    cairo_line_to(cairos->bg, r, t);
-    cairo_close_path(cairos->bg);
-    cairo_fill(cairos->bg);
-    cairo_stroke(cairos->bg);
-    cairo_restore(cairos->bg);
-     */
-    int dx, dy;
-    cairo_save(cairos->fg);
-    cairo_set_source_rgba(cairos->fg, 0, 0, 0, 1);
-    for (dy=-1; dy<=1; dy++) {
-        for (dx=-1; dx<=1; dx++) {
-            cairo_move_to(cairos->fg, px+dx, py+dy);
-            cairo_show_text(cairos->fg, txt);
-        }
-    }
-    cairo_stroke(cairos->fg);
-    cairo_restore(cairos->fg);
-
-    cairo_move_to(cairos->fg, px, py);
-    cairo_show_text(cairos->fg, txt);
-    cairo_stroke(cairos->fg);
 }
 
 int main(int argc, char** args) {
@@ -354,6 +330,19 @@ int main(int argc, char** args) {
     srand(0);
 
 	if (!justlist) {
+        /*
+         Cairo layers:
+
+         -background: surfbg / cairobg
+         --> gets drawn first, in black, masked by surfshapesmask
+
+         -shapes: surfshapes / cairoshapes
+         --> gets drawn second, masked by surfshapesmask
+
+         -foreground/text: surffg / cairo
+         --> gets drawn last.
+         */
+
 		surffg = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
 		cairo = cairo_create(surffg);
 		cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
@@ -717,9 +706,7 @@ int main(int argc, char** args) {
     cairo_set_font_size(cairot, fontsize);
 
     // Here's where you set the background surface's properties...
-    //cairo_set_source_rgb(cairot, 0.0, 0.0, 0.0);
     cairo_set_source_surface(cairot, surfbg, 0, 0);
-    //cairo_mask_surface(cairot, surfbg, 0, 0);
     cairo_mask_surface(cairot, surfshapesmask, 0, 0);
     cairo_stroke(cairot);
 
