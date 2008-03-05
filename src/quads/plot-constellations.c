@@ -84,18 +84,70 @@ static int sort_by_mag(const void* v1, const void* v2) {
 	return -1;
 }
 
-static void add_text(cairo_t* cairo, const char* txt, double px, double py) {
+static void add_text(cairo_t* cairo,
+                     cairo_t* cairobg,
+                     cairo_t* cairoshapes,
+                     const char* txt, double px, double py) {
+    cairo_text_extents_t textents;
+    double l,r,t,b;
+    double margin = 2.0;
+
     int dx, dy;
-    cairo_save(cairo);
-    cairo_set_source_rgba(cairo, 0, 0, 0, 1);
     for (dy=-1; dy<=1; dy++) {
         for (dx=-1; dx<=1; dx++) {
-            cairo_move_to(cairo, px+dx, py+dy);
-            cairo_show_text(cairo, txt);
+            cairo_move_to(cairobg, px+dx, py+dy);
+            cairo_show_text(cairobg, txt);
         }
     }
-    cairo_stroke(cairo);
-    cairo_restore(cairo);
+    cairo_stroke(cairobg);
+
+    cairo_text_extents(cairo, txt, &textents);
+    l = px - textents.x_bearing;
+    r = l + textents.width + textents.x_bearing;
+    t = py + textents.y_bearing;
+    b = t + textents.height;
+    l -= margin;
+    t -= margin;
+    r += margin + 1;
+    b += margin + 1;
+
+    /*
+     cairo_save(cairobg);
+     //cairo_set_source_rgba(0,0,0,0);
+     cairo_set_source_rgba(cairobg, 0,0,0,0);
+     cairo_move_to(cairobg, l, t);
+     cairo_line_to(cairobg, l, b);
+     cairo_line_to(cairobg, r, b);
+     cairo_line_to(cairobg, r, t);
+     cairo_close_path(cairobg);
+     cairo_fill(cairobg);
+     cairo_stroke(cairobg);
+     cairo_restore(cairobg);
+     */
+
+    {
+        //cairo_pattern_t* pat = cairo_pattern_create_rgba(0,0,0,1);
+
+        cairo_save(cairoshapes);
+        cairo_set_source_rgba(cairoshapes, 0,1,0,0);
+        //cairo_set_source_rgba(cairoshapes, 0,1,0,1);
+        //cairo_set_source(cairoshapes, pat);
+
+        cairo_set_operator(cairoshapes, CAIRO_OPERATOR_SOURCE);
+
+        cairo_move_to(cairoshapes, l, t);
+        cairo_line_to(cairoshapes, l, b);
+        cairo_line_to(cairoshapes, r, b);
+        cairo_line_to(cairoshapes, r, t);
+        cairo_close_path(cairoshapes);
+        //cairo_clip(cairoshapes);
+        cairo_fill(cairoshapes);
+        //cairo_mask(cairoshapes, pat);
+        cairo_stroke(cairoshapes);
+        cairo_restore(cairoshapes);
+        //cairo_pattern_destroy(pat);
+    }
+
     cairo_move_to(cairo, px, py);
     cairo_show_text(cairo, txt);
     cairo_stroke(cairo);
@@ -110,11 +162,17 @@ int main(int argc, char** args) {
     double scale = 1.0;
     bool pngformat = TRUE;
 
-    cairo_t* cairo = NULL;
     cairo_surface_t* target = NULL;
+    cairo_t* cairot = NULL;
 
     cairo_surface_t* surfbg = NULL;
     cairo_t* cairobg = NULL;
+
+    cairo_surface_t* surfshapes = NULL;
+    cairo_t* cairoshapes = NULL;
+
+    cairo_surface_t* surffg = NULL;
+    cairo_t* cairo = NULL;
 
     double lw = 2.0;
     // circle linewidth.
@@ -278,24 +336,31 @@ int main(int argc, char** args) {
     srand(0);
 
 	if (!justlist) {
-		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
-		cairo = cairo_create(target);
+		surffg = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
+		cairo = cairo_create(surffg);
 		cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
 		cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
-		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+		cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
 		cairo_scale(cairo, scale, scale);
 		//cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_select_font_face(cairo, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size(cairo, fontsize);
 
-		//surfbg = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
+		surfshapes = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
+		cairoshapes = cairo_create(surfshapes);
+		cairo_set_line_join(cairoshapes, CAIRO_LINE_JOIN_BEVEL);
+		cairo_set_antialias(cairoshapes, CAIRO_ANTIALIAS_GRAY);
+		cairo_set_source_rgba(cairoshapes, 1.0, 1.0, 1.0, 1.0);
+		cairo_scale(cairoshapes, scale, scale);
+		cairo_select_font_face(cairoshapes, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size(cairoshapes, fontsize);
+
 		surfbg = cairo_image_surface_create(CAIRO_FORMAT_A8, W, H);
 		cairobg = cairo_create(surfbg);
 		cairo_set_line_join(cairobg, CAIRO_LINE_JOIN_BEVEL);
 		cairo_set_antialias(cairobg, CAIRO_ANTIALIAS_GRAY);
-		cairo_set_source_rgb(cairobg, 1.0, 1.0, 1.0);
+        cairo_set_source_rgba(cairobg, 0, 0, 0, 1);
 		cairo_scale(cairobg, scale, scale);
-		//cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_select_font_face(cairobg, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size(cairobg, fontsize);
 	}
@@ -367,8 +432,10 @@ int main(int argc, char** args) {
 				if (px < 0 || py < 0 || px*scale > W || py*scale > H)
 					continue;
 				if (!justlist) {
-					cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
-					cairo_stroke(cairo);
+					cairo_arc(cairobg, px, py, crad+1.0, 0.0, 2.0*M_PI);
+					cairo_stroke(cairobg);
+					cairo_arc(cairoshapes, px, py, crad, 0.0, 2.0*M_PI);
+					cairo_stroke(cairoshapes);
 				}
                 radecdeg2xyzarr(ra, dec, xyz);
                 cmass[0] += xyz[0];
@@ -412,7 +479,7 @@ int main(int argc, char** args) {
 				py = H/scale - textents.height;
 			//fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
 
-            add_text(cairo, longname, px, py);
+            add_text(cairo, cairobg, cairoshapes, longname, px, py);
 
 			// Draw the lines.
             cairo_set_line_width(cairo, lw);
@@ -435,9 +502,9 @@ int main(int argc, char** args) {
                 dy = py2 - py1;
                 dist = hypot(dx, dy);
                 gapfrac = endgap / dist;
-                cairo_move_to(cairo, px1 + dx*gapfrac, py1 + dy*gapfrac);
-                cairo_line_to(cairo, px1 + dx*(1.0-gapfrac), py1 + dy*(1.0-gapfrac));
-                cairo_stroke(cairo);
+                cairo_move_to(cairoshapes, px1 + dx*gapfrac, py1 + dy*gapfrac);
+                cairo_line_to(cairoshapes, px1 + dx*(1.0-gapfrac), py1 + dy*(1.0-gapfrac));
+                cairo_stroke(cairoshapes);
 			}
 			il_free(lines);
         }
@@ -450,10 +517,10 @@ int main(int argc, char** args) {
 		pl* brightstars = pl_new(16);
 
 		if (!justlist) {
-			cairo_set_source_rgba(cairo, 0.75, 0.75, 0.75, 0.8);
+			cairo_set_source_rgba(cairoshapes, 0.75, 0.75, 0.75, 0.8);
 			cairo_font_extents(cairo, &extents);
 			dy = extents.ascent * 0.5;
-			cairo_set_line_width(cairo, cw);
+			cairo_set_line_width(cairoshapes, cw);
 		}
 
 		N = bright_stars_n();
@@ -470,6 +537,9 @@ int main(int argc, char** args) {
 				continue;
 			if (common_only && !(bs->common_name && strlen(bs->common_name)))
 				continue;
+
+            if (strcmp(bs->common_name, "Maia") == 0)
+                continue;
 
 			pl_append(brightstars, bs);
 		}
@@ -502,20 +572,17 @@ int main(int argc, char** args) {
 				printf("The star %s\n", bs->name);
 
 			if (!justlist)
-                add_text(cairo, text, px + label_offset, py + dy);
+                add_text(cairo, cairobg, cairoshapes, text, px + label_offset, py + dy);
 
 			free(text);
 
 			if (!justlist) {
                 // plot a black circle behind the light circle...
-                cairo_save(cairo);
-                cairo_set_source_rgba(cairo, 0, 0, 0, 1);
-                cairo_arc(cairo, px, py, crad+1.0, 0.0, 2.0*M_PI);
-                cairo_stroke(cairo);
-                cairo_restore(cairo);
+                cairo_arc(cairobg, px, py, crad+1.0, 0.0, 2.0*M_PI);
+                cairo_stroke(cairobg);
 
-				cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
-				cairo_stroke(cairo);
+				cairo_arc(cairoshapes, px, py, crad, 0.0, 2.0*M_PI);
+				cairo_stroke(cairoshapes);
 			}
 		}
 	}
@@ -527,6 +594,7 @@ int main(int argc, char** args) {
         cairo_font_extents_t extents;
 
 		if (!justlist) {
+			cairo_set_source_rgb(cairoshapes, 1.0, 1.0, 1.0);
 			cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 			cairo_set_line_width(cairo, nw);
 			cairo_font_extents(cairo, &extents);
@@ -587,18 +655,15 @@ int main(int argc, char** args) {
 				pixsize = ngc->size * 60.0 / imscale;
 
                 // black circle behind the white one...
-                cairo_save(cairobg);
-                cairo_set_source_rgba(cairobg, 0, 0, 0, 1);
                 cairo_arc(cairobg, px, py, pixsize/2.0+1.0, 0.0, 2.0*M_PI);
                 cairo_stroke(cairobg);
-                cairo_restore(cairobg);
 
-				cairo_move_to(cairo, px + pixsize/2.0, py);
-				cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
+				cairo_move_to(cairoshapes, px + pixsize/2.0, py);
+				cairo_arc(cairoshapes, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
 				//fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
-				cairo_stroke(cairo);
+				cairo_stroke(cairoshapes);
 
-                add_text(cairo, text, px + label_offset, py + dy);
+                add_text(cairo, cairobg, cairoshapes, text, px + label_offset, py + dy);
 			}
 			free(text);
 			sl_free2(str);
@@ -608,11 +673,29 @@ int main(int argc, char** args) {
 	if (justlist)
 		return 0;
 
-    //cairo_set_source_surface(cairo, surfbg, 0, 0);
-    cairo_set_source_rgb(cairo, 0.0, 1.0, 0.0);
-    cairo_mask_surface(cairo, surfbg, 0, 0);
-    //cairo_stroke(cairo);
+    target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
+    cairot = cairo_create(target);
+    cairo_set_line_join(cairot, CAIRO_LINE_JOIN_BEVEL);
+    cairo_set_antialias(cairot, CAIRO_ANTIALIAS_GRAY);
+    cairo_set_source_rgba(cairot, 0, 0, 0, 1);
+    cairo_scale(cairot, scale, scale);
+    cairo_select_font_face(cairot, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cairot, fontsize);
 
+    // Here's where you set the background surface's properties...
+    cairo_set_source_rgb(cairot, 0.0, 0.0, 0.0);
+    cairo_mask_surface(cairot, surfbg, 0, 0);
+    cairo_stroke(cairot);
+
+    // Add on the shapes.
+    cairo_set_source_surface(cairot, surfshapes, 0, 0);
+    cairo_mask_surface(cairot, surfshapes, 0, 0);
+    cairo_stroke(cairot);
+
+    // Add on the foreground.
+    cairo_set_source_surface(cairot, surffg, 0, 0);
+    cairo_mask_surface(cairot, surffg, 0, 0);
+    cairo_stroke(cairot);
 
     // Convert image for output...
     cairoutils_argb32_to_rgba(img, W, H);
