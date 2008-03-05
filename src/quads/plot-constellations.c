@@ -492,6 +492,13 @@ int main(int argc, char** args) {
 			free(text);
 
 			if (!justlist) {
+                // plot a black circle behind the light circle...
+                cairo_save(cairo);
+                cairo_set_source_rgba(cairo, 0, 0, 0, 1);
+                cairo_arc(cairo, px, py, crad+1.0, 0.0, 2.0*M_PI);
+                cairo_stroke(cairo);
+                cairo_restore(cairo);
+
 				cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
 				cairo_stroke(cairo);
 			}
@@ -563,6 +570,14 @@ int main(int argc, char** args) {
 
 			if (!justlist) {
 				pixsize = ngc->size * 60.0 / imscale;
+
+                // black circle behind the white one...
+                cairo_save(cairo);
+                cairo_set_source_rgba(cairo, 0, 0, 0, 1);
+                cairo_arc(cairo, px, py, pixsize/2.0+1.0, 0.0, 2.0*M_PI);
+                cairo_stroke(cairo);
+                cairo_restore(cairo);
+
 				cairo_move_to(cairo, px + pixsize/2.0, py);
 				cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
 				//fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
