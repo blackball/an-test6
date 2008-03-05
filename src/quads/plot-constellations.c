@@ -698,12 +698,7 @@ int main(int argc, char** args) {
 
     target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
     cairot = cairo_create(target);
-    cairo_set_line_join(cairot, CAIRO_LINE_JOIN_BEVEL);
-    cairo_set_antialias(cairot, CAIRO_ANTIALIAS_GRAY);
     cairo_set_source_rgba(cairot, 0, 0, 0, 1);
-    cairo_scale(cairot, scale, scale);
-    cairo_select_font_face(cairot, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_set_font_size(cairot, fontsize);
 
     // Here's where you set the background surface's properties...
     cairo_set_source_surface(cairot, surfbg, 0, 0);
