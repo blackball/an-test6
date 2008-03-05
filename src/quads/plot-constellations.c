@@ -429,6 +429,75 @@ int main(int argc, char** args) {
         if (verbose) fprintf(stderr, "done constellations.\n");
     }
 
+	if (bright) {
+        double dy = 0;
+        cairo_font_extents_t extents;
+		pl* brightstars = pl_new(16);
+
+		if (!justlist) {
+			cairo_set_source_rgba(cairo, 0.75, 0.75, 0.75, 0.8);
+			cairo_font_extents(cairo, &extents);
+			dy = extents.ascent * 0.5;
+			cairo_set_line_width(cairo, cw);
+		}
+
+		N = bright_stars_n();
+		if (verbose) fprintf(stderr, "Checking %i bright stars.\n", N);
+
+		for (i=0; i<N; i++) {
+			const brightstar_t* bs = bright_stars_get(i);
+
+            if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
+                continue;
+            if (px < 0 || py < 0 || px*scale > W || py*scale > H)
+                continue;
+			if (!(bs->name && strlen(bs->name)))
+				continue;
+			if (common_only && !(bs->common_name && strlen(bs->common_name)))
+				continue;
+
+			pl_append(brightstars, bs);
+		}
+
+		if (Nbright && (pl_size(brightstars) > Nbright)) {
+			pl_sort(brightstars, sort_by_mag);
+			pl_remove_index_range(brightstars, Nbright, pl_size(brightstars)-Nbright);
+		}
+
+		for (i=0; i<pl_size(brightstars); i++) {
+			char* text;
+			const brightstar_t* bs = pl_get(brightstars, i);
+
+            if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
+                continue;
+			if (bs->common_name && strlen(bs->common_name))
+				if (print_common_only || common_only)
+					text = strdup(bs->common_name);
+				else
+					asprintf(&text, "%s (%s)", bs->common_name, bs->name);
+			else
+				text = strdup(bs->name);
+
+			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
+			if (verbose) fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
+
+			if (bs->common_name && strlen(bs->common_name))
+				printf("The star %s (%s)\n", bs->common_name, bs->name);
+			else
+				printf("The star %s\n", bs->name);
+
+			if (!justlist)
+                add_text(cairo, text, px + label_offset, py + dy);
+
+			free(text);
+
+			if (!justlist) {
+				cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
+				cairo_stroke(cairo);
+			}
+		}
+	}
+
     if (NGC) {
         double imscale;
         double imsize;
@@ -505,75 +574,6 @@ int main(int argc, char** args) {
 			sl_free2(str);
         }
     }
-
-	if (bright) {
-        double dy = 0;
-        cairo_font_extents_t extents;
-		pl* brightstars = pl_new(16);
-
-		if (!justlist) {
-			cairo_set_source_rgba(cairo, 0.75, 0.75, 0.75, 0.8);
-			cairo_font_extents(cairo, &extents);
-			dy = extents.ascent * 0.5;
-			cairo_set_line_width(cairo, cw);
-		}
-
-		N = bright_stars_n();
-		if (verbose) fprintf(stderr, "Checking %i bright stars.\n", N);
-
-		for (i=0; i<N; i++) {
-			const brightstar_t* bs = bright_stars_get(i);
-
-            if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
-                continue;
-            if (px < 0 || py < 0 || px*scale > W || py*scale > H)
-                continue;
-			if (!(bs->name && strlen(bs->name)))
-				continue;
-			if (common_only && !(bs->common_name && strlen(bs->common_name)))
-				continue;
-
-			pl_append(brightstars, bs);
-		}
-
-		if (Nbright && (pl_size(brightstars) > Nbright)) {
-			pl_sort(brightstars, sort_by_mag);
-			pl_remove_index_range(brightstars, Nbright, pl_size(brightstars)-Nbright);
-		}
-
-		for (i=0; i<pl_size(brightstars); i++) {
-			char* text;
-			const brightstar_t* bs = pl_get(brightstars, i);
-
-            if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
-                continue;
-			if (bs->common_name && strlen(bs->common_name))
-				if (print_common_only || common_only)
-					text = strdup(bs->common_name);
-				else
-					asprintf(&text, "%s (%s)", bs->common_name, bs->name);
-			else
-				text = strdup(bs->name);
-
-			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
-			if (verbose) fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
-
-			if (bs->common_name && strlen(bs->common_name))
-				printf("The star %s (%s)\n", bs->common_name, bs->name);
-			else
-				printf("The star %s\n", bs->name);
-
-			if (!justlist)
-                add_text(cairo, text, px + label_offset, py + dy);
-
-			free(text);
-
-			if (!justlist) {
-				cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
-				cairo_stroke(cairo);
-			}
-		}
-	}
 
 	if (justlist)
 		return 0;
