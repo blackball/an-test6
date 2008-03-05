@@ -84,15 +84,21 @@ static int sort_by_mag(const void* v1, const void* v2) {
 	return -1;
 }
 
-static void add_text(cairo_t* cairo,
-                     cairo_t* cairobg,
-                     cairo_t* cairoshapes,
+struct cairos_t {
+    cairo_t* fg;
+    cairo_t* bg;
+    cairo_t* shapes;
+    cairo_t* shapesmask;
+};
+typedef struct cairos_t cairos_t;
+
+static void add_text(cairos_t* cairos,
                      const char* txt, double px, double py) {
     cairo_text_extents_t textents;
     double l,r,t,b;
     double margin = 2.0;
 
-    cairo_text_extents(cairo, txt, &textents);
+    cairo_text_extents(cairos->fg, txt, &textents);
     l = px - textents.x_bearing;
     r = l + textents.width + textents.x_bearing;
     t = py + textents.y_bearing;
@@ -104,43 +110,59 @@ static void add_text(cairo_t* cairo,
 
     // Blank out anything on the "shapes" and "background" layers 
     // underneath the text.
-    cairo_save(cairoshapes);
-    cairo_set_source_rgba(cairoshapes, 0,0,0,0);
-    cairo_set_operator(cairoshapes, CAIRO_OPERATOR_SOURCE);
-    cairo_move_to(cairoshapes, l, t);
-    cairo_line_to(cairoshapes, l, b);
-    cairo_line_to(cairoshapes, r, b);
-    cairo_line_to(cairoshapes, r, t);
-    cairo_close_path(cairoshapes);
-    cairo_fill(cairoshapes);
-    cairo_stroke(cairoshapes);
-    cairo_restore(cairoshapes);
 
-    cairo_save(cairobg);
-    cairo_set_source_rgba(cairobg, 0,0,0,0);
-    cairo_set_operator(cairobg, CAIRO_OPERATOR_SOURCE);
-    cairo_move_to(cairobg, l, t);
-    cairo_line_to(cairobg, l, b);
-    cairo_line_to(cairobg, r, b);
-    cairo_line_to(cairobg, r, t);
-    cairo_close_path(cairobg);
-    cairo_fill(cairobg);
-    cairo_stroke(cairobg);
-    cairo_restore(cairobg);
+    cairo_save(cairos->shapesmask);
+    cairo_set_source_rgba(cairos->shapesmask, 0, 0, 0, 0);
+    cairo_set_operator(cairos->shapesmask, CAIRO_OPERATOR_SOURCE);
+    cairo_move_to(cairos->shapesmask, l, t);
+    cairo_line_to(cairos->shapesmask, l, b);
+    cairo_line_to(cairos->shapesmask, r, b);
+    cairo_line_to(cairos->shapesmask, r, t);
+    cairo_close_path(cairos->shapesmask);
+    cairo_fill(cairos->shapesmask);
+    cairo_stroke(cairos->shapesmask);
+    cairo_restore(cairos->shapesmask);
 
+    /*
+    cairo_save(cairos->shapes);
+    cairo_set_source_rgba(cairos->shapes, 0,0,0,0);
+    cairo_set_operator(cairos->shapes, CAIRO_OPERATOR_SOURCE);
+    cairo_move_to(cairos->shapes, l, t);
+    cairo_line_to(cairos->shapes, l, b);
+    cairo_line_to(cairos->shapes, r, b);
+    cairo_line_to(cairos->shapes, r, t);
+    cairo_close_path(cairos->shapes);
+    cairo_fill(cairos->shapes);
+    cairo_stroke(cairos->shapes);
+    cairo_restore(cairos->shapes);
 
+    cairo_save(cairos->bg);
+    cairo_set_source_rgba(cairos->bg, 0,0,0,0);
+    cairo_set_operator(cairos->bg, CAIRO_OPERATOR_SOURCE);
+    cairo_move_to(cairos->bg, l, t);
+    cairo_line_to(cairos->bg, l, b);
+    cairo_line_to(cairos->bg, r, b);
+    cairo_line_to(cairos->bg, r, t);
+    cairo_close_path(cairos->bg);
+    cairo_fill(cairos->bg);
+    cairo_stroke(cairos->bg);
+    cairo_restore(cairos->bg);
+     */
     int dx, dy;
+    cairo_save(cairos->fg);
+    cairo_set_source_rgba(cairos->fg, 0, 0, 0, 1);
     for (dy=-1; dy<=1; dy++) {
         for (dx=-1; dx<=1; dx++) {
-            cairo_move_to(cairobg, px+dx, py+dy);
-            cairo_show_text(cairobg, txt);
+            cairo_move_to(cairos->fg, px+dx, py+dy);
+            cairo_show_text(cairos->fg, txt);
         }
     }
-    cairo_stroke(cairobg);
+    cairo_stroke(cairos->fg);
+    cairo_restore(cairos->fg);
 
-    cairo_move_to(cairo, px, py);
-    cairo_show_text(cairo, txt);
-    cairo_stroke(cairo);
+    cairo_move_to(cairos->fg, px, py);
+    cairo_show_text(cairos->fg, txt);
+    cairo_stroke(cairos->fg);
 }
 
 int main(int argc, char** args) {
@@ -152,6 +174,9 @@ int main(int argc, char** args) {
     double scale = 1.0;
     bool pngformat = TRUE;
 
+    cairos_t thecairos;
+    cairos_t* cairos = &thecairos;
+
     cairo_surface_t* target = NULL;
     cairo_t* cairot = NULL;
 
@@ -160,6 +185,9 @@ int main(int argc, char** args) {
 
     cairo_surface_t* surfshapes = NULL;
     cairo_t* cairoshapes = NULL;
+
+    cairo_surface_t* surfshapesmask = NULL;
+    cairo_t* cairoshapesmask = NULL;
 
     cairo_surface_t* surffg = NULL;
     cairo_t* cairo = NULL;
@@ -345,6 +373,17 @@ int main(int argc, char** args) {
 		cairo_select_font_face(cairoshapes, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size(cairoshapes, fontsize);
 
+		surfshapesmask = cairo_image_surface_create(CAIRO_FORMAT_A8, W, H);
+		cairoshapesmask = cairo_create(surfshapesmask);
+		cairo_set_line_join(cairoshapesmask, CAIRO_LINE_JOIN_BEVEL);
+		cairo_set_antialias(cairoshapesmask, CAIRO_ANTIALIAS_GRAY);
+		cairo_set_source_rgba(cairoshapesmask, 1.0, 1.0, 1.0, 1.0);
+		cairo_scale(cairoshapesmask, scale, scale);
+		cairo_select_font_face(cairoshapesmask, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size(cairoshapesmask, fontsize);
+        cairo_paint(cairoshapesmask);
+        cairo_stroke(cairoshapesmask);
+
 		surfbg = cairo_image_surface_create(CAIRO_FORMAT_A8, W, H);
 		cairobg = cairo_create(surfbg);
 		cairo_set_line_join(cairobg, CAIRO_LINE_JOIN_BEVEL);
@@ -353,6 +392,11 @@ int main(int argc, char** args) {
 		cairo_scale(cairobg, scale, scale);
 		cairo_select_font_face(cairobg, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size(cairobg, fontsize);
+
+        cairos->bg = cairobg;
+        cairos->fg = cairo;
+        cairos->shapes = cairoshapes;
+        cairos->shapesmask = cairoshapesmask;
 	}
 
     if (constell) {
@@ -469,7 +513,7 @@ int main(int argc, char** args) {
 				py = H/scale - textents.height;
 			//fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
 
-            add_text(cairo, cairobg, cairoshapes, longname, px, py);
+            add_text(cairos, longname, px, py);
 
 			// Draw the lines.
             cairo_set_line_width(cairo, lw);
@@ -562,7 +606,7 @@ int main(int argc, char** args) {
 				printf("The star %s\n", bs->name);
 
 			if (!justlist)
-                add_text(cairo, cairobg, cairoshapes, text, px + label_offset, py + dy);
+                add_text(cairos, text, px + label_offset, py + dy);
 
 			free(text);
 
@@ -653,7 +697,7 @@ int main(int argc, char** args) {
 				//fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
 				cairo_stroke(cairoshapes);
 
-                add_text(cairo, cairobg, cairoshapes, text, px + label_offset, py + dy);
+                add_text(cairos, text, px + label_offset, py + dy);
 			}
 			free(text);
 			sl_free2(str);
@@ -673,13 +717,16 @@ int main(int argc, char** args) {
     cairo_set_font_size(cairot, fontsize);
 
     // Here's where you set the background surface's properties...
-    cairo_set_source_rgb(cairot, 0.0, 0.0, 0.0);
-    cairo_mask_surface(cairot, surfbg, 0, 0);
+    //cairo_set_source_rgb(cairot, 0.0, 0.0, 0.0);
+    cairo_set_source_surface(cairot, surfbg, 0, 0);
+    //cairo_mask_surface(cairot, surfbg, 0, 0);
+    cairo_mask_surface(cairot, surfshapesmask, 0, 0);
     cairo_stroke(cairot);
 
     // Add on the shapes.
     cairo_set_source_surface(cairot, surfshapes, 0, 0);
-    cairo_mask_surface(cairot, surfshapes, 0, 0);
+    //cairo_mask_surface(cairot, surfshapes, 0, 0);
+    cairo_mask_surface(cairot, surfshapesmask, 0, 0);
     cairo_stroke(cairot);
 
     // Add on the foreground.
