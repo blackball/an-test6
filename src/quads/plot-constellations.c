@@ -112,6 +112,10 @@ int main(int argc, char** args) {
 
     cairo_t* cairo = NULL;
     cairo_surface_t* target = NULL;
+
+    cairo_surface_t* surfbg = NULL;
+    cairo_t* cairobg = NULL;
+
     double lw = 2.0;
     // circle linewidth.
     double cw = 2.0;
@@ -283,6 +287,17 @@ int main(int argc, char** args) {
 		//cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_select_font_face(cairo, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size(cairo, fontsize);
+
+		//surfbg = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
+		surfbg = cairo_image_surface_create(CAIRO_FORMAT_A8, W, H);
+		cairobg = cairo_create(surfbg);
+		cairo_set_line_join(cairobg, CAIRO_LINE_JOIN_BEVEL);
+		cairo_set_antialias(cairobg, CAIRO_ANTIALIAS_GRAY);
+		cairo_set_source_rgb(cairobg, 1.0, 1.0, 1.0);
+		cairo_scale(cairobg, scale, scale);
+		//cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		cairo_select_font_face(cairobg, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size(cairobg, fontsize);
 	}
 
     if (constell) {
@@ -572,11 +587,11 @@ int main(int argc, char** args) {
 				pixsize = ngc->size * 60.0 / imscale;
 
                 // black circle behind the white one...
-                cairo_save(cairo);
-                cairo_set_source_rgba(cairo, 0, 0, 0, 1);
-                cairo_arc(cairo, px, py, pixsize/2.0+1.0, 0.0, 2.0*M_PI);
-                cairo_stroke(cairo);
-                cairo_restore(cairo);
+                cairo_save(cairobg);
+                cairo_set_source_rgba(cairobg, 0, 0, 0, 1);
+                cairo_arc(cairobg, px, py, pixsize/2.0+1.0, 0.0, 2.0*M_PI);
+                cairo_stroke(cairobg);
+                cairo_restore(cairobg);
 
 				cairo_move_to(cairo, px + pixsize/2.0, py);
 				cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
@@ -592,6 +607,12 @@ int main(int argc, char** args) {
 
 	if (justlist)
 		return 0;
+
+    //cairo_set_source_surface(cairo, surfbg, 0, 0);
+    cairo_set_source_rgb(cairo, 0.0, 1.0, 0.0);
+    cairo_mask_surface(cairo, surfbg, 0, 0);
+    //cairo_stroke(cairo);
+
 
     // Convert image for output...
     cairoutils_argb32_to_rgba(img, W, H);
