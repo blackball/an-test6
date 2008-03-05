@@ -395,22 +395,22 @@ def convert(job, df, fn, args=None):
         if 'red' in args:
             red = args['red']
         else:
-            red = '66ccff' # '9999ff' #
+            red = 'cc3333'
 
         if 'rmarker' in args:
             rmarker = args['rmarker']
         else:
-            rmarker = 'Xcrosshair'
+            rmarker = 'circle'
 
         if 'green' in args:
             green = args['green']
         else:
-            green = 'cc3333'
+            green = '66ccff' # '9999ff' #
 
         if 'gmarker' in args:
             gmarker = args['gmarker']
         else:
-            gmarker = 'circle'
+            gmarker = 'Xcrosshair'
 
         fullfn = basename + fn + '-' + red + '-' + rmarker + '-' + green + '-' + gmarker
         if os.path.exists(fullfn):
@@ -424,6 +424,7 @@ def convert(job, df, fn, args=None):
             imgfn = convert(job, df, 'ppm-8bit')
             scale = 1.0
         fxy = job.get_filename('job.axy')
+        match = job.get_filename('match.fits')
         ixy = convert(job, df, 'index-xy')
         commonargs = ' -S %f -x %f -y %f -w 2' % (scale, scale, scale)
         logfn = 'blind.log'
@@ -433,7 +434,8 @@ def convert(job, df, fn, args=None):
                    + '| plotxy -i %s -I - -r 4 -C %s -s %s' % (ixy, green, gmarker) + commonargs
                    + ' > %s' % (fullfn))
         cmd = ('plotxy -i %s -I %s -r 5 -C %s -s %s -P' % (fxy, imgfn, red, rmarker) + commonargs
-               + '| plotxy -i %s -I - -r 5 -C %s -s %s' % (ixy, green, gmarker) + commonargs
+               + '| plotxy -i %s -I - -r 5 -C %s -s %s -b black -P' % (ixy, green, gmarker) + commonargs
+               + '| plotquad -m %s -I - -C %s -s %g -w 2 -b black' % (match, green, scale)
                + ' > %s' % (fullfn))
         run_convert_command(cmd, fullfn)
         return fullfn

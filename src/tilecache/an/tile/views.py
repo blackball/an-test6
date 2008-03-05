@@ -259,6 +259,15 @@ def get_tile(request):
     # RA,Dec range; image size.
     cmdline = tilerender + (" -x %f -X %f -y %f -Y %f" % (ramin, ramax, decmin, decmax))
     cmdline += (" -w %i -h %i" % (imw, imh))
+
+    if 'toright' in request.GET:
+        cmdline += ' -z'
+
+    if 'lw' in request.GET:
+        lw = float(request.GET['lw'])
+        if lw:
+            cmdline += ' -L %g' % lw
+
     # cachedir: -D
     cmdline += (" -D " + rendercachedir)
     # layers: -l

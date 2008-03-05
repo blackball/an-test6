@@ -29,7 +29,7 @@
 #include "boilerplate.h"
 #include "cairoutils.h"
 
-#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:X:Y:"
+#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:X:Y:b:"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
@@ -54,7 +54,8 @@ static void printHelp(char* progname) {
     printf("  [-C <color>]      Color to plot in: (default: white)\n");
     cairoutils_print_color_names("\n                 ");
     printf("\n");
-    printf("  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
+    printf("  [-b <color>]      Draw in <color> behind each marker.\n"
+           "  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
 		   "  [-e <extension>]  FITS extension to read (default 0).\n"
 		   "\n");
 }
@@ -87,11 +88,20 @@ int main(int argc, char *args[]) {
     char* xcol = NULL;
     char* ycol = NULL;
     int marker;
+    bool background = FALSE;
+    float br=0.0, bg=0.0, bb=0.0;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
         case 'C':
             if (cairoutils_parse_color(optarg, &r, &g, &b)) {
+                fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
+                exit(-1);
+            }
+            break;
+        case 'b':
+            background = TRUE;
+            if (cairoutils_parse_color(optarg, &br, &bg, &bb)) {
                 fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
                 exit(-1);
             }
@@ -238,6 +248,20 @@ int main(int argc, char *args[]) {
     if (marker == -1) {
         fprintf(stderr, "No such marker: %s\n", shape);
         marker = 0;
+    }
+
+    //
+    if (background) {
+        cairo_save(cairo);
+        cairo_set_line_width(cairo, lw+2.0);
+        cairo_set_source_rgba(cairo, br, bg, bb, 0.75);
+        for (i=n; i<Nxy; i++) {
+            double x = xy_getx(xy, i) + 0.5 - xoff;
+            double y = xy_gety(xy, i) + 0.5 - yoff;
+            cairoutils_draw_marker(cairo, marker, x, y, rad);
+            cairo_stroke(cairo);
+        }
+        cairo_restore(cairo);
     }
 
 	// Draw markers.

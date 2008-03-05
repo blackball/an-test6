@@ -32,7 +32,7 @@
 #include "permutedsort.h"
 #include "matchfile.h"
 
-#define OPTIONS "hW:H:w:I:C:PRo:d:cm:s:"
+#define OPTIONS "hW:H:w:I:C:PRo:d:cm:s:b:"
 
 static void printHelp(char* progname) {
     int i;
@@ -43,11 +43,12 @@ static void printHelp(char* progname) {
            "  [-C <color>]      Color to plot in: (default: white)\n",
            progname);
     for (i=0;; i++) {
-        char* color = cairoutils_get_color_name(i);
+        const char* color = cairoutils_get_color_name(i);
         if (!color) break;
         printf("                       %s\n", color);
     }
-    printf("  [-c]:            Also plot a circle at each vertex.\n"
+    printf("  [-b <color>]      Draw in <color> behind each line.\n"
+           "  [-c]:            Also plot a circle at each vertex.\n"
            "  [-W <width> ]       Width of output image.\n"
 		   "  [-H <height>]       Height of output image.\n"
 		   "  [-w <width>]      Width of lines to draw (default: 5).\n"
@@ -87,6 +88,9 @@ int main(int argc, char *args[]) {
     double scale = 1.0;
     char* matchfn = NULL;
 
+    bool background = FALSE;
+    float br=0.0, bg=0.0, bb=0.0;
+
 	coords = dl_new(16);
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
@@ -107,6 +111,13 @@ int main(int argc, char *args[]) {
 			if (!strcasecmp(optarg, "random"))
 				randomcolor = TRUE;
             else if (cairoutils_parse_color(optarg, &r, &g, &b)) {
+                fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
+                exit(-1);
+            }
+            break;
+        case 'b':
+            background = TRUE;
+            if (cairoutils_parse_color(optarg, &br, &bg, &bb)) {
                 fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
                 exit(-1);
             }
@@ -241,22 +252,33 @@ int main(int argc, char *args[]) {
 		}
 		permuted_sort(theta, sizeof(double), compare_doubles, perm, dimquads);
 
+        // hack.
+        if (background) {
+            cairo_save(cairo);
+            cairo_set_line_width(cairo, lw + 2.0);
+            cairo_set_source_rgba(cairo, br, bg, bb, 0.75);
+            for (j=0; j<dimquads; j++) {
+                ((j==0) ? cairo_move_to : cairo_line_to)
+                    (cairo,
+                     dl_get(coords, i*(2*dimquads) + perm[j]*2),
+                     dl_get(coords, i*(2*dimquads) + perm[j]*2 + 1));
+            }
+            cairo_close_path(cairo);
+            cairo_stroke(cairo);
+            cairo_restore(cairo);
+        }
+
 		if (randomcolor) {
 			r = ((rand() % 128) + 127) / 255.0;
 			g = ((rand() % 128) + 127) / 255.0;
 			b = ((rand() % 128) + 127) / 255.0;
 			cairo_set_source_rgba(cairo, r, g, b, a);
 		}
-
 		for (j=0; j<dimquads; j++) {
-			if (j==0)
-				cairo_move_to(cairo,
-							  dl_get(coords, i*(2*dimquads) + perm[j]*2),
-							  dl_get(coords, i*(2*dimquads) + perm[j]*2 + 1));
-			else
-				cairo_line_to(cairo,
-							  dl_get(coords, i*(2*dimquads) + perm[j]*2),
-							  dl_get(coords, i*(2*dimquads) + perm[j]*2 + 1));
+			((j==0) ? cairo_move_to : cairo_line_to)
+                (cairo,
+                 dl_get(coords, i*(2*dimquads) + perm[j]*2),
+                 dl_get(coords, i*(2*dimquads) + perm[j]*2 + 1));
 		}
 		cairo_close_path(cairo);
 		cairo_stroke(cairo);
