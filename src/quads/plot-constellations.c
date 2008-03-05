@@ -92,15 +92,6 @@ static void add_text(cairo_t* cairo,
     double l,r,t,b;
     double margin = 2.0;
 
-    int dx, dy;
-    for (dy=-1; dy<=1; dy++) {
-        for (dx=-1; dx<=1; dx++) {
-            cairo_move_to(cairobg, px+dx, py+dy);
-            cairo_show_text(cairobg, txt);
-        }
-    }
-    cairo_stroke(cairobg);
-
     cairo_text_extents(cairo, txt, &textents);
     l = px - textents.x_bearing;
     r = l + textents.width + textents.x_bearing;
@@ -111,42 +102,41 @@ static void add_text(cairo_t* cairo,
     r += margin + 1;
     b += margin + 1;
 
-    /*
-     cairo_save(cairobg);
-     //cairo_set_source_rgba(0,0,0,0);
-     cairo_set_source_rgba(cairobg, 0,0,0,0);
-     cairo_move_to(cairobg, l, t);
-     cairo_line_to(cairobg, l, b);
-     cairo_line_to(cairobg, r, b);
-     cairo_line_to(cairobg, r, t);
-     cairo_close_path(cairobg);
-     cairo_fill(cairobg);
-     cairo_stroke(cairobg);
-     cairo_restore(cairobg);
-     */
+    // Blank out anything on the "shapes" and "background" layers 
+    // underneath the text.
+    cairo_save(cairoshapes);
+    cairo_set_source_rgba(cairoshapes, 0,0,0,0);
+    cairo_set_operator(cairoshapes, CAIRO_OPERATOR_SOURCE);
+    cairo_move_to(cairoshapes, l, t);
+    cairo_line_to(cairoshapes, l, b);
+    cairo_line_to(cairoshapes, r, b);
+    cairo_line_to(cairoshapes, r, t);
+    cairo_close_path(cairoshapes);
+    cairo_fill(cairoshapes);
+    cairo_stroke(cairoshapes);
+    cairo_restore(cairoshapes);
 
-    {
-        //cairo_pattern_t* pat = cairo_pattern_create_rgba(0,0,0,1);
+    cairo_save(cairobg);
+    cairo_set_source_rgba(cairobg, 0,0,0,0);
+    cairo_set_operator(cairobg, CAIRO_OPERATOR_SOURCE);
+    cairo_move_to(cairobg, l, t);
+    cairo_line_to(cairobg, l, b);
+    cairo_line_to(cairobg, r, b);
+    cairo_line_to(cairobg, r, t);
+    cairo_close_path(cairobg);
+    cairo_fill(cairobg);
+    cairo_stroke(cairobg);
+    cairo_restore(cairobg);
 
-        cairo_save(cairoshapes);
-        cairo_set_source_rgba(cairoshapes, 0,1,0,0);
-        //cairo_set_source_rgba(cairoshapes, 0,1,0,1);
-        //cairo_set_source(cairoshapes, pat);
 
-        cairo_set_operator(cairoshapes, CAIRO_OPERATOR_SOURCE);
-
-        cairo_move_to(cairoshapes, l, t);
-        cairo_line_to(cairoshapes, l, b);
-        cairo_line_to(cairoshapes, r, b);
-        cairo_line_to(cairoshapes, r, t);
-        cairo_close_path(cairoshapes);
-        //cairo_clip(cairoshapes);
-        cairo_fill(cairoshapes);
-        //cairo_mask(cairoshapes, pat);
-        cairo_stroke(cairoshapes);
-        cairo_restore(cairoshapes);
-        //cairo_pattern_destroy(pat);
+    int dx, dy;
+    for (dy=-1; dy<=1; dy++) {
+        for (dx=-1; dx<=1; dx++) {
+            cairo_move_to(cairobg, px+dx, py+dy);
+            cairo_show_text(cairobg, txt);
+        }
     }
+    cairo_stroke(cairobg);
 
     cairo_move_to(cairo, px, py);
     cairo_show_text(cairo, txt);
