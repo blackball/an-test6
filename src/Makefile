@@ -57,7 +57,50 @@ install-indices:
 		tar xvzf $$x -C $(INSTALL_DIR)/data; \
 	done
 
-RELEASE_VER := 0.1
+upgrade-indices:
+	@echo
+	@echo
+	@echo "Warning: this process will modify the index files that you downloaded"
+	@echo "and installed (in the directory $(INSTALL_DIR)/data -- if that's not"
+	@echo "correct then edit the INSTALL_DIR variable in the Makefile)"
+	@echo
+	@echo "This process is not reversible, so you will not be able to use the"
+	@echo "old version of the code with the new version of the index files."
+	@echo
+	@echo "If you want to continue experimenting with the old code, please quit"
+	@echo "this process (control-C now), copy the index files in the directory"
+	@echo "$(INSTALL_DIR)/data to some safe place, then re-run this command."
+	@echo
+	@echo
+	@echo
+	@echo "Waiting 10 seconds for you to read the message above..."
+	@echo
+	sleep 1
+	@echo
+	@echo "All right, you had your chance.  Proceeding."
+	@echo
+	$(MAKE) -C libkd
+	@echo
+	@echo
+
+	@for x in `ls $(INSTALL_DIR)/data/index-*.{skdt,ckdt}.fits 2>/dev/null`; do \
+		echo "Upgrading $$x in $(INSTALL_DIR)/data ..."; \
+		echo; \
+		echo ./libkd/fix-bb "$$x" "$$x.tmp"; \
+		echo; \
+		./libkd/fix-bb "$$x" "$$x.tmp"; \
+		if [ $$? -ne 0 ]; then \
+			echo; \
+			echo "Command failed.  Aborting."; \
+			echo; \
+			break; \
+		fi; \
+		echo "mv $$x.tmp $$x"; \
+		mv "$$x.tmp" "$$x"; \
+	done
+
+
+RELEASE_VER := 0.2-pre
 RELEASE_DIR := astrometry.net-$(RELEASE_VER)
 RELEASE_SVN	:= svn+ssh://astrometry.net/svn/tags/tarball-$(RELEASE_VER)
 RELEASE_SUBDIRS := cfitsio qfits-an gsl-an an-common libkd quads demo
