@@ -75,7 +75,7 @@ upgrade-indices:
 	@echo
 	@echo "Waiting 10 seconds for you to read the message above..."
 	@echo
-	sleep 1
+	sleep 10
 	@echo
 	@echo "All right, you had your chance.  Proceeding."
 	@echo
