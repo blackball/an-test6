@@ -63,6 +63,8 @@ pixels=UxV arcmin
 
 #include "qfits_error.h"
 
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:C:E:gr";
+
 static struct option long_options[] = {
 	{"help",           no_argument,       0, 'h'},
 	{"verbose",        no_argument,       0, 'v'},
@@ -94,10 +96,9 @@ static struct option long_options[] = {
     {"code-tolerance", required_argument, 0, 'C'},
     {"pixel-error",    required_argument, 0, 'E'},
     {"use-wget",       no_argument,       0, 'g'},
+    {"resort",         no_argument,       0, 'r'},
 	{0, 0, 0, 0}
 };
-
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:C:E:g";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -134,6 +135,7 @@ static void print_help(const char* progname) {
            "  [--code-tolerance <tol>]: matching distance for quads (default 0.01) (-c)\n"
            "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
            "  [--use-wget]: use wget instead of curl.  (-g)\n"
+           "  [--resort]: sort the star brightnesses using a compromise between background-subtraction and no background-subtraction (-r). \n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
            "\n"
@@ -202,6 +204,7 @@ int main(int argc, char** args) {
     char* ycol = NULL;
     char* solvedin = NULL;
 	bool usecurl = TRUE;
+    bool resort = FALSE;
 
     me = find_executable(args[0], NULL);
 
@@ -223,6 +226,10 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'r':
+            resort = TRUE;
+            sl_append(augmentxyargs, "--resort");
+            break;
         case 'g':
             usecurl = FALSE;
             break;

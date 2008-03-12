@@ -46,6 +46,8 @@
 
 #include "qfits.h"
 
+static const char* OPTIONS = "hg:i:L:H:u:t:o:x:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:c:E:r";
+
 static struct option long_options[] = {
 	{"help",		   no_argument,	      0, 'h'},
 	{"verbose",        no_argument,       0, 'v'},
@@ -80,10 +82,9 @@ static struct option long_options[] = {
     {"verify",         required_argument, 0, 'V'},
     {"code-tolerance", required_argument, 0, 'c'},
     {"pixel-error",    required_argument, 0, 'E'},
+    {"resort",         no_argument,       0, 'r'},
 	{0, 0, 0, 0}
 };
-
-static const char* OPTIONS = "hg:i:L:H:u:t:o:x:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:c:E:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -122,6 +123,7 @@ static void print_help(const char* progname) {
            "  [--verify <wcs-file>]: try to verify an existing WCS file  (-V)\n"
            "  [--code-tolerance <tol>]: matching distance for quads, default 0.01  (-c)\n"
            "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
+           "  [--resort]: sort the star brightnesses using a compromise between background-subtraction and no background-subtraction (-r). \n"
 		   "\n", progname);
 }
 
@@ -191,6 +193,7 @@ int main(int argc, char** args) {
     sl* verifywcs;
     double codetol = 0.0;
     double pixerr = 0.0;
+    bool resort = FALSE;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -214,6 +217,9 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 'r':
+            resort = TRUE;
+            break;
         case 'E':
             pixerr = atof(optarg);
             break;
@@ -639,17 +645,27 @@ int main(int argc, char** args) {
         }
 
 		// sort the table by FLUX.
-        append_executable(cmd, "tabsort", me);
-        sl_append(cmd, "-i");
-        append_escape(cmd, xylsfn);
-        sl_append(cmd, "-o");
-        append_escape(cmd, sortedxylsfn);
-        sl_append(cmd, "-c");
-        append_escape(cmd, sortcol);
-        if (descending)
-            sl_append(cmd, "-d");
-        if (!verbose)
-            sl_append(cmd, "-q");
+        if (resort) {
+            append_executable(cmd, "resort-xylist", me);
+            sl_append(cmd, "-f");
+            append_escape(cmd, sortcol);
+            if (descending)
+                sl_append(cmd, "-d");
+            append_escape(cmd, xylsfn);
+            append_escape(cmd, sortedxylsfn);
+        } else {
+            append_executable(cmd, "tabsort", me);
+            sl_append(cmd, "-i");
+            append_escape(cmd, xylsfn);
+            sl_append(cmd, "-o");
+            append_escape(cmd, sortedxylsfn);
+            sl_append(cmd, "-c");
+            append_escape(cmd, sortcol);
+            if (descending)
+                sl_append(cmd, "-d");
+            if (!verbose)
+                sl_append(cmd, "-q");
+        }
 
         cmdstr = sl_implode(cmd, " ");
         sl_remove_all(cmd);
@@ -858,6 +874,9 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+    if (verbose)
+        printf("Writing headers to file %s.\n", outfn);
+
 	if (qfits_header_dump(hdr, fout)) {
 		fprintf(stderr, "Failed to write FITS header.\n");
 		exit(-1);
@@ -866,36 +885,31 @@ int main(int argc, char** args) {
 	// copy blocks from xyls to output.
 	{
 		FILE* fin;
-		char block[FITS_BLOCK_SIZE];
-		int startblock;
-		int nblocks;
+		int start;
+		int nb;
 		struct stat st;
-		startblock = fits_blocks_needed(orig_nheaders * FITS_LINESZ);
+
+        if (verbose)
+            printf("Copying body of file %s to output %s.\n", xylsfn, outfn);
+
+		start = fits_blocks_needed(orig_nheaders * FITS_LINESZ) * FITS_BLOCK_SIZE;
+
 		if (stat(xylsfn, &st)) {
 			fprintf(stderr, "Failed to stat() xyls file \"%s\": %s\n", xylsfn, strerror(errno));
 			exit(-1);
 		}
-		nblocks = st.st_size / FITS_BLOCK_SIZE;
+		nb = st.st_size;
+
 		fin = fopen(xylsfn, "rb");
 		if (!fin) {
 			fprintf(stderr, "Failed to open xyls file \"%s\": %s\n", xylsfn, strerror(errno));
 			exit(-1);
 		}
-		if (fseeko(fin, startblock * FITS_BLOCK_SIZE, SEEK_SET)) {
-			fprintf(stderr, "Failed to seek in xyls file \"%s\": %s\n", xylsfn, strerror(errno));
-			exit(-1);
-		}
-		//printf("Copying FITS blocks %i to %i from xyls to output.\n", startblock, nblocks);
-		for (i=startblock; i<nblocks; i++) {
-			if (fread(block, 1, FITS_BLOCK_SIZE, fin) != FITS_BLOCK_SIZE) {
-				fprintf(stderr, "Failed to read xyls file \"%s\": %s\n", xylsfn, strerror(errno));
-				exit(-1);
-			}
-			if (fwrite(block, 1, FITS_BLOCK_SIZE, fout) != FITS_BLOCK_SIZE) {
-				fprintf(stderr, "Failed to write output file: %s\n", strerror(errno));
-				exit(-1);
-			}
-		}
+
+        if (pipe_file_offset(fin, start, nb - start, fout)) {
+            fprintf(stderr, "Failed to copy the data segment of xylist file %s to %s.\n", xylsfn, outfn);
+            exit(-1);
+        }
 		fclose(fin);
 	}
 
