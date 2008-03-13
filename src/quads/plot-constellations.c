@@ -116,9 +116,9 @@ static void add_text(cairos_t* cairos,
         for (dx=-1; dx<=1; dx++) {
             cairo_move_to(cairos->fg, px+dx, py+dy);
             cairo_show_text(cairos->fg, txt);
+            cairo_stroke(cairos->fg);
         }
     }
-    cairo_stroke(cairos->fg);
     cairo_restore(cairos->fg);
 
     // draw the white text.
