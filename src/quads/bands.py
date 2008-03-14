@@ -26,27 +26,13 @@ rawdata = [
     ]
 
 surveys = array([survey for (survey, band, a,b,c,d,e) in rawdata])
-#bands = array([band for (survey, band, a,b,c,d) in rawdata])
-#names = array(['%s-%s' % (survey, band) for (survey, band, a,b,c,d) in rawdata])
 los = array([lo or mid - fwhm/2. for (survey, band, lo, hi, mid, fwhm, e) in rawdata])
 his = array([hi or mid + fwhm/2. for (survey, band, lo, hi, mid, fwhm, e) in rawdata])
 
-#mins = array([lo for (survey, band, lo, hi, mid, fwhm) in rawdata])
-#maxs = array([hi for (survey, band, lo, hi, mid, fwhm) in rawdata])
-#mids = array([mid for (survey, band, lo, hi, mid, fwhm) in rawdata])
-#fwhms = array([fwhm for (survey, band, lo, hi, mid, fwhm) in rawdata])
-
-#I = argsort((los+his)/2.)
-
 survs = set(surveys)
-#persurveylos = [los[surveys == s].min() for s in set(surveys)]
-#persurveylos = {}
-#persurveyhis = {}
 surveymids = {}
 surveylos = {}
 for s in survs:
-    #persurveylos[s] = los[surveys == s].min()
-    #persurveyhis[s] = his[surveys == s].max()
     surveymids[s] = sqrt(los[surveys == s].min() * his[surveys == s].max())
     surveylos[s] = los[surveys == s].min()
 
@@ -54,27 +40,19 @@ ymargin = 0.1
 xmargin = 1.1
 
 clf()
-#for i, (lo, hi, name) in enumerate(zip(los[I], his[I], names[I])):
 lastsurvey = ''
 h = 0
-#for i, (lo, hi, survey, band, name) in enumerate(zip(los, his, surveys, bands, names)):
 for (survey, band, mn, mx, mid, fwhm, off) in rawdata:
     lo = mn or mid - fwhm/2.
     hi = mx or mid + fwhm/2.
 
     if survey != lastsurvey:
         h += 1
-        #text(lo, h, survey,
-        #text(surveymids[survey], h-margin, survey,
-        #horizontalalignment='center',
-        #     verticalalignment='top')
         text(surveylos[survey] / xmargin, h, survey,
              horizontalalignment='right',
              verticalalignment='center')
         lastsurvey = survey
     semilogx([lo, hi], [h, h], 'ko-')
-    #semilogx([lo, hi], [i, i], 'ko-')
-    #text((lo+hi)/2., i+0.5, name,
     text(sqrt(lo*hi), h+ymargin, band,
          horizontalalignment='center',
          verticalalignment='bottom')
@@ -99,7 +77,6 @@ xlabel('Wavelength')
 title('Bands')
 savefig('bands.png')
     
-
 
 # USNOB
 # http://www.iop.org/EJ/article/1538-3881/125/2/984/202452.tb1.html
