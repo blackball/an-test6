@@ -10,7 +10,8 @@ Put the contents of the "web" directory on your normal web server (eg CSlab)
 Setting up your own web server on CSLab:
 
 bash
-### EDIT HERE
+### EDIT HERE - set these to the places where you want to install
+###             the various bits of software.
 export APACHE_DIR=/u/dstn/software/apache-2.2.8
 export DJANGO_DIR=/u/dstn/software/django-0.96.1
 export EASY_GMAPS_DIR=/u/dstn/easy-gmaps
@@ -63,12 +64,13 @@ cp -a $EASY_GMAPS_DIR/conf/* conf
 
 ### EDIT:
 # You will want to add this to your shell's init file (~/.bashrc, or whatever)
+#  (But expand the APACHE_DIR and DJANGO_DIR variables)
 export PYTHONPATH=${PYTHONPATH}:$APACHE_DIR/python:$DJANGO_DIR
 #
 
 ### EDIT:
 # - httpd.conf  (search for "EDIT HERE")
-# - django.conf
+# - django.conf (search for "EDIT HERE")
 ###
 ./bin/apachectl start
 
@@ -76,3 +78,16 @@ export PYTHONPATH=${PYTHONPATH}:$APACHE_DIR/python:$DJANGO_DIR
 # Set up the Django project
 #
 $DJANGO_DIR/django/bin/django-admin.py startproject proj
+cp $EASY_GMAPS_DIR/proj/*.py proj
+
+#
+# Build the C renderer.
+#
+cp $EASY_GMAPS_DIR/proj/julia.c proj
+gcc -O3 -o proj/julia proj/julia.c -lm
+
+#
+# Restart Apache for good luck.
+#
+./bin/apachectl restart
+
