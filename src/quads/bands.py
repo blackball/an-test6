@@ -8,8 +8,8 @@ rawdata = [
     #              min  max  mid fwhm   label-offset
     ('galex',   'fuv', 135, 175, 0, 0,  0),
     ('galex',   'nuv', 175, 280, 0, 0,  0),
-    ('usnob', 'B', 350, 540, 0, 0,      0),
-    ('usnob', 'R', 590, 690, 0, 0,      1),
+    ('usnob', 'B [OJ]', 350, 540, 0, 0,      0),
+    ('usnob', 'R [EF]', 590, 690, 0, 0,      1),
     ('usnob', 'N', 715, 900, 0, 0,      0),
     ('sdss',  'u',   0,   0, 354,  57,  0),
     ('sdss',  'g',   0,   0, 477, 137,  1),
@@ -55,7 +55,8 @@ for (survey, band, mn, mx, mid, fwhm, off) in rawdata:
     semilogx([lo, hi], [h, h], 'ko-')
     text(sqrt(lo*hi), h+ymargin, band,
          horizontalalignment='center',
-         verticalalignment='bottom')
+         verticalalignment='bottom',
+         fontsize='10')
 
     if mn:
         txt = '%g-%g' % (mn, mx)
@@ -71,6 +72,30 @@ for (survey, band, mn, mx, mid, fwhm, off) in rawdata:
 
 a=axis()
 axis([70, 1.1e4, 0, h+1])
+
+y0 = 0.1
+y1 = 0.25
+mx = 1.0e4
+mn = 75
+for (x, y, txt) in [(1e-11, y0, 'Gamma'),
+                    (1e-9,  y1, 'X-ray'),
+                    (400e-9,   y0, 'purple'),
+                    (500e-9,   y1, 'green'),
+                    (700e-9,   y0, 'red'),
+                    (10e-6,   y0, 'infrared'),
+                    ]:
+    ha = 'left'
+    x /= 1e-9
+    if x >= mx:
+        x = mx
+        ha = 'right'
+    if x < mn:
+        x = mn
+    text(x, y, txt,
+         verticalalignment='bottom',
+         horizontalalignment=ha,
+         fontsize='8')
+
 xticks([100, 1000, 10000], ['100 nm', '1 um', '10 um'])
 yticks([],[])
 xlabel('Wavelength')
