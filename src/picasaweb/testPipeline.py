@@ -23,7 +23,7 @@ def main():
   # a dictionary, keyed by entry.GetHtmlLink().href value=md5smu
   masterDict = {}
 
-  currentPhotos=pws.GetFeed("http://picasaweb.google.com/data/feed/api/user/"+pws.email+"?kind=photo")
+  currentPhotos=pws.GetFeed(makePhotoFeed(pws.email,None))
   if currentPhotos and currentPhotos.entry:
     print "Photos currently loaded in service account %s:" % pws.email
     for e in currentPhotos.entry:

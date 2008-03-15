@@ -10,7 +10,7 @@ def main():
   """Adds a tag value to a photo using GData Picasaweb API"""
 
   HELPSTRING = 'addTag.py --tag=DesiredTag'
-  [tag,pphotoid,palbum,puser,atoken]=pwParsePhotoOpts(["tag="],[None],HELPSTRING)
+  [tag,pphotoid,palbumid,palbum,puser,atoken]=pwParsePhotoOpts(["tag="],[None],HELPSTRING)
 
   if tag==None:
     print "Tag cannot be empty!"
@@ -20,7 +20,7 @@ def main():
   pws = pwInit()
   pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
-  insertTag(tag,pphotoid,palbum)
+  insertTag(tag,pphotoid,palbum,albumid=palbumid)
 
 
 if __name__ == '__main__':

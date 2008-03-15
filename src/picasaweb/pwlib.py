@@ -15,7 +15,9 @@ import getopt
 AUTH_ENV = "GDATA_PW_AUTHTOKEN"
 AUTH_USR = "GDATA_PW_AUTHUSER"
 
+globalBaseURI = "http://picasaweb.google.com/data/feed/api"
 globalPWService = None
+
 
 def pwInit():
   global globalPWService
@@ -82,31 +84,65 @@ def pwParseBasicOpts(extraOpts,extraDefaults,HELPSTRING):
 
 def pwParsePhotoOpts(extraOpts,extraDefaults,HELPSTRING):
   HELPSTRING_BASE = ' [--user=photo_user] [--auth="auth token"]'
-  THISHELP=" --albumid=albumid --photoid=photo_id"
+  THISHELP=" --album=album_name|--albumid=album_id --photoid=photo_id"
 
-  rez=pwParseBasicOpts(extraOpts+["photoid=","albumid="],extraDefaults+[None,None],HELPSTRING+THISHELP)
-  if rez[len(extraOpts)]==None:
+  rez=pwParseBasicOpts(extraOpts+["photoid=","albumid=","album="],extraDefaults+[None,None,None],HELPSTRING+THISHELP)
+  if not rez[len(extraOpts)]:
     print "PhotoID cannot be missing."
     print HELPSTRING+THISHELP+HELPSTRING_BASE
     sys.exit(2)
-  if rez[len(extraOpts)+1]==None:
-    print "AlbumID cannot be missing."
+  if not rez[len(extraOpts)+1] and not rez[len(extraOpts)+2]:
+    print "AlbumID and AlbumName cannot both be missing."
+    print HELPSTRING+THISHELP+HELPSTRING_BASE
+    sys.exit(2)
+  if rez[len(extraOpts)+1] and rez[len(extraOpts)+2]:
+    print "AlbumID and AlbumName cannot both be set."
     print HELPSTRING+THISHELP+HELPSTRING_BASE
     sys.exit(2)
   return rez
 
 
-def uploadPhoto(photofile,palbum,caption=None,verbose=False,pws=None):
+def makeUserURI(puser):
+  global globalBaseURI
+  if puser:
+    return globalBaseURI+'/user/'+puser
+  else:
+    return globalBaseURI+'/all'
+
+def makeAlbumURI(puser,palbum,albumid=None):
+  if palbum:
+    return makeUserURI(puser)+'/album/'+palbum
+  else:
+    return makeUserURI(puser)+'/albumid/'+albumid
+      
+def makePhotoURI(pphotoid,puser,palbum,albumid=None):
+  return makeAlbumURI(puser,palbum,albumid=albumid)+'/photoid/'+pphotoid
+
+def makeTagFeed(tag,puser=None):
+  return makeUserURI(puser)+"?q="+tag
+
+def makeAlbumFeed(puser):
+  return makeUserURI(puser)+"?kind=album"
+
+def makePhotoFeed(puser,palbum,albumid=None):
+  if palbum or albumid:
+    return makeAlbumURI(puser,palbum,albumid=albumid)+'?kind=photo'
+  else:
+    return makeUserURI(puser)+"?kind=photo"
+
+    
+def uploadPhoto(photofile,palbum,albumid=None,caption=None,verbose=False,pws=None):
   if pws==None:
     pws=pwInit()
   if verbose:
-    print "  Adding photo in file %s to album %s of user %s" % (photofile,palbum,pws.email)
+    print "  Adding photo in file %s to album %s of user %s" % (photofile,albumnameorid,pws.email)
   if verbose and caption:
     print "  ...setting caption to %s" % caption
   #if verbose and tag:
   #  print "  ...tagging with tags %s" % tag
   try:
-    albumURI='http://picasaweb.google.com/data/feed/api/user/'+pws.email+'/albumid/'+palbum
+    albumURI=makeAlbumURI(pws.email,palbum,albumid=albumid)
+
     #somehow adding tags is not supported at insert time
     #pEntry=pws.InsertPhotoSimple(albumURI,photofile.split('/')[-1],caption,photofile,keywords=tags)
     pEntry=pws.InsertPhotoSimple(albumURI,photofile.split('/')[-1],caption,photofile)
@@ -118,12 +154,13 @@ def uploadPhoto(photofile,palbum,caption=None,verbose=False,pws=None):
     print "  Error inserting photo. Make sure file exists and auth token is not expired?"
     return None
 
-def insertTag(tag,pphotoid,palbum,puser=None,verbose=False,pws=None):
+def insertTag(tag,pphotoid,palbum,albumid=None,puser=None,verbose=False,pws=None):
   if pws==None:
     pws=pwInit()
   if puser==None:
     puser=pws.email
-  photoURI='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/photoid/'+pphotoid
+  photoURI=makePhotoURI(pphotoid,puser,palbum,albumid=albumid)
+
   # CHECK IF TAG IS ALREADY THERE?
   try:
     pws.InsertTag(photoURI,tag)
@@ -132,12 +169,12 @@ def insertTag(tag,pphotoid,palbum,puser=None,verbose=False,pws=None):
 
 
 
-def insertComment(comment,pphotoid,palbum,puser=None,verbose=False,pws=None):
+def insertComment(comment,pphotoid,palbum,albumid=None,userid=None,puser=None,verbose=False,pws=None):
   if pws==None:
     pws=pwInit()
   if puser==None:
     puser=pws.email
-  e=getPhotoEntry(palbum,pphotoid,puser=puser)
+  e=getPhotoEntry(palbum,pphotoid,albumid=albumid,puser=userid)
   if e:
     try:
       pws.InsertComment(e,comment)
@@ -148,13 +185,13 @@ def insertComment(comment,pphotoid,palbum,puser=None,verbose=False,pws=None):
 
 
 
-def setCaption(caption,pphotoid,palbum,pentry=None,puser=None,verbose=False,pws=None):
+def setCaption(caption,pphotoid,palbum,albumid=None,pentry=None,puser=None,verbose=False,pws=None):
   if pws==None:
     pws=pwInit()
   if pentry==None:
     if puser==None:
       puser=pws.email
-    pentry=getPhotoEntry(palbum,pphotoid,puser=puser,pws=pws)
+    pentry=getPhotoEntry(palbum,pphotoid,albumid=albumid,puser=puser,pws=pws)
   if pentry:
     pentry.summary.text=caption
     try:
@@ -199,13 +236,14 @@ def downloadEntry(e,verbose=False,skipdownload=False):
     return (localfilename,md5sum)
 
 
-def getPhotoEntry(palbum,pphotoid,puser=None,pws=None):
+def getPhotoEntry(palbum,pphotoid,albumid=None,puser=None,pws=None):
   if pws==None:
     pws=pwInit()
   if puser==None:
     puser=pws.email
-  albumfeed='http://picasaweb.google.com/data/feed/api/user/'+puser+'/albumid/'+palbum+'/?kind=photo'
-  af=pws.GetFeed(albumfeed)
+    
+  af=pws.GetFeed(makePhotoFeed(puser,palbum,albumid=albumid))
+
   for e in af.entry:
     ll=e.GetFeedLink().href
     if ll[ll.rfind('/photoid/')+9:]==pphotoid:
@@ -219,32 +257,33 @@ def getAllTagEntries(tag,puser=None,verbose=False,pws=None):
   if verbose:
     print "  Querying for images having tag="+tag+"..."
   allE=[]
-  if puser==None:
-    theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag)
-  else:
-    theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/user/"+puser+"?q="+tag)
+  print makeTagFeed(tag)
+  theserez=pws.GetFeed(makeTagFeed(tag))
   numToGet = int(theserez.total_results.text)
-  if verbose:
-    print "  ...trying to get %d results" % numToGet
   if(len(theserez.entry)==0 or numToGet==0):
     if verbose:
       print "  No matching images found. Sorry."
     return None
   else:
+    if verbose:
+      print "  ...trying to get %d results (got %d on first request)" % (numToGet,len(theserez.entry))
     while(len(allE)<numToGet):
-      #if verbose:
-      #  print "  ...now have %d results, doing append" % len(allE)
+      if verbose:
+        print "  ...now have %d results, doing append" % len(allE)
       allE.extend(theserez.entry)
-      #if verbose:
-      #  print "  ...did append now have %d results, getting feed again" % len(allE)
+      if verbose:
+        print "  ...did append now have %d results, getting feed again with start_index=%d" % (len(allE),len(allE)+1)
       try:
-        theserez=pws.GetFeed("http://picasaweb.google.com/data/feed/api/all?q="+tag, 
-                             start_index=len(allE)+1) # check the +1
+        # start_index is 1based
+        theserez=pws.GetFeed(makeTagFeed(tag),start_index=len(allE)+1)
+        print "  ...feed now thinks total_results="+theserez.total_results.text
+        if(theserez==None or len(theserez.entry)==0):
+          break
       except:
         print "  Warning: only got %d of %d results" % (len(allE),numToGet)
         break
-      #if verbose:
-      #  print "  ...got feed, looping back in while"
+      if verbose:
+        print "  ...got feed, looping back in while"
     if verbose:
       print "  Retrieved data for %d (of %d) matching images." % (len(allE),numToGet)
     return allE
@@ -258,7 +297,7 @@ def getAllAlbums(username,verbose=False,pws=None):
     print "  Querying for albums from user="+username+"..."
   allA=[]
   try:
-    thisfeed=pws.GetFeed("http://picasaweb.google.com/data/feed/api/user/"+username+"?kind=album")
+    thisfeed=pws.GetFeed(makeAlbumFeed(puser))
     return thisfeed.entry
   except:
     if verbose:

@@ -9,8 +9,8 @@ import sys
 def main():
   """Adds a comment to a photo using GData Picasaweb API"""
 
-  HELPSTRING = 'addComment.py --comment "Desired Comment Text"'
-  [comment,pphotoid,palbum,puser,atoken]=pwParsePhotoOpts(["comment="],[None],HELPSTRING)
+  HELPSTRING = 'addComment.py --comment "Desired Comment Text" --userid=username'
+  [comment,userid,pphotoid,palbumid,palbum,puser,atoken]=pwParsePhotoOpts(["comment=","userid="],[None,None],HELPSTRING)
 
   if comment==None:
     print "Comment cannot be empty!"
@@ -20,7 +20,7 @@ def main():
   pws = pwInit()
   pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
-  insertComment(comment,pphotoid,palbum,puser=puser)
+  insertComment(comment,pphotoid,palbum,albumid=palbumid,userid=userid,puser=puser)
 
 
 if __name__ == '__main__':

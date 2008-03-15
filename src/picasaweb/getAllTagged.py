@@ -51,13 +51,14 @@ def main():
 
   # get all comments on each image in the entrylist
   for e in allE:
-    print e.GetCommentsUri()
+    #print e.GetCommentsUri()
     masterDict[e.id.text] = [e,[]]
     c = pws.GetFeed(e.GetCommentsUri())
-    print "found %d comments for image %s" % (len(c.entry),e.id.text)
+    #print "found %d comments for image %s" % (len(c.entry),e.id.text)
     for ce in c.entry:
       for cauthor in ce.author:
         if cauthor.user.text.lower()==serviceuser or len(serviceuser)==0:
+          #print "found %d comments by user %s for image %s" % (len(c.entry),serviceuser,e.id.text)
           masterDict[e.id.text][1].append(ce.content.text)
 
   for candidate in masterDict:
