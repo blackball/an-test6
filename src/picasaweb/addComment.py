@@ -20,7 +20,7 @@ def main():
   pws = pwInit()
   pwAuth(gdata_authtoken=atoken,gdata_user=puser)
 
-  insertComment(comment,pphotoid,palbum,albumid=palbumid,userid=userid,puser=puser)
+  insertComment(comment,photoid=pphotoid,album=palbum,albumid=palbumid,userid=userid,pws=pws)
 
 
 if __name__ == '__main__':
