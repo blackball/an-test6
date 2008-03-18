@@ -30,6 +30,13 @@ _libname = ctypes.util.find_library('_sip.so')
 if _libname:
     print 'libname is ', _libname
     _sip = ctypes.CDLL(_libname)
+else:
+    import os.path
+    p = os.path.join(os.path.dirname(__file__), '_sip.so')
+    if os.path.exists(p):
+        _sip = ctypes.CDLL(_libname)
+        if _sip:
+            print 'loaded', p
 
 def loadlibrary(fn):
     global _sip
