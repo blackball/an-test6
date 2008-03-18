@@ -34,9 +34,11 @@ else:
     import os.path
     p = os.path.join(os.path.dirname(__file__), '_sip.so')
     if os.path.exists(p):
-        _sip = ctypes.CDLL(_libname)
+        _sip = ctypes.CDLL(p)
         if _sip:
             print 'loaded', p
+    else:
+        print 'file does not exist:', p
 
 def loadlibrary(fn):
     global _sip
