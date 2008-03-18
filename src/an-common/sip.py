@@ -54,7 +54,7 @@ class Tan(ctypes.Structure):
                 ("imageh", c_double)]
 
     def __init__(self, filename=None):
-        if not filename is None:
+        if filename is not None:
             cfn = c_char_p(filename)
             rtn = _sip.tan_read_header_file(cfn, ctypes.pointer(self))
             if not rtn:
@@ -80,6 +80,19 @@ class Tan(ctypes.Structure):
                 ctypes.pointer(ra),
                 ctypes.pointer(dec))
         return ra.value, dec.value
+
+    def radec2pixelxy(self, RA, Dec):
+        ra = ctypes.c_double(RA)
+        dec = ctypes.c_double(Dec)
+        fpx = ctypes.c_double(0.)
+        fpy = ctypes.c_double(0.)
+        _sip.tan_radec2pixelxy(
+                ctypes.pointer(self),
+                ra, dec,
+                ctypes.pointer(fpx),
+                ctypes.pointer(fpy)
+                )
+        return fpx.value, fpy.value
 
     def radec_bounds(self, stepsize):
         ramin = ctypes.c_double(0)
