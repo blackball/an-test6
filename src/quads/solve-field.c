@@ -63,7 +63,7 @@ pixels=UxV arcmin
 
 #include "qfits_error.h"
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:C:E:gr";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:C:E:grz";
 
 static struct option long_options[] = {
 	{"help",           no_argument,       0, 'h'},
@@ -97,6 +97,7 @@ static struct option long_options[] = {
     {"pixel-error",    required_argument, 0, 'E'},
     {"use-wget",       no_argument,       0, 'g'},
     {"resort",         no_argument,       0, 'r'},
+    {"downsample",     no_argument,       0, 'z'},
 	{0, 0, 0, 0}
 };
 
@@ -136,6 +137,7 @@ static void print_help(const char* progname) {
            "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
            "  [--use-wget]: use wget instead of curl.  (-g)\n"
            "  [--resort]: sort the star brightnesses using a compromise between background-subtraction and no background-subtraction (-r). \n"
+           "  [--downsample]: downsample the image by half before doing source extraction  (-z)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
            "\n"
@@ -223,6 +225,9 @@ int main(int argc, char** args) {
 		if (c == -1)
 			break;
 		switch (c) {
+        case 'z':
+            sl_append(augmentxyargs, "--downsample");
+            break;
 		case 'h':
 			help = TRUE;
 			break;

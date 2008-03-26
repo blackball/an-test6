@@ -46,7 +46,7 @@
 
 #include "qfits.h"
 
-static const char* OPTIONS = "2C:E:F:H:I:L:M:P:R:S:TV:W:X:Y:ac:d:e:fg:hi:k:m:o:rs:t:u:vw:x:";
+static const char* OPTIONS = "2C:E:F:H:I:L:M:P:R:S:TV:W:X:Y:ac:d:e:fg:hi:k:m:o:rs:t:u:vw:x:z::";
 
 static struct option long_options[] = {
 	{"help",		   no_argument,	      0, 'h'},
@@ -83,6 +83,7 @@ static struct option long_options[] = {
     {"code-tolerance", required_argument, 0, 'c'},
     {"pixel-error",    required_argument, 0, 'E'},
     {"resort",         no_argument,       0, 'r'},
+    {"downsample",     optional_argument, 0, 'z'},
 	{0, 0, 0, 0}
 };
 
@@ -195,6 +196,8 @@ int main(int argc, char** args) {
     double pixerr = 0.0;
     bool resort = FALSE;
 
+    int scaledown = 0;
+
     depths = il_new(4);
     fields = il_new(16);
     cmd = sl_new(16);
@@ -214,6 +217,11 @@ int main(int argc, char** args) {
 			if (long_options[option_index].flag != 0)
 				break;
 			break;
+        case 'z':
+            if (optarg)
+                scaledown = atoi(optarg);
+            else
+                scaledown = 2;
 		case 'h':
 			help_flag = 1;
 			break;
@@ -574,6 +582,16 @@ int main(int argc, char** args) {
         sl_append(cmd, "-o");
         append_escape(cmd, xylsfn);
         append_escape(cmd, fitsimgfn);
+
+        if (scaledown > 1) {
+            if (scaledown == 2)
+                sl_append(cmd, "-H");
+            else {
+                // FIXME
+                fprintf(stderr, "Can only downsample image by 2.\n");
+                exit(-1);
+            }
+        }
 
         cmdstr = sl_implode(cmd, " ");
         sl_remove_all(cmd);
