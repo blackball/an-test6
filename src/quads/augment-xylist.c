@@ -334,6 +334,7 @@ int main(int argc, char** args) {
 		case '?':
 			break;
 		default:
+            fprintf(stderr, "Unknown option '-%c'\n", optopt);
 			exit( -1);
 		}
 	}
