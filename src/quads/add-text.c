@@ -27,7 +27,7 @@ void print_help(char* progname) {
            "  -c <color>:\n"
            , progname);
     for (i=0;; i++) {
-        char* color = cairoutils_get_color_name(i);
+        const char* color = cairoutils_get_color_name(i);
         if (!color) break;
         fprintf(stderr, "     %s\n", color);
     }
@@ -141,7 +141,7 @@ int main(int argc, char** args) {
             sl_append(lines, cptr);
             break;
         }
-        sl_appendf(lines, "%.*s", (nl - cptr) - 1, cptr);
+        sl_appendf(lines, "%.*s", (int)((nl - cptr) - 1), cptr);
         cptr = nl + 1;
     }
     // Treat the string "\n" as a newline also.
@@ -152,7 +152,7 @@ int main(int argc, char** args) {
         if (!nl)
             continue;
         sl_remove(lines, i);
-        sl_insertf(lines, i, "%.*s", nl - line, line);
+        sl_insertf(lines, i, "%.*s", (int)(nl - line), line);
         sl_insertf(lines, i+1, "%s", nl + 2);
     }
 
