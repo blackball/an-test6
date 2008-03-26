@@ -214,15 +214,14 @@ int main(int argc, char** args) {
 			break;
 		switch (c) {
 		case 0:
-			/* If this option set a flag, do nothing else now. */
-			if (long_options[option_index].flag != 0)
-				break;
-			break;
+            fprintf(stderr, "Unknown option '-%c'\n", optopt);
+            exit(-1);
         case 'z':
             if (optarg)
                 scaledown = atoi(optarg);
             else
                 scaledown = 2;
+            break;
 		case 'h':
 			help_flag = 1;
 			break;
