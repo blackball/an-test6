@@ -125,6 +125,7 @@ static void print_help(const char* progname) {
            "  [--code-tolerance <tol>]: matching distance for quads, default 0.01  (-c)\n"
            "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
            "  [--resort]: sort the star brightnesses using a compromise between background-subtraction and no background-subtraction (-r). \n"
+           "  [--downsample <n>]: downsample the image by factor <n> before running source extraction  (-z).\n"
 		   "\n", progname);
 }
 
