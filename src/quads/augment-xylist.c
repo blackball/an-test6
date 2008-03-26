@@ -46,7 +46,7 @@
 
 #include "qfits.h"
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:x:w:e:TP:S:R:W:M:C:fd:F:2m:X:Y:s:avk:I:V:c:E:r";
+static const char* OPTIONS = "2C:E:F:H:I:L:M:P:R:S:TV:W:X:Y:ac:d:e:fg:hi:k:m:o:rs:t:u:vw:x:";
 
 static struct option long_options[] = {
 	{"help",		   no_argument,	      0, 'h'},
