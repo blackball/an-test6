@@ -7,7 +7,6 @@ Author: Keir Mierle 2007
 import sys
 import os
 import tempfile
-from fits2fits import fits2fits as fits2fits
 
 fitstype = "FITS image data"
 fitsext = 'fits'
@@ -115,6 +114,9 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
     # If it's a FITS file we want to filter it first because of the many
     # misbehaved FITS files. fits2fits is a sanitizer.
     if (ext == fitsext) and (not no_fits2fits):
+
+        from fits2fits import fits2fits as fits2fits
+
         if not sanitized:
             (outfile_dir, outfile_file) = os.path.split(outfile)
             (f, sanitized) = tempfile.mkstemp('sanitized', outfile_file, outfile_dir)
