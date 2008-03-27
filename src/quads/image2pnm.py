@@ -11,14 +11,16 @@ import tempfile
 fitstype = "FITS image data"
 fitsext = 'fits'
 
+pgmcmd = "pgmtoppm rgbi:1/1/1 %s > %s"
+
 imgcmds = {fitstype : (fitsext, "an-fitstopnm -i %s > %s"),
            "JPEG image data"  : ("jpg",  "jpegtopnm %s > %s"),
            "PNG image data"   : ("png",  "pngtopnm %s > %s"),
            "GIF image data"   : ("gif",  "giftopnm %s > %s"),
            "Netpbm PPM"       : ("pnm",  "ppmtoppm < %s > %s"),
            "Netpbm PPM \"rawbits\" image data" : ("pnm",  "cp %s %s"),
-           "Netpbm PGM"       : ("pnm",  "pgmtoppm %s > %s"),
-           "Netpbm PGM \"rawbits\" image data" : ("pnm",  "pgmtoppm %s > %s"),
+           "Netpbm PGM"       : ("pnm",  pgmcmd),
+           "Netpbm PGM \"rawbits\" image data" : ("pnm",  pgmcmd),
            "TIFF image data"  : ("tiff",  "tifftopnm %s > %s"),
            }
 
@@ -149,7 +151,7 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
         typeinfo = run_file(outfile)
         if (typeinfo.startswith("Netpbm PGM")):
             # Convert to PPM.
-            do_command("pgmtoppm white %s > %s" % (shell_escape(outfile), shell_escape(original_outfile)))
+            do_command(pgmcmd % (shell_escape(outfile), shell_escape(original_outfile)))
             tempfiles.append(outfile)
         else:
             os.rename(outfile, original_outfile)
