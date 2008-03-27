@@ -70,7 +70,7 @@ static void add_columns(fitstable_t* tab, bool write) {
 		sprintf(fld, "BAND_%i", ob);
         ADDCOL(c, c, fld, nil, obs[ob].band);
 		sprintf(fld, "ID_%i", ob);
-        ADDCOL(i64, i64, fld, nil, obs[ob].id);
+        ADDCOL(i, i, fld, nil, obs[ob].id);
 		sprintf(fld, "MAG_%i", ob);
         ADDCOL(f, f, fld, "mag", obs[ob].mag);
 		sprintf(fld, "SIGMA_MAG_%i", ob);
