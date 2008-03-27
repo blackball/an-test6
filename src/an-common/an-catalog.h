@@ -43,7 +43,9 @@ struct an_observation {
     // the catalog-specific band of the observation ('O', 'E', 'J', 'H', etc)
 	unsigned char band;
 	int id;
+    // [mag]
 	float mag;
+    // [mag]
 	float sigma_mag;
 };
 typedef struct an_observation an_observation;

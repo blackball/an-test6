@@ -99,7 +99,7 @@ struct twomass_entry {
 	char h_cc;
 	char k_cc;
 
-	// number of detections (seen, possible)
+	// number of detections (M=seen, N=possible)
 	uint8_t j_ndet_M;
 	uint8_t j_ndet_N;
 	uint8_t h_ndet_M;
@@ -122,7 +122,7 @@ struct twomass_entry {
 	uint8_t date_month;
 	uint8_t date_day;
 
-	// in days: Julian date (+- 30 seconds) of the measurement.
+	// [days]: Julian date (+- 30 seconds) of the measurement.
 	double jdate;
 
 	// nightly scan number

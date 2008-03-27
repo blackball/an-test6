@@ -126,6 +126,7 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 	int i;
 	double vals1[5];
 	float val2;
+	float val3;
 
 	cursor = line;
 	for (i=0; i<5; i++) {
@@ -136,11 +137,15 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 		}
 		cursor += nchars;
 	}
-	e->ra = vals1[0];
-	e->dec = vals1[1];
-	e->err_major = arcsec2deg(vals1[2]);
-	e->err_minor = arcsec2deg(vals1[3]);
-	e->err_angle = vals1[4];
+
+    // note: the bracketed units are the units used in the [source file : struct];
+    // if only unit is given then it's the same in both.
+
+	e->ra = vals1[0];  // [deg]
+	e->dec = vals1[1]; // [deg]
+	e->err_major = arcsec2deg(vals1[2]); // [arcsec : deg]
+	e->err_minor = arcsec2deg(vals1[3]); // [arcsec : deg]
+	e->err_angle = vals1[4]; // [deg]
 
 	printval("ra %g, dec %g, err_major %g, err_minor %g, err_angle %i\n", e->ra, e->dec, e->err_major, e->err_minor, e->err_angle);
 
@@ -163,6 +168,7 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 			&e->j_m, &e->j_cmsig, &e->j_msigcom, &e->j_snr,
 			&e->h_m, &e->h_cmsig, &e->h_msigcom, &e->h_snr,
 			&e->k_m, &e->k_cmsig, &e->k_msigcom, &e->k_snr };
+        // these are all [mag] or unitless
 		if (parse_null(&cursor, dests[i])) {
 			fprintf(stderr, "Failed to parse \"%s\" entry in 2MASS line.\n", names[i]);
 			return -1;
@@ -308,7 +314,7 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 		return -1;
 	}
 	cursor += nchars;
-    e->proximity = arcsec2deg(e->proximity);
+    e->proximity = arcsec2deg(e->proximity); // [arcsec : deg]
 	printval("proximity %g\n", e->proximity);
 
 	if (parse_null(&cursor, &val2)) {
@@ -318,7 +324,7 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 	if (twomass_is_null_float(val2))
 		e->prox_angle = TWOMASS_NULL;
 	else
-		e->prox_angle = val2;
+		e->prox_angle = val2; // [deg]
 
 	printval("proximity_angle %i\n", e->prox_angle);
 
@@ -397,7 +403,7 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 	printval("date %i/%i/%i\n", e->date_year, e->date_month, e->date_day);
 	printval("scan %i\n", e->scan);
 
-	if (sscanf(cursor, "%f|%f|%n", &e->glon, &e->glat, &nchars) != 2) {
+	if (sscanf(cursor, "%f|%f|%n", &e->glon, &e->glat, &nchars) != 2) { // [deg], [deg]
 		fprintf(stderr, "Failed to parse 'glon/glat' entry in 2MASS line.\n");
 		return -1;
 	}
@@ -409,8 +415,8 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 		return -1;
 	}
 	cursor += nchars;
-    e->x_scan = arcsec2deg(e->x_scan);
-	printval("x_scan %g, jdate %g.\n", e->x_scan, e->jdate);
+    e->x_scan = arcsec2deg(e->x_scan); // [arcsec : deg]
+	printval("x_scan %g, jdate %g.\n", e->x_scan, e->jdate); // [day]
 
 	for (i=0; i<9; i++) {
 		char* names[] = {
@@ -418,6 +424,7 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 			"j_m_stdap", "j_msig_stdap",
 			"h_m_stdap", "h_msig_stdap",
 			"k_m_stdap", "k_msig_stdap" };
+        // all [mag] or unitless
 		float* dests[] = {
 			&e->j_psfchi, &e->h_psfchi, &e->k_psfchi,
 			&e->j_m_stdap, &e->j_msig_stdap,
@@ -440,8 +447,8 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 			return -1;
 		}
 		cursor += nchars;
-		e->dist_edge_ns = arcsec2deg(dist_ns);
-		e->dist_edge_ew = arcsec2deg(dist_ew);
+		e->dist_edge_ns = arcsec2deg(dist_ns); // [arcsec : deg]
+		e->dist_edge_ew = arcsec2deg(dist_ew); // [arcsec : deg]
 		switch (ns) {
 		case 'n':
 			e->dist_flag_ns = TRUE;
@@ -511,17 +518,22 @@ int twomass_parse_entry(struct twomass_entry* e, const char* line) {
 	ensure(*cursor, "association");
 	cursor++;
 
-	if (parse_null(&cursor, &e->dist_opt) ||
-		parse_null(&cursor, &val2) ||
+	if (parse_null(&cursor, &val2) || // dist_opt
+		parse_null(&cursor, &val3) || // phi_opt
 		parse_null(&cursor, &e->b_m_opt) ||
 		parse_null(&cursor, &e->vr_m_opt)) {
 		fprintf(stderr, "Failed to parse 'dist_opt/phi_opt/b_m_opt/vr_m_opt' entries in 2MASS line.\n");
 		return -1;
 	}
 	if (twomass_is_null_float(val2))
+		e->dist_opt = TWOMASS_NULL;
+	else
+		e->dist_opt = arcsec2deg(val2); // [arcsec : deg]
+
+	if (twomass_is_null_float(val3))
 		e->phi_opt = TWOMASS_NULL;
 	else
-		e->phi_opt = val2;
+		e->phi_opt = val3;
 
 	printval("dist_opt %g, phi_opt %g, b_m_opt %g, vr_m_opt %g.\n", e->dist_opt, e->phi_opt, e->b_m_opt, e->vr_m_opt);
 
