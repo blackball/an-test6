@@ -234,7 +234,6 @@ int main(int argc, char** args) {
 			int N = usnob_fits_count_entries(usnob);
 			int spikesFound = 0;
 			printf("Reading %i entries from USNO-B catalog file %s\n", N, infn);
-			//usnob->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
 				int ob, j;
 
@@ -264,13 +263,13 @@ int main(int argc, char** args) {
 
 				memset(&an, 0, sizeof(an));
 
-				an.ra = entry->ra;
+				an.ra  = entry->ra;
 				an.dec = entry->dec;
-				an.motion_ra = entry->pm_ra;
+				an.motion_ra  = entry->pm_ra;
 				an.motion_dec = entry->pm_dec;
-				an.sigma_ra = entry->sigma_ra;
+				an.sigma_ra  = entry->sigma_ra;
 				an.sigma_dec = entry->sigma_dec;
-				an.sigma_motion_ra = entry->sigma_pm_ra;
+				an.sigma_motion_ra  = entry->sigma_pm_ra;
 				an.sigma_motion_dec = entry->sigma_pm_dec;
 
 				an.id = an_catalog_get_id(version, starid);
@@ -305,7 +304,6 @@ int main(int argc, char** args) {
 			tycho2_entry* entry;
 			int N = tycho2_fits_count_entries(tycho);
 			printf("Reading %i entries from Tycho-2 catalog file %s\n", N, infn);
-			//tycho->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
 				int ob;
 				if (!(i % 100000)) {
@@ -324,13 +322,13 @@ int main(int argc, char** args) {
 
 				memset(&an, 0, sizeof(an));
 
-				an.ra = entry->ra;
+				an.ra  = entry->ra;
 				an.dec = entry->dec;
-				an.sigma_ra = entry->sigma_ra;
+				an.sigma_ra  = entry->sigma_ra;
 				an.sigma_dec = entry->sigma_dec;
-				an.motion_ra = entry->pm_ra;
+				an.motion_ra  = entry->pm_ra;
 				an.motion_dec = entry->pm_dec;
-				an.sigma_motion_ra = entry->sigma_pm_ra;
+				an.sigma_motion_ra  = entry->sigma_pm_ra;
 				an.sigma_motion_dec = entry->sigma_pm_dec;
 
 				an.id = an_catalog_get_id(version, starid);
@@ -380,7 +378,6 @@ int main(int argc, char** args) {
 			twomass_entry* entry;
 			int N = twomass_fits_count_entries(twomass);
 			printf("Reading %i entries from 2MASS catalog file %s\n", N, infn);
-			//twomass->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
 				int ob;
 				if (!(i % 100000)) {
@@ -402,7 +399,7 @@ int main(int argc, char** args) {
 
 				memset(&an, 0, sizeof(an));
 
-				an.ra = entry->ra;
+				an.ra  = entry->ra;
 				an.dec = entry->dec;
 				an.sigma_ra =
 					sqrt(square(cos(deg2rad(entry->err_angle)) * entry->err_major) +

@@ -42,6 +42,7 @@ struct an_observation {
 	uint8_t catalog;
     // the catalog-specific band of the observation ('O', 'E', 'J', 'H', etc)
 	unsigned char band;
+    // the ID number in the original survey
 	int id;
     // [mag]
 	float mag;
@@ -60,16 +61,19 @@ struct an_entry {
     // [degrees]
 	double dec;
     // [degrees]
+    // note: this is actually stddev in RA*cos(Dec)
 	float sigma_ra;
     // [degrees]
 	float sigma_dec;
 
     // PROPER MOTION
     // [arcsec/yr]
+    // note: this is actually d(RA*cos(Dec))/dt
 	float motion_ra;
     // [arcsec/yr]
 	float motion_dec;
     // [arcsec/yr]
+    // note: this is actually stddev in d(RA*cos(Dec))/dt
 	float sigma_motion_ra;
     // [arcsec/yr]
 	float sigma_motion_dec;
