@@ -46,7 +46,7 @@
 
 #include "qfits.h"
 
-static const char* OPTIONS = "2C:E:F:H:I:L:M:P:R:S:TV:W:X:Y:ac:d:e:fg:hi:k:m:o:rs:t:u:vw:x:z::";
+static const char* OPTIONS = "2AC:E:F:H:I:L:M:P:R:S:TV:W:X:Y:ac:d:e:fg:hi:k:m:o:rs:t:u:vw:x:z::";
 
 static struct option long_options[] = {
 	{"help",		   no_argument,	      0, 'h'},
@@ -84,6 +84,7 @@ static struct option long_options[] = {
     {"pixel-error",    required_argument, 0, 'E'},
     {"resort",         no_argument,       0, 'r'},
     {"downsample",     optional_argument, 0, 'z'},
+    {"dont-augment",   no_argument,       0, 'A'},
 	{0, 0, 0, 0}
 };
 
@@ -126,6 +127,7 @@ static void print_help(const char* progname) {
            "  [--pixel-error <pix>]: for verification, size of pixel positional error, default 1  (-E)\n"
            "  [--resort]: sort the star brightnesses using a compromise between background-subtraction and no background-subtraction (-r). \n"
            "  [--downsample <n>]: downsample the image by factor <n> before running source extraction  (-z).\n"
+           "  [--dont-augment]: quit after writing the xylist (use with --keep-xylist)  (-A)\n"
 		   "\n", progname);
 }
 
@@ -196,7 +198,7 @@ int main(int argc, char** args) {
     double codetol = 0.0;
     double pixerr = 0.0;
     bool resort = FALSE;
-
+    bool doaugment = TRUE;
     int scaledown = 0;
 
     depths = il_new(4);
@@ -216,6 +218,9 @@ int main(int argc, char** args) {
 		case 0:
             fprintf(stderr, "Unknown option '-%c'\n", optopt);
             exit(-1);
+        case 'A':
+            doaugment = FALSE;
+            break;
         case 'z':
             if (optarg)
                 scaledown = atoi(optarg);
@@ -698,6 +703,11 @@ int main(int argc, char** args) {
 		}
         free(cmdstr);
 		xylsfn = sortedxylsfn;
+    }
+
+    if (!doaugment) {
+        // done!
+        return 0;
     }
 
 	// start piling FITS headers in there.
