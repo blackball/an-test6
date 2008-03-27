@@ -38,7 +38,9 @@ enum an_sources {
 };
 
 struct an_observation {
-	unsigned char catalog;
+    // one of AN_SOURCES_* defined above.
+	uint8_t catalog;
+    // the catalog-specific band of the observation ('O', 'E', 'J', 'H', etc)
 	unsigned char band;
 	int id;
 	float mag;
@@ -51,23 +53,23 @@ typedef struct an_observation an_observation;
 struct an_entry {
 	uint64_t id;
     // POSITION
-    // In degrees
+    // [degrees]
 	double ra;
-    // In degrees
+    // [degrees]
 	double dec;
-    // In degrees
+    // [degrees]
 	float sigma_ra;
-    // In degrees
+    // [degrees]
 	float sigma_dec;
 
     // PROPER MOTION
-    // In arcsec/yr.
+    // [arcsec/yr]
 	float motion_ra;
-    // In arcsec/yr.
+    // [arcsec/yr]
 	float motion_dec;
-    // In arcsec/yr
+    // [arcsec/yr]
 	float sigma_motion_ra;
-    // In arcsec/yr
+    // [arcsec/yr]
 	float sigma_motion_dec;
 
 	uint8_t nobs;

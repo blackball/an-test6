@@ -56,11 +56,10 @@ static void add_columns(fitstable_t* tab, bool write) {
     ADDCOL(d, d, "DEC", "deg", dec);
     ADDCOL(f, f, "SIGMA_RA",  "deg", sigma_ra);
     ADDCOL(f, f, "SIGMA_DEC", "deg", sigma_dec);
-
-    ADDCOL(f, f, "MOTION_RA",  "mas/yr", motion_ra);
-    ADDCOL(f, f, "MOTION_DEC", "mas/yr", motion_dec);
-    ADDCOL(f, f, "SIGMA_MOTION_RA",  "mas/yr", sigma_motion_ra);
-    ADDCOL(f, f, "SIGMA_MOTION_DEC", "mas/yr", sigma_motion_dec);
+    ADDCOL(f, f, "MOTION_RA",  "arcsec/yr", motion_ra);
+    ADDCOL(f, f, "MOTION_DEC", "arcsec/yr", motion_dec);
+    ADDCOL(f, f, "SIGMA_MOTION_RA",  "arcsec/yr", sigma_motion_ra);
+    ADDCOL(f, f, "SIGMA_MOTION_DEC", "arcsec/yr", sigma_motion_dec);
     ADDCOL(u8, u8, "NOBSERVATIONS", nil, nobs);
     ADDCOL(i64, i64, "ID", nil, id);
 
@@ -71,11 +70,11 @@ static void add_columns(fitstable_t* tab, bool write) {
 		sprintf(fld, "BAND_%i", ob);
         ADDCOL(c, c, fld, nil, obs[ob].band);
 		sprintf(fld, "ID_%i", ob);
-        ADDCOL(i, i32, fld, nil, obs[ob].id);
+        ADDCOL(i64, i64, fld, nil, obs[ob].id);
 		sprintf(fld, "MAG_%i", ob);
-        ADDCOL(f, f, fld, nil, obs[ob].mag);
+        ADDCOL(f, f, fld, "mag", obs[ob].mag);
 		sprintf(fld, "SIGMA_MAG_%i", ob);
-        ADDCOL(f, f, fld, nil, obs[ob].sigma_mag);
+        ADDCOL(f, f, fld, "mag", obs[ob].sigma_mag);
     }
 }
 #undef ADDCOL
