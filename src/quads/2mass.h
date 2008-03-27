@@ -171,6 +171,7 @@ struct twomass_entry {
 
     // [degrees]
 	float dist_edge_ns;
+    // [degrees]
 	float dist_edge_ew;
 	// TRUE=north
 	bool dist_flag_ns;

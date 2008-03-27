@@ -81,9 +81,9 @@ struct observation {
 
 struct usnob_entry {
 	// (numbers in brackets are number of digits used in USNOB format)
-	// in degrees (a:9)
+	// [degrees] (a:9)
 	double ra;
-	// in degrees (s:8)
+	// [degrees] (s:8)
 	double dec;
 
 	// [degrees] (u:3)
@@ -96,7 +96,8 @@ struct usnob_entry {
 	// [degrees] (R:1)
 	float sigma_dec_fit;
 
-	// proper motion [arcsec/yr] (A:3) 
+	// proper motion
+    // [arcsec/yr] (A:3) 
 	float pm_ra;
 	// [arcsec/yr] (S:3)
 	float pm_dec;

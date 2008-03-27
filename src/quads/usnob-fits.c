@@ -64,10 +64,10 @@ static void add_columns(fitstable_t* tab, bool write) {
 	ADDCOL(f,  f,       "SIGMA_DEC_FIT",     "deg",  sigma_dec_fit);
 
 	ADDCOL(f,  f,       "PM_RA",             "arcsec/yr", pm_ra);
-	ADDCOL(f,  f,       "PM_DEC",            "arcsyc/yr", pm_dec);
+	ADDCOL(f,  f,       "PM_DEC",            "arcsec/yr", pm_dec);
 
 	ADDCOL(f,  f,       "SIGMA_PM_RA",       "arcsec/yr", sigma_pm_ra);
-	ADDCOL(f,  f,       "SIGMA_PM_DEC",      "arcsyc/yr", sigma_pm_dec);
+	ADDCOL(f,  f,       "SIGMA_PM_DEC",      "arcsec/yr", sigma_pm_dec);
 
 	ADDCOL(f,  f,       "PM_PROBABILITY",    nil, pm_prob);
 	ADDCOL(f,  f,       "EPOCH",             "yr", epoch);

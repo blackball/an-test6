@@ -136,13 +136,13 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		assert(ival <= (100*60*60*360));
 		return -1;
 	}
-	usnob->ra = (double)ival / (100.0 * 60.0 * 60.0);
+	usnob->ra = arcsec2deg(ival * 0.01);
 
 	// bytes 4-7: uint, SPD (south polar distance) in units of 0.01 arcsec.
 	ival = u32_letoh(uline[1]);
 	assert(ival <= (100*60*60*180));
 	// DEC = south polar distance - 90 degrees
-	usnob->dec = (double)ival / (100.0 * 60.0 * 60.0) - 90.0;
+	usnob->dec = arcsec2deg(ival * 0.01) - 90.0;
 
 	// bytes 8-11: uint, packed in base-10:
 	//    iPSSSSAAAA

@@ -71,6 +71,7 @@ struct tycho2_entry {
 
 	// [arcsec/yr]
 	float pm_ra;        // pmRA* / 1000
+    // (note that this is actually a change in RA*cos(Dec))
 	float pm_dec;       // pmDE / 1000
 
 	// [arcsec/yr]

@@ -192,25 +192,28 @@ int tycho2_parse_entry(const char* line, tycho2_entry* entry) {
 	assert(d15 == 0.0 || (d15 >= 1.905 && d15 <= 15.193));
 	assert(d16 == 0.0 || (d16 >= 0.009 && d16 <= 1.468));
 
-	entry->mean_ra = d1;
-	entry->mean_dec = d2;
-	entry->pm_ra = d3 / 1000.0; // milli-arcsec per yr in the raw files, arcsec per yr in the struct.
-	entry->pm_dec = d4 / 1000.0;
-	entry->sigma_mean_ra  = arcsec2deg((float)u1 / 1000.0);
-	entry->sigma_mean_dec = arcsec2deg((float)u2 / 1000.0);
-	entry->sigma_pm_ra = d5 / 1000.0;
-	entry->sigma_pm_dec = d6 / 1000.0;
-	entry->epoch_mean_ra = d7;
-	entry->epoch_mean_dec = d8;
+    // note: [units in Tycho-2 data file : units in struct]
+    // if only one unit is given, it's the same in both.
+
+	entry->mean_ra  = d1; // [deg]
+	entry->mean_dec = d2; // [deg]
+	entry->pm_ra  = d3 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->pm_dec = d4 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->sigma_mean_ra  = arcsec2deg((float)u1 / 1000.0); // [mas : deg]
+	entry->sigma_mean_dec = arcsec2deg((float)u2 / 1000.0); // [mas : deg]
+	entry->sigma_pm_ra  = d5 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->sigma_pm_dec = d6 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->epoch_mean_ra  = d7; // [yr]
+	entry->epoch_mean_dec = d8; // [yr]
 	entry->nobs = u3;
 	entry->goodness_mean_ra = d9;
 	entry->goodness_mean_dec = d10;
 	entry->goodness_pm_ra = d11;
 	entry->goodness_pm_dec = d12;
-	entry->mag_BT = d13;
-	entry->sigma_BT = d14;
-	entry->mag_VT = d15;
-	entry->sigma_VT = d16;
+	entry->mag_BT = d13;   // [mag]
+	entry->sigma_BT = d14; // [mag]
+	entry->mag_VT = d15;   // [mag]
+	entry->sigma_VT = d16; // [mag]
 
 	if (parse_uint(line + 136, 3, &u1) ||
 		parse_optional_uint(line + 142, 6, &u2, 0) ||
@@ -244,18 +247,18 @@ int tycho2_parse_entry(const char* line, tycho2_entry* entry) {
     if (u1 == 999)
         entry->prox = -1.0;
     else
-        entry->prox = arcsec2deg(u1 * 0.1);
+        entry->prox = arcsec2deg(u1 * 0.1); // [arcsec : deg]
 	entry->tycho1_star = (tycho1 == 'T') ? TRUE : FALSE;
 	entry->double_star = (posflag == 'D') ? TRUE : FALSE;
 	entry->photo_center_treatment = (posflag == 'P') ? TRUE : FALSE;
 	entry->hipparcos_id = u2;
 
-	entry->ra = d1;
-	entry->dec = d2;
-	entry->epoch_ra  = 1990.0 + d3;
-	entry->epoch_dec = 1990.0 + d4;
-	entry->sigma_ra  = arcsec2deg(d5 / 1000.0);
-	entry->sigma_dec = arcsec2deg(d6 / 1000.0);
+	entry->ra  = d1; // [deg]
+	entry->dec = d2; // [deg]
+	entry->epoch_ra  = 1990.0 + d3; // [yr]
+	entry->epoch_dec = 1990.0 + d4; // [yr]
+	entry->sigma_ra  = arcsec2deg(d5 / 1000.0); // [mas : deg]
+	entry->sigma_dec = arcsec2deg(d6 / 1000.0); // [mas : deg]
 	entry->correlation = d7;
 
 	return 0;
@@ -346,24 +349,24 @@ int tycho2_supplement_parse_entry(const char* line, tycho2_entry* entry) {
 
 	assert(u2 == 0 || (u2 >= 1 && u2 <= 120404));
 
-	entry->ra = d1;
-	entry->dec = d2;
-	entry->pm_ra  = d3 / 1000.0;
-	entry->pm_dec = d4 / 1000.0;
-	entry->sigma_ra  = arcsec2deg(d5 / 1000.0);
-	entry->sigma_dec = arcsec2deg(d6 / 1000.0);
-	entry->sigma_pm_ra  = d7 / 1000.0;
-	entry->sigma_pm_dec = d8 / 1000.0;
+	entry->ra  = d1; // [deg]
+	entry->dec = d2; // [deg]
+	entry->pm_ra  = d3 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->pm_dec = d4 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->sigma_ra  = arcsec2deg(d5 / 1000.0); // [arcsec : deg]
+	entry->sigma_dec = arcsec2deg(d6 / 1000.0); // [arcsec : deg]
+	entry->sigma_pm_ra  = d7 / 1000.0; // [mas/yr : arcsec/yr]
+	entry->sigma_pm_dec = d8 / 1000.0; // [mas/yr : arcsec/yr]
 	if (bvhflag == 'H') {
-		entry->mag_HP = d11;
-		entry->sigma_HP = d12;
+		entry->mag_HP = d11;   // [mag]
+		entry->sigma_HP = d12; // [mag]
 	} else {
-		entry->mag_BT = d9;
-		entry->sigma_BT = d10;
-		entry->mag_VT = d11;
-		entry->sigma_VT = d12;
+		entry->mag_BT = d9;    // [mag]
+		entry->sigma_BT = d10; // [mag]
+		entry->mag_VT = d11;   // [mag]
+		entry->sigma_VT = d12; // [mag]
 	}
-	entry->prox = arcsec2deg(u1 * 0.1);
+	entry->prox = arcsec2deg(u1 * 0.1); // [0.1 arcsec : deg]
 	entry->hipparcos_id = u2;
 
 	return 0;
