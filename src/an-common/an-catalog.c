@@ -45,7 +45,6 @@ static void add_columns(fitstable_t* tab, bool write) {
     tfits_type d = fitscolumn_double_type();
     tfits_type f = fitscolumn_float_type();
     tfits_type u8 = fitscolumn_u8_type();
-    tfits_type i32 = fitscolumn_i32_type();
     tfits_type i = fitscolumn_int_type();
     tfits_type i64 = fitscolumn_i64_type();
     tfits_type c = fitscolumn_char_type();

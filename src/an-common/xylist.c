@@ -165,23 +165,6 @@ bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycol
     if (ycolumn)
         xylist_set_yname(xyls, ycolumn);
 
-    /*
-     rtn = xylist_open_field(xyls, 1);
-     if (rtn) {
-     xylist_close(xyls);
-     if (reason) sprintf(*reason, "Failed to read FITS extension %i from file %s", 1, fn);
-     return 0;
-     }
-     xy = xylist_read_field(xyls, NULL);
-     if (!xy) {
-     xylist_close(xyls);
-     if (reason) sprintf(*reason, "Failed to read FITS extension %i from file %s", 1, fn);
-     return 0;
-     }
-     */
-
-    //xylist_get_header(xyls);
-
     fitstable_add_read_column_struct(xyls->table, fitscolumn_double_type(),
                                      1, 0, fitscolumn_any_type(), xyls->xname, TRUE);
     fitstable_add_read_column_struct(xyls->table, fitscolumn_double_type(),

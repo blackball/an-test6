@@ -1690,14 +1690,20 @@ char*  sl_implode(sl* list, const char* join) {
 }
 
 char* sl_appendf(sl* list, const char* format, ...) {
-    va_list lst;
 	char* str;
+    va_list lst;
     va_start(lst, format);
-    if (vasprintf(&str, format, lst) == -1)
-		return NULL;
-	sl_append_nocopy(list, str);
+    str = sl_appendvf(list, format, lst);
     va_end(lst);
 	return str;
+}
+
+char* sl_appendvf(sl* list, const char* format, va_list va) {
+	char* str;
+    if (vasprintf(&str, format, va) == -1)
+		return NULL;
+	sl_append_nocopy(list, str);
+    return str;
 }
 
 char* sl_insert_sortedf(sl* list, const char* format, ...) {

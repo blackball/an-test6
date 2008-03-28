@@ -26,6 +26,7 @@
 #define BL_H
 
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "keywords.h"
 
@@ -306,6 +307,9 @@ char*  sl_implode(sl* list, const char* join);
 char*
 ATTRIB_FORMAT(printf,2,3)
 sl_appendf(sl* list, const char* format, ...);
+
+// Appends the (newly-allocated) formatted string and returns it.
+char* sl_appendvf(sl* list, const char* format, va_list va);
 
 // Inserts the (newly-allocated) formatted string and returns it.
 char*
