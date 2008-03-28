@@ -80,8 +80,6 @@ def uncompress_file(infile, uncompressed, outdir=None, typeinfo=None, quiet=True
 def get_image_type(infile):
     typeinfo = run_file(infile)
     if not typeinfo in imgcmds:
-        #tmpf = tempfile.mkstemp()
-        #dcrawcmd = 'dcraw -i "%s" > %s 2> /dev/null' % (infile, tmpf)
         dcrawcmd = 'dcraw -i "%s" > /dev/null 2> /dev/null' % (infile)
         rtn = os.system(dcrawcmd)
         if os.WIFEXITED(rtn) and (os.WEXITSTATUS(rtn) == 0):
@@ -135,6 +133,8 @@ def image2pnm(infile, outfile, sanitized, force_ppm, no_fits2fits,
         original_outfile = outfile
         (outfile_dir, outfile_file) = os.path.split(outfile)
         (f, outfile) = tempfile.mkstemp('pnm', outfile_file, outfile_dir)
+        # we might rename this file later, so don't add it to the list of
+        # tempfiles to delete until later...
         os.close(f)
         if not quiet:
             log('temporary output file: ', outfile)
@@ -225,18 +225,10 @@ def main():
     if not options.outfile:
         parser.error('required argument missing: outfile')
 
-    #if not options.uncompressed_outfile:
-    #    options.uncompressed_outfile = options.infile+'.raw'
-    #if not options.sanitized_outfile:
-    #    options.sanitized_outfile = options.infile+'.sanitized.fits'
-
     # Find the path to this executable and use it to find other Astrometry.net
     # executables.
     if (len(sys.argv) > 0):
         mydir = os.path.dirname(sys.argv[0]) + "/"
-
-    #log('input file: ', options.infile);
-    #log('output file: ', options.outfile);
 
     return convert_image(options.infile, options.outfile,
                          options.uncompressed_outfile,

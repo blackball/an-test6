@@ -159,11 +159,11 @@ int main(int argc, char** args) {
 	int W = 0, H = 0;
 	double scalelo = 0.0, scalehi = 0.0;
 	char* scaleunits = NULL;
-	qfits_header* hdr;
+	qfits_header* hdr = NULL;
 	bool tweak = TRUE;
 	int tweak_order = 0;
 	int orig_nheaders;
-	FILE* fout;
+	FILE* fout = NULL;
 	char* savepnmfn = NULL;
     bool force_ppm = FALSE;
 	bool guess_scale = FALSE;
@@ -707,7 +707,7 @@ int main(int argc, char** args) {
 
     if (!doaugment) {
         // done!
-        return 0;
+        goto cleanup;
     }
 
 	// start piling FITS headers in there.
@@ -910,6 +910,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to write FITS header.\n");
 		exit(-1);
 	}
+    qfits_header_destroy(hdr);
 
 	// copy blocks from xyls to output.
 	{
@@ -941,12 +942,15 @@ int main(int argc, char** args) {
         }
 		fclose(fin);
 	}
+    fclose(fout);
 
+ cleanup:
 	for (i=0; i<sl_size(tempfiles); i++) {
 		char* fn = sl_get(tempfiles, i);
 		if (unlink(fn)) {
 			fprintf(stderr, "Failed to delete temp file \"%s\": %s.\n", fn, strerror(errno));
 		}
+        printf("Deleted temp file %s\n", fn);
 	}
 
     dl_free(scales);
@@ -954,9 +958,6 @@ int main(int argc, char** args) {
     il_free(fields);
     sl_free2(cmd);
     sl_free2(tempfiles);
-
-	fclose(fout);
-	qfits_header_destroy(hdr);
 
 	return 0;
 }
