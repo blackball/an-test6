@@ -103,7 +103,7 @@ int main(int argc, char** args) {
 	int c;
 	int startoptind;
 	int Nside = 9;
-	int i, hp, HP;
+	int i, HP;
 	an_catalog** cats;
 	int64_t starid;
 	int version = 0;
@@ -148,7 +148,7 @@ int main(int argc, char** args) {
 	// check that "allowed" healpixes (-H) are within range.
 	if (allowed_hps) {
 		for (i=0; i<il_size(allowed_hps); i++) {
-			hp = il_get(allowed_hps, i);
+            int hp = il_get(allowed_hps, i);
 			if (hp >= HP) {
 				fprintf(stderr, "Healpix %i is larger than 12*Nside*Nside-1 (%i).\n", hp, HP);
 				exit(-1);
@@ -471,7 +471,7 @@ int main(int argc, char** args) {
 	for (i=0; i<HP; i++) {
         qfits_header* hdr;
 		if (!cats[i]) continue;
-        hdr = an_catalog_get_primary_header(cats[hp]);
+        hdr = an_catalog_get_primary_header(cats[i]);
 		fits_header_mod_int(hdr, "NOBJS", an_catalog_count_entries(cats[i]), "Number of objects in this catalog.");
 		if (an_catalog_fix_headers(cats[i]) ||
 			an_catalog_close(cats[i])) {
