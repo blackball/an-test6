@@ -80,6 +80,9 @@ void error_reportv(err_t* e, const char* module, int line, const char* fmt, va_l
 
 void error_print_stack(err_t* e, FILE* f);
 
+// returns the error messages (not module:lines) in a newly-allocated string
+char* error_get_errs(err_t* e, const char* separator);
+
 
 #endif
 

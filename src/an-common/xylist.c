@@ -21,20 +21,13 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <errors.h>
 
 #include "xylist.h"
 #include "fitstable.h"
 #include "fitsioutils.h"
 #include "an-bool.h"
 #include "keywords.h"
-
-ATTRIB_FORMAT(printf,1,2)
-static void error(const char* format, ...) {
-    va_list lst;
-    va_start(lst, format);
-    vfprintf(stderr, format, lst);
-    va_end(lst);
-}
 
 double xy_getx(xy_t* f, int i) {
     assert(i < f->N);
@@ -155,10 +148,17 @@ void xy_from_dl(xy_t* xy, dl* l, bool flux, bool back) {
 bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
                            char** reason) {
     int rtn;
-    xylist_t* xyls = xylist_open(fn);
+    xylist_t* xyls;
+    err_t* err;
+
+    errors_push_state();
+    err = errors_get_state();
+    err->print = NULL;
+    err->save = TRUE;
+
+    xyls = xylist_open(fn);
     if (!xyls) {
-        if (reason) asprintf(reason, "Failed to open file %s", fn);
-        return FALSE;
+        goto bail;
     }
     if (xcolumn)
         xylist_set_xname(xyls, xcolumn);
@@ -173,11 +173,17 @@ bool xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycol
     rtn = fitstable_read_extension(xyls->table, 1);
     xylist_close(xyls);
     if (rtn) {
-        if (reason) asprintf(reason, "Failed to find a matching FITS table in extension 1 of file %s\n", fn);
-        return FALSE;
+        //if (reason) asprintf(reason, "Failed to find a matching FITS table in extension 1 of file %s\n", fn);
+        goto bail;
     }
 
+    errors_pop_state();
     return TRUE;
+
+ bail:
+    if (reason) *reason = error_get_errs(err, ": ");
+    errors_pop_state();
+    return FALSE;
 }
 
 static xylist_t* xylist_new() {
@@ -197,11 +203,13 @@ xylist_t* xylist_open(const char* fn) {
     qfits_header* hdr;
 	xylist_t* ls = NULL;
 	ls = xylist_new();
-	if (!ls)
+	if (!ls) {
+        ERROR("Failed to allocate xylist");
 		return NULL;
+    }
     ls->table = fitstable_open(fn);
     if (!ls->table) {
-		error("Failed to open FITS table %s.\n", fn);
+		ERROR("Failed to open FITS table %s", fn);
         free(ls);
         return NULL;
     }
@@ -212,7 +220,6 @@ xylist_t* xylist_open(const char* fn) {
 	ls->nfields = qfits_query_n_ext(fn);
     ls->include_flux = TRUE;
     ls->include_background = TRUE;
-    //ls->field = -1;
 	return ls;
 }
 
@@ -220,10 +227,13 @@ xylist_t* xylist_open_for_writing(const char* fn) {
 	xylist_t* ls;
     qfits_header* hdr;
 	ls = xylist_new();
-	if (!ls)
-		goto bailout;
+	if (!ls) {
+        ERROR("Failed to allocate xylist");
+        return NULL;
+    }
     ls->table = fitstable_open_for_writing(fn);
     if (!ls->table) {
+        ERROR("Failed to open FITS table for writing");
         free(ls);
         return NULL;
     }
@@ -233,13 +243,7 @@ xylist_t* xylist_open_for_writing(const char* fn) {
     xylist_set_antype(ls, AN_FILETYPE_XYLS);
     hdr = fitstable_get_primary_header(ls->table);
     qfits_header_add(hdr, "AN_FILE", ls->antype, "Astrometry.net file type", NULL);
-    //ls->field = 1;
 	return ls;
-
- bailout:
-	if (ls)
-		free(ls);
-	return NULL;
 }
 
 int xylist_add_tagalong_column(xylist_t* ls, tfits_type c_type,
@@ -271,7 +275,7 @@ int xylist_close(xylist_t* ls) {
     int rtn = 0;
     if (ls->table) {
         if (fitstable_close(ls->table)) {
-			error("Failed to close xylist table\n");
+			ERROR("Failed to close xylist table");
             rtn = -1;
         }
     }
@@ -370,24 +374,18 @@ xy_t* xylist_read_field(xylist_t* ls, xy_t* fld) {
 xy_t* xylist_read_field_num(xylist_t* ls, int ext, xy_t* fld) {
 	xy_t* rtn;
 	if (xylist_open_field(ls, ext)) {
-		error("xylist_open_field(%i) failed\n", ext);
+		ERROR("Failed to open field %i from xylist", ext);
         return NULL;
     }
 	rtn = xylist_read_field(ls, fld);
 	if (!rtn)
-		error("xylist_read_field() failed\n");
+		ERROR("Failed to read field %i from xylist", ext);
     return rtn;
 }
 
 int xylist_open_field(xylist_t* ls, int i) {
     return fitstable_open_extension(ls->table, i);
 }
-
-/*
- int xylist_start_field(xylist_t* ls) {
- return xylist_next_field(ls);
- }
- */
 
 // Used when writing: start a new field.  Set up the table and header
 // structures so that they can be added to before writing the field header.
@@ -441,11 +439,6 @@ int xylist_write_primary_header(xylist_t* ls) {
 
 int xylist_fix_primary_header(xylist_t* ls) {
     return fitstable_fix_primary_header(ls->table);
-    /*
-     qfits_header* hdr = ls->table->primheader;
-     qfits_header_mod(hdr, "AN_FILE", ls->antype, "Astrometry.net file type");
-     return fitstable_fix_header(ls->table);
-     */
 }
 
 int xylist_write_header(xylist_t* ls) {

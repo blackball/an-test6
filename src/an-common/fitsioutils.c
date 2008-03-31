@@ -28,7 +28,18 @@
 #include "ioutils.h"
 #include "keywords.h"
 #include "an-endian.h"
+#include "errors.h"
+#include "qfits_error.h"
 
+static void errfunc(char* errstr) {
+    report_error("qfits", -1, "%s", errstr);
+}
+
+void fits_use_error_system() {
+    qfits_err_remove_all();
+    qfits_err_register(errfunc);
+    qfits_err_statset(1);
+}
 
 int fits_convert_data(void* vdest, int deststride, tfits_type desttype,
                       const void* vsrc, int srcstride, tfits_type srctype,

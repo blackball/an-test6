@@ -61,8 +61,7 @@ pixels=UxV arcmin
 #include "xylist.h"
 #include "matchfile.h"
 #include "scriptutils.h"
-
-#include "qfits_error.h"
+#include "fitsioutils.h"
 
 static const char* OPTIONS = "2C:D:E:F:GH:I:KL:OPSTU:V:W:X:Y:ac:d:fghk:m:o:rs:t:u:vz";
 
@@ -564,9 +563,8 @@ int main(int argc, char** args) {
         if (verbose)
             printf("Checking if file \"%s\" is xylist or image: ", infile);
         fflush(NULL);
-        // turn on QFITS error reporting.
-        if (verbose)
-            qfits_err_statset(1);
+        fits_use_error_system();
+        reason = NULL;
 		isxyls = xylist_is_file_xylist(infile, xcol, ycol, &reason);
         if (verbose) {
             printf(isxyls ? "xyls\n" : "image\n");
@@ -574,6 +572,7 @@ int main(int argc, char** args) {
                 printf("  (%s)\n", reason);
             }
         }
+        free(reason);
         fflush(NULL);
 
 		if (isxyls) {

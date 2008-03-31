@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/param.h>
+#include <errors.h>
 
 #include "fitstable.h"
 #include "fitsioutils.h"
@@ -337,7 +338,7 @@ int fitstable_write_one_column(fitstable_t* table, int colnum,
     }
 
     if (fseeko(table->fid, start, SEEK_SET)) {
-        fprintf(stderr, "Failed to fseeko to the start in fitstable_write_one_struct_field: %s\n", strerror(errno));
+        SYSERROR("Failed to fseeko() to the start of the file.");
         return -1;
     }
 
@@ -356,7 +357,7 @@ int fitstable_write_one_column(fitstable_t* table, int colnum,
     for (i=0; i<nrows; i++) {
         if (fseeko(table->fid, start + i * table->table->tab_w, SEEK_SET) ||
             fits_write_data_array(table->fid, src, col->fitstype, col->arraysize)) {
-            fprintf(stderr, "Failed to write row %i of column %i: %s\n", rowoffset+i, colnum, strerror(errno));
+            SYSERROR("Failed to write row %i of column %i", rowoffset+i, colnum);
             return -1;
         }
         src = ((const char*)src) + src_stride;
@@ -364,8 +365,7 @@ int fitstable_write_one_column(fitstable_t* table, int colnum,
     free(buf);
 
     if (fseeko(table->fid, foffset, SEEK_SET)) {
-        fprintf(stderr, "Failed to restore file offset in fitstable_write_one_struct_field: %s\n",
-                strerror(errno));
+        SYSERROR("Failed to restore file offset.");
         return -1;
     }
     return 0;
@@ -432,13 +432,13 @@ static void* read_array(const fitstable_t* tab,
 
     colnum = fits_find_column(tab->table, colname);
     if (colnum == -1) {
-        fprintf(stderr, "Column \"%s\" not found in FITS table %s.\n", colname, tab->fn);
+        ERROR("Column \"%s\" not found in FITS table %s.\n", colname, tab->fn);
         return NULL;
     }
     col = tab->table->col + colnum;
     if (!array_ok && (col->atom_nb != 1)) {
-        fprintf(stderr, "Column \"%s\" in FITS table %s is an array of size %i, not a scalar.\n",
-                colname, tab->fn, col->atom_nb);
+        ERROR("Column \"%s\" in FITS table %s is an array of size %i, not a scalar.\n",
+              colname, tab->fn, col->atom_nb);
         return NULL;
     }
 
@@ -525,18 +525,18 @@ fitstable_t* fitstable_open(const char* fn) {
     fitstable_t* tab;
     tab = fitstable_new();
     if (!tab) {
-		fprintf(stderr, "Failed to allocate new FITS table structure.\n");
+		ERROR("Failed to allocate new FITS table structure.");
         goto bailout;
 	}
     tab->extension = 1;
     tab->fn = strdup_safe(fn);
     tab->primheader = qfits_header_read(fn);
     if (!tab->primheader) {
-        fprintf(stderr, "Failed to read primary FITS header from %s.\n", fn);
+        ERROR("Failed to read primary FITS header from %s.", fn);
         goto bailout;
     }
     if (fitstable_open_extension(tab, tab->extension)) {
-        fprintf(stderr, "Failed to open extension %i in file %s.\n", tab->extension, fn);
+        ERROR("Failed to open extension %i in file %s.", tab->extension, fn);
         goto bailout;
     }
 	return tab;
@@ -555,7 +555,7 @@ fitstable_t* fitstable_open_for_writing(const char* fn) {
     tab->fn = strdup_safe(fn);
     tab->fid = fopen(fn, "wb");
 	if (!tab->fid) {
-		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+		SYSERROR("Couldn't open output file %s for writing", fn);
 		goto bailout;
 	}
 	tab->primheader = qfits_table_prim_header_default();
@@ -574,7 +574,7 @@ int fitstable_close(fitstable_t* tab) {
     if (!tab) return 0;
     if (tab->fid) {
         if (fclose(tab->fid)) {
-            fprintf(stderr, "Failed to close output file %s: %s\n", tab->fn, strerror(errno));
+            SYSERROR("Failed to close output file %s", tab->fn);
             rtn = -1;
         }
     }
@@ -644,7 +644,7 @@ int fitstable_open_extension(fitstable_t* tab, int ext) {
     }
 	tab->table = qfits_table_open(tab->fn, ext);
 	if (!tab->table) {
-		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n", ext, tab->fn);
+		ERROR("FITS extension %i in file %s is not a table (or there was an error opening the file)", ext, tab->fn);
 		return -1;
 	}
     if (tab->header) {
@@ -652,7 +652,7 @@ int fitstable_open_extension(fitstable_t* tab, int ext) {
     }
     tab->header = qfits_header_readext(tab->fn, ext);
 	if (!tab->header) {
-		fprintf(stderr, "Couldn't get header for FITS extension %i in file %s.\n", ext, tab->fn);
+		ERROR("Couldn't get header for FITS extension %i in file %s", ext, tab->fn);
 		return -1;
 	}
     return 0;
@@ -667,7 +667,7 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
     }
 	tab->table = qfits_table_open(tab->fn, ext);
 	if (!tab->table) {
-		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n", ext, tab->fn);
+		ERROR("FITS extension %i in file %s is not a table (or there was an error opening the file)", ext, tab->fn);
 		return -1;
 	}
     if (tab->header) {
@@ -675,7 +675,7 @@ int fitstable_read_extension(fitstable_t* tab, int ext) {
     }
     tab->header = qfits_header_readext(tab->fn, ext);
 	if (!tab->header) {
-		fprintf(stderr, "Couldn't get header for FITS extension %i in file %s.\n", ext, tab->fn);
+		ERROR("Couldn't get header for FITS extension %i in file %s", ext, tab->fn);
 		return -1;
 	}
     for (i=0; i<ncols(tab); i++) {
@@ -782,15 +782,6 @@ int fitstable_fix_header(fitstable_t* t) {
     return fits_pad_file(t->fid);
 }
 
-/*
- void fitstable_reset_table(fitstable_t* tab) {
- if (tab->table) {
- qfits_table_close(tab->table);
- }
- fitstable_create_table(tab);
- }
- */
-
 void fitstable_close_table(fitstable_t* tab) {
     int i;
     if (tab->table) {
@@ -823,119 +814,6 @@ void fitstable_print_missing(fitstable_t* tab, FILE* f) {
     //fprintf(f, "\n");
 }
 
-/*
- int fitstable_read_array(const fitstable_t* tab,
- int offset, int N,
- void* maindata, int mainstride) {
- int i;
- void* tempdata = NULL;
- int highwater = 0;
-
- // We read in column-major order.
-
- for (i=0; i<ncols(tab); i++) {
- void* dest;
- int stride;
- void* finaldest;
- int finalstride;
- fitscol_t* col = getcol(tab, i);
-
- if (col->col == -1)
- continue;
-
- if (col->in_struct) {
- finaldest = ((char*)maindata) + col->coffset;
- finalstride = mainstride;
- } else if (col->cdata) {
- finaldest = col->cdata;
- finalstride = col->cdata_stride;
- } else
- continue;
-
- if (col->fitstype != col->ctype) {
- int NB = col->fitssize * N;
- if (NB > highwater) {
- free(tempdata);
- tempdata = malloc(NB);
- highwater = NB;
- }
- dest = tempdata;
- stride = col->fitssize;
- } else {
- dest = finaldest;
- stride = finalstride;
- }
-
- // Read from FITS file...
- qfits_query_column_seq_to_array
- (tab->table, col->col, offset, N, dest, stride);
-
- if (col->fitstype != col->ctype) {
- int j;
- for (j=0; j<col->arraysize; j++)
- fits_convert_data(((char*)finaldest) + j * fits_get_atom_size(col->ctype), finalstride, col->ctype,
- ((char*)dest) + j * fits_get_atom_size(col->fitstype), stride, col->fitstype, N);
- }
- }
- free(tempdata);
- return 0;
- }
- */
-
-/*
- int fitstable_write_array(const fitstable_t* tab,
- int offset, int N,
- const void* maindata, int mainstride) {
- int i, j;
- void* tempdata = NULL;
- int highwater = 0;
-
- // We write in row-major order (to avoid fseeking around)
-
- for (j=0; j<N; j++) {
- for (i=0; i<ncols(tab); i++) {
- fitscol_t* col = getcol(tab, i);
- char* src;
- int k;
-
- // FIXME - should we pay attention to the col->col entry?
- // Or do we assume that when writing the orders match?
- // Ugh!!
-
- if (col->in_struct) {
- src = ((char*)maindata) + col->coffset
- + mainstride * (offset + j);
- } else if (col->cdata) {
- src = col->cdata +
- + col->cdata_stride * (offset + j);
- } else
- continue;
-
- if (col->fitstype != col->ctype) {
- int NB = col->fitssize;
- if (NB > highwater) {
- free(tempdata);
- tempdata = malloc(NB);
- highwater = NB;
- }
- fits_convert_data(tempdata, fits_get_atom_size(col->fitstype), col->fitstype,
- src, fits_get_atom_size(col->ctype), col->ctype,
- col->arraysize);
- src = tempdata;
- }
-
- for (k=0; k<col->arraysize; k++)
- fits_write_data(tab->fid, src + fits_get_atom_size(col->fitstype) * k, col->fitstype);
- }
- }
- free(tempdata);
-
- // Increment row counter...
- tab->table->nr += N;
- return 0;
- }
- */
-
 static void fitstable_create_table(fitstable_t* tab) {
     qfits_table* qt;
     int i;
@@ -955,7 +833,7 @@ static void fitstable_create_table(fitstable_t* tab) {
 static int refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
     fitstable_t* tab = userdata;
     if (fitstable_read_structs(tab, buffer, tab->br->elementsize, offset, n)) {
-        fprintf(stderr, "Error refilling FITS table read buffer.\n");
+        ERROR("Error refilling FITS table read buffer");
         return -1;
     }
     return 0;

@@ -39,8 +39,12 @@ void errors_free() {
 }
 
 void errors_push_state() {
-    err_t* now = pl_pop(estack);
-    err_t* snapshot = error_copy(now);
+    err_t* now;
+    err_t* snapshot;
+    // make sure the stack and current state are initialized
+    errors_get_state();
+    now = pl_pop(estack);
+    snapshot = error_copy(now);
     pl_push(estack, snapshot);
     pl_push(estack, now);
 }
@@ -111,3 +115,6 @@ void error_print_stack(err_t* e, FILE* f) {
     }
 }
 
+char* error_get_errs(err_t* e, const char* separator) {
+    return sl_join_reverse(e->errstack, separator);
+}

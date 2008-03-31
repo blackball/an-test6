@@ -23,6 +23,8 @@
 #include "keywords.h"
 #include "an-bool.h"
 
+void fits_use_error_system();
+
 double fits_get_double_val(const qfits_table* table, int column,
                            const void* rowdata);
 
