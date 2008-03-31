@@ -63,7 +63,8 @@ pixels=UxV arcmin
 
 #include "qfits_error.h"
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2m:X:Y:s:avo:k:I:V:C:E:grz";
+static const char* OPTIONS = "2C:D:E:F:GH:I:KL:OPTU:V:W:X:Y:ac:d:fghk:m:o:rs:t:u:vz";
+
 
 static struct option long_options[] = {
 	{"help",           no_argument,       0, 'h'},
@@ -98,6 +99,7 @@ static struct option long_options[] = {
     {"use-wget",       no_argument,       0, 'g'},
     {"resort",         no_argument,       0, 'r'},
     {"downsample",     no_argument,       0, 'z'},
+    {"continue",       no_argument,       0, 'K'},
 	{0, 0, 0, 0}
 };
 
@@ -127,6 +129,7 @@ static void print_help(const char* progname) {
            "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane.  (-2)\n"
 	       "  [--backend-config <filename>]: use this config file for the \"backend\" program.  (-c <file>)\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
+	       "  [--continue]: don't overwrite output files if they already exist; continue a previous run  (-K)\n"
 	       "  [--files-on-stdin]: read filenames to solve on stdin, one per line (-f)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!  (-v)\n"
@@ -197,6 +200,7 @@ int main(int argc, char** args) {
 	int nbeargs;
 	bool fromstdin = FALSE;
 	bool overwrite = FALSE;
+	bool cont = FALSE;
     bool makeplots = TRUE;
     char* me;
     char* tempdir = "/tmp";
@@ -305,6 +309,9 @@ int main(int argc, char** args) {
             break;
         case 'O':
             overwrite = TRUE;
+            break;
+        case 'K':
+            cont = TRUE;
             break;
 		case 'G':
 			guess_scale = FALSE;
@@ -477,19 +484,21 @@ int main(int argc, char** args) {
 		free(base);
 		base = NULL;
 
-		// Check for (and delete) existing output filenames.
+		// Check for (and possibly delete) existing output filenames.
 		for (i = 0; i < sl_size(outfiles); i++) {
 			char* fn = sl_get(outfiles, i);
 			if (!file_exists(fn))
 				continue;
-			if (overwrite) {
+            if (cont) {
+            } else if (overwrite) {
 				if (unlink(fn)) {
 					printf("Failed to delete an already-existing output file: \"%s\": %s\n", fn, strerror(errno));
 					exit(-1);
 				}
 			} else {
 				printf("Output file \"%s\" already exists.  Bailing out.  "
-				       "Use the --overwrite flag to overwrite existing files.\n", fn);
+				       "Use the --overwrite flag to overwrite existing files,\n"
+                       " or the --continue  flag to not overwrite existing files.\n", fn);
 				printf("Continuing to next input file.\n");
                 goto nextfile;
 			}
