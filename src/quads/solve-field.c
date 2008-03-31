@@ -424,7 +424,7 @@ int main(int argc, char** args) {
 			infile = args[f];
 			f++;
             printf("Reading input file %i of %i: \"%s\"...\n",
-                   1 + f - optind, argc - optind, infile);
+                   f - optind, argc - optind, infile);
 		}
         inputnum++;
 
