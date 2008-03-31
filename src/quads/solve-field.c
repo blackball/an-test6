@@ -51,6 +51,7 @@ pixels=UxV arcmin
 #include <sys/wait.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <errors.h>
 
 #include <getopt.h>
 

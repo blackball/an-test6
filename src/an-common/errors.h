@@ -50,7 +50,11 @@ void
 ATTRIB_FORMAT(printf,3,4)
 report_error(const char* modfile, int modline, const char* fmt, ...);
 
+void report_errno();
+
 #define ERROR(fmt, ...) report_error(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+
+#define SYSERROR(fmt, ...) do { report_errno(); report_error(__FILE__, __LINE__, fmt, ##__VA_ARGS__); } while(0)
 
 // free globals.
 void errors_free();
@@ -58,6 +62,11 @@ void errors_free();
 void errors_print_stack(FILE* f);
 
 /***    End globals   ***/
+
+
+
+
+
 
 err_t* error_new();
 
@@ -70,6 +79,7 @@ error_report(err_t* e, const char* module, int line, const char* fmt, ...);
 void error_reportv(err_t* e, const char* module, int line, const char* fmt, va_list va);
 
 void error_print_stack(err_t* e, FILE* f);
+
 
 #endif
 

@@ -61,6 +61,10 @@ void report_error(const char* modfile, int modline, const char* fmt, ...) {
     va_end(va);
 }
 
+void report_errno() {
+    error_report(errors_get_state(), "system", -1, "%s", strerror(errno));
+}
+
 err_t* error_new() {
     err_t* e = calloc(1, sizeof(err_t));
     e->modstack = sl_new(4);
@@ -90,7 +94,11 @@ void error_reportv(err_t* e, const char* module, int line, const char* fmt, va_l
     }
     if (e->save) {
         sl_appendvf(e->errstack, fmt, va);
-        sl_appendf(e->modstack, "%s:%i", module, line);
+        if (line >= 0) {
+            sl_appendf(e->modstack, "%s:%i", module, line);
+        } else {
+            sl_appendf(e->modstack, "%s", module);
+        }
     }
 }
 
