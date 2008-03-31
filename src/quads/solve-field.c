@@ -410,11 +410,14 @@ int main(int argc, char** args) {
 			if (fnbuf[len-1] == '\n')
 				fnbuf[len-1] = '\0';
 			infile = fnbuf;
+            printf("Reading input file \"%s\"...\n", infile);
 		} else {
 			if (f == argc)
 				break;
 			infile = args[f];
 			f++;
+            printf("Reading input file %i of %i: \"%s\"...\n",
+                   1 + f - optind, argc - optind, infile);
 		}
         inputnum++;
 
