@@ -63,7 +63,7 @@ pixels=UxV arcmin
 
 #include "qfits_error.h"
 
-static const char* OPTIONS = "2C:D:E:F:GH:I:KL:OPTU:V:W:X:Y:ac:d:fghk:m:o:rs:t:u:vz";
+static const char* OPTIONS = "2C:D:E:F:GH:I:KL:OPSTU:V:W:X:Y:ac:d:fghk:m:o:rs:t:u:vz";
 
 
 static struct option long_options[] = {
@@ -100,6 +100,7 @@ static struct option long_options[] = {
     {"resort",         no_argument,       0, 'r'},
     {"downsample",     no_argument,       0, 'z'},
     {"continue",       no_argument,       0, 'K'},
+    {"skip-solved",    no_argument,       0, 'S'},
 	{0, 0, 0, 0}
 };
 
@@ -130,6 +131,9 @@ static void print_help(const char* progname) {
 	       "  [--backend-config <filename>]: use this config file for the \"backend\" program.  (-c <file>)\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
 	       "  [--continue]: don't overwrite output files if they already exist; continue a previous run  (-K)\n"
+	       "  [--skip-solved]: skip input files for which the 'solved' output file already exists;\n"
+           "                  NOTE: this assumes single-field input files.  (-S)\n"
+           "  [--continue]: don't overwrite output files if they already exist; continue a previous run  (-K)\n"
 	       "  [--files-on-stdin]: read filenames to solve on stdin, one per line (-f)\n"
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!  (-v)\n"
@@ -201,6 +205,7 @@ int main(int argc, char** args) {
 	bool fromstdin = FALSE;
 	bool overwrite = FALSE;
 	bool cont = FALSE;
+    bool skip_solved = FALSE;
     bool makeplots = TRUE;
     char* me;
     char* tempdir = "/tmp";
@@ -312,6 +317,9 @@ int main(int argc, char** args) {
             break;
         case 'K':
             cont = TRUE;
+            break;
+        case 'S':
+            skip_solved = TRUE;
             break;
 		case 'G':
 			guess_scale = FALSE;
@@ -483,6 +491,16 @@ int main(int argc, char** args) {
 
 		free(base);
 		base = NULL;
+
+        if (skip_solved) {
+            if (solvedin && file_exists(solvedin)) {
+                printf("Solved file exists: %s; skipping this input file.\n", solvedin);
+                continue;
+            } else if (file_exists(solvedfn)) {
+                printf("Solved file exists: %s; skipping this input file.\n", solvedfn);
+                continue;
+            }
+        }
 
 		// Check for (and possibly delete) existing output filenames.
 		for (i = 0; i < sl_size(outfiles); i++) {
