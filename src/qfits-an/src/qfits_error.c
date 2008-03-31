@@ -84,6 +84,10 @@ static void qfits_err_main_display(char *) ;
                               Function codes
  -----------------------------------------------------------------------------*/
 
+void qfits_err_remove_all() {
+    qfits_err_control.n = 0;
+}
+
 /* Public warning/error functions */
 void qfits_warning(const char *fmt, ...)
 {
