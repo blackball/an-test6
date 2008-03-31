@@ -1659,12 +1659,26 @@ void sl_print(sl* list) {
 	}
 }
 
-char*  sl_implode(sl* list, const char* join) {
+static char* sljoin(sl* list, const char* join, int forward) {
+    int start, end, inc;
+
 	int len = 0;
 	int i, N;
 	char* rtn;
 	int offset;
 	int JL;
+
+    // step through the list forward or backward?
+    if (forward) {
+        start = 0;
+        end = sl_size(list);
+        inc = 1;
+    } else {
+        start = sl_size(list) - 1;
+        end = -1;
+        inc = -1;
+    }
+
 	JL = strlen(join);
 	N = sl_size(list);
 	for (i=0; i<N; i++)
@@ -1674,10 +1688,10 @@ char*  sl_implode(sl* list, const char* join) {
 	if (!rtn)
 		return rtn;
 	offset = 0;
-	for (i=0; i<N; i++) {
+	for (i=start; i!=end; i+= inc) {
 		char* str = sl_get(list, i);
 		int L = strlen(str);
-		if (i) {
+		if (i != start) {
 			memcpy(rtn + offset, join, JL);
 			offset += JL;
 		}
@@ -1687,6 +1701,18 @@ char*  sl_implode(sl* list, const char* join) {
 	assert(offset == len);
 	rtn[offset] = '\0';
 	return rtn;
+}
+
+char*  sl_join(sl* list, const char* join) {
+    return sljoin(list, join, 1);
+}
+
+char*  sl_join_reverse(sl* list, const char* join) {
+    return sljoin(list, join, 0);
+}
+
+char*  sl_implode(sl* list, const char* join) {
+    return sl_join(list, join);
 }
 
 char* sl_appendf(sl* list, const char* format, ...) {

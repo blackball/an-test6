@@ -301,7 +301,15 @@ void   sl_print(sl* list);
 // Like the PHP function implode(), joins each element in the list with the given
 // "join" string.  The result is a newly-allocate string containing:
 //   sl_get(list, 0) + join + sl_get(list, 1) + join + ... + join + sl_get(list, N-1)
+// -AKA sl_join.
 char*  sl_implode(sl* list, const char* join);
+
+// like Python's joinstring.join(list)
+// -AKA sl_implode
+char*  sl_join(sl* list, const char* joinstring);
+
+// same as sl_join(reverse(list), str)
+char*  sl_join_reverse(sl* list, const char* join);
 
 // Appends the (newly-allocated) formatted string and returns it.
 char*

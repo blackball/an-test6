@@ -19,6 +19,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "cutest.h"
 
@@ -375,5 +376,28 @@ void test_bl_extend(CuTest *tc) {
 	*new1 = 10;
 	int *new2 = bl_access(list, 0);
 	CuAssertPtrEquals(tc, new2, new1);
+}
+
+///////////
+
+static void addsome(sl* s, const char* fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    sl_appendvf(s, fmt, va);
+    va_end(va);
+}
+
+void test_sl_join(CuTest* tc) {
+    sl* s = sl_new(4);
+    sl_append(s, "123");
+    sl_appendf(s, "%1$s%1$s", "testing");
+    addsome(s, "%i", 456);
+    sl_insert(s, 1, "inserted");
+    sl_insertf(s, 2, "%s%s", "ins", "ertedf");
+    CuAssertStrEquals(tc, "123insertedinsertedftestingtesting456", sl_join(s, ""));
+    CuAssertStrEquals(tc, "123--inserted--insertedf--testingtesting--456",
+                      sl_join(s, "--"));
+    CuAssertStrEquals(tc, "456--testingtesting--insertedf--inserted--123",
+                      sl_join_reverse(s, "--"));
 }
 
