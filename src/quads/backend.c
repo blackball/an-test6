@@ -43,6 +43,7 @@
 #include "math.h"
 #include "fitsioutils.h"
 #include "scriptutils.h"
+#include "gnu-specific.h"
 
 #include "qfits.h"
 
@@ -70,6 +71,7 @@ static void print_help(const char* progname)
 
 struct indexinfo {
 	char* indexname;
+    char* canonname;
 	// quad size
 	double losize;
 	double hisize;
@@ -91,6 +93,17 @@ struct backend {
     int cpulimit;
 };
 typedef struct backend backend_t;
+
+static char* get_canonical(const char* indexname) {
+    // canonicalize_file_name requires an extant file; "indexname" is the base
+    // name, so add the ".quad.fits" suffix.
+    char* path;
+    char* canon;
+    asprintf(&path, "%s.quad.fits", indexname);
+    canon = canonicalize_file_name(path);
+    free(path);
+    return canon;
+}
 
 static int get_index_scales(const char* indexname,
                             double* losize, double* hisize)
@@ -125,11 +138,26 @@ static int get_index_scales(const char* indexname,
 	return 0;
 }
 
-static void add_index(backend_t* backend, char* full_index_path, double lo, double hi) {
+static bool add_index(backend_t* backend, char* full_index_path, double lo, double hi) {
 	indexinfo_t ii;
+    int k;
+
 	ii.indexname = full_index_path;
+    ii.canonname = get_canonical(full_index_path);
 	ii.losize = lo;
 	ii.hisize = hi;
+
+    // check that this canonical path isn't already in the list of
+    // index files that we've openend.
+    for (k=0; k<bl_size(backend->indexinfos); k++) {
+        indexinfo_t* iii = bl_access(backend->indexinfos, k);
+        if (strcmp(iii->canonname, ii.canonname))
+            continue;
+        if (verbose)
+            printf("Skipping duplicate index %s\n", full_index_path);
+        free(ii.canonname);
+        return FALSE;
+    }
 	bl_append(backend->indexinfos, &ii);
 	if (ii.losize < backend->sizesmallest) {
 		backend->sizesmallest = ii.losize;
@@ -145,6 +173,7 @@ static void add_index(backend_t* backend, char* full_index_path, double lo, doub
 	} else if (ii.hisize == backend->sizebiggest) {
 		il_append(backend->ibiggest, bl_size(backend->indexinfos) - 1);
 	}
+    return TRUE;
 }
 
 static int find_index(backend_t* backend, char* index)
@@ -153,23 +182,37 @@ static int find_index(backend_t* backend, char* index)
 	double lo, hi;
 	int i = 0;
 	char* full_index_path;
-	for (i=0; i<sl_size(backend->index_paths); i++) {
-		char* index_path = sl_get(backend->index_paths, i);
-        asprintf_safe(&full_index_path, "%s/%s", index_path, index);
+
+    if (strlen(index) && index[0] == '/') {
+        // it's an absolute path - don't search dirs.
+        full_index_path = strdup(index);
         if (get_index_scales(full_index_path, &lo, &hi) == 0) {
 			found_index = TRUE;
-			break;
-		}
-        free(full_index_path);
-	}
+		} else {
+            free(full_index_path);
+        }
+    }
+    if (!found_index) {
+        for (i=0; i<sl_size(backend->index_paths); i++) {
+            char* index_path = sl_get(backend->index_paths, i);
+            asprintf_safe(&full_index_path, "%s/%s", index_path, index);
+            if (get_index_scales(full_index_path, &lo, &hi) == 0) {
+                found_index = TRUE;
+                break;
+            }
+            free(full_index_path);
+        }
+    }
 	if (!found_index) {
-		//printf("Failed to get the range of quad scales for index \"%s\".\n", index);
 		printf("Failed to find the index \"%s\".\n", index);
 		return -1;
 	}
     if (verbose)
         printf("Found index: %s\n", full_index_path);
-    add_index(backend, full_index_path, lo, hi);
+
+    if (!add_index(backend, full_index_path, lo, hi)) {
+        free(full_index_path);
+    }
 	return 0;
 }
 
@@ -251,6 +294,8 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 
     for (i=0; i<sl_size(indices); i++) {
         char* ind = sl_get(indices, i);
+        if (verbose)
+            printf("Trying index %s...\n", ind);
         if (find_index(backend, ind)) {
             rtn = -1;
             goto done;
@@ -268,6 +313,8 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 fprintf(stderr, "Failed to open directory \"%s\": %s\n", path, strerror(errno));
                 continue;
             }
+            if (verbose)
+                printf("Auto-indexing directory %s...\n", path);
             trybases = sl_new(16);
             while (1) {
                 struct dirent* de;
@@ -297,7 +344,6 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 sl_insert_sorted(trybases, base);
                 free(base);
             }
-            //for (j=0; j<sl_size(trybases); j++) {
             // reverse-sort
             for (j=sl_size(trybases)-1; j>=0; j--) {
                 char* base = sl_get(trybases, j);
@@ -308,7 +354,9 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
                 if (verbose)
                     printf("Trying to add index \"%s\".\n", fullpath);
                 if (get_index_scales(fullpath, &lo, &hi) == 0) {
-                    add_index(backend, fullpath, lo, hi);
+                    if (!add_index(backend, fullpath, lo, hi)) {
+                        free(fullpath);
+                    }
                 } else {
                     if (verbose)
                         printf("Failed to add index \"%s\".\n", fullpath);
@@ -987,6 +1035,7 @@ void backend_free(backend_t* backend)
 		for (i = 0; i < bl_size(backend->indexinfos); i++) {
 			indexinfo_t* ii = bl_access(backend->indexinfos, i);
 			free(ii->indexname);
+			free(ii->canonname);
 		}
 		bl_free(backend->indexinfos);
 	}
