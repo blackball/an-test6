@@ -494,8 +494,13 @@ int main(int argc, char** args) {
                 asprintf(&solvedinfn, "%s/%s", solvedindir, solvedin);
             else if (solvedin)
                 solvedinfn = strdup(solvedin);
-            else
-                asprintf(&solvedinfn, "%s/%s.solved", solvedindir, base);
+            else {
+                char* bc = strdup(base);
+                char* bn = strdup(basename(bc));
+                asprintf(&solvedinfn, "%s/%s.solved", solvedindir, bn);
+                free(bn);
+                free(bc);
+            }
         }
         if (solvedinfn && (strcmp(solvedfn, solvedinfn) == 0)) {
             // solved input and output files are the same: don't delete the input!
