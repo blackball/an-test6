@@ -261,7 +261,6 @@ struct kdtree {
 
 	struct kdtree_funcs fun;
 };
-//typedef struct kdtree kdtree_t;
 
 struct kdtree_qres {
 	unsigned int nres;
@@ -276,7 +275,6 @@ struct kdtree_qres {
 	double *sdists;          /* Squared distance from query point */
 	u32 *inds;    /* Indexes into original data set */
 };
-//typedef struct kdtree_qres kdtree_qres_t;
 
 
 /* These functions return the number of bytes each entry in the kdtree is

@@ -33,6 +33,8 @@
 #include "ioutils.h"
 #include "errors.h"
 
+#define KDTREE_FITS_VERSION 1
+
 // is the given table name one of the above strings?
 int kdtree_fits_column_is_kdtree(char* columnname) {
     return
@@ -367,6 +369,7 @@ int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* inhdr, 
     fits_header_add_int(tablehdr, "KDT_NDAT", kdtree->ndata,  "kdtree: number of data points");
     fits_header_add_int(tablehdr, "KDT_NDIM", kdtree->ndim,   "kdtree: number of dimensions");
     fits_header_add_int(tablehdr, "KDT_NNOD", kdtree->nnodes, "kdtree: number of nodes");
+    fits_header_add_int(tablehdr, "KDT_VER",  KDTREE_FITS_VERSION, "kdtree: version number");
 
     qfits_header_dump(tablehdr, out);
     qfits_header_destroy(tablehdr);
