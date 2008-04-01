@@ -517,14 +517,14 @@ int main(int argc, char** args) {
                     printf("Checking for solved file %s\n", solvedinfn);
                 if (file_exists(solvedinfn)) {
                     printf("Solved file exists: %s; skipping this input file.\n", solvedinfn);
-                    continue;
+                    goto nextfile;
                 }
             }
             if (verbose)
                 printf("Checking for solved file %s\n", solvedfn);
             if (file_exists(solvedfn)) {
                 printf("Solved file exists: %s; skipping this input file.\n", solvedfn);
-                continue;
+                goto nextfile;
             }
         }
 
@@ -665,8 +665,6 @@ int main(int argc, char** args) {
 			exit(-1);
         }
 		free(cmd);
-
-        free(solvedinfn);
 
         if (makeplots) {
             // source extraction overlay
@@ -949,6 +947,7 @@ int main(int argc, char** args) {
         fflush(NULL);
 
     nextfile:        // clean up and move on to the next file.
+        free(solvedinfn);
 		for (i=0; i<sl_size(tempfiles); i++) {
 			char* fn = sl_get(tempfiles, i);
 			if (unlink(fn))
