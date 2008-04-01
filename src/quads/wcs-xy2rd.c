@@ -124,6 +124,8 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to read an xylist from file %s.\n", xylsfn);
 		exit(-1);
 	}
+    xylist_set_include_flux(xyls, FALSE);
+    xylist_set_include_background(xyls, FALSE);
 	if (xcol)
 		xylist_set_xname(xyls, xcol);
 	if (ycol)

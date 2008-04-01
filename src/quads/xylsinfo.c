@@ -70,6 +70,8 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to open xyls file %s.\n", inputfiles[0]);
 		exit(-1);
 	}
+    xylist_set_include_flux(xyls, FALSE);
+    xylist_set_include_background(xyls, FALSE);
 
 	xy = xylist_read_field(xyls, NULL);
 	if (!xy) {

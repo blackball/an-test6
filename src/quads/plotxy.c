@@ -181,6 +181,9 @@ int main(int argc, char *args[]) {
 		fprintf(stderr, "Failed to open xylist from file %s.\n", fname);
 		exit(-1);
 	}
+    // we don't care about FLUX and BACKGROUND columns.
+    xylist_set_include_flux(xyls, FALSE);
+    xylist_set_include_background(xyls, FALSE);
     if (xcol)
         xylist_set_xname(xyls, xcol);
     if (ycol)
