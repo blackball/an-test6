@@ -65,7 +65,7 @@ char* create_temp_file(char* fn, char* dir) {
         exit(-1);
     }
     close(fid);
-    printf("Created temp file %s\n", tempfile);
+    //printf("Created temp file %s\n", tempfile);
     return tempfile;
 }
 

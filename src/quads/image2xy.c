@@ -244,7 +244,7 @@ int main(int argc, char *argv[]) {
 			fits_report_error(stderr, status);
 			exit( -1);
 		}
-        fprintf(stderr, "BITPIX: %i\n", bitpix);
+        //fprintf(stderr, "BITPIX: %i\n", bitpix);
 
 		fpixel = malloc(naxis * sizeof(long));
 		for (a=0; a<naxis; a++)

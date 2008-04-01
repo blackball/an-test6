@@ -950,7 +950,7 @@ int main(int argc, char** args) {
 		if (unlink(fn)) {
 			fprintf(stderr, "Failed to delete temp file \"%s\": %s.\n", fn, strerror(errno));
 		}
-        printf("Deleted temp file %s\n", fn);
+        //printf("Deleted temp file %s\n", fn);
 	}
 
     dl_free(scales);

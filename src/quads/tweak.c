@@ -759,8 +759,7 @@ void tweak_print_rms_curve(tweak_t* t) {
         ssumarcsec += arcsec2;
         rmsarcsec = sqrt(ssumarcsec / (double)(i + 1));
 
-        fprintf(stderr, "Including best %i correspondences: RMS = %g pixels, %g arcsec.\n",
-               (i+1), rmspix, rmsarcsec);
+        //fprintf(stderr, "Including best %i correspondences: RMS = %g pixels, %g arcsec.\n", (i+1), rmspix, rmsarcsec);
 
         dl_append(allvals, sqrt(pix2));
         dl_append(allvals, sqrt(arcsec2));
@@ -768,25 +767,27 @@ void tweak_print_rms_curve(tweak_t* t) {
         dl_append(allvals, rmspix);
     }
 
-    fprintf(stderr, "pixerrs = [");
-    for (i=0; i<N; i++)
-        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 0));
-    fprintf(stderr, "];\n");
+    /*
+     fprintf(stderr, "pixerrs = [");
+     for (i=0; i<N; i++)
+     fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 0));
+     fprintf(stderr, "];\n");
 
-    fprintf(stderr, "arcsecerrs = [");
-    for (i=0; i<N; i++)
-        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 1));
-    fprintf(stderr, "];\n");
+     fprintf(stderr, "arcsecerrs = [");
+     for (i=0; i<N; i++)
+     fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 1));
+     fprintf(stderr, "];\n");
 
-    fprintf(stderr, "pixrms = [");
-    for (i=0; i<N; i++)
-        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 2));
-    fprintf(stderr, "];\n");
+     fprintf(stderr, "pixrms = [");
+     for (i=0; i<N; i++)
+     fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 2));
+     fprintf(stderr, "];\n");
 
-    fprintf(stderr, "arcsecrms = [");
-    for (i=0; i<N; i++)
-        fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 3));
-    fprintf(stderr, "];\n");
+     fprintf(stderr, "arcsecrms = [");
+     for (i=0; i<N; i++)
+     fprintf(stderr, "%g, ", dl_get(allvals, i*4 + 3));
+     fprintf(stderr, "];\n");
+     */
 
     dl_free(allvals);
 
