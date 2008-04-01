@@ -63,7 +63,7 @@ pixels=UxV arcmin
 #include "scriptutils.h"
 #include "fitsioutils.h"
 
-static const char* OPTIONS = "2C:D:E:F:GH:I:KL:OPSTU:V:W:X:Y:ac:d:fghk:m:o:rs:t:u:vz";
+static const char* OPTIONS = "2C:D:E:F:GH:I:KL:OPSTU:V:W:X:Y:ac:d:fghi:k:m:o:rs:t:u:vz";
 
 
 static struct option long_options[] = {
@@ -93,6 +93,7 @@ static struct option long_options[] = {
     {"sort-ascending", no_argument,       0, 'a'},
     {"keep-xylist",    required_argument, 0, 'k'},
 	{"solved-in",      required_argument, 0, 'I'},
+	{"solved-in-dir",  required_argument, 0, 'i'},
     {"verify",         required_argument, 0, 'V'},
     {"code-tolerance", required_argument, 0, 'C'},
     {"pixel-error",    required_argument, 0, 'E'},
@@ -138,6 +139,7 @@ static void print_help(const char* progname) {
            "  [--temp-dir <dir>]: where to put temp files, default /tmp  (-m)\n"
            "  [--verbose]: be more chatty!  (-v)\n"
            "  [--keep-xylist <filename>]: save the (unaugmented) xylist to <filename>  (-k)\n"
+           "  [--solved-in-dir <dir>]: directory containing input solved files  (-i)\n"
            "  [--solved-in <filename>]: input filename for solved file  (-I)\n"
            "  [--verify <wcs-file>]: try to verify an existing WCS file  (-V)\n"
            "  [--code-tolerance <tol>]: matching distance for quads (default 0.01) (-c)\n"
@@ -214,6 +216,7 @@ int main(int argc, char** args) {
     char* xcol = NULL;
     char* ycol = NULL;
     char* solvedin = NULL;
+    char* solvedindir = NULL;
 	bool usecurl = TRUE;
     bool resort = FALSE;
 
@@ -234,6 +237,9 @@ int main(int argc, char** args) {
 		if (c == -1)
 			break;
 		switch (c) {
+        case 'i':
+            solvedindir = optarg;
+            break;
         case 'z':
             sl_append(augmentxyargs, "--downsample");
             break;
@@ -265,8 +271,6 @@ int main(int argc, char** args) {
             append_escape(augmentxyargs, optarg);
             break;
         case 'I':
-            sl_append(augmentxyargs, "--solved-in");
-            append_escape(augmentxyargs, optarg);
             solvedin = optarg;
             break;
         case 'k':
@@ -407,6 +411,7 @@ int main(int argc, char** args) {
 		char* cpy;
 		char* base;
 		char *matchfn, *rdlsfn, *solvedfn, *wcsfn, *axyfn, *objsfn, *redgreenfn;
+        char* solvedinfn = NULL;
 		char *ngcfn, *ppmfn=NULL, *indxylsfn;
         char* downloadfn;
         char* suffix = NULL;
@@ -483,7 +488,16 @@ int main(int argc, char** args) {
             downloadfn = sl_appendf(outfiles, "%s-downloaded", base);
 
 		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
-        if (solvedin && !strcmp(solvedfn, solvedin)) {
+
+        if (solvedin || solvedindir) {
+            if (solvedin && solvedindir)
+                asprintf(&solvedinfn, "%s/%s", solvedindir, solvedin);
+            else if (solvedin)
+                solvedinfn = strdup(solvedin);
+            else
+                asprintf(&solvedinfn, "%s/%s.solved", solvedindir, base);
+        }
+        if (solvedinfn && !strcmp(solvedfn, solvedinfn)) {
             // solved input and output files are the same: don't delete the input!
             sl_pop(outfiles);
             // MEMLEAK
@@ -493,8 +507,8 @@ int main(int argc, char** args) {
 		base = NULL;
 
         if (skip_solved) {
-            if (solvedin && file_exists(solvedin)) {
-                printf("Solved file exists: %s; skipping this input file.\n", solvedin);
+            if (solvedinfn && file_exists(solvedinfn)) {
+                printf("Solved file exists: %s; skipping this input file.\n", solvedinfn);
                 continue;
             } else if (file_exists(solvedfn)) {
                 printf("Solved file exists: %s; skipping this input file.\n", solvedfn);
@@ -623,6 +637,11 @@ int main(int argc, char** args) {
 		sl_append(augmentxyargs, "--wcs");
         append_escape(augmentxyargs, wcsfn);
 
+        if (solvedinfn) {
+            sl_append(augmentxyargs, "--solved-in");
+            append_escape(augmentxyargs, solvedinfn);
+        }
+
 		cmd = sl_implode(augmentxyargs, " ");
         if (verbose)
             printf("Running:\n  %s\n", cmd);
@@ -634,6 +653,8 @@ int main(int argc, char** args) {
 			exit(-1);
         }
 		free(cmd);
+
+        free(solvedinfn);
 
         if (makeplots) {
             // source extraction overlay
