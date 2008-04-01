@@ -104,7 +104,8 @@ $(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
 SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
 
 _sip.so: sip-utils.o sip.o starutil.o mathutil.o sip_qfits.o \
-		fitsioutils.o ioutils.o bl.o gnu-specific.o an-endian.o $(QFITS_LIB)
+		fitsioutils.o ioutils.o bl.o gnu-specific.o an-endian.o \
+		errors.o $(QFITS_LIB)
 	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
 
 _healpix.so: healpix.o starutil.o mathutil.o

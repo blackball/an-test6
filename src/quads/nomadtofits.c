@@ -146,7 +146,7 @@ int main(int argc, char** args) {
 					infn, (unsigned int)map_size, NOMAD_RECORD_SIZE);
 		}
 
-		printf("File %i of %i: %s: %i records.\n", optind - startoptind, argc - startoptind, infn, map_size / NOMAD_RECORD_SIZE);
+		printf("File %i of %i: %s: %i records.\n", optind - startoptind, argc - startoptind, infn, (int)(map_size / NOMAD_RECORD_SIZE));
 
 		lastgrass = 0;
 		for (i=0; i<map_size; i+=NOMAD_RECORD_SIZE) {

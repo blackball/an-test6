@@ -72,7 +72,7 @@ err_t* error_new();
 
 void error_free(err_t* e);
 
-void error_nerrs(err_t* e);
+int error_nerrs(err_t* e);
 
 char* error_get_errstr(err_t* e, int i);
 

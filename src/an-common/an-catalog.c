@@ -26,6 +26,7 @@
 #include "an-catalog.h"
 #include "fitsioutils.h"
 #include "starutil.h"
+#include "gnu-specific.h"
 
 // This is a naughty preprocessor function because it uses variables
 // declared in the scope from which it is called.
