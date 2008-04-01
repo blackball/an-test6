@@ -497,7 +497,7 @@ int main(int argc, char** args) {
             else
                 asprintf(&solvedinfn, "%s/%s.solved", solvedindir, base);
         }
-        if (solvedinfn && !strcmp(solvedfn, solvedinfn)) {
+        if (solvedinfn && (strcmp(solvedfn, solvedinfn) == 0)) {
             // solved input and output files are the same: don't delete the input!
             sl_pop(outfiles);
             // MEMLEAK
@@ -507,6 +507,10 @@ int main(int argc, char** args) {
 		base = NULL;
 
         if (skip_solved) {
+            if (solvedinfn)
+                printf("Checking for solved file %s\n", solvedinfn);
+            if (solvedfn)
+                printf("Checking for solved file %s\n", solvedfn);
             if (solvedinfn && file_exists(solvedinfn)) {
                 printf("Solved file exists: %s; skipping this input file.\n", solvedinfn);
                 continue;
