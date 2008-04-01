@@ -512,14 +512,17 @@ int main(int argc, char** args) {
 		base = NULL;
 
         if (skip_solved) {
-            if (solvedinfn)
-                printf("Checking for solved file %s\n", solvedinfn);
-            if (solvedfn)
+            if (solvedinfn) {
+                if (verbose)
+                    printf("Checking for solved file %s\n", solvedinfn);
+                if (file_exists(solvedinfn)) {
+                    printf("Solved file exists: %s; skipping this input file.\n", solvedinfn);
+                    continue;
+                }
+            }
+            if (verbose)
                 printf("Checking for solved file %s\n", solvedfn);
-            if (solvedinfn && file_exists(solvedinfn)) {
-                printf("Solved file exists: %s; skipping this input file.\n", solvedinfn);
-                continue;
-            } else if (file_exists(solvedfn)) {
+            if (file_exists(solvedfn)) {
                 printf("Solved file exists: %s; skipping this input file.\n", solvedfn);
                 continue;
             }
