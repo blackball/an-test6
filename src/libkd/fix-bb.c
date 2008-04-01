@@ -27,6 +27,7 @@
 #include "kdtree_fits_io.h"
 #include "ioutils.h"
 #include "fitsioutils.h"
+#include "errors.h"
 
 void printHelp(char* progname) {
 	printf("\nUsage: %s <input> <output>\n"
@@ -66,7 +67,25 @@ int main(int argc, char** args) {
     outfn = args[optind+1];
 
     printf("Reading kdtree from file %s ...\n", infn);
-    kd = kdtree_fits_read(infn, NULL, &hdr);
+
+    {
+        err_t* err;
+        errors_push_state();
+        err = errors_get_state();
+        err->print = NULL;
+        err->save = TRUE;
+
+        kd = kdtree_fits_read(infn, NULL, &hdr);
+
+        if (!kd) {
+            ERROR("Failed to read kdtree from file %s", infn);
+            error_print_stack(err, stderr);
+            errors_free();
+            exit(-1);
+        }
+
+        errors_pop_state();
+    }
 
     printf("Tree name: %s\n", kd->name);
     printf("Treetype: 0x%x\n", kd->treetype);
@@ -127,7 +146,7 @@ int main(int argc, char** args) {
     kd->name = strdup("tst");
 
     if (kdtree_fits_write(kd, outfn, outhdr)) {
-        fprintf(stderr, "Failed to write output.\n");
+        ERROR("Failed to write output");
         exit(-1);
     }
 
@@ -136,12 +155,12 @@ int main(int argc, char** args) {
 
     fin = fopen(infn, "rb");
     if (!fin) {
-        fprintf(stderr, "Failed to re-open input file for reading: %s\n", strerror(errno));
+        SYSERROR("Failed to re-open input file %s for reading", infn);
         exit(-1);
     }
     fout = fopen(outfn, "ab");
     if (!fout) {
-        fprintf(stderr, "Failed to re-open output file for writing: %s\n", strerror(errno));
+        SYSERROR("Failed to re-open output file %s for writing", outfn);
         exit(-1);
     }
 
@@ -161,23 +180,23 @@ int main(int argc, char** args) {
         printf("Extension %i is not part of the kdtree.  Copying it verbatim.\n", ext);
         if (qfits_get_hdrinfo(infn, ext, &hoffset, &hlength) ||
             qfits_get_datinfo(infn, ext, &doffset, &dlength)) {
-            fprintf(stderr, "Failed to get header or data offset & length for extension %i.\n", ext);
+            ERROR("Failed to get header or data offset & length for extension %i", ext);
             exit(-1);
         }
 
         if (pipe_file_offset(fin, hoffset, hlength, fout) ||
             pipe_file_offset(fin, doffset, dlength, fout)) {
-            fprintf(stderr, "Failed to write extension %i verbatim.\n", ext);
+            ERROR("Failed to write extension %i verbatim", ext);
             exit(-1);
         }
     }
     fclose(fin);
     if (fclose(fout)) {
-        fprintf(stderr, "Failed to close output file: %s\n", strerror(errno));
+        SYSERROR("Failed to close output file %s", outfn);
         exit(-1);
     }
 
     kdtree_fits_close(kd);
-
+    errors_free();
 	return 0;
 }

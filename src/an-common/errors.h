@@ -72,6 +72,10 @@ err_t* error_new();
 
 void error_free(err_t* e);
 
+void error_nerrs(err_t* e);
+
+char* error_get_errstr(err_t* e, int i);
+
 void
 ATTRIB_FORMAT(printf,4,5)
 error_report(err_t* e, const char* module, int line, const char* fmt, ...);

@@ -83,6 +83,14 @@ void error_free(err_t* e) {
     free(e);
 }
 
+void error_nerrs(err_t* e) {
+    return sl_size(e->errstack);
+}
+
+char* error_get_errstr(err_t* e, int i) {
+    return sl_get(e->errstack, i);
+}
+
 void error_report(err_t* e, const char* module, int line, const char* fmt, ...) {
     va_list va;
     va_start(va, fmt);

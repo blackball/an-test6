@@ -25,9 +25,12 @@
 #include "kdtree_internal.h"
 #include "kdtree_mem.h"
 #include "keywords.h"
+#include "errors.h"
 
 #define KDTREE_MAX_RESULTS 1000
 #define KDTREE_MAX_DIM 100
+
+#define WARNING(x, ...) fprintf(stderr, x, ## __VA_ARGS__)
 
 #define MANGLE(x) KDMANGLE(x, ETYPE, DTYPE, TTYPE)
 
@@ -461,7 +464,7 @@ bool resize_results(kdtree_qres_t* res, int newsize, int D,
 		res->results.any = REALLOC(res->results.any, newsize * D * sizeof(etype));
 	res->inds = REALLOC(res->inds, newsize * sizeof(u32));
 	if (newsize && (!res->results.any || (do_dists && !res->sdists) || !res->inds))
-		fprintf(stderr, "Failed to resize kdtree results arrays.\n");
+		SYSERROR("Failed to resize kdtree results arrays");
 	res->capacity = newsize;
 	return TRUE;
 }
@@ -1113,7 +1116,7 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 	} else {
 		res = CALLOC(1, sizeof(kdtree_qres_t));
 		if (!res) {
-			fprintf(stderr, "Failed to allocate kdtree_qres_t struct.\n");
+			SYSERROR("Failed to allocate kdtree_qres_t struct");
 			return NULL;
 		}
 		resize_results(res, KDTREE_MAX_RESULTS, D, do_dists, do_points);
@@ -1398,7 +1401,7 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 	N = r - l + 1;
 	permute = MALLOC(N * sizeof(int));
 	if (!permute) {
-		fprintf(stderr, "Failed to allocate extra permutation array.\n");
+		SYSERROR("Failed to allocate extra permutation array");
 		return -1;
 	}
 	for (i = 0; i < N; i++)
@@ -1411,7 +1414,7 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 	// permute the data one dimension at a time...
 	tmparr = MALLOC(N * sizeof(dtype));
 	if (!tmparr) {
-		fprintf(stderr, "Failed to allocate temp permutation array.\n");
+		SYSERROR("Failed to allocate temp permutation array");
 		return -1;
 	}
 	for (j = 0; j < D; j++) {
@@ -1425,7 +1428,7 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
 	FREE(tmparr);
 	tmpparr = MALLOC(N * sizeof(int));
 	if (!tmpparr) {
-		fprintf(stderr, "Failed to allocate temp permutation array.\n");
+		SYSERROR("Failed to allocate temp permutation array");
 		return -1;
 	}
 	for (i = 0; i < N; i++) {
@@ -1695,7 +1698,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 	assert(R >= 0);
 	assert(L <= R);
 	if (L >= kd->ndata || R >= kd->ndata || L < 0 || R < 0 || L > R) {
-		fprintf(stderr, "kdtree_check: L,R out of range.\n");
+		ERROR("kdtree_check: L,R out of range");
 		return -1;
 	}
 
@@ -1709,7 +1712,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			assert(counts[i] == 1);
 		for (i=0; i<kd->ndata; i++)
 			if (counts[i] != 1) {
-				fprintf(stderr, "kdtree_check: permutation vector failure.\n");
+				ERROR("kdtree_check: permutation vector failure");
 				return -1;
 			}
 		FREE(counts);
@@ -1722,7 +1725,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			assert(kd->perm[i] >= 0);
 			assert(kd->perm[i] < kd->ndata);
 			if (kd->perm[i] < 0 || kd->perm[i] >= kd->ndata) {
-				fprintf(stderr, "kdtree_check: permutation vector range failure.\n");
+				ERROR("kdtree_check: permutation vector range failure");
 				return -1;
 			}
 		}
@@ -1742,7 +1745,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 		for (d=0; d<D; d++) {
 			assert(plo[d] <= phi[d]);
 			if (plo[d] > phi[d]) {
-				fprintf(stderr, "kdtree_check: bounding-box sanity failure.\n");
+				ERROR("kdtree_check: bounding-box sanity failure");
 				return -1;
 			}
 		}
@@ -1754,7 +1757,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				assert(plo[d] <= t);
 				assert(t <= phi[d]);
 				if (plo[d] > t || t > phi[d]) {
-					fprintf(stderr, "kdtree_check: bounding-box failure.\n");
+					ERROR("kdtree_check: bounding-box failure");
 					return -1;
 				}
 			}
@@ -1768,7 +1771,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				assert(plo[d] <= bb[d]);
 				assert(bb[d] <= phi[d]);
 				if (plo[d] > bb[d] || bb[d] > phi[d]) {
-					fprintf(stderr, "kdtree_check: bounding-box nesting failure.\n");
+					ERROR("kdtree_check: bounding-box nesting failure");
 					return -1;
 				}
 			}
@@ -1777,7 +1780,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				assert(plo[d] <= bb[d]);
 				assert(bb[d] <= phi[d]);
 				if (plo[d] > bb[d] || bb[d] > phi[d]) {
-					fprintf(stderr, "kdtree_check: bounding-box nesting failure.\n");
+					ERROR("kdtree_check: bounding-box nesting failure");
 					return -1;
 				}
 			}
@@ -1786,7 +1789,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				assert(plo[d] <= bb[d]);
 				assert(bb[d] <= phi[d]);
 				if (plo[d] > bb[d] || bb[d] > phi[d]) {
-					fprintf(stderr, "kdtree_check: bounding-box nesting failure.\n");
+					ERROR("kdtree_check: bounding-box nesting failure");
 					return -1;
 				}
 			}
@@ -1795,7 +1798,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				assert(plo[d] <= bb[d]);
 				assert(bb[d] <= phi[d]);
 				if (plo[d] > bb[d] || bb[d] > phi[d]) {
-					fprintf(stderr, "kdtree_check: bounding-box nesting failure.\n");
+					ERROR("kdtree_check: bounding-box nesting failure");
 					return -1;
 				}
 			}
@@ -1810,7 +1813,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			}
 			assert(ok);
 			if (!ok) {
-				fprintf(stderr, "kdtree_check: peer overlap failure.\n");
+				ERROR("kdtree_check: peer overlap failure");
 				return -1;
 			}
 		}
@@ -1844,7 +1847,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				Unused dtype* dat = KD_DATA(kd, D, i);
 				assert(dat[dim] <= dsplit);
 				if (dat[dim] > dsplit) {
-					fprintf(stderr, "kdtree_check: split-plane failure.\n");
+					ERROR("kdtree_check: split-plane failure");
 					return -1;
 				}
 			}
@@ -1855,7 +1858,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 				Unused dtype* dat = KD_DATA(kd, D, i);
 				assert(dat[dim] >= dsplit);
 				if (dat[dim] < dsplit) {
-					fprintf(stderr, "kdtree_check: split-plane failure.\n");
+					ERROR("kdtree_check: split-plane failure");
 					return -1;
 				}
 			}
@@ -1956,32 +1959,15 @@ kdtree_t* MANGLE(kdtree_convert_data)
 			// Bizarrely, the above causes conversion errors,
 			// while the below does not...
 			etype dd = POINT_ED(kd, d, *edata, KD_ROUND);
-			// FIXME - what to do here - clamp?
 			if (dd > DTYPE_MAX) {
-				fprintf(stderr, "Clamping value %.12g -> %.12g to %u.\n", (double)*edata, (double)dd, (unsigned int)DTYPE_MAX);
+				WARNING("Clamping value %.12g -> %.12g to %u", (double)*edata, (double)dd, (unsigned int)DTYPE_MAX);
 				dd = DTYPE_MAX;
 			}
 			if (dd < DTYPE_MIN) {
-				fprintf(stderr, "Clamping value %.12g -> %.12g to %u.\n", (double)*edata, (double)dd, (unsigned int)DTYPE_MIN);
+				WARNING("Clamping value %.12g -> %.12g to %u.\n", (double)*edata, (double)dd, (unsigned int)DTYPE_MIN);
 				dd = DTYPE_MIN;
 			}
 			*ddata = (dtype)dd;
-
-			// DEBUG: check it.
-			/*{
-			  etype ee = POINT_DE(kd, d, *ddata);
-			  if (DIST_ED(kd, fabs(ee - *edata), ) > 1) {
-			  double dd = POINT_ED(kd, d, *edata, );
-			  double ddr = KD_ROUND(dd);
-			  uint uddr = (uint)ddr;
-			  fprintf(stderr, "Error: converting data: %g -> %u -> %g.\n",
-			  *edata, (uint)*ddata, ee);
-			  fprintf(stderr, "unrounded: %.10g.  rounded: %.10g.  uint: %u\n",
-			  dd, KD_ROUND(dd), (uint)(KD_ROUND(dd)));
-			  fprintf(stderr, " %.10g, %.10g, %u.\n",
-			  dd, ddr, uddr);
-			  }
-			  }*/
 
 			ddata++;
 			edata++;
@@ -2037,12 +2023,12 @@ kdtree_t* MANGLE(kdtree_build)
 
 	/* Parameters checking */
 	if (!data || !N || !D) {
-        fprintf(stderr, "Data, N, or D is zero.\n");
+        ERROR("Data, N, or D is zero");
 		return NULL;
     }
 	/* Make sure we have enough data */
 	if ((1 << maxlevel) - 1 > N) {
-        fprintf(stderr, "Too few data points for number of tree levels (%i < %i)!\n", N, (1 << maxlevel) - 1);
+        ERROR("Too few data points for number of tree levels (%i < %i)!", N, (1 << maxlevel) - 1);
 		return NULL;
     }
 
@@ -2050,8 +2036,8 @@ kdtree_t* MANGLE(kdtree_build)
         (options & KD_BUILD_NO_LR) &&
         !(options & KD_BUILD_SPLITDIM) &&
         TTYPE_INTEGER) {
-        fprintf(stderr, "Currently you can't set KD_BUILD_NO_LR for int trees "
-                "unless you also set KD_BUILD_SPLITDIM.\n");
+        ERROR("Currently you can't set KD_BUILD_NO_LR for int trees "
+                "unless you also set KD_BUILD_SPLITDIM");
         return NULL;
     }
 
@@ -2190,7 +2176,7 @@ kdtree_t* MANGLE(kdtree_build)
 
 			/* FIXME but qsort allocates a 2nd perm array GAH */
 			if (kdtree_qsort(data, kd->perm, left, right, D, dim)) {
-				fprintf(stderr, "kdtree_qsort failed.\n");
+				ERROR("kdtree_qsort failed");
 				// FIXME: memleak mania!
 				return NULL;
 			}
@@ -2363,7 +2349,7 @@ bool MANGLE(kdtree_node_point_mindist2_exceeds)
 		tlo =  LOW_HR(kd, D, node);
 		thi = HIGH_HR(kd, D, node);
 	} else {
-		fprintf(stderr, "Error: kdtree_node_point_mindist2_exceeds: kdtree does not have bounding boxes!\n");
+		ERROR("Error: kdtree_node_point_mindist2_exceeds: kdtree does not have bounding boxes!");
 		return FALSE;
 	}
 	for (d=0; d<D; d++) {
@@ -2396,7 +2382,7 @@ bool MANGLE(kdtree_node_point_maxdist2_exceeds)
 	double d2 = 0.0;
 
 	if (!bboxes(kd, node, &tlo, &thi, D)) {
-		fprintf(stderr, "Error: kdtree_node_point_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
+		ERROR("Error: kdtree_node_point_maxdist2_exceeds: kdtree does not have bounding boxes!");
 		return FALSE;
 	}
 	for (d=0; d<D; d++) {
@@ -2431,12 +2417,12 @@ bool MANGLE(kdtree_node_node_maxdist2_exceeds)
 	assert(kd1->ndim == kd2->ndim);
 
 	if (!bboxes(kd1, node1, &tlo1, &thi1, D)) {
-		fprintf(stderr, "Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
+		ERROR("Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!");
 		return FALSE;
 	}
 
 	if (!bboxes(kd2, node2, &tlo2, &thi2, D)) {
-		fprintf(stderr, "Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
+		ERROR("Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!");
 		return FALSE;
 	}
 
@@ -2449,7 +2435,7 @@ bool MANGLE(kdtree_node_node_maxdist2_exceeds)
 		bhi = POINT_TE(kd2, d, thi2[d]);
 		// HACK - if etype is integer...
 		if (ETYPE_INTEGER)
-			fprintf(stderr, "HACK - int overflow is possible here.\n");
+			WARNING("HACK - int overflow is possible here.");
 		delta1 = bhi - alo;
 		delta2 = ahi - blo;
 		delta = (delta1 > delta2 ? delta1 : delta2);
@@ -2472,12 +2458,12 @@ bool MANGLE(kdtree_node_node_mindist2_exceeds)
 	assert(kd1->ndim == kd2->ndim);
 
 	if (!bboxes(kd1, node1, &tlo1, &thi1, D)) {
-		fprintf(stderr, "Error: kdtree_node_node_mindist2_exceeds: kdtree does not have bounding boxes!\n");
+		ERROR("Error: kdtree_node_node_mindist2_exceeds: kdtree does not have bounding boxes!");
 		return FALSE;
 	}
 
 	if (!bboxes(kd2, node2, &tlo2, &thi2, D)) {
-		fprintf(stderr, "Error: kdtree_node_node_mindist2_exceeds: kdtree does not have bounding boxes!\n");
+		ERROR("Error: kdtree_node_node_mindist2_exceeds: kdtree does not have bounding boxes!");
 		return FALSE;
 	}
 
@@ -2544,7 +2530,7 @@ static void nodes_contained_rec(const kdtree_t* kd,
 	}
 
 	if (!bboxes(kd, nodeid, &tlo, &thi, D)) {
-		fprintf(stderr, "Error: kdtree_nodes_contained: node %i doesn't have a bounding box.\n", nodeid);
+		ERROR("Error: kdtree_nodes_contained: node %i doesn't have a bounding box", nodeid);
 		return;
 	}
 
@@ -2578,20 +2564,20 @@ void MANGLE(kdtree_nodes_contained)
 		double q;
 		qlo[d] = q = POINT_ET(kd, d, querylow[d], floor);
 		if (q < TTYPE_MIN) {
-                    //fprintf(stderr, "Error: query value %g is below the minimum range of the tree %g.\n", q, (double)TTYPE_MIN);
-                    qlo[d] = TTYPE_MIN;
+            //WARNING("Error: query value %g is below the minimum range of the tree %g.\n", q, (double)TTYPE_MIN);
+            qlo[d] = TTYPE_MIN;
 		} else if (q > TTYPE_MAX) {
-                    // query's low position is more than the tree's max: no overlap is possible.
-                    return;
-                }
+            // query's low position is more than the tree's max: no overlap is possible.
+            return;
+        }
 		qhi[d] = q = POINT_ET(kd, d, queryhi [d], ceil );
 		if (q > TTYPE_MAX) {
-                    //fprintf(stderr, "Error: query value %g is above the maximum range of the tree %g.\n", q, (double)TTYPE_MAX);
-                    qhi[d] = TTYPE_MAX;
+            //WARNING("Error: query value %g is above the maximum range of the tree %g.\n", q, (double)TTYPE_MAX);
+            qhi[d] = TTYPE_MAX;
 		} else if (q < TTYPE_MIN) {
-                    // query's high position is less than the tree's min: no overlap is possible.
-                    return;
-                }
+            // query's high position is less than the tree's min: no overlap is possible.
+            return;
+        }
 	}
 
 	nodes_contained_rec(kd, 0, qlo, qhi, cb_contained, cb_overlap, cb_extra);

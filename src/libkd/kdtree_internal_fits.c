@@ -22,6 +22,7 @@
 #include "kdtree.h"
 #include "fitsioutils.h"
 #include "ioutils.h"
+#include "errors.h"
 
 static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
     // This function should only be called if the column name matched, so we
@@ -35,7 +36,6 @@ static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 		ext->nitems = kd->ndata;
     } else if (starts_with(ext->name, KD_STR_BB)) {
         ext->datasize = sizeof(ttype) * kd->ndim * 2;
-        // ext->nitems = kd->nnodes;
 	} else if (starts_with(ext->name, KD_STR_SPLIT)) {
 		ext->nitems = kd->ninterior;
 	} else if (starts_with(ext->name, KD_STR_SPLITDIM)) {
@@ -46,7 +46,7 @@ static void tablesize_kd(kdtree_t* kd, extra_table* ext) {
 	} else if (starts_with(ext->name, KD_STR_RANGE)) {
 		ext->nitems = (kd->ndim * 2 + 1);
 	} else {
-		fprintf(stderr, "tablesize_kd called with ext->name %s\n", ext->name);
+        ERROR("tablesize_kd called with ext->name %s", ext->name);
 	}
 }
 
@@ -102,7 +102,6 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 	// kd->bb
 	ext->name = get_table_name(kd->name, KD_STR_BB);
     ext->compute_tablesize = tablesize_kd;
-    //ext->compute_tablesize = NULL;
     ibb = ext - extras;
     ext++;
 
@@ -143,7 +142,7 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 
 	Ne = ext - extras;
 	if (kdtree_fits_common_read(fn, kd, extras, Ne)) {
-		fprintf(stderr, "Failed to read kdtree from file %s.\n", fn);
+		ERROR("Failed to read kdtree from file %s", fn);
         rtnval = -1;
         goto bailout;
 	}
@@ -154,17 +153,17 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
         int nitems_new = kd->nnodes;
         if (!((extras[ibb].nitems == nitems_old) ||
               (extras[ibb].nitems == nitems_new))) {
-            fprintf(stderr, "The %s table should contain either %i (new) or "
+            ERROR("The %s table should contain either %i (new) or "
                     "%i (old buggy) bounding-boxes, but it has %i.  Proceeding "
-                    "as though this table extension doesn't exist.\n",
+                    "as though this table extension doesn't exist",
                     extras[ibb].name, nitems_new, nitems_old, extras[ibb].nitems);
             extras[ibb].found = 0;
         }
         if (extras[ibb].nitems == nitems_old) {
-            fprintf(stderr, "Warning: this file contains an old buggy %s extension; it "
-                    "has %i rather than %i items.  Proceeding anyway, but this is probably a "
-                    "bug unless you are running the fix-bb program!\n",
-                    extras[ibb].name, nitems_old, nitems_new);
+            ERROR("Warning: this file contains an old buggy %s extension; it "
+                  "has %i rather than %i items.  Proceeding anyway, but this "
+                  "probably going to cause problems!",
+                  extras[ibb].name, nitems_old, nitems_new);
         }
     }
 
@@ -173,14 +172,14 @@ int MANGLE(kdtree_read_fits)(const char* fn, kdtree_t* kd, extra_table* uextras,
 		  extras[inodes].found ||
 		  (extras[isplit].found &&
 		   (TTYPE_INTEGER || extras[isplitdim].found)))) {
-		fprintf(stderr, "tree contains neither traditional nodes, bounding boxes nor split+dim data.\n");
+		ERROR("kdtree contains neither traditional nodes, bounding boxes nor split+dim data");
         rtnval = -1;
         goto bailout;
 	}
 
 	if ((TTYPE_INTEGER && !ETYPE_INTEGER) &&
 		!(extras[irange].found)) {
-		fprintf(stderr, "treee does not contain required range information.\n");
+		ERROR("treee does not contain required range information");
         rtnval = -1;
         goto bailout;
 	}

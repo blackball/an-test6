@@ -29,6 +29,7 @@
 #include "kdtree_mem.h"
 #include "keywords.h"
 #include "an-fls.h"
+#include "errors.h"
 
 KD_DECLARE(kdtree_update_funcs, void, (kdtree_t*));
 
@@ -203,7 +204,7 @@ void* kdtree_get_data(const kdtree_t* kd, int i) {
 	case KDT_DATA_U16:
 		return kd->data.s + kd->ndim * i;
 	default:
-		fprintf(stderr, "kdtree_get_data: invalid data type %i.\n", kdtree_datatype(kd));
+		ERROR("kdtree_get_data: invalid data type %i", kdtree_datatype(kd));
 		return NULL;
 	}
 }
@@ -232,7 +233,7 @@ void kdtree_copy_data_double(const kdtree_t* kd, int start, int N, double* dest)
 				dest[i*D + d] = POINT_INVSCALE(kd, d, kd->data.s[(start + i)*D + d]);
 		break;
 	default:
-		fprintf(stderr, "kdtree_copy_data_double: invalid data type %i.\n", kdtree_datatype(kd));
+		ERROR("kdtree_copy_data_double: invalid data type %i", kdtree_datatype(kd));
 		return;
 	}
 }

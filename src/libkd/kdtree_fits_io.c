@@ -31,6 +31,7 @@
 #include "fitsioutils.h"
 #include "qfits.h"
 #include "ioutils.h"
+#include "errors.h"
 
 // is the given table name one of the above strings?
 int kdtree_fits_column_is_kdtree(char* columnname) {
@@ -103,13 +104,13 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
     int rtn = -1;
 
 	if (!qfits_is_fits(fn)) {
-		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
+		ERROR("Kdtree file %s doesn't look like a FITS file", fn);
 		return NULL;
 	}
 
     kdtree = CALLOC(1, sizeof(kdtree_t));
     if (!kdtree) {
-		fprintf(stderr, "Couldn't allocate kdtree.\n");
+		SYSERROR("Couldn't allocate kdtree");
 		return NULL;
     }
 
@@ -117,7 +118,8 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
         // Look in the primary header...
         header = qfits_header_read(fn);
         if (!header) {
-            fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
+            ERROR("Couldn't read FITS header from %s", fn);
+            free(kdtree);
             return NULL;
         }
         if (is_tree_header_ok(header, &ndim, &ndata, &nnodes, &tt, 1)) {
@@ -135,7 +137,7 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
             char* name;
             header = qfits_header_readext(fn, i);
             if (!header) {
-                fprintf(stderr, "Failed to read header for extension %i.\n", i);
+                ERROR("Failed to read FITS header for extension %i in file %s", i, fn);
                 return NULL;
             }
             name = fits_get_dupstring(header, "KDT_NAME");
@@ -161,7 +163,7 @@ kdtree_t* kdtree_fits_read_extras(const char* fn, const char* treename, qfits_he
         }
         if (i > nexten) {
             // Not found.
-            fprintf(stderr, "Kdtree named \"%s\" not found in file %s.\n", treename, fn);
+            ERROR("Kdtree named \"%s\" not found in file %s", treename, fn);
             FREE(kdtree);
             return NULL;
         }
@@ -218,7 +220,7 @@ FILE* kdtree_fits_write_primary_header(const char* fn) {
 
     fout = fopen(fn, "wb");
     if (!fout) {
-        fprintf(stderr, "Failed to open file %s for writing: %s\n", fn, strerror(errno));
+        SYSERROR("Failed to open file %s for writing", fn);
         return NULL;
     }
 
@@ -240,7 +242,7 @@ int kdtree_fits_write_extras(const kdtree_t* kdtree, const char* fn, const qfits
         return rtn;
     }
     if (fclose(fout)) {
-        fprintf(stderr, "Failed to close file %s after writing: %s\n", fn, strerror(errno));
+        SYSERROR("Failed to close file %s after writing", fn);
         return -1;
     }
     return 0;
@@ -260,7 +262,7 @@ int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extra
 		extra_table* tab = extras + i;
 		if (fits_find_table_column(fn, tab->name, &tab->offset, &tab->size, NULL)) {
 			if (tab->required) {
-				fprintf(stderr, "Failed to find table %s in file %s.\n", tab->name, fn);
+				ERROR("Failed to find table %s in file %s", tab->name, fn);
 				return -1;
 			}
 			tab->found = 0;
@@ -284,7 +286,7 @@ int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extra
 		table = fits_get_table_column(fn, tab->name, &col);
 		if (tab->nitems) {
 			if (tab->nitems != table->nr) {
-				fprintf(stderr, "Table %s in file %s: expected %i data items, found %i.\n",
+				ERROR("Table %s in file %s: expected %i data items, found %i",
 						tab->name, fn, tab->nitems, table->nr);
 				qfits_table_close(table);
 				return -1;
@@ -295,7 +297,7 @@ int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extra
 		ds = table->col[col].atom_nb * table->col[col].atom_size;
 		if (tab->datasize) {
 			if (tab->datasize != ds) {
-				fprintf(stderr, "Table %s in file %s: expected data size %i, found %i.\n",
+				ERROR("Table %s in file %s: expected data size %i, found %i",
 						tab->name, fn, tab->datasize, ds);
 				qfits_table_close(table);
 				return -1;
@@ -307,7 +309,7 @@ int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extra
 
 		tablesize = tab->datasize * tab->nitems;
 		if (fits_bytes_needed(tablesize) != tab->size) {
-			fprintf(stderr, "The size of table %s in file %s doesn't jive with what's expected: %i vs %i.\n",
+			ERROR("The size of table %s in file %s doesn't jive with what's expected: %i vs %i",
 					tab->name, fn, fits_bytes_needed(tablesize), tab->size);
 			return -1;
 		}
@@ -318,14 +320,13 @@ int kdtree_fits_common_read(const char* fn, kdtree_t* kdtree, extra_table* extra
 	// launch!
 	fid = fopen(fn, "rb");
 	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s to read kdtree: %s\n",
-				fn, strerror(errno));
+		SYSERROR("Couldn't open file %s to read kdtree", fn);
 		return -1;
 	}
 	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
 	fclose(fid);
 	if (map == MAP_FAILED) {
-		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
+		SYSERROR("Couldn't mmap kdtree file %s", fn);
 		return -1;
 	}
 
@@ -393,7 +394,7 @@ int kdtree_fits_common_write(const kdtree_t* kdtree, const qfits_header* inhdr, 
 		qfits_table_close(table);
 		if ((fwrite(dataptr, 1, tablesize, out) != tablesize) ||
 			fits_pad_file(out)) {
-			fprintf(stderr, "Failed to write kdtree table %s: %s\n", tab->name, strerror(errno));
+			SYSERROR("Failed to write kdtree table %s", tab->name);
 			return -1;
 		}
 	}
