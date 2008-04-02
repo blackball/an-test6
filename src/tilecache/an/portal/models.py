@@ -12,18 +12,15 @@ from an.portal.log import log
 class UserPreferences(models.Model):
     user = models.ForeignKey(User, editable=False)
 
-    # Automatically grant permission to redistribute my images?
-    autoredistributable = models.BooleanField(default=False)
-
     # Automatically allow anonymous access to my job status pages?
-    anonjobstatus = models.BooleanField(default=False)
+    exposejobs = models.BooleanField(default=False)
 
     def __str__(self):
         s = ('<UserPreferences: ' + self.user.username +
-             ', redistributable: ' + (self.autoredistributable and 'T' or 'F')+
-             ', allow anonymous: ' + (self.anonjobstatus and 'T' or 'F') + '>')
+             ', expose jobs: ' + (self.exposejobs and 'T' or 'F'))
         return s
 
+    @staticmethod
     def for_user(user):
         prefset = UserPreferences.objects.all().filter(user = user)
         if not prefset or not len(prefset):
@@ -32,7 +29,12 @@ class UserPreferences(models.Model):
         else:
             prefs = prefset[0]
         return prefs
-    for_user = staticmethod(for_user)
+
+    def expose_jobs(self):
+        return self.exposejobs
+
+    def set_expose_jobs(self, tf):
+        self.exposejobs = tf
 
 
 from an.portal.job import *

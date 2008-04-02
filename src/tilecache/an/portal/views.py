@@ -605,7 +605,7 @@ def getfile(request):
         return res
 
     if f == 'origfile':
-        if not job.is_file_exposed():
+        if not job.is_exposed():
             return HttpResponse('access to this file is forbidden.')
         df = job.diskfile
         res = HttpResponse()
@@ -644,13 +644,11 @@ def userprefs(request):
         form = PrefsForm(request.POST)
     else:
         form = PrefsForm({
-            'autoredistributable': prefs.autoredistributable,
-            'anonjobstatus': prefs.anonjobstatus,
+            'exposejobs': prefs.exposejobs,
             })
 
     if request.POST and form.is_valid():
-        prefs.autoredistributable = form.cleaned_data['autoredistributable']
-        prefs.anonjobstatus = form.cleaned_data['anonjobstatus']
+        prefs.set_expose_jobs(form.cleaned_data['exposejobs'])
         prefs.save()
         msg = 'Preferences Saved'
     else:
@@ -679,6 +677,10 @@ def summary(request):
         jobs += sub.jobs.all()
 
     voimgs = voImage.objects.all().filter(user=request.user)
+
+    log('Jobs:')
+    for job in jobs:
+        log('  %s: is_exposed: %s' % (job.get_id(), job.is_exposed()))
 
     ctxt = {
         'subs' : subs,
@@ -709,17 +711,14 @@ def changeperms(request):
     job = jobs[0]
     if job.get_user() != request.user:
         return HttpResponse('not your job!')
-    if 'allowanon' in request.POST:
-        allow = int(request.POST['allowanon'])
-        job.set_job_exposed(allow)
-        job.save()
-        if 'HTTP_REFERER' in request.META:
-            return HttpResponseRedirect(request.META['HTTP_REFERER'])
-        return HttpResponseRedirect(reverse(summary))
 
-    if 'redist' in request.POST:
-        redist = int(request.POST['redist'])
-        job.set_file_exposed(redist)
+    log('changeperms:')
+    for k,v in request.POST.items():
+        log('  %s = %s' % (str(k), str(v)))
+    expose = int(request.POST.get('exposejob', '-1'))
+    if expose == 0 or expose == 1:
+        log('exposejob = %i' % expose)
+        job.set_exposed(expose)
         job.save()
         if 'HTTP_REFERER' in request.META:
             return HttpResponseRedirect(request.META['HTTP_REFERER'])

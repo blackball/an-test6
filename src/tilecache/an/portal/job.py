@@ -34,13 +34,6 @@ class DiskFile(models.Model):
     imagew = models.PositiveIntegerField(null=True)
     imageh = models.PositiveIntegerField(null=True)
 
-    #def __init__(self, *args, **kwargs):
-    #    if 'file' in kwargs and 'filehash' not in kwargs:
-    #        fn = kwargs['file']
-    #        hashval = DiskFile.get_hash(fn)
-    #        kwargs['filehash'] = hashval
-    #    super(DiskFile, self).__init__(*args, **kwargs)
-
     def __str__(self):
         return ('<DiskFile %s, type %s, size %ix%i>' %
                 (self.filehash, self.filetype or '(none)',
@@ -60,11 +53,7 @@ class DiskFile(models.Model):
         return typemap[self.filetype]
 
     def show(self):
-        jobs = self.jobs.all()
-        for job in jobs:
-            if job.get_expose_file():
-                return True
-        return False
+        return (self.jobs.all().filter(exposejob=True).count() > 0)
 
     def submitted_by_user(self, u):
         jobs = self.jobs.all()
@@ -380,6 +369,20 @@ class Submission(models.Model):
 
 
 class Job(models.Model):
+    # called by the Django superclass constructor when the "exposejob"
+    # field is not given a value.  Get the value from the UserPrefs.
+    def get_default_exposejob(self):
+        u = self.get_user()
+        if u:
+            prefs = UserPreferences.for_user(u)
+            if prefs:
+                return prefs.expose_jobs()
+            else:
+                log('No preferences found for user %s' % str(u))
+        else:
+            log('No user found for new Job')
+        return False
+
     # test-200802-12345678
     jobid = models.CharField(max_length=32, unique=True, primary_key=True)
 
@@ -398,13 +401,10 @@ class Job(models.Model):
     # to show the user a filename that makes sense.
     fileorigname = models.CharField(max_length=64, null=True)
 
-    # Has the user granted us permission to serve this file to everyone?
-    exposefile = models.BooleanField(default=False)
-
     calibration = models.ForeignKey(Calibration, null=True)
 
     # Has the user granted us permission to show this job to everyone?
-    exposejob = models.BooleanField(default=False)
+    exposejob = models.BooleanField(default=get_default_exposejob)
 
     status = models.CharField(max_length=16)
     failurereason = models.CharField(max_length=256)
@@ -416,21 +416,8 @@ class Job(models.Model):
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
 
-    def __init__(self, *args, **kwargs):
-        #for k,v in kwargs.items():
-        #    if v is None:
-        #        del kwargs[k]
-        super(Job, self).__init__(*args, **kwargs)
-        if not 'exposejob' in kwargs or kwargs['exposejob'] is None:
-            u = self.get_user()
-            if u:
-                prefs = UserPreferences.for_user(u)
-                if prefs:
-                    self.exposejob = prefs.anonjobstatus
-                else:
-                    log('No preferences found for user %s' % str(u))
-            else:
-                log('No user found for new Job')
+    #def __init__(self, *args, **kwargs):
+    #    super(Job, self).__init__(*args, **kwargs)
 
     def __str__(self):
         s = '<Job %s, ' % self.get_id()
@@ -468,17 +455,9 @@ class Job(models.Model):
     def get_fileid(self):
         return self.diskfile.filehash
 
-    def get_expose_file(self):
-        return self.exposefile
-
-    def set_job_exposed(self, exposed):
+    def set_exposed(self, exposed):
         self.exposejob = exposed and True or False
-
-    def set_file_exposed(self, exposed):
-        self.exposefile = exposed and True or False
-
-    def is_file_exposed(self):
-        return self.exposefile
+        log('job.is_exposed() is now: %s' % self.is_exposed())
 
     def is_exposed(self):
         return self.exposejob
