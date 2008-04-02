@@ -439,6 +439,12 @@ class Job(models.Model):
             s = s[:20] + '...'
         return s
 
+    def short_userfilename(self):
+        s = self.submission.uploaded.userfilename
+        if len(s) > 20:
+            s = s[:20] + '...'
+        return s
+
     # status is "Solved" or "Failed"
     def is_finished(self):
         return self.status in ['Solved', 'Failed']

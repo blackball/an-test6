@@ -66,7 +66,7 @@ tr.odd td {}
 
 <td>
 {% if job.get_description %}
-{{ job.get_description }}
+{{ job.short_description }}
 {% endif %}
 </td>
 
@@ -84,7 +84,7 @@ tr.odd td {}
 &nbsp;
 {% endif %}
 {% if job.submission.uploaded.userfilename %}
-File: {{ job.submission.uploaded.userfilename }}
+{{ job.short_userfilename }}
 
 {% if job.fileorigname %}
 {% ifequal job.fileorigname job.submission.fileorigname %}
@@ -103,7 +103,7 @@ File: {{ job.submission.uploaded.userfilename }}
 {% endcomment %}
 
 {% endif %}
-<a href="{{ getfileurl }}{{ job.get_id }}&f=origfile">Stored Copy</a>
+<a href="{{ getfileurl }}{{ job.get_id }}&f=origfile">Cached</a>
 </td>
 
 <td class="c">
