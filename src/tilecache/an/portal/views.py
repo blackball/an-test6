@@ -81,6 +81,8 @@ def get_status_url(jobid):
     return reverse(jobstatus) + '?jobid=' + jobid
 
 def get_job(jobid):
+    if jobid is None:
+        return None
     jobs = Job.objects.all().filter(jobid=jobid)
     if len(jobs) != 1:
         #log('Found %i jobs, not 1' % len(jobs))
@@ -701,30 +703,32 @@ def changeperms(request):
         return HttpResponse('no POST')
     prefs = UserPreferences.for_user(request.user)
 
-    if not 'jobid' in request.POST:
-        return HttpResponse('no jobid')
-
-    jobid = request.POST['jobid']
-    jobs = Job.objects.all().filter(jobid = jobid)
-    if not jobs or len(jobs) != 1:
-        return HttpResponse('no job')
-    job = jobs[0]
-    if job.get_user() != request.user:
-        return HttpResponse('not your job!')
-
     log('changeperms:')
     for k,v in request.POST.items():
         log('  %s = %s' % (str(k), str(v)))
     expose = int(request.POST.get('exposejob', '-1'))
-    if expose == 0 or expose == 1:
+    if expose in [0, 1]:
+        job = get_job(request.POST.get('jobid'))
+        if job is None:
+            return HttpResponse('no jobid')
+        if job.get_user() != request.user:
+            return HttpResponse('not your job!')
         log('exposejob = %i' % expose)
         job.set_exposed(expose)
         job.save()
-        if 'HTTP_REFERER' in request.META:
-            return HttpResponseRedirect(request.META['HTTP_REFERER'])
-        return HttpResponseRedirect(reverse(summary))
+    exposeall = int(request.POST.get('exposeall', '-1'))
+    if exposeall in [0, 1]:
+        #jobs = Job.objects.all().filter(submission.user=request.user)
+        subs = Submission.objects.all().filter(user=request.user)
+        for sub in subs:
+            jobs = sub.jobs.all()
+            for job in jobs:
+                job.set_exposed(exposeall)
+                job.save()
 
-    return HttpResponse('no action.')
+    if 'HTTP_REFERER' in request.META:
+        return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponseRedirect(reverse(summary))
 
 @login_required
 def publishtovo(request):
