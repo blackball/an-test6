@@ -433,6 +433,12 @@ class Job(models.Model):
             return self.description
         return self.submission.description
 
+    def short_description(self):
+        s = self.get_description()
+        if len(s) > 20:
+            s = s[:20] + '...'
+        return s
+
     # status is "Solved" or "Failed"
     def is_finished(self):
         return self.status in ['Solved', 'Failed']
@@ -504,6 +510,12 @@ class Job(models.Model):
         elif units == 'focalmm':
             txt = 'focal length of ' + val + ' mm'
         return txt
+
+    def short_failurereason(self):
+        s = self.failurereason
+        if len(s) > 25:
+            s = s[:25] + '...'
+        return s
 
     def get_scale_bounds(self):
         stype = self.get_scaletype()

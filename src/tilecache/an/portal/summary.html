@@ -74,7 +74,7 @@ tr.odd td {}
 
 <td class="c">{{ job.status }}
 {% if job.failurereason %}
-: {{ job.failurereason }}
+: {{ job.short_failurereason }}
 {% endif %}
 </td>
 
