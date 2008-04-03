@@ -370,25 +370,7 @@ class Submission(models.Model):
 
 class Job(models.Model):
 
-    # called by the Django superclass constructor when the "exposejob"
-    # field is not given a value.  Get the value from the UserPrefs.
-    def get_default_exposejob():
-        # FIXME
-        return True
-
-    def junk(self):
-        u = self.get_user()
-        if u:
-            prefs = UserPreferences.for_user(u)
-            if prefs:
-                return prefs.expose_jobs()
-            else:
-                log('No preferences found for user %s' % str(u))
-        else:
-            log('No user found for new Job')
-        return False
-
-    # test-200802-12345678
+    # eg 'test-200802-12345678'
     jobid = models.CharField(max_length=32, unique=True, primary_key=True)
 
     submission = models.ForeignKey(Submission, related_name='jobs', null=True)
@@ -409,7 +391,7 @@ class Job(models.Model):
     calibration = models.ForeignKey(Calibration, null=True)
 
     # Has the user granted us permission to show this job to everyone?
-    exposejob = models.BooleanField(default=get_default_exposejob)
+    exposejob = models.BooleanField(null=True, blank=True, default=None)
 
     status = models.CharField(max_length=16)
     failurereason = models.CharField(max_length=256)
@@ -421,8 +403,18 @@ class Job(models.Model):
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
 
-    #def __init__(self, *args, **kwargs):
-    #    super(Job, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Job, self).__init__(*args, **kwargs)
+        if self.exposejob is None:
+            u = self.get_user()
+            if u:
+                prefs = UserPreferences.for_user(u)
+                if prefs:
+                    self.exposejob = prefs.expose_jobs()
+                else:
+                    log('No preferences found for user %s' % str(u))
+            else:
+                log('No user found for new Job')
 
     def __str__(self):
         s = '<Job %s, ' % self.get_id()

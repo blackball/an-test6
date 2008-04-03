@@ -25,29 +25,6 @@ var req;
 var reload = true;
 var period = 5000;
 
-function start() {
-  setTimeout('sendRequest()', period);
-  //sendRequest();
-}
-
-function sendRequest() {
-  req = new XMLHttpRequest();
-  req.onreadystatechange = requestStateChanged;
-  var url = '{{ xmlsummaryurl }}';
-  req.open('GET', url, true);
-  req.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
-  //  req.data = ' ';
-  req.send(' ');
-}
-
-function requestStateChanged() {
-  if (processRequest()) {
-    if (reload) {
-      setTimeout('sendRequest()', period);
-    }
-  }
-}
-
 function processRequest() {
   if (!req) {
     return false;
@@ -82,6 +59,36 @@ function processRequest() {
   return true;
 }
 
+function requestStateChanged() {
+  if (processRequest()) {
+    if (reload) {
+      setTimeout('sendRequest()', period);
+    }
+  }
+}
+
+function sendRequest() {
+  req = new XMLHttpRequest();
+  req.onreadystatechange = requestStateChanged;
+  var url = '{{ xmlsummaryurl }}';
+  req.open('GET', url, true);
+  req.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
+  //  req.data = ' ';
+  req.send(' ');
+}
+
+function start() {
+  setTimeout('sendRequest()', period);
+  //sendRequest();
+}
+
+function stop() {
+  reload = false;
+  if (req) {
+    req.abort();
+  }
+  req = null;
+}
 </script>
 {% endblock javascript %}
 
