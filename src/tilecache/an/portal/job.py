@@ -582,6 +582,13 @@ class Job(models.Model):
     def set_finishtime_now(self):
         self.finishtime = Job.timenow()
 
+    def format_status(self):
+        s = self.status
+        r = self.short_failurereason()
+        if r:
+            s = s + ': ' + r
+        return s
+
     def format_enqueuetime(self):
         return Job.format_time(self.enqueuetime)
     def format_starttime(self):

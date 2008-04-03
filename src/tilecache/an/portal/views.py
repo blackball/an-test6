@@ -118,7 +118,7 @@ def joblist(request):
     if jobid:
         job = get_job(jobid)
 
-    n = int(request.GET.get('n', '0'))
+    n = int(request.GET.get('n', '50'))
     start = int(request.GET.get('start', '0'))
     if n:
         end = start + n
@@ -130,6 +130,27 @@ def joblist(request):
     kind = request.GET.get('type')
     if not kind in [ 'user', 'nearby', 'tag', 'sub' ]:
         kind = 'user'
+
+    colnames = {
+        'jobid' : 'Job Id',
+        'status' : 'Status',
+        'starttime' : 'Start Time',
+        'finishtime' : 'Finish Time',
+        'testcol' : 'Test Column',
+        }
+
+    allcols = colnames.keys()
+
+    cols = ','.join(request.GET.getlist('cols'))
+    log("cols: " + str(cols))
+    if cols:
+        cols = cols.split(',')
+        okcols = []
+        for c in cols:
+            if c in allcols:
+                okcols.append(c)
+        cols = okcols
+    log("cols: " + str(cols))
 
     ctxt = {}
 
@@ -151,6 +172,10 @@ def joblist(request):
                  '?submission=%s' % sub.get_id() +
                  '&layers=tycho,grid,userboundary&arcsinh')
 
+        if not cols:
+            cols = [ 'jobid', 'status', 'starttime', 'finishtime' ]
+
+    log("cols: " + str(cols))
 
     if end > 0 and end < len(jobs):
         args = request.GET.copy()
@@ -167,13 +192,16 @@ def joblist(request):
 
     jobs = jobs[start:end]
 
+
+    addcols = [c for c in allcols if c not in cols]
+
     if format == 'xml':
         res = HttpResponse()
         res['Content-type'] = 'text/xml'
         res.write('<submission subid="%s">\n' % subid)
         for job in jobs:
             res.write('  <job jobid="%s">\n' % job.jobid)
-            res.write('    <jobid>%s</jobid>\n' % job.jobid)
+            #res.write('    <jobid>%s</jobid>\n' % job.jobid)
             s = job.status
             if job.failurereason:
                 s += ': ' + job.failurereason
@@ -189,9 +217,43 @@ def joblist(request):
         #xmlargs.update(request.GET)
         #xmlargs['format'] = 'xml'
 
+        cnames = [colnames.get(c) for c in cols]
+
+        columns = []
+        for c,n in zip(cols, cnames):
+            args = request.GET.copy()
+            delcols = cols[:]
+            delcols.remove(c)
+            args['cols'] = ','.join(delcols)
+            delurl = request.path + '?' + args.urlencode()
+            columns.append((c, n, delurl))
+
+        addcolumns = zip(addcols, [colnames[c] for c in addcols])
+
+        rjobs = []
+        for job in jobs:
+            rend = []
+            for c in cols:
+                t = ''
+                if c == 'jobid':
+                    t = job.jobid
+                elif c == 'starttime':
+                    t = job.format_starttime_brief()
+                elif c == 'finishtime':
+                    t = job.format_finishtime_brief()
+                elif c == 'status':
+                    t = job.format_status()
+                rend.append(str(t))
+            rjobs.append(rend)
+
         ctxt.update({
+            'thisurl' : request.get_full_path(),
+            'addcolumns' : addcolumns,
+            'columns' : columns,
+            #'colnames' : cnames,
             'submission' : sub,
             'jobs' : jobs,
+            'rjobs' : rjobs,
             'reload_time' : (len(jobs) < 2) and 2 or 15,
             'statusurl' : get_status_url(''),
             'gmaps' : gmaps,
