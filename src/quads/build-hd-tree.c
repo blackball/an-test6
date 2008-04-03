@@ -236,7 +236,7 @@ int main(int argc, char** args) {
 	D = 3;
 	if (convert) {
         double lo[] = {-1.0, -1.0, -1.0};
-        double hi[] = {1.0, 1.0, 1.0};
+        double hi[] = { 1.0,  1.0,  1.0};
 		printf("Converting data...\n");
         kd = kdtree_new(N, D, Nleaf);
         kdtree_set_limits(kd, lo, hi);
@@ -263,7 +263,6 @@ int main(int argc, char** args) {
 
 	qfits_header_destroy(hdr);
     free(xyz);
-    //free(kd->data.any);
     kdtree_free(kd);
 
     return 0;

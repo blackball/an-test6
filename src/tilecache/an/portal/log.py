@@ -11,5 +11,7 @@ logging.basicConfig(level=logging.DEBUG,
                     )
 
 def log(*msg):
-    logging.debug(' '.join([str(m).encode('latin_1') for m in msg]))
+    logging.debug(' '.join([str(m).decode('latin_1', 'backslashreplace') for m in msg]))
+    #logging.debug(' '.join([str(m).encode('latin_1', 'backslashreplace') for m in msg]))
+    #logging.debug(' '.join([str(m).encode('latin_1') for m in msg]))
     #logging.debug(' '.join(map(str, msg)))

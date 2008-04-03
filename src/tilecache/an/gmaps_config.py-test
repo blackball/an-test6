@@ -5,6 +5,8 @@ w3c_validator_url = 'http://oven.cosmo.fas.nyu.edu:8888/w3c-markup-validator/che
 basedir = "/home/gmaps/test/"
 tcdir = basedir + "tilecache/"
 
+hdcat = basedir + 'hd.fits'
+
 uploader_url = '/test/uploader'
 
 jobqueuedir = basedir + "job-queue/"

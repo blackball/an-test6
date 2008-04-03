@@ -46,6 +46,7 @@
 #include "constellations.h"
 #include "brightstars.h"
 #include "hd.h"
+#include "qfits_error.h"
 
 const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:MDd:";
 
@@ -203,6 +204,9 @@ int main(int argc, char** args) {
 	int i, N;
 	bool justlist = FALSE;
     bool only_messier = FALSE;
+
+    //qfits_err_remove_all();
+    qfits_err_statset(1);
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -625,6 +629,7 @@ int main(int argc, char** args) {
 				cairo_stroke(cairoshapes);
 			}
 		}
+        pl_free(brightstars);
 	}
 
     if (NGC) {
@@ -719,6 +724,9 @@ int main(int argc, char** args) {
         bl* hdlist;
         int i;
 
+        if (!justlist)
+            cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+
         hdcat = henry_draper_open(hdpath);
         if (!hdcat) {
             fprintf(stderr, "Failed to open HD catalog.\n");
@@ -743,9 +751,14 @@ int main(int argc, char** args) {
                 continue;
             }
             asprintf(&txt, "HD %i", hd->hd);
-            if (!justlist)
-                add_text(cairos, txt, px, py - label_offset);
-            printf(txt);
+            if (!justlist) {
+                //cairo_text_extents_t textents;
+                //cairo_text_extents(cairo, txt, &textents);
+                //add_text(cairos, txt, px, py - label_offset);
+                fprintf(stderr, "(%g, %g), (%g, %g)\n", hd->ra, hd->dec, px, py);
+                add_text(cairos, txt, px, py);
+            }
+            printf("%s\n", txt);
             free(txt);
         }
         bl_free(hdlist);
@@ -791,7 +804,15 @@ int main(int argc, char** args) {
     }
 
     cairo_surface_destroy(target);
+    cairo_surface_destroy(surfshapesmask);
+    cairo_surface_destroy(surffg);
+    cairo_surface_destroy(surfbg);
+    cairo_surface_destroy(surfshapes);
     cairo_destroy(cairo);
+    cairo_destroy(cairot);
+    cairo_destroy(cairobg);
+    cairo_destroy(cairoshapes);
+    cairo_destroy(cairoshapesmask);
     free(img);
 
     return 0;

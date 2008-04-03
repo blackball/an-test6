@@ -256,7 +256,7 @@ def convert(job, df, fn, args=None):
 
     elif fn == 'objsinfield':
         infn = job.get_filename('wcs.fits')
-        cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j -D -d "%s" > %s' % (infn, gmaps_config.hdcat, fullfn)
+        cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j -D -d %s > %s' % (infn, gmaps_config.hdcat, fullfn)
         run_convert_command(cmd)
         return fullfn
 
@@ -378,7 +378,7 @@ def convert(job, df, fn, args=None):
         wcsfn = job.get_filename('wcs.fits')
         imgfn = convert(job, df, 'ppm-medium-8bit')
         (scale, dw, dh) = df.get_medium_scale()
-        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s -D -d "%s"' %
+        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s -D -d %s' %
                (wcsfn, fullfn, 1.0/float(scale), imgfn, gmaps_config.hdcat))
         run_convert_command(cmd)
         return fullfn
@@ -386,7 +386,7 @@ def convert(job, df, fn, args=None):
     elif fn == 'annotation-big':
         imgfn = convert(job, df, 'ppm-8bit')
         wcsfn = job.get_filename('wcs.fits')
-        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s -D -d "%s"' %
+        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s -D -d %s' %
                (wcsfn, fullfn, imgfn, gmaps_config.hdcat))
         run_convert_command(cmd)
         return fullfn
