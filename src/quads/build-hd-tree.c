@@ -44,6 +44,8 @@ deg|deg|
  It turns out that the HD numbers are all in sequence and contiguous, so there's no
  point storing them.
 
+ A copy of this input file is available at 
+ http://trac.astrometry.net/browser/binary/henry-draper/henry-draper.tsv
 */
 
 #include <unistd.h>
