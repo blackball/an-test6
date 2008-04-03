@@ -17,6 +17,7 @@ td.c { text-align:center; }
 tr.even td { background-color:#EEE; }
 tr.odd td {}
 p.c { text-align:center; }
+h3.c { text-align:center; }
 {% endblock inlinecss %}
 
 {% block javascript %}
@@ -98,7 +99,20 @@ function stop() {
 
 {% block content %}
 
+<h3 class="c">
+Jobs {{ firstnum }} through {{ lastnum }} of {{ totalnum }}
+</h3>
+
 {% if jobs %}
+<p class="c">
+{% if prevurl %}
+<a href="{{ prevurl }}">prev</a>
+{% endif %}
+{% if nexturl %}
+<a href="{{ nexturl }}">next</a>
+{% endif %}
+</p>
+
 <table id="summarytable">
 
 <tr>
@@ -138,12 +152,14 @@ function stop() {
 
 </table>
 
+<p class="c">
 {% if prevurl %}
 <a href="{{ prevurl }}">prev</a>
 {% endif %}
 {% if nexturl %}
 <a href="{{ nexturl }}">next</a>
 {% endif %}
+</p>
 
 {% if somesolved %}
 <br />

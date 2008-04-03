@@ -145,7 +145,7 @@ def joblist(request):
         if sub is None:
             return HttpResponse('no sub')
         job = None
-        jobs = sub.jobs.all().order_by('starttime', 'jobid')
+        jobs = sub.jobs.all().order_by('enqueuetime', 'starttime', 'jobid')
 
         gmaps = (reverse('an.tile.views.index') +
                  '?submission=%s' % sub.get_id() +
@@ -161,6 +161,10 @@ def joblist(request):
         args['start'] = max(0, start-n)
         ctxt['prevurl'] =request.path + '?' + args.urlencode()
         
+    ctxt['firstnum'] = max(0, start)
+    ctxt['lastnum']  = end == -1 and len(jobs) or min(len(jobs), end)
+    ctxt['totalnum']  = len(jobs)
+
     jobs = jobs[start:end]
 
     if format == 'xml':
