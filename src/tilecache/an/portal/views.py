@@ -268,9 +268,6 @@ def submission_status_xml(request):
     res = HttpResponse()
     res['Content-type'] = 'text/xml'
 
-    ## DEBUG
-    jobs = jobs[len(jobs)-100:]
-
     res.write('<submission subid="%s">\n' % subid)
     for job in jobs:
         res.write('  <job jobid="%s">\n' % job.jobid)
@@ -305,9 +302,6 @@ def submission_status(request, submission):
     gmaps = (reverse('an.tile.views.index') +
              '?submission=%s' % submission.get_id() +
              '&layers=tycho,grid,userboundary&arcsinh')
-
-    ## DEBUG
-    jobs = jobs[len(jobs)-100:]
 
     ctxt = {
         'submission' : submission,
