@@ -101,6 +101,38 @@ def getsessionjob(request):
     return get_job(jobid)
 
 @login_required
+def submission_status_xml(request):
+    subid = request.GET.get('subid')
+    if subid is None:
+        return HttpResponse('no subid')
+    subs = Submission.objects.all().filter(subid=subid)
+    if len(subs) != 1:
+        return HttpResponse('%i subs' % len(subs))
+    sub = subs[0]
+    jobs = sub.jobs.all().order_by('starttime', 'jobid')
+    res = HttpResponse()
+    res['Content-type'] = 'text/xml'
+
+    ## DEBUG
+    jobs = jobs[len(jobs)-100:]
+
+    res.write('<submission subid="%s">\n' % subid)
+    for job in jobs:
+        res.write('  <job jobid="%s">\n' % job.jobid)
+        res.write('    <jobid>%s</jobid>\n' % job.jobid)
+        s = job.status
+        if job.failurereason:
+            s += ': ' + job.failurereason
+        res.write('    <status>%s</status>\n' % s)
+        res.write('    <start>%s</start>\n' % job.format_starttime_brief())
+        res.write('    <finish>%s</finish>\n' % job.format_finishtime_brief())
+        res.write('  </job>\n')
+    res.write('</submission>\n')
+
+    return res
+
+
+@login_required
 def submission_status(request, submission):
     jobs = submission.jobs.all().order_by('starttime', 'jobid')
 
@@ -119,13 +151,17 @@ def submission_status(request, submission):
              '?submission=%s' % submission.get_id() +
              '&layers=tycho,grid,userboundary&arcsinh')
 
+    ## DEBUG
+    jobs = jobs[len(jobs)-100:]
+
     ctxt = {
         'submission' : submission,
-        'reload_time' : (len(jobs) < 2) and 2 or 5,
+        'reload_time' : (len(jobs) < 2) and 2 or 15,
         'jobs' : jobs,
         'statusurl' : get_status_url(''),
         'somesolved' : somesolved,
         'gmaps_view_submission' : gmaps,
+        'xmlsummaryurl' : reverse(submission_status_xml) + '?subid=' + submission.subid,
         }
     t = loader.get_template('portal/submission_status.html')
     c = RequestContext(request, ctxt)

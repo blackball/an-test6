@@ -3,7 +3,9 @@
 {% block extrahead %}
 {% if submission.is_finished %}
 {% else %}
-<meta http-equiv="refresh" content="{{ reload_time }}; URL=" />
+
+{#  <meta http-equiv="refresh" content="{{ reload_time }}; URL=" />  #}
+
 {% endif %}
 {% endblock extrahead %}
 
@@ -16,6 +18,76 @@ tr.even td { background-color:#EEE; }
 tr.odd td {}
 p.c { text-align:center; }
 {% endblock inlinecss %}
+
+{% block javascript %}
+<script type="text/javascript">
+var req;
+var reload = true;
+var period = 5000;
+
+function start() {
+  setTimeout('sendRequest()', period);
+  //sendRequest();
+}
+
+function sendRequest() {
+  req = new XMLHttpRequest();
+  req.onreadystatechange = requestStateChanged;
+  var url = '{{ xmlsummaryurl }}';
+  req.open('GET', url, true);
+  req.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
+  //  req.data = ' ';
+  req.send(' ');
+}
+
+function requestStateChanged() {
+  if (processRequest()) {
+    if (reload) {
+      setTimeout('sendRequest()', period);
+    }
+  }
+}
+
+function processRequest() {
+  if (!req) {
+    return false;
+  }
+  if (req.readyState != 4) {
+    return false;
+  }
+  if (req.status != 200) {
+    return true;
+  }
+  xml = req.responseXML;
+  if (!xml) {
+    return true;
+  }
+
+  jobs = xml.getElementsByTagName('job');
+  for (i=0; i<jobs.length; i++) {
+    job = jobs[i];
+    jobid = job.getAttribute('jobid');
+    for (j=0; j<job.childNodes.length; j++) {
+      child = job.childNodes[j];
+      //      if (child.
+      col = child.nodeName;
+      id = 'job-' + jobid + '-' + col;
+      div = document.getElementById(id);
+      if (!div) {
+        continue;
+      }
+      div.firstChild.nodeValue = child.firstChild.nodeValue;
+    }
+  }
+  return true;
+}
+
+</script>
+{% endblock javascript %}
+
+{% block bodytag %}
+<body onLoad="start();">
+{% endblock bodytag %}
 
 {% block content %}
 
@@ -31,14 +103,29 @@ p.c { text-align:center; }
 
 {% for job in jobs %}
 <tr class="{% cycle even,odd %}">
-<td><a href="{{ statusurl }}{{ job.jobid }}"> {{ job.jobid }} </a></td>
-<td class="c">{{ job.status }}
+<td><a href="{{ statusurl }}{{ job.jobid }}">
+<span id="job-{{job.jobid}}-jobid">
+{{ job.jobid }}
+</span>
+</a></td>
+<td class="c">
+<span id="job-{{job.jobid}}-status">
+{{ job.status }}
 {% if job.failurereason %}
 : {{ job.failurereason }}
 {% endif %}
+</span>
 </td>
-<td> {{ job.format_starttime_brief }} </td>
-<td> {{ job.format_finishtime_brief }} </td>
+<td>
+<span id="job-{{job.jobid}}-start">
+{{ job.format_starttime_brief }}
+</span>
+</td>
+<td>
+<span id="job-{{job.jobid}}-start">
+{{ job.format_finishtime_brief }}
+</span>
+</td>
 </tr>
 {% endfor %}
 

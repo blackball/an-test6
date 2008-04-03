@@ -18,6 +18,7 @@ urlpatterns = patterns('',
 					   (r'^tag_summary/$',     an.portal.views.tag_summary),
 					   (r'^user_summary/$',     an.portal.views.user_summary),
 					   (r'^nearby_summary/$',     an.portal.views.nearby_summary),
+					   (r'^substatusxml/$',      an.portal.views.submission_status_xml),
                        # PLAY
 					   (r'^redgreen$',     an.portal.views.redgreen),
                        (r'^run-variant/$', an.portal.views.run_variant),
