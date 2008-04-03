@@ -400,6 +400,7 @@ class Job(models.Model):
     howsolved = models.CharField(max_length=256)
 
     # times
+    enqueuetime = models.DateTimeField(null=True)
     starttime  = models.DateTimeField(null=True)
     finishtime = models.DateTimeField(null=True)
 
@@ -574,16 +575,22 @@ class Job(models.Model):
     def allowanonymous(self, prefs=None):
         return self.exposejob
 
+    def set_enqueuetime_now(self):
+        self.enqueuetime = Job.timenow()
     def set_starttime_now(self):
         self.starttime = Job.timenow()
     def set_finishtime_now(self):
         self.finishtime = Job.timenow()
 
+    def format_enqueuetime(self):
+        return Job.format_time(self.enqueuetime)
     def format_starttime(self):
         return Job.format_time(self.starttime)
     def format_finishtime(self):
         return Job.format_time(self.finishtime)
 
+    def format_enqueuetime_brief(self):
+        return Job.format_time_brief(self.enqueuetime)
     def format_starttime_brief(self):
         return Job.format_time_brief(self.starttime)
     def format_finishtime_brief(self):

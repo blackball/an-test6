@@ -385,6 +385,7 @@ def handle_tarball(basedir, filenames, submission):
             )
 
         if len(validpaths) == 1:
+            job.enqueuetime = submission.submittime
             job.save()
             submission.save()
             # One file in tarball: convert straight to a Job.
@@ -394,6 +395,7 @@ def handle_tarball(basedir, filenames, submission):
                 return rtn
             break
 
+        job.set_enqueuetime_now()
         job.set_status('Queued')
         job.save()
         submission.save()
@@ -491,6 +493,7 @@ def main(sshconfig, joblink):
             fileorigname = submission.fileorigname,
             diskfile = submission.diskfile,
             )
+        job.enqueuetime = submission.submittime
         job.save()
         submission.save()
         rtn = handle_job(job, sshconfig)
