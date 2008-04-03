@@ -311,13 +311,13 @@ def get_tile(request):
         filenames = []
 
         if 'submission' in request.GET:
-            jobid = request.GET['submission']
-            subs = Submission.objects.all().filter(jobid=jobid)
+            subid = request.GET['submission']
+            subs = Submission.objects.all().filter(subid=subid)
             if len(subs) != 1:
-                logging.debug("Found %i submission matching id %s, expected 1.\n" % (len(subs), jobid))
+                logging.debug("Found %i submission matching id %s, expected 1.\n" % (len(subs), subid))
                 return HttpResponse('Got %i submissions.' % len(subs))
             sub = subs[0]
-            jobs = sub.jobs.all().filter(solved=True)
+            jobs = sub.jobs.all().filter(status='Solved')
 
             # BIG HACK!
             if not sip.libraryloaded():
@@ -329,7 +329,8 @@ def get_tile(request):
                 jpegfn = fn + '.jpg'
 
                 if not os.path.exists(wcsfn):
-                    tanwcs = job.tanwcs
+                    calib = job.calibration
+                    tanwcs = calib.raw_tan
                     if not tanwcs:
                         continue
                     # convert to an_common.sip.Tan
@@ -340,8 +341,8 @@ def get_tile(request):
 
                 if not os.path.exists(jpegfn):
                     logging.debug('Writing JPEG file ' + jpegfn)
-                    field = job.field
-                    tmpjpeg = convert(job, field, 'jpeg-norm')
+                    df = job.diskfile
+                    tmpjpeg = convert(job, df, 'jpeg-norm')
                     shutil.copy(tmpjpeg, jpegfn)
 
                 filenames.append(fn)

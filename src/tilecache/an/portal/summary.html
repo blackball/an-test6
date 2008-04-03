@@ -23,7 +23,7 @@ tr.odd td {}
 {% for s in subs %}
 <tr class="{% cycle even,odd %}">
 <td>
-<a href="{{ statusurl }}{{ s.jobid }}">{{ s.subid }}</a>
+<a href="{{ statusurl }}{{ s.subid }}">{{ s.subid }}</a>
 </td>
 <td>
 {{ s.format_submittime_brief }}
