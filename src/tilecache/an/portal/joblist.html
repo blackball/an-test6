@@ -45,17 +45,28 @@ function processRequest() {
   jobs = xml.getElementsByTagName('job');
   for (i=0; i<jobs.length; i++) {
     job = jobs[i];
-    jobid = job.getAttribute('jobid');
+    //jobid = job.getAttribute('jobid');
+    jobn = job.getAttribute('n');
     for (j=0; j<job.childNodes.length; j++) {
       child = job.childNodes[j];
       //      if (child.
       col = child.nodeName;
-      id = 'job-' + jobid + '-' + col;
+      id = 'job-' + jobn + '-' + col;
       div = document.getElementById(id);
       if (!div) {
         continue;
       }
+      //div.innerHTML = child.innerHTML;
+      div.firstChild.nodeType = child.firstChild.nodeType;
       div.firstChild.nodeValue = child.firstChild.nodeValue;
+      /*
+      while (div.childNodes.length) {
+        div.removeChild(div.childNodes[0]);
+      }       
+      for (k=0; k<child.childNodes.length; k++) {
+        div.appendChild(child.childNodes[k]);
+      }
+      */
     }
   }
   return true;
@@ -131,42 +142,19 @@ Add columns:
 {% endfor %}
 </tr>
 
-{% for job in rjobs %}
+<a href="{{ xmlsummaryurl }}">XML</a>
+
+{% for job,jobid,jobn in rjobs %}
 <tr class="{% cycle even,odd %}">
-{% for c in job %}
-<td class="c">
-{{ c }}
+{% autoescape off %}
+{% for tdclass,col,val in job %}
+<td class="{{ tdclass }}">
+<span id="job-{{ jobn }}-{{ col }}">
+{{ val }}
+</span>
 </td>
 {% endfor %}
-</tr>
-{% endfor %}
-
-
-{% for job in jobs %}
-<tr class="{% cycle even,odd %}">
-<td><a href="{{ statusurl }}{{ job.jobid }}">
-<span id="job-{{job.jobid}}-jobid">
-{{ job.jobid }}
-</span>
-</a></td>
-<td class="c">
-<span id="job-{{job.jobid}}-status">
-{{ job.status }}
-{% if job.failurereason %}
-: {{ job.failurereason }}
-{% endif %}
-</span>
-</td>
-<td>
-<span id="job-{{job.jobid}}-start">
-{{ job.format_starttime_brief }}
-</span>
-</td>
-<td>
-<span id="job-{{job.jobid}}-finish">
-{{ job.format_finishtime_brief }}
-</span>
-</td>
+{% endautoescape %}
 </tr>
 {% endfor %}
 

@@ -664,5 +664,7 @@ class Job(models.Model):
         # enqueue by creating a symlink in the job queue directory.
         jobdir = j.get_job_dir()
         link = config.jobqueuedir + j.get_id()
+        if os.path.exists(link):
+            os.unlink(link)
         os.symlink(jobdir, link)
 

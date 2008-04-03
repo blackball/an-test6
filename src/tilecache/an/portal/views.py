@@ -142,7 +142,6 @@ def joblist(request):
     allcols = colnames.keys()
 
     cols = ','.join(request.GET.getlist('cols'))
-    log("cols: " + str(cols))
     if cols:
         cols = cols.split(',')
         okcols = []
@@ -150,7 +149,6 @@ def joblist(request):
             if c in allcols:
                 okcols.append(c)
         cols = okcols
-    log("cols: " + str(cols))
 
     ctxt = {}
 
@@ -175,8 +173,6 @@ def joblist(request):
         if not cols:
             cols = [ 'jobid', 'status', 'starttime', 'finishtime' ]
 
-    log("cols: " + str(cols))
-
     if end > 0 and end < len(jobs):
         args = request.GET.copy()
         args['start'] = end
@@ -195,19 +191,35 @@ def joblist(request):
 
     addcols = [c for c in allcols if c not in cols]
 
+    rjobs = []
+    for i, job in enumerate(jobs):
+        rend = []
+        jobn = start + i
+        for c in cols:
+            t = ''
+            tdclass = 'c'
+            if c == 'jobid':
+                t = ('<a href="' + get_status_url(job.jobid) + '">'
+                     + job.jobid
+                     #+ ' (' + 'a href="' + get_status_url(job.jobid) + '") '
+                     + '</a>')
+            elif c == 'starttime':
+                t = job.format_starttime_brief()
+            elif c == 'finishtime':
+                t = job.format_finishtime_brief()
+            elif c == 'status':
+                t = job.format_status()
+            rend.append((tdclass, c, str(t)))
+        rjobs.append((rend, job.jobid, jobn))
+
     if format == 'xml':
         res = HttpResponse()
         res['Content-type'] = 'text/xml'
         res.write('<submission subid="%s">\n' % subid)
-        for job in jobs:
-            res.write('  <job jobid="%s">\n' % job.jobid)
-            #res.write('    <jobid>%s</jobid>\n' % job.jobid)
-            s = job.status
-            if job.failurereason:
-                s += ': ' + job.failurereason
-            res.write('    <status>%s</status>\n' % s)
-            res.write('    <start>%s</start>\n' % job.format_starttime_brief())
-            res.write('    <finish>%s</finish>\n' % job.format_finishtime_brief())
+        for (rend, jobid, jobn) in rjobs:
+            res.write('  <job jobid="%s" n="%i">\n' % (jobid, jobn))
+            for (tdclass, c, t) in rend:
+                res.write('   <%s>%s</%s>\n' % (c, t, c))
             res.write('  </job>\n')
         res.write('</submission>\n')
         return res
@@ -229,22 +241,6 @@ def joblist(request):
             columns.append((c, n, delurl))
 
         addcolumns = zip(addcols, [colnames[c] for c in addcols])
-
-        rjobs = []
-        for job in jobs:
-            rend = []
-            for c in cols:
-                t = ''
-                if c == 'jobid':
-                    t = job.jobid
-                elif c == 'starttime':
-                    t = job.format_starttime_brief()
-                elif c == 'finishtime':
-                    t = job.format_finishtime_brief()
-                elif c == 'status':
-                    t = job.format_status()
-                rend.append(str(t))
-            rjobs.append(rend)
 
         ctxt.update({
             'thisurl' : request.get_full_path(),
