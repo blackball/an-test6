@@ -90,6 +90,14 @@ def get_job(jobid):
     job = jobs[0]
     return job
 
+def get_submission(subid):
+    if subid is None:
+        return None
+    subs = Submission.objects.all().filter(subid=subid)
+    if len(subs) != 1:
+        return None
+    return subs[0]
+
 def get_url(job, fn):
     return reverse(getfile) + '?jobid=%s&f=%s' % (job.jobid, fn)
 
@@ -99,6 +107,96 @@ def getsessionjob(request):
         return None
     jobid = request.session['jobid']
     return get_job(jobid)
+
+
+@login_required
+def joblist(request):
+    subid = request.GET.get('subid')
+    if subid:
+        sub = get_submission(subid)
+    jobid = request.GET.get('jobid')
+    if jobid:
+        job = get_job(jobid)
+
+    n = int(request.GET.get('n', '0'))
+    start = int(request.GET.get('start', '0'))
+    if n:
+        end = start + n
+    else:
+        end = -1
+
+    format = request.GET.get('format', 'html')
+
+    kind = request.GET.get('type')
+    if not kind in [ 'user', 'nearby', 'tag', 'sub' ]:
+        kind = 'user'
+
+    ctxt = {}
+
+    gmaps = ''
+
+    if kind == 'user':
+        pass
+    if kind == 'nearby':
+        pass
+    if kind == 'tag':
+        pass
+    if kind == 'sub':
+        if sub is None:
+            return HttpResponse('no sub')
+        job = None
+        jobs = sub.jobs.all().order_by('starttime', 'jobid')
+
+        gmaps = (reverse('an.tile.views.index') +
+                 '?submission=%s' % sub.get_id() +
+                 '&layers=tycho,grid,userboundary&arcsinh')
+
+
+    if end > 0 and end < len(jobs):
+        args = request.GET.copy()
+        args['start'] = end
+        ctxt['nexturl'] = request.path + '?' + args.urlencode()
+    if start > 0:
+        args = request.GET.copy()
+        args['start'] = max(0, start-n)
+        ctxt['prevurl'] =request.path + '?' + args.urlencode()
+        
+    jobs = jobs[start:end]
+
+    if format == 'xml':
+        res = HttpResponse()
+        res['Content-type'] = 'text/xml'
+        res.write('<submission subid="%s">\n' % subid)
+        for job in jobs:
+            res.write('  <job jobid="%s">\n' % job.jobid)
+            res.write('    <jobid>%s</jobid>\n' % job.jobid)
+            s = job.status
+            if job.failurereason:
+                s += ': ' + job.failurereason
+            res.write('    <status>%s</status>\n' % s)
+            res.write('    <start>%s</start>\n' % job.format_starttime_brief())
+            res.write('    <finish>%s</finish>\n' % job.format_finishtime_brief())
+            res.write('  </job>\n')
+        res.write('</submission>\n')
+        return res
+
+    else:
+        #xmlargs = {}
+        #xmlargs.update(request.GET)
+        #xmlargs['format'] = 'xml'
+
+        ctxt.update({
+            'submission' : sub,
+            'jobs' : jobs,
+            'reload_time' : (len(jobs) < 2) and 2 or 15,
+            'statusurl' : get_status_url(''),
+            'gmaps' : gmaps,
+            'xmlsummaryurl' : request.get_full_path() + '&format=xml',
+            })
+        #'somesolved' : somesolved,
+        t = loader.get_template('portal/joblist.html')
+        c = RequestContext(request, ctxt)
+        return HttpResponse(t.render(c))
 
 @login_required
 def submission_status_xml(request):
@@ -270,8 +368,8 @@ def nearby_summary(request):
     for (nside,hp) in hps:
         tags = Tag.objects.all().filter(machineTag=True, text='hp:%i:%i'%(nside,hp))
         for t in tags:
-            if t.job.jobid != jobid:
-                jobs.append(t.job)
+            #if t.job.jobid != jobid:
+            jobs.append(t.job)
 
     ctxt = {
         'jobid' : jobid,
