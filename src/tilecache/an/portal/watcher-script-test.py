@@ -448,6 +448,7 @@ def main(sshconfig, joblink):
         tmpfile = submission.uploaded.get_filename()
         log('uploaded tempfile is ' + tmpfile)
         basename = submission.uploaded.userfilename
+
     else:
         bailout(job, 'no datasrc')
         return -1
@@ -464,6 +465,9 @@ def main(sshconfig, joblink):
 
     # Handle tar files: add a Submission, create new Jobs.
     job = None
+
+    log('uncompressed file: %s' % uncomp)
+
     if is_tarball(uncomp):
         log('file is tarball.')
         # create temp dir to extract tarfile.

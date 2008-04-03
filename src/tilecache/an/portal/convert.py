@@ -49,9 +49,10 @@ def run_pnmfile(fn):
     return (w, h, pnmtype, maxval)
 
 def is_tarball(fn):
+    log('is_tarball: %s' % fn)
     typeinfo = image2pnm.run_file(fn)
     log('file type: "%s"' % typeinfo)
-    return typeinfo == 'POSIX tar archive'
+    return typeinfo.startswith('POSIX tar archive')
 
 def get_objs_in_field(job, df):
     objsfn = convert(job, df, 'objsinfield')

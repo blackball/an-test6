@@ -369,9 +369,14 @@ class Submission(models.Model):
 
 
 class Job(models.Model):
+
     # called by the Django superclass constructor when the "exposejob"
     # field is not given a value.  Get the value from the UserPrefs.
-    def get_default_exposejob(self):
+    def get_default_exposejob():
+        # FIXME
+        return True
+
+    def junk(self):
         u = self.get_user()
         if u:
             prefs = UserPreferences.for_user(u)
