@@ -427,8 +427,9 @@ plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_INC) -c -o $@ $<
 
 plot-constellations: plot-constellations.o $(COMMON)/cairoutils.o \
-		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o svn.o \
-		$(ANUTILS_LIB) $(QFITS_LIB)
+		ngc2000.o ngcic-accurate.o brightstars.o boilerplate.o \
+		svn.o hd.o \
+		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_LIB) $(PNG_LIB) $(JPEG_LIB)
 
 add-text: add-text.o $(COMMON)/cairoutils.o $(ANUTILS_LIB) $(QFITS_LIB)

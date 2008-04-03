@@ -45,8 +45,9 @@
 #include "ngcic-accurate.h"
 #include "constellations.h"
 #include "brightstars.h"
+#include "hd.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:M";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:MDd:";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -61,6 +62,8 @@ void print_help(char* progname) {
            "   [-N]: plot NGC objects\n"
            "   [-C]: plot constellations\n"
 		   "   [-B]: plot named bright stars\n"
+           "   [-D]: plot HD objects\n"
+           "   [-d]: path to HD catalog\n"
 		   "   [-b <number-of-bright-stars>]: just plot the <N> brightest stars\n"
 		   "   [-c]: only plot bright stars that have common names.\n"
 		   "   [-j]: if a bright star has a common name, only print that\n"
@@ -150,6 +153,9 @@ int main(int argc, char** args) {
     double scale = 1.0;
     bool pngformat = TRUE;
 
+    char* hdpath = NULL;
+    bool HD = FALSE;
+
     cairos_t thecairos;
     cairos_t* cairos = &thecairos;
 
@@ -203,6 +209,12 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+        case 'D':
+            HD = TRUE;
+            break;
+        case 'd':
+            hdpath = optarg;
+            break;
         case 'M':
             only_messier = TRUE;
             break;
@@ -279,8 +291,8 @@ int main(int argc, char** args) {
 	  }
 	*/
 
-    if (!(NGC || constell || bright)) {
-        fprintf(stderr, "Neither constellations, bright stars, nor NGC overlays selected!\n");
+    if (!(NGC || constell || bright || HD)) {
+        fprintf(stderr, "Neither constellations, bright stars, HD nor NGC/IC overlays selected!\n");
         print_help(args[0]);
         exit(-1);
     }
@@ -305,6 +317,11 @@ int main(int argc, char** args) {
     } else if (!justlist) {
         // Allocate a black image.
         img = calloc(4 * W * H, 1);
+    }
+
+    if (HD && !hdpath) {
+        fprintf(stderr, "If you specify -D (plot Henry Draper objs), you also have to give -d (path to Henry Draper catalog)\n");
+        exit(-1);
     }
 
     // read WCS.
@@ -691,6 +708,48 @@ int main(int argc, char** args) {
 			free(text);
 			sl_free2(str);
         }
+    }
+
+    if (HD) {
+        double rac, decc, ra2, dec2;
+        double xyz1[3], xyz2[3];
+        double r2;
+        double arcsec;
+        hd_catalog_t* hdcat;
+        bl* hdlist;
+        int i;
+
+        hdcat = henry_draper_open(hdpath);
+        if (!hdcat) {
+            fprintf(stderr, "Failed to open HD catalog.\n");
+            exit(-1);
+        }
+
+        sip_pixelxy2radec(&sip, W/2.0, H/2.0, &rac, &decc);
+        sip_pixelxy2radec(&sip, 0.0, 0.0, &ra2, &dec2);
+        radecdeg2xyzarr(rac, decc, xyz1);
+        radecdeg2xyzarr(ra2, dec2, xyz2);
+        r2 = distsq(xyz1, xyz2, 3);
+        // Fudge
+        r2 *= 1.2;
+        arcsec = distsq2arcsec(r2);
+        hdlist = henry_draper_get(hdcat, rac, decc, arcsec);
+
+        for (i=0; i<bl_size(hdlist); i++) {
+            double px, py;
+            char* txt;
+            hd_entry_t* hd = bl_access(hdlist, i);
+            if (!sip_radec2pixelxy(&sip, hd->ra, hd->dec, &px, &py)) {
+                continue;
+            }
+            asprintf(&txt, "HD %i", hd->hd);
+            if (!justlist)
+                add_text(cairos, txt, px, py - label_offset);
+            printf(txt);
+            free(txt);
+        }
+        bl_free(hdlist);
+        henry_draper_close(hdcat);
     }
 
 	if (justlist)
