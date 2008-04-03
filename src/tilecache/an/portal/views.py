@@ -19,7 +19,7 @@ from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 from django.core.urlresolvers import reverse
 
-from xml.sax.saxutils import escape
+#from xml.sax.saxutils import escape
 
 import an.portal.mercator as merc
 
@@ -202,7 +202,8 @@ def joblist(request):
             tdclass = 'c'
             if c == 'jobid':
                 t = ('<a href="'
-                     + escape(get_status_url(job.jobid))
+                     #+ escape(get_status_url(job.jobid))
+                     get_status_url(job.jobid)
                      + '">'
                      + job.jobid
                      #+ ' (' + 'a href="' + get_status_url(job.jobid) + '") '
