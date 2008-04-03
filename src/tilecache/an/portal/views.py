@@ -19,8 +19,6 @@ from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 from django.core.urlresolvers import reverse
 
-#from xml.sax.saxutils import escape
-
 import an.portal.mercator as merc
 
 from an.portal.models import UserPreferences
@@ -202,11 +200,9 @@ def joblist(request):
             tdclass = 'c'
             if c == 'jobid':
                 t = ('<a href="'
-                     #+ escape(get_status_url(job.jobid))
-                     get_status_url(job.jobid)
+                     + get_status_url(job.jobid)
                      + '">'
                      + job.jobid
-                     #+ ' (' + 'a href="' + get_status_url(job.jobid) + '") '
                      + '</a>')
             elif c == 'starttime':
                 t = job.format_starttime_brief()
@@ -230,10 +226,6 @@ def joblist(request):
         return res
 
     else:
-        #xmlargs = {}
-        #xmlargs.update(request.GET)
-        #xmlargs['format'] = 'xml'
-
         cnames = [colnames.get(c) for c in cols]
 
         columns = []
@@ -251,7 +243,6 @@ def joblist(request):
             'thisurl' : request.get_full_path(),
             'addcolumns' : addcolumns,
             'columns' : columns,
-            #'colnames' : cnames,
             'submission' : sub,
             'jobs' : jobs,
             'rjobs' : rjobs,
@@ -260,7 +251,6 @@ def joblist(request):
             'gmaps' : gmaps,
             'xmlsummaryurl' : request.get_full_path() + '&format=xml',
             })
-        #'somesolved' : somesolved,
         t = loader.get_template('portal/joblist.html')
         c = RequestContext(request, ctxt)
         return HttpResponse(t.render(c))
