@@ -185,7 +185,7 @@ int main(int argc, char** args) {
         tycho2_fits_close(tyc);
 
         printf("Building kdtree from Tycho-2...\n");
-        tyckd = kdtree_build(kd, xyz, N, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
+        tyckd = kdtree_build(NULL, xyz, N, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
         if (!tyckd) {
             ERROR("Failed to build a kdtree from Tycho-2 catalog.");
             exit(-1);
@@ -275,6 +275,7 @@ int main(int argc, char** args) {
             kdtree_qres_t* res;
             res = kdtree_rangesearch(tyckd, xyz + 3*i, r2);
             printf("%i results\n", res->nres);
+            kdtree_free_query(res);
         }
     }
 
