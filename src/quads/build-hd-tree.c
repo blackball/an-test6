@@ -279,7 +279,7 @@ int main(int argc, char** args) {
     }
 
     if (tyckd) {
-        free(tyckd->data);
+        free(tyckd->data.any);
         kdtree_free(tyckd);
     }
 
