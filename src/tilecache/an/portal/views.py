@@ -875,6 +875,7 @@ def summary(request):
         'voimgs' : voimgs,
         'prefs' : prefs,
         'statusurl' : get_status_url(''),
+        'substatusurl' : reverse(joblist) + '?type=sub&subid=',
         'getfileurl' : reverse(getfile) + '?jobid=',
         'getfield' : reverse(getfile) + '?fieldid=',
         }
