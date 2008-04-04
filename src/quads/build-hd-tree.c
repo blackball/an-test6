@@ -74,7 +74,7 @@ deg|deg|
 #include "tycho2.h"
 #include "tycho2-fits.h"
 
-static const char* OPTIONS = "hR:d:t:bsST:";
+static const char* OPTIONS = "hR:d:t:bsST:X:";
 
 #define HD_NENTRIES 272150
 
@@ -87,7 +87,8 @@ void printHelp(char* progname) {
 		   "    [-t  <tree type>]:  {double,float,u32,u16}, default u32.\n"
 		   "    [-d  <data type>]:  {double,float,u32,u16}, default u32.\n"
 		   "    [-S]: include separate splitdim array\n"
-           "    [-T <Tycho-2 catalog>]: cross-reference positions with Tycho-2.\n"
+           "    [-T <Tycho-2 catalog>]: path to Tycho-2 catalog.\n"
+           "    [-X <Cross-ref file>]: path to Tycho-2 - to - HD cross-ref file.\n"
            "\n"
            "   <input.tsv>  <output.fits>\n"
 		   "\n", progname);
@@ -96,6 +97,64 @@ void printHelp(char* progname) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+// the Tycho-2 and cross-ref fields we care about...
+struct tyc {
+    // from Tycho-2
+    int16_t tyc1;
+    int16_t tyc2;
+    int8_t  tyc3;
+    double ra;
+    double dec;
+
+    // From X-ref
+    int hd;
+    // number of Tycho-2 cross-refs for this star.
+    uint8_t ntyc;
+};
+typedef struct tyc tycstar_t;
+
+static int compare_tycs(const void* v1, const void* v2) {
+    const tycstar_t* s1 = v1;
+    const tycstar_t* s2 = v2;
+    int d;
+    d = s1->tyc1 - s2->tyc1;
+    if (d > 0) return 1;
+    if (d < 0) return -1;
+    d = s1->tyc2 - s2->tyc2;
+    if (d > 0) return 1;
+    if (d < 0) return -1;
+    d = s1->tyc3 - s2->tyc3;
+    if (d > 0) return 1;
+    if (d < 0) return -1;
+    return 0;
+}
+
+static tycstar_t* find_tycho(tycstar_t* stars, int N,
+                             int tyc1, int tyc2, int tyc3) {
+    tycstar_t key;
+    key.tyc1 = tyc1;
+    key.tyc2 = tyc2;
+    key.tyc3 = tyc3;
+    return bsearch(&key, stars, N, sizeof(tycstar_t), compare_tycs);
+}
+
+static int compare_hds(const void* v1, const void* v2) {
+    const tycstar_t* s1 = v1;
+    const tycstar_t* s2 = v2;
+    int d;
+    d = s1->hd - s2->hd;
+    if (d > 0) return 1;
+    if (d < 0) return -1;
+    return 0;
+}
+
+static tycstar_t* find_hd(tycstar_t* stars, int N,
+                          int hd) {
+    tycstar_t key;
+    key.hd = hd;
+    return bsearch(&key, stars, N, sizeof(tycstar_t), compare_hds);
+}
+
 int main(int argc, char** args) {
     int argchar;
     kdtree_t* kd;
@@ -103,8 +162,12 @@ int main(int argc, char** args) {
     char* infn = NULL;
     char* outfn = NULL;
     char* tychofn = NULL;
+    char* crossfn = NULL;
 	char* progname = args[0];
     FILE* f;
+
+    tycstar_t* tycstars = NULL;
+    int Ntyc = 0;
 
 	int exttype  = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
@@ -118,6 +181,7 @@ int main(int argc, char** args) {
     dl* decs;
     dl* hds;
     int nbad = 0;
+    int nox = 0;
 
     int* hd;
     double* xyz;
@@ -128,6 +192,9 @@ int main(int argc, char** args) {
         switch (argchar) {
         case 'T':
             tychofn = optarg;
+            break;
+        case 'X':
+            crossfn = optarg;
             break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
@@ -170,27 +237,89 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+    if (tychofn || crossfn) {
+        if (!(tychofn && crossfn)) {
+            printf("You need both -T <Tycho2> and -X <Crossref> to do cross-referencing.\n");
+            exit(-1);
+        }
+    }
+
     if (tychofn) {
-        int i, N, M;
-        double* xyz;
-        tycho2_fits* tyc = tycho2_fits_open(tychofn);
+        int i, N;
+        tycho2_fits* tyc;
+        FILE* f;
+        int nx, nox;
+
+        tyc = tycho2_fits_open(tychofn);
         if (!tyc) {
             ERROR("Failed to open Tycho-2 catalog.");
             exit(-1);
         }
         printf("Reading Tycho-2 catalog...\n");
-        N = tycho2_fits_count_entries(tyc);
-        xyz = malloc(N * 3 * sizeof(double));
 
-        M = 0;
+        N = tycho2_fits_count_entries(tyc);
+        tycstars = calloc(N, sizeof(tycstar_t));
+
         for (i=0; i<N; i++) {
             tycho2_entry* te = tycho2_fits_read_entry(tyc);
-            radecdeg2xyzarr(te->ra, te->dec, xyz + i*3);
+            tycstars[i].tyc1 = te->tyc1;
+            tycstars[i].tyc2 = te->tyc2;
+            tycstars[i].tyc3 = te->tyc3;
+            tycstars[i].ra   = te->ra;
+            tycstars[i].dec  = te->dec;
         }
         tycho2_fits_close(tyc);
-        M = N;
 
-        xyz = realloc(xyz, M * 3 * sizeof(double));
+        printf("Sorting...\n");
+        qsort(tycstars, N, sizeof(tycstar_t), compare_tycs);
+        Ntyc = N;
+
+        f = fopen(crossfn, "rb");
+        if (!f) {
+            SYSERROR("Failed to open cross-reference file %s", crossfn);
+            exit(-1);
+        }
+
+        nx = 0;
+        nox = 0;
+        while (TRUE) {
+            char buf[1024];
+            int tyc1, tyc2, tyc3, hd, nhd, ntyc;
+            char ftyc, sptype0, sptype1, sptype2;
+            tycstar_t* s;
+
+            if (!fgets(buf, sizeof(buf), f)) {
+                if (ferror(f)) {
+                    SYSERROR("Failed to read a line of text from the cross-reference file");
+                    exit(-1);
+                }
+                break;
+            }
+
+            if (sscanf(buf, " %d %d %d%c %d %c%c%c %d %d",
+                       &tyc1, &tyc2, &tyc3, &ftyc, &hd,
+                       &sptype0, &sptype1, &sptype2, &nhd, &ntyc) != 10) {
+                ERROR("Failed to parse line: \"%s\"", buf);
+            }
+
+            //printf("%i %i %i %i %i %i\n", tyc1, tyc2, tyc3, hd, nhd, ntyc);
+            s = find_tycho(tycstars, Ntyc, tyc1, tyc2, tyc3);
+            if (!s) {
+                ERROR("Failed to find Tycho-2 star %i-%i-%i", tyc1, tyc2, tyc3);
+                nox++;
+            } else {
+                s->hd = hd;
+                s->ntyc = ntyc;
+            }
+            nx++;
+        }
+        fclose(f);
+
+        printf("Read %i cross-references.\n", nx);
+        printf("Failed to find %i cross-referenced Tycho-2 stars.\n", nox);
+
+        printf("Sorting...\n");
+        qsort(tycstars, N, sizeof(tycstar_t), compare_hds);
     }
 
 	// defaults
@@ -212,6 +341,7 @@ int main(int argc, char** args) {
     decs = dl_new(1024);
     hds = il_new(1024);
 
+    printf("Reading HD catalog...\n");
     for (;;) {
         char buf[1024];
         double ra, dec;
@@ -237,6 +367,18 @@ int main(int argc, char** args) {
             }
             nbad++;
         } else {
+
+            if (tycstars) {
+                tycstar_t* s = find_hd(tycstars, Ntyc, hd);
+                if (!s) {
+                    //printf("Failed to find cross-ref for HD %i\n", hd);
+                    nox++;
+                } else {
+                    ra = s->ra;
+                    dec = s->dec;
+                }
+            }
+
             dl_append(ras, ra);
             dl_append(decs, dec);
             il_append(hds, hd);
@@ -251,6 +393,10 @@ int main(int argc, char** args) {
         printf("WARNING: expected %i Henry Draper catalog entries.\n", HD_NENTRIES);
     }
 
+    if (nox) {
+        printf("Found %i HD entries with no cross-reference (expect this to be about 1%%)\n", nox);
+    }
+
     hd = malloc(sizeof(int) * N);
     il_copy(hds, 0, N, hd);
     il_free(hds);
@@ -262,7 +408,10 @@ int main(int argc, char** args) {
     // HACK  - don't allocate 'em in the first place...
     free(hd);
 
-
+    xyz = malloc(sizeof(double) * 3 * N);
+    for (i=0; i<N; i++) {
+        radecdeg2xyzarr(dl_get(ras, i), dl_get(decs, i), xyz + 3*i);
+    }
 
     dl_free(ras);
     dl_free(decs);
@@ -299,6 +448,7 @@ int main(int argc, char** args) {
 	qfits_header_destroy(hdr);
     free(xyz);
     kdtree_free(kd);
+    free(tycstars);
 
     return 0;
 }
