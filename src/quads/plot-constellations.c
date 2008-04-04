@@ -747,9 +747,10 @@ int main(int argc, char** args) {
             double px, py;
             char* txt;
             hd_entry_t* hd = bl_access(hdlist, i);
-            if (!sip_radec2pixelxy(&sip, hd->ra, hd->dec, &px, &py)) {
+            if (!sip_radec2pixelxy(&sip, hd->ra, hd->dec, &px, &py))
                 continue;
-            }
+            if (px < 0 || py < 0 || px*scale > W || py*scale > H)
+                continue;
             asprintf(&txt, "HD %i", hd->hd);
             if (!justlist) {
                 //cairo_text_extents_t textents;

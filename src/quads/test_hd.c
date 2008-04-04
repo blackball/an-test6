@@ -43,10 +43,21 @@ void test_hd_1(CuTest* tc) {
 
     // Where is "HD n" ?
     for (i=0; i<10; i++) {
+        bl* res;
+        int j;
+
         ind = invperm[i];
         kdtree_copy_data_double(hdcat->kd, ind, 1, xyz);
         xyzarr2radecdeg(xyz, &ra, &dec);
         printf("HD %i: RA,Dec %g, %g\n", i+1, ra, dec);
+
+        res = henry_draper_get(hdcat, ra, dec, 10.0);
+        CuAssertPtrNotNull(tc, res);
+        for (j=0; j<bl_size(res); j++) {
+            hd_entry_t* hd = bl_access(res, j);
+            printf("res %i: HD %i, RA, Dec %g, %g\n", j, hd->hd, hd->ra, hd->dec);
+        }
+        bl_free(res);
     }
 
     for (i=0; i<sizeof(strangehds)/sizeof(int); i++) {
