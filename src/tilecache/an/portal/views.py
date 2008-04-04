@@ -196,10 +196,16 @@ def joblist(request):
         args = request.GET.copy()
         args['start'] = end
         ctxt['nexturl'] = request.path + '?' + args.urlencode()
+        args['start'] = start + n * ((len(jobs) - start) / n)
+        ctxt['lasturl'] = request.path + '?' + args.urlencode()
     if start > 0:
         args = request.GET.copy()
-        args['start'] = max(0, start-n)
+        prev = max(0, start-n)
+        args['start'] = prev
         ctxt['prevurl'] =request.path + '?' + args.urlencode()
+        if prev != 0:
+            args['start'] = 0
+            ctxt['firsturl'] = request.path + '?' + args.urlencode()
         
     ctxt['firstnum'] = max(0, start)
     ctxt['lastnum']  = end == -1 and len(jobs) or min(len(jobs), end)

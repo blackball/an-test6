@@ -19,6 +19,7 @@ tr.odd td {}
 p.c { text-align:center; }
 h3.c { text-align:center; }
 .delcollink { font-size:75%; text-align:center; color:#999; }
+.grayedout { color:#999; }
 {% endblock inlinecss %}
 
 {% block javascript %}
@@ -142,14 +143,7 @@ Jobs {{ firstnum }} to {{ lastnum }} of {{ totalnum }}
 </h3>
 
 {% if jobs %}
-<p class="c">
-{% if prevurl %}
-<a href="{{ prevurl }}">prev</a>
-{% endif %}
-{% if nexturl %}
-<a href="{{ nexturl }}">next</a>
-</p>
-{% endif %}
+{% include "portal/nextprev.html" %}
 
 {% if addcolumns %}
 <p class="c">
@@ -186,14 +180,7 @@ Add column:
 
 </table>
 
-<p class="c">
-{% if prevurl %}
-<a href="{{ prevurl }}">prev</a>
-{% endif %}
-{% if nexturl %}
-<a href="{{ nexturl }}">next</a>
-{% endif %}
-</p>
+{% include "portal/nextprev.html" %}
 
 <br />
 
