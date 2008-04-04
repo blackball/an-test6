@@ -117,6 +117,7 @@ int main(int argc, char** args) {
 
     int* hd;
     double* xyz;
+    double r2 = 0;
 
     qfits_header* hdr;
 
@@ -174,6 +175,7 @@ int main(int argc, char** args) {
             ERROR("Failed to open Tycho-2 catalog.");
             exit(-1);
         }
+        printf("Reading Tycho-2 catalog...\n");
         N = tycho2_fits_count_entries(tyc);
         xyz = malloc(N * 3 * sizeof(double));
         for (i=0; i<N; i++) {
@@ -182,6 +184,7 @@ int main(int argc, char** args) {
         }
         tycho2_fits_close(tyc);
 
+        printf("Building kdtree from Tycho-2...\n");
         tyckd = kdtree_build(kd, xyz, N, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
         if (!tyckd) {
             ERROR("Failed to build a kdtree from Tycho-2 catalog.");
@@ -258,9 +261,27 @@ int main(int argc, char** args) {
     // HACK  - don't allocate 'em in the first place...
     free(hd);
 
+    if (tyckd) {
+        // HD catalog has only 2 digits of RA,Dec degrees.
+        double arcsec = deg2arcsec(0.02);
+        r2 = arcsec2distsq(arcsec);
+    }
+
     xyz = malloc(sizeof(double) * 3 * N);
-    for (i=0; i<N; i++)
+    for (i=0; i<N; i++) {
         radecdeg2xyzarr(dl_get(ras, i), dl_get(decs, i), xyz + 3*i);
+
+        if (tyckd) {
+            kdtree_qres_t* res;
+            res = kdtree_rangesearch(tyckd, xyz + 3*i, r2);
+            printf("%i results\n", res->nres);
+        }
+    }
+
+    if (tyckd) {
+        free(tyckd->data);
+        kdtree_free(tyckd);
+    }
 
     dl_free(ras);
     dl_free(decs);
