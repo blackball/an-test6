@@ -56,12 +56,21 @@ bl* henry_draper_get(hd_catalog_t* hdcat,
     if (!q) {
         return NULL;
     }
+
+    /*
+     fprintf(stderr, "%i results\n", q->nres);
+     for (i=0; i<q->nres; i++) {
+     double* pt = q->results.d + i*3;
+     fprintf(stderr, "(%g,%g,%g)\n", pt[0], pt[1], pt[2]);
+     }
+     fprintf(stderr, "\n");
+     */
     res = bl_new(256, sizeof(hd_entry_t));
 
     for (i=0; i<q->nres; i++) {
         double* pt = q->results.d + i*3;
-        fprintf(stderr, "(%g,%g,%g)\n", pt[0], pt[1], pt[2]);
-        xyzarr2radecdeg(q->results.d + i*3, &(hd.ra), &(hd.dec));
+        //fprintf(stderr, "(%g,%g,%g)\n", pt[0], pt[1], pt[2]);
+        xyzarr2radecdeg(pt, &(hd.ra), &(hd.dec));
         hd.hd = q->inds[i] + 1;
         bl_append(res, &hd);
     }

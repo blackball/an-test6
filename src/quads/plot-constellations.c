@@ -753,10 +753,20 @@ int main(int argc, char** args) {
                 continue;
             asprintf(&txt, "HD %i", hd->hd);
             if (!justlist) {
-                //cairo_text_extents_t textents;
-                //cairo_text_extents(cairo, txt, &textents);
+                cairo_text_extents_t textents;
+                cairo_text_extents(cairo, txt, &textents);
                 //add_text(cairos, txt, px, py - label_offset);
-                fprintf(stderr, "(%g, %g), (%g, %g)\n", hd->ra, hd->dec, px, py);
+                //fprintf(stderr, "(%g, %g), (%g, %g)\n", hd->ra, hd->dec, px, py);
+
+                cairo_arc(cairobg, px, py, crad+1.0, 0.0, 2.0*M_PI);
+                cairo_stroke(cairobg);
+
+				cairo_arc(cairoshapes, px, py, crad, 0.0, 2.0*M_PI);
+				cairo_stroke(cairoshapes);
+
+                px -= (textents.width * 0.5);
+                py -= (crad + 2.0);
+
                 add_text(cairos, txt, px, py);
             }
             printf("%s\n", txt);

@@ -406,9 +406,9 @@ static void compute_splitbits(kdtree_t* kd) {
 /* Sorts results by kq->sdists */
 static int kdtree_qsort_results(kdtree_qres_t *kq, int D) {
 	int beg[KDTREE_MAX_RESULTS], end[KDTREE_MAX_RESULTS], i = 0, j, L, R;
-	static dtype piv_vec[KDTREE_MAX_DIM];
+	static etype piv_vec[KDTREE_MAX_DIM];
 	unsigned int piv_perm;
-	etype piv;
+	double piv;
 
 	beg[0] = 0;
 	end[0] = kq->nres - 1;
@@ -417,8 +417,8 @@ static int kdtree_qsort_results(kdtree_qres_t *kq, int D) {
 		R = end[i];
 		if (L < R) {
 			piv = kq->sdists[L];
-			for (j = 0;j < D;j++)
-				piv_vec[j] = kq->results.DTYPE[D * L + j];
+			for (j=0; j<D; j++)
+				piv_vec[j] = kq->results.ETYPE[L*D + j];
 			piv_perm = kq->inds[L];
 			if (i == KDTREE_MAX_RESULTS - 1) /* Sanity */
 				assert(0);
@@ -426,25 +426,25 @@ static int kdtree_qsort_results(kdtree_qres_t *kq, int D) {
 				while (kq->sdists[R] >= piv && L < R)
 					R--;
 				if (L < R) {
-					for (j = 0;j < D;j++)
-						kq->results.DTYPE[D*L + j] = kq->results.DTYPE[D * R + j];
-					kq->inds[L] = kq->inds[R];
+					for (j=0; j<D; j++)
+						kq->results.ETYPE[L*D + j] = kq->results.ETYPE[R*D + j];
+					kq->inds  [L] = kq->inds  [R];
 					kq->sdists[L] = kq->sdists[R];
 					L++;
 				}
 				while (kq->sdists[L] <= piv && L < R)
 					L++;
 				if (L < R) {
-					for (j = 0;j < D;j++)
-						kq->results.DTYPE[D*R + j] = kq->results.DTYPE[D * L + j];
-					kq->inds[R] = kq->inds[L];
+					for (j=0; j<D; j++)
+						kq->results.ETYPE[R*D + j] = kq->results.ETYPE[L*D + j];
+					kq->inds  [R] = kq->inds  [L];
 					kq->sdists[R] = kq->sdists[L];
 					R--;
 				}
 			}
-			for (j = 0;j < D;j++)
-				kq->results.DTYPE[D*L + j] = piv_vec[j];
-			kq->inds[L] = piv_perm;
+			for (j=0; j<D; j++)
+				kq->results.ETYPE[D*L + j] = piv_vec[j];
+			kq->inds  [L] = piv_perm;
 			kq->sdists[L] = piv;
 			beg[i + 1] = L + 1;
 			end[i + 1] = end[i];
@@ -455,9 +455,35 @@ static int kdtree_qsort_results(kdtree_qres_t *kq, int D) {
 	return 1;
 }
 
+static void print_results(kdtree_qres_t* res, int D) {
+    if (TRUE) {
+        int i, d;
+        printf("%i results.\n", res->nres);
+        for (i=0; i<res->nres; i++) {
+            printf("  ind %i", res->inds[i]);
+            if (res->sdists)
+                printf(", dist %g", res->sdists[i]);
+            if (res->results.any) {
+                printf(", pt [ ");
+                for (d=0; d<D; d++)
+                    printf("%g ", res->results.ETYPE[i*D + d]);
+                printf("]");
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+}
+
 static
 bool resize_results(kdtree_qres_t* res, int newsize, int D,
 					bool do_dists, bool do_points) {
+
+    if (FALSE) {
+        printf("resize results: before:\n");
+        print_results(res, D);
+    }
+
 	if (do_dists)
 		res->sdists  = REALLOC(res->sdists , newsize * sizeof(double));
 	if (do_points)
@@ -466,6 +492,12 @@ bool resize_results(kdtree_qres_t* res, int newsize, int D,
 	if (newsize && (!res->results.any || (do_dists && !res->sdists) || !res->inds))
 		SYSERROR("Failed to resize kdtree results arrays");
 	res->capacity = newsize;
+
+    if (FALSE) {
+        printf("resize results: after:\n");
+        print_results(res, D);
+    }
+
 	return TRUE;
 }
 
@@ -473,6 +505,12 @@ static
 bool add_result(const kdtree_t* kd, kdtree_qres_t* res, double sdist,
                 unsigned int ind, const dtype* pt,
 				int D, bool do_dists, bool do_points) {
+
+    if (FALSE) {
+        printf("Before adding new result:\n");
+        print_results(res, D);
+    }
+
 	if (do_dists)
 		res->sdists[res->nres] = sdist;
 	res->inds  [res->nres] = ind;
@@ -486,6 +524,12 @@ bool add_result(const kdtree_t* kd, kdtree_qres_t* res, double sdist,
 		// enlarge arrays.
 		return resize_results(res, res->capacity * 2, D, do_dists, do_points);
 	}
+
+    if (FALSE) {
+        printf("After adding new result:\n");
+        print_results(res, D);
+    }
+
 	return TRUE;
 }
 
@@ -1338,8 +1382,17 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
 		resize_results(res, res->nres, D, do_dists, do_points);
 
 	/* Sort by ascending distance away from target point before returning */
-	if (options & KD_OPTIONS_SORT_DISTS)
+	if (options & KD_OPTIONS_SORT_DISTS) {
+        if (FALSE) {
+            printf("before sorting results:\n");
+            print_results(res, D);
+        }
 		kdtree_qsort_results(res, kd->ndim);
+        if (FALSE) {
+            printf("after sorting results:\n");
+            print_results(res, D);
+        }
+    }
 
 	return res;
 }
@@ -1731,8 +1784,24 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 		}
 	}
 
-	if (KD_IS_LEAF(kd, nodeid))
+	if (KD_IS_LEAF(kd, nodeid)) {
+        if ((kd->minval && !kd->maxval) ||
+            (!kd->minval && kd->maxval)) {
+            ERROR("kdtree_check: minval but no maxval (or vice versa)");
+            return -1;
+        }
+        if (kd->minval && kd->maxval) {
+            for (i=L; i<=R; i++) {
+                dtype* dat = KD_DATA(kd, D, i);
+                for (d=0; d<D; d++) {
+                    etype e = POINT_DE(kd, d, dat[d]);
+                    assert(e >= kd->minval[d]);
+                    assert(e <= kd->maxval[d]);
+                }
+            }
+        }
 		return 0;
+    }
 
 	if (kd->bb.any) {
 		ttype* bb;
@@ -1864,6 +1933,7 @@ static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 			}
 		}
 	}
+
 	return 0;
 }
 

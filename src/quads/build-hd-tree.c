@@ -65,8 +65,10 @@ deg|deg|
 #include "boilerplate.h"
 #include "errors.h"
 #include "bl.h"
+#include "tycho2.h"
+#include "tycho2-fits.h"
 
-static const char* OPTIONS = "hR:d:t:bsS";
+static const char* OPTIONS = "hR:d:t:bsST:";
 
 #define HD_NENTRIES 272150
 
@@ -79,6 +81,7 @@ void printHelp(char* progname) {
 		   "    [-t  <tree type>]:  {double,float,u32,u16}, default u32.\n"
 		   "    [-d  <data type>]:  {double,float,u32,u16}, default u32.\n"
 		   "    [-S]: include separate splitdim array\n"
+           "    [-T <Tycho-2 catalog>]: cross-reference positions with Tycho-2.\n"
            "\n"
            "   <input.tsv>  <output.fits>\n"
 		   "\n", progname);
@@ -93,8 +96,11 @@ int main(int argc, char** args) {
     int Nleaf = 25;
     char* infn = NULL;
     char* outfn = NULL;
+    char* tychofn = NULL;
 	char* progname = args[0];
     FILE* f;
+
+    kdtree_t* tyckd = NULL;
 
 	int exttype  = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
@@ -116,6 +122,9 @@ int main(int argc, char** args) {
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+        case 'T':
+            tychofn = optarg;
+            break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
             break;
@@ -156,6 +165,30 @@ int main(int argc, char** args) {
 		printHelp(progname);
 		exit(-1);
 	}
+
+    if (tychofn) {
+        int i, N;
+        double* xyz;
+        tycho2_fits* tyc = tycho2_fits_open(tychofn);
+        if (!tyc) {
+            ERROR("Failed to open Tycho-2 catalog.");
+            exit(-1);
+        }
+        N = tycho2_fits_count_entries(tyc);
+        xyz = malloc(N * 3 * sizeof(double));
+        for (i=0; i<N; i++) {
+            tycho2_entry* te = tycho2_fits_read_entry(tyc);
+            radecdeg2xyzarr(te->ra, te->dec, xyz + i*3);
+        }
+        tycho2_fits_close(tyc);
+
+        tyckd = kdtree_build(kd, xyz, N, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
+        if (!tyckd) {
+            ERROR("Failed to build a kdtree from Tycho-2 catalog.");
+            exit(-1);
+        }
+    }
+
 	// defaults
 	if (!datatype)
 		datatype = KDT_DATA_U32;

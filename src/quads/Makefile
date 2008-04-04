@@ -345,7 +345,7 @@ build-an-catalog: build-an-catalog.o usnob-fits.o tycho2-fits.o \
 cut-an: cut-an.o catalog.o idfile.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-build-hd-tree: build-hd-tree.o \
+build-hd-tree: build-hd-tree.o tycho2-fits.o tycho2.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 startree: startree.o catalog.o \
