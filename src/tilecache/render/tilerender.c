@@ -33,6 +33,7 @@
 #include "starutil.h"
 #include "cairoutils.h"
 #include "ioutils.h"
+#include "fitsioutils.h"
 
 #include "render_tycho.h"
 #include "render_gridlines.h"
@@ -87,6 +88,8 @@ char* layernames[] = {
 
 	"boundaries",
 	"userboundary",
+
+    "userdot",
 };
 
 render_func_t renderers[] = {
@@ -106,6 +109,8 @@ render_func_t renderers[] = {
 
 	render_boundary,
 	render_boundary,
+
+    render_boundary,
 };
 
 static void
@@ -285,6 +290,9 @@ int main(int argc, char *argv[]) {
     }
 
 	logmsg("tilecache: BEGIN TILECACHE\n");
+
+    // FIXME - hrm, should really log this...
+    fits_use_error_system();
 
 	if (inmerc) {
 		// -x -X -y -Y were given in Mercator coordinates - convert to deg.

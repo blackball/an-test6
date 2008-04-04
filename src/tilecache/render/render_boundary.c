@@ -54,9 +54,10 @@ int render_boundary(unsigned char* img, render_args_t* args) {
             return -1;
         }
         logmsg("read %i filenames from the file \"%s\".\n", sl_size(wcsfiles), args->filelist);
-	} else if (strcmp("userboundary", args->currentlayer) == 0) {
+	} else if ((strcmp("userboundary", args->currentlayer) == 0) ||
+               (strcmp("userdot", args->currentlayer) == 0)) {
 		if (!sl_size(args->imwcsfns)) {
-			logmsg("Layer is \"userboundary\" but no imwcsfns were given.\n");
+			logmsg("Layer is \"%s\" but no imwcsfns were given.\n", args->currentlayer);
 			return -1;
 		}
 		wcsfiles = sl_new(4);
@@ -102,11 +103,17 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		triedwcs = sl_new(4);
 		if (basefn[0] == '/') {
 			wcsfn = sl_appendf(triedwcs, "%s.wcs", basefn);
-			if (!file_readable(wcsfn)) {
-				logmsg("Failed to read WCS file \"%s\".\n", basefn);
-				sl_free2(triedwcs);
-				goto nextfile;
-			}
+			if (file_readable(wcsfn)) {
+            } else {
+                wcsfn = sl_append(triedwcs, basefn);
+                if (!file_readable(wcsfn)) {
+                    logmsg("Failed to read WCS file: tried\n");
+                    for (i=0; i<sl_size(triedwcs); i++) {
+                        logmsg("  %s\n", sl_get(triedwcs, i));
+                    }
+                    goto nextfile;
+                }
+            }
 		} else {
 			for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
 				wcsfn = sl_appendf(triedwcs, "%s/%s%s", wcs_dirs[i], basefn, (fullfilename ? "" : ".wcs"));
@@ -120,14 +127,11 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 				for (i=0; i<sl_size(triedwcs); i++) {
 					logmsg("  %s\n", sl_get(triedwcs, i));
 				}
-				sl_free2(triedwcs);
 				goto nextfile;
 			}
 		}
 
         res = sip_read_header_file(wcsfn, &wcs);
-		sl_free2(triedwcs);
-		wcsfn = NULL;
         if (!res) {
             logmsg("failed to parse SIP header from %s\n", wcsfn);
 			goto nextfile;
@@ -135,7 +139,22 @@ int render_boundary(unsigned char* img, render_args_t* args) {
         W = wcs.wcstan.imagew;
         H = wcs.wcstan.imageh;
 
-		{
+		if (strcmp("userdot", args->currentlayer) == 0) {
+            double px, py;
+            double ix, iy;
+            double ra, dec;
+
+            ix = W/2;
+            iy = H/2;
+            sip_pixelxy2radec(&wcs, ix, iy, &ra, &dec);
+            px = ra2pixelf(ra, args);
+            py = dec2pixelf(dec, args);
+
+            cairo_move_to(cairo, px, py);
+            cairo_arc(cairo, px, py, lw, 0, 2.0*M_PI);
+            cairo_fill(cairo);
+
+        } else {
 			// bottom, right, top, left, close.
 			int offsetx[] = { 0, W, W, 0, 0 };
 			int offsety[] = { 0, 0, H, H, 0 };
@@ -206,7 +225,6 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 			cairo_stroke(cairo);
 		}
 
-
 		if (args->dashbox > 0.0) {
 			double ra, dec;
 			double mx, my;
@@ -249,7 +267,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		}
 
 	nextfile:
-		free(wcsfn);
+        sl_free2(triedwcs);
 	}
 
 	sl_free2(wcsfiles);

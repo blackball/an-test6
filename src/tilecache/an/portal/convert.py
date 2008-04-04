@@ -497,6 +497,26 @@ def convert(job, df, fn, args=None):
         run_convert_command(cmd, fullfn)
         return fullfn
 
+    elif fn == 'onsky-dot':
+        wcsfn = job.get_filename('wcs.fits')
+        (ramin,ramax,decmin,decmax) = (0, 360, -85, 85)
+        (w, h) = (300, 300)
+        lw = 3
+        layers = [ 'tycho', 'grid', 'userdot' ]
+        gain = -1
+        cmd = ('tilerender'
+               + ' -x %f -X %f -y %f -Y %f' % (ramin, ramax, decmin, decmax)
+               + ' -w %i -h %i' % (w, h)
+               + ' -L %g' % lw
+               + ''.join((' -l ' + l) for l in layers)
+               + ' -I %s' % wcsfn
+               + ' -s' # arcsinh
+               + ' -g %g' % gain
+               + ' > %s' % fullfn
+               )
+        run_convert_command(cmd, fullfn)
+        return fullfn
+
     errmsg = 'Unimplemented: convert(%s)' % fn
     log(errmsg)
     raise FileConversionError(errmsg)

@@ -420,6 +420,8 @@ class Job(models.Model):
     def __str__(self):
         s = '<Job %s, ' % self.get_id()
         s += str(self.submission)
+        if self.fileorigname:
+            s += ', origfile %s' % self.fileorigname
         if self.status:
             s += ', %s' % self.status
         s += ' ' + str(self.diskfile)
