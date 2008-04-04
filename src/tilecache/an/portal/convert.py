@@ -331,9 +331,11 @@ def convert(job, df, fn, args=None):
         return fullfn
 
     elif ((fn == 'ppm-small') or (fn == 'ppm-small-8bit') or
+          (fn == 'ppm-thumb') or (fn == 'ppm-thumb-8bit') or
           (fn == 'ppm-medium') or (fn == 'ppm-medium-8bit')):
-        eightbit = (fn == 'ppm-small-8bit') or (fn == 'ppm-medium-8bit')
-        small = (fn == 'ppm-small-8bit') or (fn == 'ppm-small')
+        eightbit = fn.endswith('-8bit')
+        small = '-small' in fn
+        thumb = '-thumb' in fn
 
         # what the heck is this??
         if job.is_input_fits() or job.is_input_text():
@@ -355,6 +357,8 @@ def convert(job, df, fn, args=None):
 
         if small:
             imgfn = convert(job, df, 'pnm-small')
+        elif thumb:
+            imgfn = convert(job, df, 'pnm-thumb')
         else:
             imgfn = convert(job, df, 'pnm-medium')
         x = run_pnmfile(imgfn)
@@ -374,20 +378,23 @@ def convert(job, df, fn, args=None):
         run_convert_command(cmd)
         return fullfn
 
-    elif fn == 'annotation':
+    elif fn.startswith('annotation'):
+        if fn == 'annotation-big':
+            imgfn = convert(job, df, 'ppm-8bit')
+            scale = 1.0
+        elif fn == 'annotation':
+            imgfn = convert(job, df, 'ppm-medium-8bit')
+            (scale, dw, dh) = df.get_medium_scale()
+        elif fn == 'annotation-small':
+            imgfn = convert(job, df, 'ppm-small-8bit')
+            (scale, dw, dh) = df.get_small_scale()
+        elif fn == 'annotation-thumb':
+            imgfn = convert(job, df, 'ppm-thumb-8bit')
+            (scale, dw, dh) = df.get_thumbnail_scale()
+
         wcsfn = job.get_filename('wcs.fits')
-        imgfn = convert(job, df, 'ppm-medium-8bit')
-        (scale, dw, dh) = df.get_medium_scale()
         cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s -D -d %s' %
                (wcsfn, fullfn, 1.0/float(scale), imgfn, gmaps_config.hdcat))
-        run_convert_command(cmd)
-        return fullfn
-
-    elif fn == 'annotation-big':
-        imgfn = convert(job, df, 'ppm-8bit')
-        wcsfn = job.get_filename('wcs.fits')
-        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -i %s -D -d %s' %
-               (wcsfn, fullfn, imgfn, gmaps_config.hdcat))
         run_convert_command(cmd)
         return fullfn
 

@@ -151,11 +151,14 @@ def joblist(request):
         'status' : 'Status',
         'starttime' : 'Start Time',
         'finishtime' : 'Finish Time',
+        'enqueuetime' : 'Enqueued Time',
         'radec' : '(RA, Dec)',
         'fieldsize' : 'Field size',
         'tags' : 'Tags',
         'desc' : 'Description',
         'objsin' : 'Objects',
+        'thumbnail' : 'Thumbnail',
+        'annthumb' : 'Annotated Thumbnail',
         }
 
     allcols = colnames.keys()
@@ -234,6 +237,8 @@ def joblist(request):
                 t = job.format_starttime_brief()
             elif c == 'finishtime':
                 t = job.format_finishtime_brief()
+            elif c == 'enqueuetime':
+                t = job.format_enqueuetime_brief()
             elif c == 'status':
                 t = job.format_status()
             elif c == 'radec':
@@ -254,6 +259,18 @@ def joblist(request):
             elif c == 'objsin':
                 if job.solved():
                     t = ', '.join(get_objs_in_field(job, job.diskfile))
+            elif c == 'thumbnail':
+                t = ('<img src="'
+                     + reverse(getfile)
+                     + '?jobid=%s&f=thumbnail' % job.jobid
+                     + '" alt="Thumbnail" />')
+            elif c == 'annthumb':
+                if job.solved():
+                    t = ('<img src="'
+                         + reverse(getfile)
+                         + '?jobid=%s&f=annotation-thumb' % job.jobid
+                         + '" alt="Thumbnail" />')
+
             rend.append((tdclass, c, str(t)))
         rjobs.append((rend, job.jobid, jobn))
 
@@ -786,7 +803,7 @@ def getfile(request):
     if 'variant' in request.GET:
         variant = int(request.GET['variant'])
 
-    pngimages = [ 'annotation', 'annotation-big',
+    pngimages = [ 'annotation', 'annotation-big', 'annotation-thumb',
                   'sources-small', 'sources-medium', 'sources-big',
                   'redgreen', 'redgreen-big', 'thumbnail',
                   ]
