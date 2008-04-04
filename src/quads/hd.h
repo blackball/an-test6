@@ -16,16 +16,20 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
-#include "kdtree.h"
+#ifndef AN_HD_H
+#define AN_HD_H
 
-struct hd_entry_t {
+#include "kdtree.h"
+#include "bl.h"
+
+struct hd_entry {
     // J2000.0 degrees
     double ra;
     double dec;
 
     int hd;
 };
-typedef struct hd_entry_t hd_entry_t;
+typedef struct hd_entry hd_entry_t;
 
 struct hd_catalog {
     char* fn;
@@ -41,3 +45,4 @@ bl* henry_draper_get(hd_catalog_t* hd,
                      double racenter, double deccenter,
                      double radius_in_arcsec);
 
+#endif

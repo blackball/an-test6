@@ -21,6 +21,7 @@ INSTALL_DIR ?= /usr/local/astrometry
 export INSTALL_DIR
 
 all:
+	$(MAKE) -C qfits-an -q || $(MAKE) -C qfits-an install
 	$(MAKE) -C quads
 
 # Targets that require extra libraries

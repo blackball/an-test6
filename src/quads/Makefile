@@ -169,7 +169,7 @@ solver_test.o: solver.c
 
 # Add the basename of your test sources here...
 ALL_TEST_FILES = test_dfind test_ctmf test_simplexy test_dsmooth test_2mass \
-	test_tycho2 test_usnob test_nomad test_matchfile
+	test_tycho2 test_usnob test_nomad test_matchfile test_hd
 
 ALL_TEST_EXTRA_OBJS :=
 ALL_TEST_LIBS :=
@@ -207,6 +207,9 @@ ALL_TEST_EXTRA_OBJS += nomad-fits.o nomad.o
 
 test_matchfile: matchfile.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 ALL_TEST_EXTRA_OBJS += matchfile.o
+
+test_hd: hd.o $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+ALL_TEST_EXTRA_OBJS += hd.o
 
 ALL_TEST_LIBS += $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
