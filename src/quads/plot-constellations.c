@@ -765,7 +765,7 @@ int main(int argc, char** args) {
 				cairo_stroke(cairoshapes);
 
                 px -= (textents.width * 0.5);
-                py -= (crad + 2.0);
+                py -= (crad + 4.0);
 
                 add_text(cairos, txt, px, py);
             }
