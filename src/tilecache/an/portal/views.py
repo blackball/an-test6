@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 
 from django import newforms as forms
 from django.db import models
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, QueryDict
 from django.newforms import widgets, ValidationError, form_for_model
 from django.template import Context, RequestContext, loader
 from django.core.urlresolvers import reverse
@@ -111,13 +111,16 @@ def getsessionjob(request):
 
 @login_required
 def joblist(request):
+    myargs = QueryDict('', mutable=True)
+
+    sub = None
     subid = request.GET.get('subid')
     if subid:
         sub = get_submission(subid)
+    job = None
     jobid = request.GET.get('jobid')
     if jobid:
         job = get_job(jobid)
-
     n = int(request.GET.get('n', '50'))
     start = int(request.GET.get('start', '0'))
     if n:
@@ -131,12 +134,28 @@ def joblist(request):
     if not kind in [ 'user', 'nearby', 'tag', 'sub' ]:
         kind = 'user'
 
+    if sub:
+        myargs['subid'] = sub.subid
+    if job:
+        myargs['jobid'] = job.jobid
+    if start:
+        myargs['start'] = start
+    if n:
+        myargs['n'] = n
+    if format != 'html':
+        myargs['format'] = format
+    myargs['type'] = kind
+
     colnames = {
         'jobid' : 'Job Id',
         'status' : 'Status',
         'starttime' : 'Start Time',
         'finishtime' : 'Finish Time',
-        'testcol' : 'Test Column',
+        'radec' : '(RA, Dec)',
+        'fieldsize' : 'Field size',
+        'tags' : 'Tags',
+        'desc' : 'Description',
+        'objsin' : 'Objects',
         }
 
     allcols = colnames.keys()
@@ -188,6 +207,7 @@ def joblist(request):
 
     jobs = jobs[start:end]
 
+    myargs['cols'] = ','.join(cols)
 
     addcols = [c for c in allcols if c not in cols]
 
@@ -210,13 +230,34 @@ def joblist(request):
                 t = job.format_finishtime_brief()
             elif c == 'status':
                 t = job.format_status()
+            elif c == 'radec':
+                if job.solved():
+                    wcs = job.calibration.raw_tan
+                    (ra,dec) = wcs.get_field_center()
+                    t = '(%.2f, %.2f)' % (ra, dec)
+            elif c == 'fieldsize':
+                if job.solved():
+                    wcs = job.calibration.raw_tan
+                    (w, h, units) = wcs.get_field_size()
+                    t = '%.2f x %.2f %s' % (w, h, units)
+            elif c == 'tags':
+                tags = job.tags.all().filter(machineTag=False).order_by('addedtime')
+                t = ', '.join([tag.text for tag in tags])
+            elif c == 'desc':
+                t = job.description or ''
+            elif c == 'objsin':
+                if job.solved():
+                    t = ', '.join(get_objs_in_field(job, job.diskfile))
             rend.append((tdclass, c, str(t)))
         rjobs.append((rend, job.jobid, jobn))
 
     if format == 'xml':
         res = HttpResponse()
         res['Content-type'] = 'text/xml'
+
         res.write('<submission subid="%s">\n' % subid)
+        if kind == 'sub' and sub.is_finished():
+            res.write('  <stop />\n')
         for (rend, jobid, jobn) in rjobs:
             res.write('  <job jobid="%s" n="%i">\n' % (jobid, jobn))
             for (tdclass, c, t) in rend:
@@ -240,7 +281,7 @@ def joblist(request):
         addcolumns = zip(addcols, [colnames[c] for c in addcols])
 
         ctxt.update({
-            'thisurl' : request.get_full_path(),
+            'thisurl' : request.path + '?' + myargs.urlencode(),
             'addcolumns' : addcolumns,
             'columns' : columns,
             'submission' : sub,

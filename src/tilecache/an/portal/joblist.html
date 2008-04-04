@@ -89,6 +89,12 @@ function processRequest() {
       }
     }
   }
+
+  stops = xml.getElementsByTagName('stop');
+  if (stops.length > 0) {
+    stop();
+  }   
+
   return true;
 }
 
@@ -147,7 +153,7 @@ Jobs {{ firstnum }} to {{ lastnum }} of {{ totalnum }}
 
 {% if addcolumns %}
 <p class="c">
-Add columns:
+Add column:
 {% for c,n in addcolumns %}
 <a href="{{ thisurl }}&cols={{c}}">{{n}}</a>&nbsp;
 {% endfor %}
@@ -189,16 +195,13 @@ Add columns:
 {% endif %}
 </p>
 
-{% if somesolved %}
 <br />
 
 <p class="c">
-<a href="{{ gmaps_view_submission }}">
+<a href="{{ gmaps }}">
 View this set of jobs in the Google Maps viewer
 </a>
 </p>
-
-{% endif %}
 
 {% else %}
 <table id="summarytable">

@@ -59,6 +59,21 @@ class TanWCS(models.Model):
         tan = self.to_tanwcs()
         return tan.pixelxy2radec(self.imagew/2., self.imageh/2.)
 
+    # returns (w, h, units)
+    def get_field_size(self):
+        scale = self.get_pixscale()
+        (fieldw, fieldh) = (self.imagew * scale, self.imageh * scale)
+        units = 'arcsec'
+        if min(fieldw, fieldh) > 3600:
+            fieldw /= 3600.
+            fieldh /= 3600.
+            units = 'deg'
+        elif min(fieldw, fieldh) > 60:
+            fieldw /= 60.
+            fieldh /= 60.
+            units = 'arcmin'
+        return (fieldw, fieldh, units)
+    
     def radec_bounds(self, nsteps=10):
         tanwcs = self.to_tanwcs()
         return tanwcs.radec_bounds(nsteps)
