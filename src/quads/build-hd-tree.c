@@ -46,6 +46,11 @@ deg|deg|
 
  A copy of this input file is available at 
  http://trac.astrometry.net/browser/binary/henry-draper/henry-draper.tsv
+
+
+ Dude, use
+ http://cdsarc.u-strasbg.fr/viz-bin/Cat?IV/25        
+
 */
 
 #include <unistd.h>
@@ -54,6 +59,7 @@ deg|deg|
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include "kdtree.h"
 #include "kdtree_fits_io.h"
@@ -100,6 +106,7 @@ int main(int argc, char** args) {
 	char* progname = args[0];
     FILE* f;
 
+    double* tycmag = NULL;
     kdtree_t* tyckd = NULL;
 
 	int exttype  = KDT_EXT_DOUBLE;
@@ -168,7 +175,8 @@ int main(int argc, char** args) {
 	}
 
     if (tychofn) {
-        int i, N;
+        int mag8 = 0, mag9 = 0, mag10 = 0, mag11 = 0;
+        int i, N, M;
         double* xyz;
         tycho2_fits* tyc = tycho2_fits_open(tychofn);
         if (!tyc) {
@@ -178,14 +186,50 @@ int main(int argc, char** args) {
         printf("Reading Tycho-2 catalog...\n");
         N = tycho2_fits_count_entries(tyc);
         xyz = malloc(N * 3 * sizeof(double));
+        tycmag = malloc(N * sizeof(double));
+
+        M = 0;
         for (i=0; i<N; i++) {
+            float mag = 0.0;
             tycho2_entry* te = tycho2_fits_read_entry(tyc);
-            radecdeg2xyzarr(te->ra, te->dec, xyz + i*3);
+            if (te->mag_VT != 0.0) {
+                mag = te->mag_VT;
+            } else if (te->mag_HP != 0.0) {
+                mag = te->mag_HP;
+            } else if (te->mag_BT != 0.0) {
+                mag = te->mag_VT;
+            }
+
+            // Take only Tycho-2 stars brighter than mag 10.
+            if (mag != 0.0 && mag < 10.0) {
+                radecdeg2xyzarr(te->ra, te->dec, xyz + M*3);
+                tycmag[M] = mag;
+                M++;
+            }
+
+            if (mag != 0.0) {
+                if (mag < 8.0)
+                    mag8++;
+                if (mag < 9.0)
+                    mag9++;
+                if (mag < 10.0)
+                    mag10++;
+                if (mag < 11.0)
+                    mag11++;
+            }
         }
         tycho2_fits_close(tyc);
 
+        printf("Mags < 8: %i\n", mag8);
+        printf("Mags < 9: %i\n", mag9);
+        printf("Mags < 10: %i\n", mag10);
+        printf("Mags < 11: %i\n", mag11);
+
+        xyz = realloc(xyz, M * 3 * sizeof(double));
+        tycmag = realloc(tycmag, M * sizeof(double));
+
         printf("Building kdtree from Tycho-2...\n");
-        tyckd = kdtree_build(NULL, xyz, N, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
+        tyckd = kdtree_build(NULL, xyz, M, 3, 10, KDTT_DOUBLE, KD_BUILD_SPLIT);
         if (!tyckd) {
             ERROR("Failed to build a kdtree from Tycho-2 catalog.");
             exit(-1);
@@ -268,18 +312,39 @@ int main(int argc, char** args) {
     }
 
     xyz = malloc(sizeof(double) * 3 * N);
-    for (i=0; i<N; i++) {
-        radecdeg2xyzarr(dl_get(ras, i), dl_get(decs, i), xyz + 3*i);
+    {
+        int nreshist[10];
+        int k;
+        for (k=0; k<sizeof(nreshist)/sizeof(int); k++)
+            nreshist[k] = 0;
 
-        if (tyckd) {
-            kdtree_qres_t* res;
-            res = kdtree_rangesearch(tyckd, xyz + 3*i, r2);
-            printf("%i results\n", res->nres);
-            kdtree_free_query(res);
+        for (i=0; i<N; i++) {
+            radecdeg2xyzarr(dl_get(ras, i), dl_get(decs, i), xyz + 3*i);
+            
+            if (tyckd) {
+                kdtree_qres_t* res;
+                res = kdtree_rangesearch(tyckd, xyz + 3*i, r2);
+                if (res->nres == 1) {
+                    // update xyz.
+                    memcpy(xyz + 3*i, res->results.d, 3 * sizeof(double));
+                } else if (res->nres) {
+                    int j;
+                    printf("%i results\n", res->nres);
+                    for (j=0; j<res->nres; j++) {
+                        printf("  dist %g arcsec, mag %g\n", distsq2arcsec(res->sdists[j]), tycmag[res->inds[j]]);
+                    }
+                }
+                nreshist[MIN(sizeof(nreshist)/sizeof(int), res->nres)]++;
+                kdtree_free_query(res);
+            }
         }
+        printf("Histogram of number of Tycho-2 correspondence results:\n");
+        for (k=0; k<sizeof(nreshist)/sizeof(int); k++)
+            printf("  %i: %i\n", k, nreshist[k]);
     }
 
     if (tyckd) {
+        free(tycmag);
         free(tyckd->data.any);
         kdtree_free(tyckd);
     }
