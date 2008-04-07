@@ -526,36 +526,6 @@ def nearby_summary(request):
     c = RequestContext(request, ctxt)
     return HttpResponse(t.render(c))
 
-
-def tag_summary(request):
-    if 'tag' in request.GET:
-        tagid = request.GET['tag']
-        tag = Tag.objects.all().filter(id=tagid)
-    elif 'txt' in request.GET:
-        tagtxt = request.GET['txt']
-        log('Searching for tag text: "%s"' % repr(tagtxt))
-        tag = Tag.objects.all().filter(text=tagtxt)
-    else:
-        return HttpResponse('no tag')
-    if not len(tag):
-        return HttpResponse('no such tag')
-    tag = tag[0]
-
-    alltags = Tag.objects.all().filter(text=tag.text)
-    jobs = [tag.job for tag in alltags]
-
-    ctxt = {
-        'tag': tag,
-        'jobs': jobs,
-        'imageurl' : reverse(getfile) + '?fieldid=',
-        'thumbnailurl': reverse(getfile) + '?f=thumbnail&jobid=',
-        'statusurl' : get_status_url(''),
-        'usersummaryurl' : reverse(user_summary) + '?user='
-        }
-    t = loader.get_template('portal/tag-summary.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
-
 def user_summary(request):
     if not 'user' in request.GET:
         return HttpResponse('no user')
