@@ -181,7 +181,21 @@ def joblist(request):
     title = None
 
     if kind == 'user':
-        pass
+        uname = request.GET.get('user')
+        if not uname:
+            return HttpResponse('no user')
+        users = User.objects.all().filter(username=uname)
+        if users.count() == 0:
+            return HttpResponse('no such user')
+        user = users[0]
+
+        # FIXME - order_by
+        jobs = Job.objects.all().filter(submission__user=user,
+                                        exposejob=True).order_by('-enqueuetime', '-starttime')
+        N = jobs.count()
+        if not cols:
+            cols = [ 'thumbnail', 'jobid', 'status' ]
+        title = 'Jobs submitted by <i>%s</i>' % user.username
 
     elif kind == 'nearby':
         if job is None:
@@ -255,8 +269,10 @@ def joblist(request):
     ctxt['lastnum']  = end == -1 and N or min(N, end)
     ctxt['totalnum']  = N
 
+    if kind == 'user':
+        jobs = jobs[start:end]
 
-    if kind == 'nearby':
+    elif kind == 'nearby':
         tags = tags[start:end]
         jobs = [t.job for t in tags]
 
@@ -320,7 +336,12 @@ def joblist(request):
                          + '?jobid=%s&f=annotation-thumb' % job.jobid
                          + '" alt="Thumbnail" />')
             elif c == 'user':
-                t = job.get_user().username
+                t = ('<a href="'
+                     + reverse(joblist) + '?type=user&user='
+                     + job.get_user().username
+                     + '">'
+                     + job.get_user().username
+                     + '</a>')
             rend.append((tdclass, c, str(t)))
         rjobs.append((rend, job.jobid, jobn))
 
@@ -522,7 +543,7 @@ def user_summary(request):
     user = user[0]
 
     jobs = []
-    for sub in user.submission_set.all():
+    for sub in user.submissions.all():
         for job in sub.jobs.all():
             if job.is_exposed():
                 jobs.append(job)

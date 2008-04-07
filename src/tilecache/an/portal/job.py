@@ -239,7 +239,7 @@ class Submission(models.Model):
 
     subid = models.CharField(max_length=32, unique=True, primary_key=True)
 
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, related_name='submissions')
 
     # Only one of these should be set...
     batch = models.ForeignKey(BatchSubmission, null=True)
