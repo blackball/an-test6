@@ -23,6 +23,8 @@ h3.c { text-align:center; }
 {% endblock inlinecss %}
 
 {% block javascript %}
+
+{% if xmlsummaryurl %}
 <script type="text/javascript">
 var req;
 var reload = true;
@@ -129,17 +131,40 @@ function stop() {
   }
   req = null;
 }
+
+function onLoad() {
+  start();
+}
+
+function onUnload() {
+  stop();
+}
 </script>
+{% endif %}{# xmlsummaryurl #}
+
 {% endblock javascript %}
 
 {% block bodytag %}
-<body onLoad="start();">
+
+{% if xmlsummaryurl %}
+<body onload="onLoad();" onunload="onUnload();">
+{% else %}
+<body>
+{% endif %}
+
 {% endblock bodytag %}
 
 {% block content %}
 
 <h3 class="c">
+{% if title %}
+{% autoescape off %}
+{{ title }}
+{% endautoescape %}
+({{ firstnum }} to {{ lastnum }} of {{ totalnum }})
+{% else %}
 Jobs {{ firstnum }} to {{ lastnum }} of {{ totalnum }}
+{% endif %}
 </h3>
 
 {% if jobs %}

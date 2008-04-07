@@ -159,6 +159,7 @@ def joblist(request):
         'objsin' : 'Objects',
         'thumbnail' : 'Thumbnail',
         'annthumb' : 'Annotated Thumbnail',
+        'user' : 'User',
         }
 
     allcols = colnames.keys()
@@ -176,47 +177,70 @@ def joblist(request):
 
     gmaps = ''
 
+    ajaxupdate = False
+    title = None
+
     if kind == 'user':
         pass
     if kind == 'nearby':
         pass
     if kind == 'tag':
-        pass
+        #if 'tag' in request.GET:
+        #    tagid = request.GET['tag']
+        #    tag = Tag.objects.all().filter(id=tagid)
+        tagtxt = request.GET.get('tagtext')
+        if not tagtxt:
+            return HttpResponse('no tag')
+        myargs['tagtext'] = tagtxt
+        tags = Tag.objects.all().filter(text=tagtxt)
+        if tags.count() == 0:
+            return HttpResponse('no such tag')
+
+        tags = tags.order_by('addedtime')
+        N = tags.count()
+        if not cols:
+            cols = [ 'thumbnail', 'jobid', 'user' ]
+        title = 'Jobs tagged with <i>%s</i>' % tagtxt
+
     if kind == 'sub':
         if sub is None:
             return HttpResponse('no sub')
         job = None
         jobs = sub.jobs.all().order_by('enqueuetime', 'starttime', 'jobid')
-
+        N = jobs.count()
         gmaps = (reverse('an.tile.views.index') +
                  '?submission=%s' % sub.get_id() +
                  '&layers=tycho,grid,userboundary&arcsinh')
-
         if not cols:
             cols = [ 'jobid', 'status', 'starttime', 'finishtime' ]
 
-    if end > 0 and end < len(jobs):
-        args = request.GET.copy()
+    myargs['cols'] = ','.join(cols)
+
+    if end > 0 and end < N:
+        args = myargs.copy()
         args['start'] = end
         ctxt['nexturl'] = request.path + '?' + args.urlencode()
-        args['start'] = start + n * ((len(jobs) - start) / n)
+        args['start'] = start + n * ((N - start) / n)
         ctxt['lasturl'] = request.path + '?' + args.urlencode()
     if start > 0:
-        args = request.GET.copy()
+        args = myargs.copy()
         prev = max(0, start-n)
         args['start'] = prev
-        ctxt['prevurl'] =request.path + '?' + args.urlencode()
+        ctxt['prevurl'] = request.path + '?' + args.urlencode()
         if prev != 0:
             args['start'] = 0
             ctxt['firsturl'] = request.path + '?' + args.urlencode()
         
-    ctxt['firstnum'] = max(0, start)
-    ctxt['lastnum']  = end == -1 and len(jobs) or min(len(jobs), end)
-    ctxt['totalnum']  = len(jobs)
+    ctxt['firstnum'] = max(0, start) + 1
+    ctxt['lastnum']  = end == -1 and N or min(N, end)
+    ctxt['totalnum']  = N
 
-    jobs = jobs[start:end]
 
-    myargs['cols'] = ','.join(cols)
+    if kind == 'tag':
+        tags = tags[start:end]
+        jobs = [t.job for t in tags]
+    if kind == 'sub':
+        jobs = jobs[start:end]
 
     addcols = [c for c in allcols if c not in cols]
 
@@ -270,7 +294,8 @@ def joblist(request):
                          + reverse(getfile)
                          + '?jobid=%s&f=annotation-thumb' % job.jobid
                          + '" alt="Thumbnail" />')
-
+            elif c == 'user':
+                t = job.get_user().username
             rend.append((tdclass, c, str(t)))
         rjobs.append((rend, job.jobid, jobn))
 
@@ -313,8 +338,11 @@ def joblist(request):
             'reload_time' : (len(jobs) < 2) and 2 or 15,
             'statusurl' : get_status_url(''),
             'gmaps' : gmaps,
-            'xmlsummaryurl' : request.get_full_path() + '&format=xml',
+            'title' : title,
             })
+        if ajaxupdate:
+            ctxt['xmlsummaryurl'] = request.get_full_path() + '&format=xml'
+
         t = loader.get_template('portal/joblist.html')
         c = RequestContext(request, ctxt)
         return HttpResponse(t.render(c))
@@ -634,7 +662,8 @@ def jobstatus(request):
         'jobowner' : jobowner,
         'allowanon' : anonymous,
         'tags' : taglist,
-        'view_tagtxt_url' : reverse(tag_summary) + '?',
+        #'view_tagtxt_url' : reverse(tag_summary) + '?',
+        'view_tagtxt_url' : reverse(joblist) + '?type=tag&tagtext=',
         'view_nearby_url' : reverse(nearby_summary) + '?jobid=' + job.jobid,
         'set_description_url' : reverse(job_set_description),
         'add_tag_url' : reverse(job_add_tag),
