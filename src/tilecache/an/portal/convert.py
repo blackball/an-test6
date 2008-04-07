@@ -66,6 +66,18 @@ def get_objs_in_field(job, df):
         objs = []
     return objs
 
+def annotate_command(job):
+    hd = False
+    wcs = job.get_tan_wcs()
+    if wcs:
+        # one square degree
+        hd = (wcs.get_field_area() < 1.)
+    wcsfn = job.get_filename('wcs.fits')
+    cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j' % wcsfn
+    if hd:
+        cmd += ' -D -d %s' % gmaps_config.hdcat
+    return cmd
+
 def convert(job, df, fn, args=None):
     if args is None:
         args = {}
@@ -256,7 +268,8 @@ def convert(job, df, fn, args=None):
 
     elif fn == 'objsinfield':
         infn = job.get_filename('wcs.fits')
-        cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j -D -d %s > %s' % (infn, gmaps_config.hdcat, fullfn)
+        cmd = annotate_command(job, infn)
+        cmd += ' > %s' % fullfn
         run_convert_command(cmd)
         return fullfn
 
@@ -392,9 +405,8 @@ def convert(job, df, fn, args=None):
             imgfn = convert(job, df, 'ppm-thumb-8bit')
             (scale, dw, dh) = df.get_thumbnail_scale()
 
-        wcsfn = job.get_filename('wcs.fits')
-        cmd = ('plot-constellations -N -w %s -o %s -C -B -b 10 -j -s %g -i %s -D -d %s' %
-               (wcsfn, fullfn, 1.0/float(scale), imgfn, gmaps_config.hdcat))
+        cmd = annotate_command(job)
+        cmd += ' -o %s -s %g -i %s' % (fullfn, 1.0/float(scale), imgfn)
         run_convert_command(cmd)
         return fullfn
 

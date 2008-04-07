@@ -428,6 +428,11 @@ class Job(models.Model):
         s += '>'
         return s
 
+    def get_tan_wcs(self):
+        if not self.calibration:
+            return None
+        return self.calibration.raw_tan
+
     def get_description(self):
         if self.description:
             return self.description

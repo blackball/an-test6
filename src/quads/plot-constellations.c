@@ -46,7 +46,7 @@
 #include "constellations.h"
 #include "brightstars.h"
 #include "hd.h"
-#include "qfits_error.h"
+#include "fitsioutils.h"
 
 const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:MDd:";
 
@@ -205,8 +205,7 @@ int main(int argc, char** args) {
 	bool justlist = FALSE;
     bool only_messier = FALSE;
 
-    //qfits_err_remove_all();
-    qfits_err_statset(1);
+    fits_use_error_system();
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -733,7 +732,7 @@ int main(int argc, char** args) {
             exit(-1);
         }
 
-        sip_pixelxy2radec(&sip, W/2.0, H/2.0, &rac, &decc);
+        sip_pixelxy2radec(&sip, W/(2.0*scale), H/(2.0*scale), &rac, &decc);
         sip_pixelxy2radec(&sip, 0.0, 0.0, &ra2, &dec2);
         radecdeg2xyzarr(rac, decc, xyz1);
         radecdeg2xyzarr(ra2, dec2, xyz2);
