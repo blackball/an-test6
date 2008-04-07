@@ -47,8 +47,9 @@
 #include "brightstars.h"
 #include "hd.h"
 #include "fitsioutils.h"
+#include "sip-utils.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:MDd:";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cjvLn:f:MDd:G:";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -72,6 +73,7 @@ void print_help(char* progname) {
            "   [-n <width>]: NGC circle width (default 2)\n"
            "   [-f <size>]: font size.\n"
            "   [-M]: show only NGC/IC and Messier numbers (no common names)\n"
+           "   [-G <grid spacing in arcmin>]: plot RA,Dec grid\n"
            "\n", progname);
 }
 
@@ -205,6 +207,9 @@ int main(int argc, char** args) {
 	bool justlist = FALSE;
     bool only_messier = FALSE;
 
+    bool grid = FALSE;
+    double gridspacing = 0.0;
+
     fits_use_error_system();
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
@@ -212,6 +217,9 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+        case 'G':
+            gridspacing = atof(optarg);
+            break;
         case 'D':
             HD = TRUE;
             break;
@@ -294,7 +302,10 @@ int main(int argc, char** args) {
 	  }
 	*/
 
-    if (!(NGC || constell || bright || HD)) {
+    if (gridspacing > 0.0)
+        grid = TRUE;
+
+    if (!(NGC || constell || bright || HD || grid)) {
         fprintf(stderr, "Neither constellations, bright stars, HD nor NGC/IC overlays selected!\n");
         print_help(args[0]);
         exit(-1);
@@ -407,6 +418,44 @@ int main(int argc, char** args) {
         cairos->shapes = cairoshapes;
         cairos->shapesmask = cairoshapesmask;
 	}
+
+    if (grid) {
+        double ramin, ramax, decmin, decmax;
+        double ra, dec;
+        double rastep = gridspacing / 60.0;
+        double decstep = gridspacing / 60.0;
+        // how many line segments
+        int N = 10;
+        double px, py;
+        int i;
+
+		cairo_set_source_rgba(cairo, 0.2, 0.2, 0.2, 1.0);
+
+        get_radec_bounds(&sip, 100, &ramin, &ramax, &decmin, &decmax);
+        for (dec = decstep * floor(decmin / decstep); dec<=decmax; dec+=decstep) {
+            for (i=0; i<=N; i++) {
+                ra = ramin + ((double)i / (double)N) * (ramax - ramin);
+                if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
+                    continue;
+                // first time, move_to; else line_to
+                ((ra == ramin) ? cairo_move_to : cairo_line_to)(cairo, px, py);
+            }
+            cairo_stroke(cairo);
+        }
+        for (ra = rastep * floor(ramin / rastep); ra <= ramax; ra += rastep) {
+            //for (dec=decmin; dec<=decmax; dec += (decmax - decmin)/(double)N) {
+            for (i=0; i<=N; i++) {
+                dec = decmin + ((double)i / (double)N) * (decmax - decmin);
+                if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
+                    continue;
+                // first time, move_to; else line_to
+                ((dec == decmin) ? cairo_move_to : cairo_line_to)(cairo, px, py);
+            }
+            cairo_stroke(cairo);
+        }
+
+		cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
+    }
 
     if (constell) {
 		N = constellations_n();
