@@ -512,47 +512,6 @@ def job_remove_tag(request):
     tag.delete()
     return HttpResponseRedirect(get_status_url(tag.job.jobid))
 
-def nearby_summary(request):
-    if not 'jobid' in request.GET:
-        return HttpResponse('no jobid')
-    jobid = request.GET['jobid']
-    job = get_job(jobid)
-    if not job:
-        return HttpResponse('no such jobid')
-    tags = job.tags.all().filter(machineTag=True, text__startswith='hp:')
-    if len(tags) != 1:
-        return HttpResponse('no such tag')
-    tag = tags[0]
-    parts = tag.text.split(':')
-    if len(parts) != 3:
-        return HttpResponse('bad tag')
-    nside = int(parts[1])
-    hp = int(parts[2])
-
-    log('nside %i, hp %i' % (nside, hp))
-
-    hps = [ (nside, hp) ]
-
-
-    jobs = []
-    for (nside,hp) in hps:
-        tags = Tag.objects.all().filter(machineTag=True, text='hp:%i:%i'%(nside,hp))
-        for t in tags:
-            #if t.job.jobid != jobid:
-            jobs.append(t.job)
-
-    ctxt = {
-        'jobid' : jobid,
-        'jobs': jobs,
-        'imageurl' : reverse(getfile) + '?fieldid=',
-        'thumbnailurl': reverse(getfile) + '?f=thumbnail&jobid=',
-        'statusurl' : get_status_url(''),
-        'usersummaryurl' : reverse(user_summary) + '?user='
-        }
-    t = loader.get_template('portal/nearby-summary.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
-
 def user_summary(request):
     if not 'user' in request.GET:
         return HttpResponse('no user')
@@ -661,11 +620,9 @@ def jobstatus(request):
         'tags' : taglist,
         'view_tagtxt_url' : reverse(joblist) + '?type=tag&tagtext=',
         'view_nearby_url' : reverse(joblist) + '?type=nearby&jobid=' + job.jobid,
-        #'view_nearby_url' : reverse(nearby_summary) + '?jobid=' + job.jobid,
         'set_description_url' : reverse(job_set_description),
         'add_tag_url' : reverse(job_add_tag),
         'remove_tag_url' : reverse(job_remove_tag) + '?',
-        #'view_tag_url' : reverse(tag_summary) + '?',
         'view_user_url' : reverse(user_summary) + '?',
         }
 
