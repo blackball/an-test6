@@ -73,7 +73,7 @@ def annotate_command(job):
         # one square degree
         hd = (wcs.get_field_area() < 1.)
     wcsfn = job.get_filename('wcs.fits')
-    cmd = 'plot-constellations -L -w %s -N -C -B -b 10 -j' % wcsfn
+    cmd = 'plot-constellations -w %s -N -C -B -b 10 -j' % wcsfn
     if hd:
         cmd += ' -D -d %s' % gmaps_config.hdcat
     return cmd
@@ -267,9 +267,8 @@ def convert(job, df, fn, args=None):
         return fullfn
 
     elif fn == 'objsinfield':
-        infn = job.get_filename('wcs.fits')
-        cmd = annotate_command(job, infn)
-        cmd += ' > %s' % fullfn
+        cmd = annotate_command(job)
+        cmd += ' -L > %s' % fullfn
         run_convert_command(cmd)
         return fullfn
 
