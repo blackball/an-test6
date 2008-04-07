@@ -182,9 +182,29 @@ def joblist(request):
 
     if kind == 'user':
         pass
-    if kind == 'nearby':
-        pass
-    if kind == 'tag':
+
+    elif kind == 'nearby':
+        if job is None:
+            return HttpResponse('no job')
+        tags = job.tags.all().filter(machineTag=True, text__startswith='hp:')
+        if tags.count() != 1:
+            return HttpResponse('no such tag')
+        tag = tags[0]
+        parts = tag.text.split(':')
+        if len(parts) != 3:
+            return HttpResponse('bad tag')
+        nside = int(parts[1])
+        hp = int(parts[2])
+        #log('nside %i, hp %i' % (nside, hp))
+        hps = get_neighbouring_healpixes(nside, hp)
+        tagtxts = ['hp:%i:%i' % (nside,hp) for (nside,hp) in hps]
+        tags = Tag.objects.all().filter(machineTag=True, text__in=tagtxts)
+        N = tags.count()
+        if not cols:
+            cols = [ 'thumbnail', 'jobid', 'user' ]
+            title = 'Jobs near <i>%s</i>' % job.jobid
+
+    elif kind == 'tag':
         #if 'tag' in request.GET:
         #    tagid = request.GET['tag']
         #    tag = Tag.objects.all().filter(id=tagid)
@@ -202,7 +222,7 @@ def joblist(request):
             cols = [ 'thumbnail', 'jobid', 'user' ]
         title = 'Jobs tagged with <i>%s</i>' % tagtxt
 
-    if kind == 'sub':
+    elif kind == 'sub':
         if sub is None:
             return HttpResponse('no sub')
         job = None
@@ -236,10 +256,15 @@ def joblist(request):
     ctxt['totalnum']  = N
 
 
-    if kind == 'tag':
+    if kind == 'nearby':
         tags = tags[start:end]
         jobs = [t.job for t in tags]
-    if kind == 'sub':
+
+    elif kind == 'tag':
+        tags = tags[start:end]
+        jobs = [t.job for t in tags]
+
+    elif kind == 'sub':
         jobs = jobs[start:end]
 
     addcols = [c for c in allcols if c not in cols]
@@ -454,6 +479,25 @@ def job_add_tag(request):
     #job.save()
     return HttpResponseRedirect(get_status_url(jobid))
 
+def get_neighbouring_healpixes(nside, hp):
+    hps = [ (nside, hp) ]
+    # neighbours at this scale.
+    neigh = healpix.get_neighbours(hp, nside)
+    #log('neighbours: %s' % (str(neigh)))
+    for n in neigh:
+        hps.append((nside, n))
+    # the next bigger scale.
+    hps.append((nside-1, n/4))
+    # the next smaller scale, plus neighbours.
+    # (use a set because some of the neighbours are in common)
+    allneigh = set()
+    for i in range(4):
+        n = healpix.get_neighbours(hp*4 + i, nside+1)
+        allneigh.update(n)
+    for i in allneigh:
+        hps.append((nside+1, i))
+    return hps
+
 @login_required
 def job_remove_tag(request):
     if not 'tag' in request.GET:
@@ -488,23 +532,6 @@ def nearby_summary(request):
     log('nside %i, hp %i' % (nside, hp))
 
     hps = [ (nside, hp) ]
-
-    # neighbours at this scale.
-    neigh = healpix.get_neighbours(hp, nside)
-    log('neighbours: %s' % (str(neigh)))
-    for n in neigh:
-        hps.append((nside, n))
-
-    # the next bigger scale.
-    hps.append((nside-1, n/4))
-
-    # the next smaller scale, plus neighbours.
-    allneigh = set()
-    for i in range(4):
-        n = healpix.get_neighbours(hp*4 + i, nside+1)
-        allneigh.update(n)
-    for i in allneigh:
-        hps.append((nside+1, i))
 
 
     jobs = []
@@ -632,13 +659,13 @@ def jobstatus(request):
         'jobowner' : jobowner,
         'allowanon' : anonymous,
         'tags' : taglist,
-        #'view_tagtxt_url' : reverse(tag_summary) + '?',
         'view_tagtxt_url' : reverse(joblist) + '?type=tag&tagtext=',
-        'view_nearby_url' : reverse(nearby_summary) + '?jobid=' + job.jobid,
+        'view_nearby_url' : reverse(joblist) + '?type=nearby&jobid=' + job.jobid,
+        #'view_nearby_url' : reverse(nearby_summary) + '?jobid=' + job.jobid,
         'set_description_url' : reverse(job_set_description),
         'add_tag_url' : reverse(job_add_tag),
         'remove_tag_url' : reverse(job_remove_tag) + '?',
-        'view_tag_url' : reverse(tag_summary) + '?',
+        #'view_tag_url' : reverse(tag_summary) + '?',
         'view_user_url' : reverse(user_summary) + '?',
         }
 

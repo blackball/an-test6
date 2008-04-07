@@ -136,15 +136,22 @@ This field contains:
 {% endfor %}
 </ul>
 </p>
-<p><a href="{{ view_nearby_url }}">View nearby fields</a></p>
 </div>
-<hr />
+{% endif %}
 
+{% if job.solved %}
+<p><a href="{{ view_nearby_url }}">View nearby fields</a></p>
+{% endif %}
+
+{% if objsinfield %}
+<hr />
 <div id="annotation">
 <p>Field plus annotations:</p>
 <a href="{{ annotation_big }}"><img src="{{ annotation }}" alt="your image plus our annotations" /></a>
 </div>
+{% endif %}
 
+{% if job.solved %}
 
 <div id="description">
 {% ifequal user job.get_user %}
@@ -205,7 +212,6 @@ Tag with:
 <hr />
 
 {% endif %}
-{# (endif objsinfield) #}
 
 <div id="onsky">
 <p>This field on the sky:</p>
