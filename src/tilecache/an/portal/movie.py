@@ -20,28 +20,38 @@ from an.util.run_command import run_command
 if __name__ == '__main__':
 
     subid = 'test-200804-28074176'
-    outdir = '/tmp/movie/'
-
+    outdir = '/tmp/movie/B'
     blankskyfn = os.path.join(outdir, 'sky-blank.png')
 
-    (ramin,ramax,decmin,decmax) = (0, 360, -85, 85)
-    (w, h) = (300, 300)
-    layers = [ 'tycho', 'grid' ]
-    gain = -1
-    cmd = ('tilerender'
-           + ' -x %f -X %f -y %f -Y %f' % (ramin, ramax, decmin, decmax)
-           + ' -w %i -h %i' % (w, h)
-           + ''.join((' -l ' + l) for l in layers)
-           + ' -s' # arcsinh
-           + ' -g %g' % gain
-           + ' > %s' % blankskyfn
-           )
-    (rtn, out, err) = run_command(cmd)
-    if rtn:
-        print 'Failed to tilerender the blank sky.'
-        print 'out', out
-        print 'err', err
-        sys.exit(-1);
+    render_sky = False
+    render_ann = True
+
+    ann_args = {
+        'grid': 10.,
+        }
+
+    ann_out_prefix = 'ann-'
+    sky_out_prefix = 'sky-'
+
+    if render_sky:
+        (ramin,ramax,decmin,decmax) = (0, 360, -85, 85)
+        (w, h) = (300, 300)
+        layers = [ 'tycho', 'grid' ]
+        gain = -1
+        cmd = ('tilerender'
+               + ' -x %f -X %f -y %f -Y %f' % (ramin, ramax, decmin, decmax)
+               + ' -w %i -h %i' % (w, h)
+               + ''.join((' -l ' + l) for l in layers)
+               + ' -s' # arcsinh
+               + ' -g %g' % gain
+               + ' > %s' % blankskyfn
+               )
+        (rtn, out, err) = run_command(cmd)
+        if rtn:
+            print 'Failed to tilerender the blank sky.'
+            print 'out', out
+            print 'err', err
+            sys.exit(-1);
 
 
     subs = Submission.objects.all().filter(subid=subid)
@@ -58,24 +68,30 @@ if __name__ == '__main__':
     for i, job in enumerate(jobs):
         if job.solved():
             ns += 1
-            print 'Job %i: creating annotation.' % (i+1)
-            annfn = convert(job, job.diskfile, 'annotation-big')
-            print 'Job %i: creating on-the-sky.' % (i+1)
-            skyfn = convert(job, job.diskfile, 'onsky-dot')
+            if render_ann:
+                print 'Job %i: creating annotation.' % (i+1)
+                annfn = convert(job, job.diskfile, 'annotation-big', ann_args)
+            if render_sky:
+                print 'Job %i: creating on-the-sky.' % (i+1)
+                skyfn = convert(job, job.diskfile, 'onsky-dot')
         else:
             nu += 1
-            print 'Job %i: getting original.' % (i+1)
-            annfn = convert(job, job.diskfile, 'fullsizepng')
-            skyfn = None
+            if render_ann:
+                print 'Job %i: getting original.' % (i+1)
+                annfn = convert(job, job.diskfile, 'fullsizepng')
+            if render_sky:
+                skyfn = None
 
-        newannfn = os.path.join(outdir, 'ann-' + job.fileorigname)
-        shutil.move(annfn, newannfn)
+        if render_ann:
+            newannfn = os.path.join(outdir, ann_out_prefix + job.fileorigname)
+            shutil.move(annfn, newannfn)
 
-        newskyfn = os.path.join(outdir, 'sky-' + job.fileorigname)
-        if skyfn:
-            shutil.move(skyfn, newskyfn)
-        else:
-            os.symlink(blankskyfn, newskyfn)
+        if render_sky:
+            newskyfn = os.path.join(outdir, sky_out_prefix + job.fileorigname)
+            if skyfn:
+                shutil.move(skyfn, newskyfn)
+            else:
+                os.symlink(blankskyfn, newskyfn)
 
     print '%i solved and %i unsolved.' % (ns, nu)
     

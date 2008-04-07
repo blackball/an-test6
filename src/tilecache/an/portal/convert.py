@@ -404,8 +404,11 @@ def convert(job, df, fn, args=None):
             imgfn = convert(job, df, 'ppm-thumb-8bit')
             (scale, dw, dh) = df.get_thumbnail_scale()
 
+
         cmd = annotate_command(job)
         cmd += ' -o %s -s %g -i %s' % (fullfn, 1.0/float(scale), imgfn)
+        if 'grid' in args:
+            cmd += ' -G %g' % args['grid']
         run_convert_command(cmd)
         return fullfn
 

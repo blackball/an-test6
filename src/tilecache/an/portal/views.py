@@ -188,6 +188,7 @@ def joblist(request):
         if users.count() == 0:
             return HttpResponse('no such user')
         user = users[0]
+        myargs['user'] = user.username
 
         # FIXME - order_by
         jobs = Job.objects.all().filter(submission__user=user,
