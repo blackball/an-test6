@@ -113,6 +113,23 @@ def getsessionjob(request):
     return get_job(jobid)
 
 @login_required
+def taglist(request):
+    mtags = Tag.objects.all().filter(machineTag=True).values('text').distinct()
+    mtags = [d['text'] for d in mtags]
+
+    utags = Tag.objects.all().filter(machineTag=False).values('text').distinct()
+    utags = [d['text'] for d in utags]
+
+    ctxt = {
+        'usertags' : utags,
+        'machinetags' : mtags,
+        'view_tagtxt_url' : reverse(joblist) + '?type=tag&tagtext=',
+        }
+    t = loader.get_template('portal/taglist.html')
+    c = RequestContext(request, ctxt)
+    return HttpResponse(t.render(c))
+
+@login_required
 def joblist(request):
     myargs = QueryDict('', mutable=True)
 
