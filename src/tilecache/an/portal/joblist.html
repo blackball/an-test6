@@ -174,7 +174,7 @@ Jobs {{ firstnum }} to {{ lastnum }} of {{ totalnum }}
 <p class="c">
 Add column:
 {% for c,n in addcolumns %}
-<a href="{{ thisurl }}&cols={{c}}">{{n}}</a>&nbsp;
+<a href="{{ thisurl }}&amp;cols={{c}}">{{n}}</a>&nbsp;
 {% endfor %}
 </p>
 {% endif %}
@@ -186,8 +186,6 @@ Add column:
 <th>{{ n }} <a href="{{d}}" class="delcollink">x</a></th>
 {% endfor %}
 </tr>
-
-<a href="{{ xmlsummaryurl }}">XML</a>
 
 {% for job,jobid,jobn in rjobs %}
 <tr class="{% cycle even,odd %}">

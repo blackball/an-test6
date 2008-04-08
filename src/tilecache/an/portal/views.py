@@ -40,6 +40,8 @@ from an import settings
 import sip
 import healpix
 
+def urlescape(s):
+    return s.replace('&', '&amp;')
 
 class SetDescriptionForm(forms.Form):
     description = forms.CharField(widget=forms.Textarea(
@@ -111,7 +113,7 @@ def getsessionjob(request):
     return get_job(jobid)
 
 
-@login_required
+#@login_required
 def joblist(request):
     myargs = QueryDict('', mutable=True)
 
@@ -297,7 +299,7 @@ def joblist(request):
             tdclass = 'c'
             if c == 'jobid':
                 t = ('<a href="'
-                     + get_status_url(job.jobid)
+                     + urlescape(get_status_url(job.jobid))
                      + '">'
                      + job.jobid
                      + '</a>')
@@ -329,14 +331,15 @@ def joblist(request):
                     objs = get_objs_in_field(job, job.diskfile)
                     t = ', '.join([
                         ('<a href="' + request.path + '?'
-                         + urlencode({ 'type': 'tag',
-                                       'tagtext': obj.encode('utf_8') })
+                         + urlescape(urlencode({'type': 'tag',
+                                                'tagtext': obj.encode('utf_8') }))
                          + '">' + obj + '</a>'
                          ) for obj in objs])
             elif c == 'thumbnail':
                 t = ('<img src="'
-                     + reverse(getfile)
-                     + '?jobid=%s&f=thumbnail' % job.jobid
+                     + reverse(getfile) + '?'
+                     + urlescape(urlencode({ 'jobid' : job.jobid,
+                                             'f' : 'thumbnail' }))
                      + '" alt="Thumbnail" />')
             elif c == 'annthumb':
                 if job.solved():
@@ -346,8 +349,8 @@ def joblist(request):
                          + '" alt="Thumbnail" />')
             elif c == 'user':
                 t = ('<a href="'
-                     + reverse(joblist) + '?type=user&user='
-                     + job.get_user().username
+                     + reverse(joblist) + urlescape('?type=user&user='
+                     + job.get_user().username)
                      + '">'
                      + job.get_user().username
                      + '</a>')
