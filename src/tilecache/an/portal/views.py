@@ -112,7 +112,6 @@ def getsessionjob(request):
     jobid = request.session['jobid']
     return get_job(jobid)
 
-
 @login_required
 def joblist(request):
     myargs = QueryDict('', mutable=True)
@@ -545,33 +544,6 @@ def job_remove_tag(request):
     tag.delete()
     return HttpResponseRedirect(get_status_url(tag.job.jobid))
 
-def user_summary(request):
-    if not 'user' in request.GET:
-        return HttpResponse('no user')
-    userid = request.GET['user']
-    user = User.objects.all().filter(id=userid)
-    if not len(user):
-        return HttpResponse('no such user')
-    user = user[0]
-
-    jobs = []
-    for sub in user.submissions.all():
-        for job in sub.jobs.all():
-            if job.is_exposed():
-                jobs.append(job)
-
-    ctxt = {
-        'user': user,
-        'jobs': jobs,
-        'imageurl' : reverse(getfile) + '?fieldid=',
-        'thumbnailurl': reverse(getfile) + '?f=thumbnail&jobid=',
-        'statusurl' : get_status_url(''),
-        }
-    t = loader.get_template('portal/user-summary.html')
-    c = RequestContext(request, ctxt)
-    return HttpResponse(t.render(c))
-
-
 def jobstatus(request):
     if not request.GET:
         return HttpResponse('no GET')
@@ -653,10 +625,10 @@ def jobstatus(request):
         'tags' : taglist,
         'view_tagtxt_url' : reverse(joblist) + '?type=tag&tagtext=',
         'view_nearby_url' : reverse(joblist) + '?type=nearby&jobid=' + job.jobid,
+        'view_user_url' : reverse(joblist) + '?type=user&user=' + job.get_user().username,
         'set_description_url' : reverse(job_set_description),
         'add_tag_url' : reverse(job_add_tag),
         'remove_tag_url' : reverse(job_remove_tag) + '?',
-        'view_user_url' : reverse(user_summary) + '?',
         }
 
     if job.solved():

@@ -16,7 +16,6 @@ urlpatterns = patterns('',
 					   (r'^set_description/$', an.portal.views.job_set_description),
 					   (r'^add_tag/$', an.portal.views.job_add_tag),
 					   (r'^remove_tag/$', an.portal.views.job_remove_tag),
-					   (r'^user_summary/$',     an.portal.views.user_summary),
 					   (r'^substatusxml/$',      an.portal.views.submission_status_xml),
                        # PLAY
 					   (r'^redgreen$',     an.portal.views.redgreen),
