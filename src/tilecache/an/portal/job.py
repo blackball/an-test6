@@ -14,8 +14,11 @@ from an.upload.models import UploadedFile
 import an.gmaps_config as config
 from an.portal.log import log
 from an.portal.wcs import *
+from an.portal.convert import get_objs_in_field
 
 from an.portal.models import UserPreferences
+
+import healpix
 
 
 # Represents one file on disk
@@ -400,9 +403,9 @@ class Job(models.Model):
     howsolved = models.CharField(max_length=256)
 
     # times
-    enqueuetime = models.DateTimeField(null=True)
-    starttime  = models.DateTimeField(null=True)
-    finishtime = models.DateTimeField(null=True)
+    enqueuetime = models.DateTimeField(default='2000-01-01')
+    starttime  = models.DateTimeField(default='2000-01-01')
+    finishtime = models.DateTimeField(default='2000-01-01')
 
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
@@ -427,6 +430,40 @@ class Job(models.Model):
         s += ' ' + str(self.diskfile)
         s += '>'
         return s
+
+    def add_machine_tags(self):
+        # Find the list of objects in the field and add them as
+        # machine tags to the Job.
+        if self.solved():
+            objs = get_objs_in_field(self, self.diskfile)
+            for obj in objs:
+                tag = Tag(job=self,
+                          user=self.get_user(),
+                          machineTag=True,
+                          text=obj,
+                          addedtime=Job.timenow())
+                tag.save()
+            # Add healpix machine tag.
+            # Find the field size:
+            wcs = self.get_tan_wcs()
+            radiusdeg = wcs.get_field_radius()
+            nside = healpix.get_closest_pow2_nside(radiusdeg)
+            log('Field has radius %g deg.' % radiusdeg)
+            log('Closest power-of-2 healpix Nside is %i.' % nside)
+            (ra,dec) = wcs.get_field_center()
+            log('Field center: (%g, %g)' % (ra,dec))
+            hp = healpix.radectohealpix(ra, dec, nside)
+            log('Healpix: %i' % hp)
+            tag = Tag(job=self,
+                      user=self.get_user(),
+                      machineTag=True,
+                      text='hp:%i:%i' % (nside, hp),
+                      addedtime=Job.timenow())
+            tag.save()
+
+    def remove_all_machine_tags(self):
+        Tag.objects.all().filter(job=self, machineTag=True,
+                                 user=self.get_user()).delete()
 
     def get_tan_wcs(self):
         if not self.calibration:
@@ -589,6 +626,11 @@ class Job(models.Model):
         self.starttime = Job.timenow()
     def set_finishtime_now(self):
         self.finishtime = Job.timenow()
+
+    def set_enqueuetime(self, t):
+        self.enqueuetime = t
+    def set_starttime(self, t):
+        self.starttime = t
 
     def format_status(self):
         s = self.status

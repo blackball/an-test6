@@ -8,6 +8,8 @@ import sha
 import tempfile
 import time
 
+from urllib import urlencode
+
 import django.contrib.auth as auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -324,7 +326,13 @@ def joblist(request):
                 t = job.description or ''
             elif c == 'objsin':
                 if job.solved():
-                    t = ', '.join(get_objs_in_field(job, job.diskfile))
+                    objs = get_objs_in_field(job, job.diskfile)
+                    t = ', '.join([
+                        ('<a href="' + request.path + '?'
+                         + urlencode({ 'type': 'tag',
+                                       'tagtext': obj.encode('utf_8') })
+                         + '">' + obj + '</a>'
+                         ) for obj in objs])
             elif c == 'thumbnail':
                 t = ('<img src="'
                      + reverse(getfile)
@@ -343,7 +351,7 @@ def joblist(request):
                      + '">'
                      + job.get_user().username
                      + '</a>')
-            rend.append((tdclass, c, str(t)))
+            rend.append((tdclass, c, t))
         rjobs.append((rend, job.jobid, jobn))
 
     if format == 'xml':

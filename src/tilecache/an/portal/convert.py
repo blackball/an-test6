@@ -58,6 +58,7 @@ def get_objs_in_field(job, df):
     objsfn = convert(job, df, 'objsinfield')
     f = open(objsfn)
     objtxt = f.read()
+    objtxt = objtxt.decode('utf_8')
     f.close()
     objs = objtxt.strip()
     if len(objs):

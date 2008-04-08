@@ -308,33 +308,7 @@ def real_handle_job(job, sshconfig):
 
         job.calibration = calib
 
-        # Find the list of objects in the field and add them as
-        # machine tags to the Job.
-        objs = get_objs_in_field(job, df)
-        for obj in objs:
-            tag = Tag(job=job,
-                      user=job.get_user(),
-                      machineTag=True,
-                      text=obj,
-                      addedtime=Job.timenow())
-            tag.save()
-
-        # Find the field size:
-        radiusdeg = wcs.get_field_radius()
-        nside = healpix.get_closest_pow2_nside(radiusdeg)
-        log('Field has radius %g deg.' % radiusdeg)
-        log('Closest power-of-2 healpix Nside is %i.' % nside)
-        (ra,dec) = wcs.get_field_center()
-        log('Field center: (%g, %g)' % (ra,dec))
-        hp = healpix.radectohealpix(ra, dec, nside)
-        log('Healpix: %i' % hp)
-        # Add healpix machine tag.
-        tag = Tag(job=job,
-                  user=job.get_user(),
-                  machineTag=True,
-                  text='hp:%i:%i' % (nside, hp),
-                  addedtime=Job.timenow())
-        tag.save()
+        job.add_machine_tags()
 
     else:
         job.set_status('Failed', 'Did not solve.')
