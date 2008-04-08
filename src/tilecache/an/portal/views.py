@@ -113,7 +113,7 @@ def getsessionjob(request):
     return get_job(jobid)
 
 
-#@login_required
+@login_required
 def joblist(request):
     myargs = QueryDict('', mutable=True)
 
