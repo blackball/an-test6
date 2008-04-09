@@ -180,6 +180,8 @@ def joblist(request):
         'thumbnail' : 'Thumbnail',
         'annthumb' : 'Annotated Thumbnail',
         'user' : 'User',
+        # DEBUG
+        'diskfile' : 'Diskfile',
         }
 
     allcols = colnames.keys()
@@ -199,6 +201,8 @@ def joblist(request):
 
     ajaxupdate = False
     title = None
+    # allow duplicate DiskFiles?
+    duplicates = False
 
     if kind == 'user':
         uname = request.GET.get('user')
@@ -210,9 +214,9 @@ def joblist(request):
         user = users[0]
         myargs['user'] = user.username
 
-        # FIXME - order_by
         jobs = Job.objects.all().filter(submission__user=user,
                                         exposejob=True).order_by('-enqueuetime', '-starttime')
+        
         N = jobs.count()
         if not cols:
             cols = [ 'thumbnail', 'jobid', 'status' ]
@@ -251,8 +255,14 @@ def joblist(request):
         if tags.count() == 0:
             return HttpResponse('no such tag')
 
-        tags = tags.order_by('addedtime')
+        tags = tags.filter(job__duplicate=False)
         N = tags.count()
+
+        #qn = tags.extra(select={'diskfile': 'portal_job.diskfile_id'},
+        #                tables = ['portal_job'],
+        #                where = ['portal_tag.job_id = portal_job.jobid'])
+        #N = qn.values('diskfile').distinct().count()
+
         if not cols:
             cols = [ 'thumbnail', 'jobid', 'user' ]
         title = 'Jobs tagged with <i>%s</i>' % tagtxt
@@ -298,6 +308,7 @@ def joblist(request):
         jobs = [t.job for t in tags]
 
     elif kind == 'tag':
+        tags = tags.order_by('addedtime')
         tags = tags[start:end]
         jobs = [t.job for t in tags]
 
@@ -370,6 +381,10 @@ def joblist(request):
                      + '">'
                      + job.get_user().username
                      + '</a>')
+            # DEBUG
+            elif c == 'diskfile':
+                t = job.diskfile.filehash
+
             rend.append((tdclass, c, t))
         rjobs.append((rend, job.jobid, jobn))
 

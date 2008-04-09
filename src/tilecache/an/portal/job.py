@@ -407,6 +407,9 @@ class Job(models.Model):
     starttime  = models.DateTimeField(default='2000-01-01')
     finishtime = models.DateTimeField(default='2000-01-01')
 
+    # Is there an identical DiskFile that solved?
+    duplicate = models.BooleanField(blank=True, null=True)
+    
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
         if self.exposejob is None:
@@ -431,6 +434,10 @@ class Job(models.Model):
         s += '>'
         return s
 
+    def set_is_duplicate(self):
+        others = Job.objects.all().filter(diskfile=self.diskfile, status='Solved').order_by('enqueuetime')
+        self.duplicate = (others.count() > 0) and (others[0] != self)
+ 
     def add_machine_tags(self):
         # Find the list of objects in the field and add them as
         # machine tags to the Job.
