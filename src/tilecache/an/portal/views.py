@@ -258,11 +258,6 @@ def joblist(request):
         tags = tags.filter(job__duplicate=False)
         N = tags.count()
 
-        #qn = tags.extra(select={'diskfile': 'portal_job.diskfile_id'},
-        #                tables = ['portal_job'],
-        #                where = ['portal_tag.job_id = portal_job.jobid'])
-        #N = qn.values('diskfile').distinct().count()
-
         if not cols:
             cols = [ 'thumbnail', 'jobid', 'user' ]
         title = 'Jobs tagged with <i>%s</i>' % tagtxt
