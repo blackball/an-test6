@@ -49,6 +49,7 @@ static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
     } else {
         kd = kdtree_build(NULL, data, N, D, Nleaf, treetype, treeopts);
     }
+    //kd = kdtree_build(NULL, data, N, D, Nleaf, treetype, treeopts);
 
     if (!kd)
         return NULL;

@@ -1980,7 +1980,7 @@ static double compute_scale(dtype* ddata, int N, int D,
 		}
 	}
 	range = maxrange(lo, hi, D);
-	return (double)TTYPE_MAX / range;
+	return (double)(DTYPE_MAX) / range;
 }
 
 // same as "compute_scale" but takes an "etype".
@@ -1999,16 +1999,8 @@ static double compute_scale_ext(etype* edata, int N, int D,
 			edata++;
 		}
 	}
-    /*
-     // round to dtype conservatively.
-     // -> can't do that yet - we're computing the conversion params!!
-     for (d=0; d<D; d++) {
-     lo[d] = POINT_DE(kd, d, POINT_ED(kd, d, lo[d], floor));
-     hi[d] = POINT_DE(kd, d, POINT_ED(kd, d, lo[d], ceil ));
-     }
-     */
     range = maxrange(lo, hi, D);
-	return (double)(TTYPE_MAX-1) / range;
+	return (double)DTYPE_MAX / range;
 }
 
 kdtree_t* MANGLE(kdtree_convert_data)
@@ -2051,6 +2043,43 @@ kdtree_t* MANGLE(kdtree_convert_data)
 			edata++;
 		}
 	}
+
+
+    // DEBUG
+    for (d=0; d<D; d++) {
+        double b4;
+        dtype dt;
+
+        b4 = kd->minval[d];
+        dt = POINT_ED(kd, d, kd->minval[d], floor);
+        kd->minval[d] = POINT_DE(kd, d, dt);
+
+        // adjust minval, maxval
+        printf("tweaking minval[%i] from %g to %g.\n",
+               d, b4, kd->minval[d]);
+
+        b4 = kd->maxval[d];
+        dt = POINT_ED(kd, d, kd->maxval[d], ceil);
+        kd->maxval[d] = POINT_DE(kd, d, dt);
+
+        printf("tweaking maxval[%i] from %g to %g.\n",
+               d, b4, kd->maxval[d]);
+
+        /*
+         kd->minval[d] = POINT_DE(kd, d, POINT_ED(kd, d, kd->minval[d], floor));
+         kd->maxval[d] = POINT_DE(kd, d, POINT_ED(kd, d, kd->minval[d], ceil ));
+         */
+    }
+
+	for (i=0; i<N; i++) {
+		for (d=0; d<D; d++) {
+            etype e = POINT_DE(kd, d, KD_DATA(kd, D, i)[d]);
+            assert(e <= kd->maxval[d]);
+            assert(e >= kd->minval[d]);
+		}
+	}
+
+
 	return kd;
 }
 
@@ -2131,6 +2160,22 @@ kdtree_t* MANGLE(kdtree_build)
             kd->data.any = indata;
         }
     }
+	if (TTYPE_INTEGER && !DTYPE_INTEGER) {
+		// compute scaling params
+		if (!kd->minval || !kd->maxval) {
+			kd->minval = MALLOC(D * sizeof(double));
+			kd->maxval = MALLOC(D * sizeof(double));
+            assert(kd->minval);
+            assert(kd->maxval);
+			kd->scale = compute_scale(kd->data.any, N, D, kd->minval, kd->maxval);
+		} else {
+			// limits were pre-set by the user.  just compute scale.
+			double range;
+			range = maxrange(kd->minval, kd->maxval, D);
+			kd->scale = (double)TTYPE_MAX / range;
+		}
+		kd->invscale = 1.0 / kd->scale;
+	}
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
@@ -2157,23 +2202,6 @@ kdtree_t* MANGLE(kdtree_build)
         kd->dimmask = 0;
 	} else if (options & KD_BUILD_SPLIT)
 		compute_splitbits(kd);
-
-	if (TTYPE_INTEGER && !DTYPE_INTEGER) {
-		// compute scaling params
-		if (!kd->minval || !kd->maxval) {
-			kd->minval = MALLOC(D * sizeof(double));
-			kd->maxval = MALLOC(D * sizeof(double));
-            assert(kd->minval);
-            assert(kd->maxval);
-			kd->scale = compute_scale(kd->data.any, N, D, kd->minval, kd->maxval);
-		} else {
-			// limits were pre-set by the user.  just compute scale.
-			double range;
-			range = maxrange(kd->minval, kd->maxval, D);
-			kd->scale = (double)TTYPE_MAX / range;
-		}
-		kd->invscale = 1.0 / kd->scale;
-	}
 
     if (options & KD_BUILD_LINEAR_LR)
         kd->has_linear_lr = TRUE;
