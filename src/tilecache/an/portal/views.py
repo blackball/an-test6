@@ -273,6 +273,7 @@ def joblist(request):
                  '&layers=tycho,grid,userboundary&arcsinh')
         if not cols:
             cols = [ 'jobid', 'status', 'starttime', 'finishtime' ]
+        ajaxupdate = True
 
     myargs['cols'] = ','.join(cols)
 
@@ -462,7 +463,9 @@ def submission_status_xml(request):
 
 @login_required
 def submission_status(request, submission):
-    jobs = submission.jobs.all().order_by('starttime', 'jobid')
+    jobs = submission.jobs.all().order_by('-starttime', '-enqueuetime', 'jobid')
+    #order_by('starttime', 'jobid')
+    
 
     somesolved = False
     for job in jobs:

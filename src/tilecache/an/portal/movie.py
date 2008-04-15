@@ -19,15 +19,22 @@ from an.util.run_command import run_command
 
 if __name__ == '__main__':
 
-    subid = 'test-200804-28074176'
-    outdir = '/tmp/movie/B'
+    # FIREBall
+    # subid = 'test-200804-28074176'
+    # outdir = '/tmp/movie/B'
+
+    # 
+    subid = 'test-200804-68274868'
+    outdir = '/tmp/movie/C'
+    
     blankskyfn = os.path.join(outdir, 'sky-blank.png')
 
     render_sky = False
     render_ann = True
 
     ann_args = {
-        'grid': 10.,
+        #'grid': 10., # grid spacing in arcmin
+        'grid': 600., # grid spacing in arcmin
         }
 
     ann_out_prefix = 'ann-'
