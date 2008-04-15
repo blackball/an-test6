@@ -2044,33 +2044,17 @@ kdtree_t* MANGLE(kdtree_convert_data)
 		}
 	}
 
-
-    // DEBUG
+    // adjust minval, maxval
     for (d=0; d<D; d++) {
-        double b4;
         dtype dt;
-
-        b4 = kd->minval[d];
+        // have to do this with an intermediate "dtype" variable to force down-conversion.
         dt = POINT_ED(kd, d, kd->minval[d], floor);
         kd->minval[d] = POINT_DE(kd, d, dt);
-
-        // adjust minval, maxval
-        printf("tweaking minval[%i] from %g to %g.\n",
-               d, b4, kd->minval[d]);
-
-        b4 = kd->maxval[d];
         dt = POINT_ED(kd, d, kd->maxval[d], ceil);
         kd->maxval[d] = POINT_DE(kd, d, dt);
-
-        printf("tweaking maxval[%i] from %g to %g.\n",
-               d, b4, kd->maxval[d]);
-
-        /*
-         kd->minval[d] = POINT_DE(kd, d, POINT_ED(kd, d, kd->minval[d], floor));
-         kd->maxval[d] = POINT_DE(kd, d, POINT_ED(kd, d, kd->minval[d], ceil ));
-         */
     }
 
+#ifndef NDEBUG
 	for (i=0; i<N; i++) {
 		for (d=0; d<D; d++) {
             etype e = POINT_DE(kd, d, KD_DATA(kd, D, i)[d]);
@@ -2078,7 +2062,7 @@ kdtree_t* MANGLE(kdtree_convert_data)
             assert(e >= kd->minval[d]);
 		}
 	}
-
+#endif
 
 	return kd;
 }
