@@ -20,8 +20,11 @@ static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
                             int Nleaf, int treetype, int treeopts);
 static double* random_points_d(int N, int D);
 
-
-
+static void free_tree(kdtree_t* kd) {
+	if ((kd->treetype & KDT_DATA_MASK) != KDT_DATA_DOUBLE)
+		free(kd->data.any);
+	kdtree_free(kd);
+}
 
 static double* random_points_d(int N, int D) {
     int i;
@@ -35,28 +38,9 @@ static double* random_points_d(int N, int D) {
 static kdtree_t* build_tree(CuTest* tc, double* data, int N, int D,
                             int Nleaf, int treetype, int treeopts) {
     kdtree_t* kd;
-    /*
-     int datatype;
-     int convert = 0;
-
-     datatype = treetype & KDT_DATA_MASK;
-     if (datatype != KDT_DATA_DOUBLE)
-     convert = 1;
-
-     if (convert) {
-     kd = kdtree_new(N, D, Nleaf);
-     kd = kdtree_convert_data(kd, data, N, D, Nleaf, treetype);
-     kd = kdtree_build(kd, kd->data.any, N, D, Nleaf, treetype, treeopts);
-     } else {
-     kd = kdtree_build(NULL, data, N, D, Nleaf, treetype, treeopts);
-     }
-     */
     kd = kdtree_build(NULL, data, N, D, Nleaf, treetype, treeopts);
-
     if (!kd)
         return NULL;
-
     CuAssertIntEquals(tc, kdtree_check(kd), 0);
-
     return kd;
 }

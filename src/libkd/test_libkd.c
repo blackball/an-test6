@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <strings.h>
 
+#include "errors.h"
 #include "cutest.h"
 #include "kdtree.h"
 #include "mathutil.h"
@@ -70,7 +71,7 @@ double linearRF(int leafid, int nbottom, int N) {
     return res - 1.0;
 }
 
-void test_1(CuTest* ct) {
+void tst_1(CuTest* ct) {
     kdtree_t* kd;
     double * data;
     int N = 1000;
@@ -88,15 +89,17 @@ void test_1(CuTest* ct) {
         int R2 = calculate_R(i, kd->nlevels, N);
         int R3 = linearR(i, kd->nbottom, N);
         double d3 = linearRF(i, kd->nbottom, N);
-        printf("%i %i %i %g\n", R1, R2, R3, d3);
-        printf("                               %s   %g\n",
-               (R1 != R3) ? "***" : "   ",
-               (double)R3 - d3);
+
+		printf("%i %i %i %g\n", R1, R2, R3, d3);
+		printf("                               %s   %g\n",
+			   (R1 != R3) ? "***" : "   ",
+			   (double)R3 - d3);
         /*
          CuAssertIntEquals(ct, R1, R2);
          CuAssertIntEquals(ct, R1, R3);
          */
     }
+	free_tree(kd);
 }
 
 static inline u8 node_level(int nodeid) {
@@ -193,7 +196,7 @@ static void run_test_nn(CuTest* tc, int treetype, int treeopts,
         CuAssertDblEquals(tc, sqrt(d2), sqrt(trued2), eps);
     }
 
-    kdtree_free(kd);
+	free_tree(kd);
     free(treedata);
     free(origdata);
 }
@@ -266,9 +269,11 @@ static void run_test_rs(CuTest* tc, int treetype, int treeopts,
          printf("Naive : ind %i, dist %g.\n", trueind, sqrt(trued2));
          printf("Kdtree: ind %i, dist %g.\n", kd->perm[ind], sqrt(d2));
          */
+
+		kdtree_free_query(res);
     }
 
-    kdtree_free(kd);
+	free_tree(kd);
     free(treedata);
     free(origdata);
 }
@@ -372,7 +377,7 @@ void run_test_lr(CuTest* tc, int D, int Nleaf, int treetype, int treeopts) {
         }
 
         kd->lr = lr;
-        kdtree_free(kd);
+		free_tree(kd);
         free(treedata);
     }
 }
@@ -390,5 +395,8 @@ void test_no_lr_with_ints(CuTest* tc) {
     data = random_points_d(N, D);
     kd = build_tree(tc, data, N, D, Nleaf, KDTT_DSS, KD_BUILD_SPLIT | KD_BUILD_NO_LR);
     CuAssert(tc, "no kd", kd == NULL);
+	free(data);
+
+	errors_free();
 }
 
