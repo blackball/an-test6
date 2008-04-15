@@ -59,6 +59,8 @@ INTERNALS_NOIO := \
 	kdint_dds_noio.o \
 	kdint_dss_noio.o
 
+DEP_OBJ := $(KD) $(KD_FITS) $(INTERNALS) $(INTERNALS_NOIO)
+
 %_noio.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS) -DKDTREE_NO_FITS
 
@@ -92,6 +94,8 @@ test_libkd: $(LIBKD_NOIO) $(ANUTILS_LIB)
 
 test_libkd_io: $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
 
+DEP_OBJ += $(ALL_TEST_FILES_O) $(ALL_TEST_FILES_MAIN_O)
+
 ### /TESTS
 
 .PHONY: realclean clean
@@ -108,7 +112,6 @@ realclean: clean
 tags:
 	etags `find . -name "*.c" -o -name "*.h"`
 
-DEP_OBJ := $(KD) $(KD_FITS) $(INTERNALS) $(INTERNALS_NOIO)
 DEP_PREREQS := $(QFITS_LIB)
 
 include $(COMMON)/makefile.deps

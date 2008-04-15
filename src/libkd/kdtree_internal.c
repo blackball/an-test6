@@ -2010,7 +2010,7 @@ kdtree_t* MANGLE(kdtree_convert_data)
 	if (!kd)
 		kd = kdtree_new(N, D, Nleaf);
 
-	if (!kd->minval && !kd->maxval) {
+	if (!kd->minval || !kd->maxval) {
 		kd->minval = MALLOC(D * sizeof(double));
 		kd->maxval = MALLOC(D * sizeof(double));
 		kd->scale = compute_scale_ext(edata, N, D, kd->minval, kd->maxval);
@@ -2094,6 +2094,10 @@ static void save_bb(kdtree_t* kd, int i, const dtype* lo, const dtype* hi) {
     }
 }
 
+static int needs_data_conversion() {
+    return DTYPE_INTEGER && !ETYPE_INTEGER;
+}
+
 kdtree_t* MANGLE(kdtree_build)
 	 (kdtree_t* kd, etype* indata, int N, int D, int Nleaf, unsigned int options) {
 	int i;
@@ -2137,14 +2141,14 @@ kdtree_t* MANGLE(kdtree_build)
 		kd = kdtree_new(N, D, Nleaf);
 
 	if (!kd->data.any) {
-        if (TTYPE_INTEGER && !DTYPE_INTEGER) {
+        if (needs_data_conversion()) {
             // need to convert the data from "etype" to "dtype".
             MANGLE(kdtree_convert_data)(kd, indata, N, D, Nleaf);
         } else {
             kd->data.any = indata;
         }
     }
-	if (TTYPE_INTEGER && !DTYPE_INTEGER) {
+    if (needs_data_conversion()) {
 		// compute scaling params
 		if (!kd->minval || !kd->maxval) {
 			kd->minval = MALLOC(D * sizeof(double));
