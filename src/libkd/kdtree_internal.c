@@ -1999,8 +1999,16 @@ static double compute_scale_ext(etype* edata, int N, int D,
 			edata++;
 		}
 	}
-	range = maxrange(lo, hi, D);
-	return (double)TTYPE_MAX / range;
+    /*
+     // round to dtype conservatively.
+     // -> can't do that yet - we're computing the conversion params!!
+     for (d=0; d<D; d++) {
+     lo[d] = POINT_DE(kd, d, POINT_ED(kd, d, lo[d], floor));
+     hi[d] = POINT_DE(kd, d, POINT_ED(kd, d, lo[d], ceil ));
+     }
+     */
+    range = maxrange(lo, hi, D);
+	return (double)(TTYPE_MAX-1) / range;
 }
 
 kdtree_t* MANGLE(kdtree_convert_data)
@@ -2074,12 +2082,13 @@ static void save_bb(kdtree_t* kd, int i, const dtype* lo, const dtype* hi) {
 }
 
 kdtree_t* MANGLE(kdtree_build)
-	 (kdtree_t* kd, dtype* data, int N, int D, int Nleaf, unsigned int options) {
+	 (kdtree_t* kd, etype* indata, int N, int D, int Nleaf, unsigned int options) {
 	int i;
 	int xx;
 	int lnext, level;
 	int maxlevel;
     dtype hi[D], lo[D];
+    dtype* data = NULL;
 
 	maxlevel = kdtree_compute_levels(N, Nleaf);
 
@@ -2092,7 +2101,7 @@ kdtree_t* MANGLE(kdtree_build)
 #endif
 
 	/* Parameters checking */
-	if (!data || !N || !D) {
+	if (!indata || !N || !D) {
         ERROR("Data, N, or D is zero");
 		return NULL;
     }
@@ -2114,8 +2123,14 @@ kdtree_t* MANGLE(kdtree_build)
 	if (!kd)
 		kd = kdtree_new(N, D, Nleaf);
 
-	if (!kd->data.any)
-		kd->data.any = data;
+	if (!kd->data.any) {
+        if (TTYPE_INTEGER && !DTYPE_INTEGER) {
+            // need to convert the data from "etype" to "dtype".
+            MANGLE(kdtree_convert_data)(kd, indata, N, D, Nleaf);
+        } else {
+            kd->data.any = indata;
+        }
+    }
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
@@ -2168,6 +2183,9 @@ kdtree_t* MANGLE(kdtree_build)
 	lnext = 1;
 	level = 0;
 
+    // shorthand
+    data = kd->data.DTYPE;
+
 	/* And in one shot, make the kdtree. Because the lr pointers
 	 * are only stored for the bottom layer, we use the lr array as a
 	 * stack. At finish, it contains the r pointers for the bottom nodes.
@@ -2205,7 +2223,7 @@ kdtree_t* MANGLE(kdtree_build)
 		assert(right < N);
 
 		/* Find the bounding-box for this node. */
-        compute_bb(kd->data.DTYPE + left * D, D, right - left + 1, lo, hi);
+        compute_bb(KD_DATA(kd, D, left), D, right - left + 1, lo, hi);
 
 		if (options & KD_BUILD_BBOX)
             save_bb(kd, i, lo, hi);
