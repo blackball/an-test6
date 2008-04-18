@@ -2,33 +2,59 @@ from pylab import *
 from numpy import *
 from constants import *
 import pyfits
+import util.sip as sip
 
-def loadCatalogData(catalogFilename):
+# def loadWCS(WCSFilename):
+# 	WCSFITS = pyfits.open(WCSFilename)
+# 	WCSData = WCSFITS[0].header.items()
+# 	return (WCSFITS, WCSData)
+
+def WCS_ra2xy(WCS, ra, dec):
+	x = zeros(ra.shape)
+	y = zeros(ra.shape)
+	for i in arange(0, ra.shape[0]):
+		(x[i], y[i]) = WCS.radec2pixelxy(ra[i], dec[i])
+	return (x,y)
+
+def WCS_xy2rd(WCS, x, y):
+	ra = zeros(x.shape)
+	dec = zeros(x.shape)
+	for i in arange(0, x.shape[0]):
+		(ra[i], dec[i]) = WCS.pixelxy2radec(x[i], y[i])
+	return (ra,dec)
+
+def loadCatalogXYData(catalogFilename):
 	catalogFITS = pyfits.open(catalogFilename)
 	catalogData = {}
-	catalogData['x'] = double(catalogFITS[1].data.field('X'))
-	catalogData['y'] = double(catalogFITS[1].data.field('Y'))
-	catalogData['sigma_x'] = 0*catalogData['x'] + 1.0
-	catalogData['sigma_y'] = 0*catalogData['x'] + 1.0
+	catalogData['X'] = double(catalogFITS[1].data.field('X'))
+	catalogData['Y'] = double(catalogFITS[1].data.field('Y'))
+	return catalogData
+
+
+def loadCatalogRDData(catalogFilename):
+	catalogFITS = pyfits.open(catalogFilename)
+	catalogData = {}
+	catalogData['RA'] = double(catalogFITS[1].data.field('RA'))
+	catalogData['DEC'] = double(catalogFITS[1].data.field('DEC'))
 	return catalogData
 
 
 def loadImageData(imageFilename):
 	imageFITS = pyfits.open(imageFilename)
 	imageData = {}
-	imageData['x'] = double(imageFITS[1].data.field('X'))
-	imageData['y'] = double(imageFITS[1].data.field('Y'))
-	imageData['flux'] = double(imageFITS[1].data.field('FLUX'))
-	imageData['back'] = double(imageFITS[1].data.field('BACKGROUND'))
-	imageData['x_initial'] = imageData['x']
-	imageData['y_initial'] = imageData['y']
-	imageData['errs'] = 0*imageData['x'] + 1.0
-	imageData['radii'] = 0*imageData['x'] + 1.0
+	imageData['X'] = double(imageFITS[1].data.field('X'))
+	imageData['Y'] = double(imageFITS[1].data.field('Y'))
+	imageData['FLUX'] = double(imageFITS[1].data.field('FLUX'))
+	imageData['BACK'] = double(imageFITS[1].data.field('BACKGROUND'))
+	imageData['X_INITIAL'] = imageData['X']
+	imageData['Y_INITIAL'] = imageData['Y']
+	imageData['ERRS'] = 0*imageData['X'] + 1.0
+	imageData['RADII'] = 0*imageData['X'] + 1.0
 	return (imageData, imageFITS)
 
 
 def trimCatalog2Image(catalogData, imageData):
-	inImageIdx = all([catalogData['x']>=imageData['x'].min(), catalogData['x']<=imageData['x'].max(), catalogData['y']>=imageData['y'].min(),catalogData['y']<=imageData['y'].max()],0)
+	inImageIdx = all([catalogData['X']>=imageData['X'].min(), catalogData['X']<=imageData['X'].max(), catalogData['Y']>=imageData['Y'].min(),catalogData['Y']<=imageData['Y'].max()],0)
 	for k in catalogData.keys():
 		catalogData[k] = catalogData[k][inImageIdx]
 	return catalogData
@@ -36,9 +62,9 @@ def trimCatalog2Image(catalogData, imageData):
 
 def renderCatalogImage(catalogData, imageData):
 	figure()
-	scatter(catalogData['x'], catalogData['y'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
-	scatter(imageData['x'], imageData['y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
-	axis((min(catalogData['x']), max(catalogData['x']), min(catalogData['y']), max(catalogData['y'])))
+	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
+	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	axis((min(catalogData['X']), max(catalogData['X']), min(catalogData['Y']), max(catalogData['Y'])))
 
 
 def findAllPairs(a, b, maxDist):
@@ -125,14 +151,14 @@ def tweakImage(imageData, catalogData, warpDegree):
 	MINWEIGHT = (getWeight(MINWEIGHT_DOS,1))[0]
 	MAXERROR = MINWEIGHT*(MINWEIGHT_DOS**2);
 
-	minSize = array([catalogData['sigma_x'].shape[0], imageData['errs'].shape[0]]).min()
+	minSize = array([catalogData['SIGMA_X'].shape[0], imageData['ERRS'].shape[0]]).min()
 
-	maxSigmas = mean(sqrt(column_stack((imageData['errs'][1:minSize], imageData['errs'][1:minSize]))**2 + column_stack((catalogData['sigma_x'][1:minSize], catalogData['sigma_y'][1:minSize]))**2),1)
+	maxSigmas = mean(sqrt(column_stack((imageData['ERRS'][1:minSize], imageData['ERRS'][1:minSize]))**2 + column_stack((catalogData['SIGMA_X'][1:minSize], catalogData['SIGMA_Y'][1:minSize]))**2),1)
 	maxSigma = mean(maxSigmas) + 3*std(maxSigmas)
 
 	maxImageDist = MAXDIST_MULT*sqrt(maxSigma*((WEIGHT_SIGMA**2)*(1-MINWEIGHT)/MINWEIGHT))
 
-	numAllPairs = imageData['x'].shape[0]*catalogData['x'].shape[0]
+	numAllPairs = imageData['X'].shape[0]*catalogData['X'].shape[0]
 
 	totalResiduals = []
 	redist_countdown = 0
@@ -143,12 +169,12 @@ def tweakImage(imageData, catalogData, warpDegree):
 
 		just_requeried = 0;
 		if redist_countdown == 0:
-			(pairs_all, dists_all) = findAllPairs(column_stack((imageData['x'], imageData['y'])), column_stack((catalogData['x'], catalogData['y'])), maxImageDist)
-			sigmas_all = (sqrt(imageData['errs'][pairs_all[:,0]]**2 + catalogData['sigma_x'][pairs_all[:,1]]**2) + sqrt(imageData['errs'][pairs_all[:,0]]**2 + catalogData['sigma_y'][pairs_all[:,1]]**2))/2
+			(pairs_all, dists_all) = findAllPairs(column_stack((imageData['X'], imageData['Y'])), column_stack((catalogData['X'], catalogData['Y'])), maxImageDist)
+			sigmas_all = (sqrt(imageData['ERRS'][pairs_all[:,0]]**2 + catalogData['SIGMA_X'][pairs_all[:,1]]**2) + sqrt(imageData['ERRS'][pairs_all[:,0]]**2 + catalogData['SIGMA_Y'][pairs_all[:,1]]**2))/2
 			just_requeried = 1
 			redist_countdown = REDIST_INTERVAL
 		else:
-			dists_all = sqrt(square(imageData['x'][pairs_all[:,0]] - catalogData['x'][pairs_all[:,1]]) + square(imageData['y'][pairs_all[:,0]] - catalogData['y'][pairs_all[:,1]]))
+			dists_all = sqrt(square(imageData['X'][pairs_all[:,0]] - catalogData['X'][pairs_all[:,1]]) + square(imageData['Y'][pairs_all[:,0]] - catalogData['Y'][pairs_all[:,1]]))
 
 		weights_all = getWeight(dists_all, sigmas_all)[0]
 
@@ -159,17 +185,17 @@ def tweakImage(imageData, catalogData, warpDegree):
 		dists = dists_all[toKeep,:]
 		weights = weights_all[toKeep,:]
 
-		imagePoints_all = matrix(column_stack((imageData['x_initial'], imageData['y_initial'])))
-		imagePoints = matrix(column_stack((imageData['x_initial'][pairs[:,0]], imageData['y_initial'][pairs[:,0]])))
-		catalogPoints = matrix(column_stack((catalogData['x'][pairs[:,1]], catalogData['y'][pairs[:,1]])))
+		imagePoints_all = matrix(column_stack((imageData['X_INITIAL'], imageData['Y_INITIAL'])))
+		imagePoints = matrix(column_stack((imageData['X_INITIAL'][pairs[:,0]], imageData['Y_INITIAL'][pairs[:,0]])))
+		catalogPoints = matrix(column_stack((catalogData['X'][pairs[:,1]], catalogData['Y'][pairs[:,1]])))
 		warpWeights = matrix(sqrt(weights)/sigmas).T
 
 		tmp = polyWarp(imagePoints_all, imagePoints, catalogPoints, warpWeights, warpDegree)
 		newPoints = tmp[0]
 		residuals = tmp[1]
 
-		imageData['x'] = array(newPoints[:,0])[:,0]
-		imageData['y'] = array(newPoints[:,1])[:,0]
+		imageData['X'] = array(newPoints[:,0])[:,0]
+		imageData['Y'] = array(newPoints[:,1])[:,0]
 
 		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(residuals)))
 
