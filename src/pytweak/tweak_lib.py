@@ -4,12 +4,14 @@ from constants import *
 import pyfits
 import util.sip as sip
 
+import pdb
+
 # def loadWCS(WCSFilename):
 # 	WCSFITS = pyfits.open(WCSFilename)
 # 	WCSData = WCSFITS[0].header.items()
 # 	return (WCSFITS, WCSData)
 
-def WCS_ra2xy(WCS, ra, dec):
+def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
 	y = zeros(ra.shape)
 	for i in arange(0, ra.shape[0]):
@@ -60,16 +62,18 @@ def trimCatalog2Image(catalogData, imageData):
 	return catalogData
 
 
-def renderCatalogImage(catalogData, imageData):
+def renderCatalogImage(catalogData, imageData, WCS):
 	figure()
 	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
 	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=100, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	axis('image')
 	axis((min(catalogData['X']), max(catalogData['X']), min(catalogData['Y']), max(catalogData['Y'])))
 
 
 def findAllPairs(a, b, maxDist):
 	distSqMat = tile(mat(sum(square(a),1)).T, (1,b.shape[0])) + tile(mat(sum(square(b),1)), (a.shape[0],1)) - 2*(mat(a)*mat(b).T)
-	#  Identical to Matlab, but weird
+	#  Identical to Matlab
 	# [i,j] = where(distSqMat.T < square(maxDist))
 	# pairs = concatenate((j,i),0).transpose()
 	# pairs = column_stack((array(pairs)[:,0], array(pairs)[:,1]))
@@ -121,7 +125,13 @@ def polyExpand(imagePoints, D):
 	return A
 
 
-def polyWarp(imagePoints_all, imagePoints, catalogPoints, warpWeights, warpDegree):
+def polyWarp(imageData, catalogData, warpDegree):
+	
+	pairs = imageData['pairs']
+	imagePoints_all = matrix(column_stack((imageData['X_INITIAL'], imageData['Y_INITIAL'])))
+	imagePoints = matrix(column_stack((imageData['X_INITIAL'][pairs[:,0]], imageData['Y_INITIAL'][pairs[:,0]])))
+	catalogPoints = matrix(column_stack((catalogData['X'][pairs[:,1]], catalogData['Y'][pairs[:,1]])))
+	warpWeights = matrix(sqrt(imageData['weights'])/imageData['sigmas']).T
 	
 	b = catalogPoints.reshape(-1,1)
 	A = polyExpand(imagePoints, warpDegree)
@@ -136,15 +146,18 @@ def polyWarp(imagePoints_all, imagePoints, catalogPoints, warpWeights, warpDegre
 	Wb = multiply(warpWeights_double, b)
 	M = linalg.lstsq(WA,Wb)[0]
 	
-	residuals = (Wb - WA*M)
-	
 	# Not sure if this is correct for warpDegree > 1
 	# W = M[0:M.shape[0]-2].reshape(-1,2)
 	# t = M[M.shape[0]-2:M.shape[0]]
 	
-	imagePoints_warp = (A_all*M).reshape(-1,2)
+	imagePoints_warp = (A_all * M).reshape(-1,2)
 	
-	return (imagePoints_warp, residuals)
+	imageData['X'] = array(imagePoints_warp[:,0])[:,0]
+	imageData['Y'] = array(imagePoints_warp[:,1])[:,0]
+	imageData['residuals'] = (Wb - WA*M)
+	imageData['warpM'] = M
+		
+	return imageData
 
 
 def tweakImage(imageData, catalogData, warpDegree):
@@ -180,24 +193,14 @@ def tweakImage(imageData, catalogData, warpDegree):
 
 		toKeep = weights_all > MINWEIGHT
 		numDropped = numAllPairs - sum(toKeep)
-		pairs = pairs_all[toKeep,:]
-		sigmas = sigmas_all[toKeep,:]
-		dists = dists_all[toKeep,:]
-		weights = weights_all[toKeep,:]
-
-		imagePoints_all = matrix(column_stack((imageData['X_INITIAL'], imageData['Y_INITIAL'])))
-		imagePoints = matrix(column_stack((imageData['X_INITIAL'][pairs[:,0]], imageData['Y_INITIAL'][pairs[:,0]])))
-		catalogPoints = matrix(column_stack((catalogData['X'][pairs[:,1]], catalogData['Y'][pairs[:,1]])))
-		warpWeights = matrix(sqrt(weights)/sigmas).T
-
-		tmp = polyWarp(imagePoints_all, imagePoints, catalogPoints, warpWeights, warpDegree)
-		newPoints = tmp[0]
-		residuals = tmp[1]
-
-		imageData['X'] = array(newPoints[:,0])[:,0]
-		imageData['Y'] = array(newPoints[:,1])[:,0]
-
-		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(residuals)))
+		imageData['pairs'] = pairs_all[toKeep,:]
+		imageData['sigmas'] = sigmas_all[toKeep,:]
+		imageData['dists'] = dists_all[toKeep,:]
+		imageData['weights'] = weights_all[toKeep,:]
+		
+		imageData = polyWarp(imageData, catalogData, warpDegree)
+		
+		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(imageData['residuals'])))
 
 		redist_countdown = redist_countdown - 1
 		if (iter > 3) & all(abs(totalResiduals[-3:-1] - totalResiduals[-1]) <= MIN_IRLS_ACCURACY):
@@ -207,6 +210,6 @@ def tweakImage(imageData, catalogData, warpDegree):
 				redist_countdown = 0
 	
 	print 'image tweaked in', iter, 'iterations'
-	
+		
 	return imageData
 
