@@ -76,49 +76,9 @@ renderCatalogImage(catalogData, imageData, WCS)
 iter = 0
 while True:
 	iter = iter + 1
+
 	imageData = tweakImage(imageData, catalogData, 1)
 
-	# shiftSatisfied = False
-	# linearWarpSatisfied = False
-	# 
-	# centerShift = imageData['warpM'][-2:]
-	# centerShiftDist = double(sqrt(centerShift.T*centerShift))
-	# print 'tangent point shift of ', centerShiftDist
-	# 
-	# if centerShiftDist > 10**-8:
-	# 	newCRPix = (WCS.wcstan.crpix[0] - double(centerShift[0]), WCS.wcstan.crpix[1] - double(centerShift[1]))
-	# 	WCS.wcstan.crpix[0] = newCRPix[0]
-	# 	WCS.wcstan.crpix[1] = newCRPix[1]
-	# 
-	# 	newCRVal = WCS.pixelxy2radec(goalCRPix[0], goalCRPix[1])
-	# 	WCS.wcstan.crval[0] = newCRVal[0]
-	# 	WCS.wcstan.crval[1] = newCRVal[1]
-	# 	WCS.wcstan.crpix[0] = goalCRPix[0]
-	# 	WCS.wcstan.crpix[1] = goalCRPix[1]
-	# 	
-	# 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	# 	
-	# 	imageData = polyWarp(imageData, catalogData, warpDegree)
-	# else:
-	# 	shiftSatisfied = True
-	# 
-	# linearWarp = imageData['warpM'][0:-2].reshape(2,-1)[:,-2::]
-	# linearWarpAmount = abs(1-linalg.det(linearWarp))
-	# print 'linear warp amount of ', linearWarpAmount
-	# 
-	# if linearWarpAmount > 10**-8:
-	# 	CD = matrix(WCS.wcstan.cd[:]).reshape(2,2)
-	# 	CD2 = (CD*linearWarp).reshape(-1,1)
-	# 	for i in arange(0,4):
-	# 		WCS.wcstan.cd[i] = CD2[i]
-	# 
-	# 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	# 	imageData = polyWarp(imageData, catalogData, warpDegree)
-	# else:
-	# 	linearWarpSatisfied = True
-	# 
-	# if (shiftSatisfied & linearWarpSatisfied) | iter > 50:
-	# 	break
 	centerShift = imageData['warpM'][-2:]
 	centerShiftDist = double(sqrt(centerShift.T*centerShift))
 	print 'tangent point shift of ', centerShiftDist
