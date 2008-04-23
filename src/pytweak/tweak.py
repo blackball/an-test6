@@ -60,14 +60,11 @@ if warpDegree == ():
 WCS = sip.Sip(WCSFilename)
 
 goalCRPix = array([WCS.wcstan.imagew/2 + 0.5, WCS.wcstan.imageh/2 + 0.5])
-#  We add the 0.5 to account for the pixel representation, where center = 1.
+#  We add the 0.5 to account for the pixel representation, where center = 1. Right?
 
 catalogData = loadCatalogRDData(catalogRDFilename)
 
 (catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-# These two lines are iffy, could be dropped:
-catalogData = trimCatalog2Image(catalogData, imageData)
-(catalogData['RA'], catalogData['DEC']) = WCS_xy2rd(WCS, catalogData['X'], catalogData['Y'])
 
 # Fudge factor until we get the real data
 catalogData['SIGMA_X'] = 0*catalogData['X'] + 1.0
@@ -78,7 +75,6 @@ title('Original Fit')
 savefig('1-initial.png')
 
 tweakImage(imageData, catalogData, warpDegree)
-
 
 startCRPix = array([0.0,0.0])
 startCRPix[0] = WCS.wcstan.crpix[0]
@@ -94,24 +90,6 @@ imageData['PIVOT'][1] = goalCRPix[1]
 (catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 polyWarp(imageData, catalogData, warpDegree)
 
-# linearWarp = imageData['warpM'][0:-2].reshape(2,-1)[:,-2::]
-# CD = matrix(WCS.wcstan.cd[:]).reshape(2,2)
-# CD2 = (CD*linearWarp).reshape(-1,1)
-# for i in arange(0,4):
-# 	WCS.wcstan.cd[i] = CD2[i]
-# 
-# (catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-# polyWarp(imageData, catalogData, 1)
-
-# imageData['X'] = imageData['X_INITIAL']
-# imageData['Y'] = imageData['Y_INITIAL']
-# renderCatalogImage(catalogData, imageData, WCS)
-# show()
-# 
-# poop()
-
-#  GARRRR
-#  COMPUTE THE WARP AROUND THE TANGENT POINT, NOT AT (0,0)!!!
 
 iter = 0
 MAX_TAN_ITERS = 20
@@ -152,7 +130,16 @@ while True:
 			WCS.wcstan.cd[i] = CD2[i]
 		
 		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-		polyWarp(imageData, catalogData, warpDegree)
+		
+		# This...
+		Mpoly = imageData['warpM'].reshape(2,-1)[:,:-3].reshape(-1,1).copy()
+		xy = matrix(column_stack((imageData['X_INITIAL'] - imageData['PIVOT'][0], imageData['Y_INITIAL']  - imageData['PIVOT'][1])))
+		xy_warp = xy + (polyExpand(xy, warpDegree,2)*Mpoly).reshape(-1,2)
+		imageData['X'] = array(xy_warp[:,0])[:,0] + imageData['PIVOT'][0]
+		imageData['Y'] = array(xy_warp[:,1])[:,0] + imageData['PIVOT'][1]
+		
+		# is effectively equivalent to this, but much faster and more elegant:
+		# polyWarp(imageData, catalogData, warpDegree)
 	else:
 		break
 
