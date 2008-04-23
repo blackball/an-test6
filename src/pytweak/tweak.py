@@ -93,6 +93,8 @@ polyWarp(imageData, catalogData, warpDegree)
 
 iter = 0
 MAX_TAN_ITERS = 20
+MAX_SHIFT_AMOUNT = 10**-8
+MAX_LWARP_AMOUNT = 10**-8
 while True:
 	iter = iter + 1
 	
@@ -110,7 +112,7 @@ while True:
 	# linearWarpAmount = abs(1-linalg.det(linearWarp))
 	print 'linear warp amount of', linearWarpAmount
 	
-	if ((centerShiftDist > 10**-8) | (linearWarpAmount > 10**-8)) & (iter < MAX_TAN_ITERS):
+	if ((centerShiftDist > MAX_SHIFT_AMOUNT) | (linearWarpAmount > MAX_LWARP_AMOUNT)) & (iter < MAX_TAN_ITERS):
 		
 		startCRPix = array([0.0, 0.0])
 		startCRPix[0] = WCS.wcstan.crpix[0]
