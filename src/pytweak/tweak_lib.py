@@ -52,6 +52,7 @@ def loadImageData(imageFilename):
 	imageData['Y_INITIAL'] = imageData['Y']
 	imageData['ERRS'] = 0*imageData['X'] + 1.0
 	imageData['RADII'] = 0*imageData['X'] + 1.0
+	imageData['PIVOT'] = [0.,0.]
 	return (imageData, imageFITS)
 
 
@@ -66,9 +67,25 @@ def renderCatalogImage(catalogData, imageData, WCS):
 	figure()
 	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
 	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
-	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=100, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
 	axis('image')
-	axis((min(catalogData['X']), max(catalogData['X']), min(catalogData['Y']), max(catalogData['Y'])))
+	axis((min(imageData['X_INITIAL']), max(imageData['X_INITIAL']), min(imageData['Y_INITIAL']), max(imageData['Y_INITIAL'])))
+
+def renderCatalogImageRADec(catalogData, imageData, WCS):
+	figure()
+	scatter(catalogData['RA'], catalogData['DEC'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
+	scatter(imageData['RA'], imageData['DEC'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(array([WCS.wcstan.crval[0]]), array([WCS.wcstan.crval[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	axis('image')
+
+
+def renderImageMotion(imageData, WCS):
+	figure()
+	scatter(imageData['X_INITIAL'], imageData['Y_INITIAL'], marker = 'o', s=30, facecolor=(1,1,1,0), edgecolor=COLOR1)
+	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	axis('image')
+	axis((min(imageData['X_INITIAL']), max(imageData['X_INITIAL']), min(imageData['Y_INITIAL']), max(imageData['Y_INITIAL'])))
 
 
 def findAllPairs(a, b, maxDist):
@@ -106,58 +123,66 @@ def getWeight(dists, sigmas, d_dists=(), d_sigmas=(), dd_dists=(), dd_sigmas=())
 	return (w, e, d_w, dd_w)
 
 
-def polyExpand(imagePoints, D):
+def polyExpand(imagePoints, D, Dstart = 0):
 	x = imagePoints[:,0]
 	y = imagePoints[:,1]
 	
-	width = ((D+1)*(D+2))/2-1
+	width = (((D+1)*(D+2))/2-1) - ((Dstart*(Dstart+1))/2-1)
 	A_sub = double(mat(zeros((x.shape[0], width))))
+	
 	col = 0
-	for d in arange(D, 0, -1):
+	for d in arange(D, Dstart-1, -1):
 		for i in arange(0, d+1):
 			A_sub[:,col] = multiply(power(x,(d-i)), power(y,i))
 			col = col + 1;
 	
-	A = zeros((2*x.shape[0], 2*(width)+2))
+	A = zeros((2*x.shape[0], 2*(width)))
 	A[::2,0:width] = A_sub
 	A[1::2,width:(2*width)] = A_sub
-	A[:,(2*width):(2*width+2)] = tile(mat([[1.,0.],[0.,1.]]), (x.shape[0],1))
 	return A
 
 
 def polyWarp(imageData, catalogData, warpDegree):
-	
+	pivot = imageData['PIVOT']
 	pairs = imageData['pairs']
-	imagePoints_all = matrix(column_stack((imageData['X_INITIAL'], imageData['Y_INITIAL'])))
-	imagePoints = matrix(column_stack((imageData['X_INITIAL'][pairs[:,0]], imageData['Y_INITIAL'][pairs[:,0]])))
-	catalogPoints = matrix(column_stack((catalogData['X'][pairs[:,1]], catalogData['Y'][pairs[:,1]])))
-	warpWeights = matrix(sqrt(imageData['weights'])/imageData['sigmas']).T
+	x_init = imageData['X_INITIAL'] - pivot[0]
+	y_init = imageData['Y_INITIAL'] - pivot[1]
+	x = imageData['X'] - pivot[0]
+	y = imageData['Y'] - pivot[1]
+	cx = catalogData['X'] - pivot[0]
+	cy = catalogData['Y'] - pivot[1]
 	
-	b = catalogPoints.reshape(-1,1)
-	A = polyExpand(imagePoints, warpDegree)
-	A_all = polyExpand(imagePoints_all, warpDegree)
+	imagePoints_all = matrix(column_stack((x_init, y_init)))
+	imagePoints = matrix(column_stack((x_init[pairs[:,0]], y_init[pairs[:,0]])))
+	catalogPoints = matrix(column_stack((cx[pairs[:,1]], cy[pairs[:,1]])))
+	warpWeights = matrix(sqrt(imageData['weights'])/imageData['sigmas']).T
 	
 	if warpWeights.shape[1] < 2:
 		warpWeights_double = tile(warpWeights, (1,2)).reshape(-1,1)
 	else:
 		warpWeights_double = warpWeights.reshape(-1,1)
 	
+	b = catalogPoints.reshape(-1,1)
+	A = polyExpand(imagePoints, warpDegree)
+	A_all = polyExpand(imagePoints_all, warpDegree)
+	
 	WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
 	Wb = multiply(warpWeights_double, b)
 	M = linalg.lstsq(WA,Wb)[0]
+	resid = (Wb - WA*M)
 	
-	# Not sure if this is correct for warpDegree > 1
-	# W = M[0:M.shape[0]-2].reshape(-1,2)
-	# t = M[M.shape[0]-2:M.shape[0]]
-	
+	# A = polyExpand(catalogPoints, warpDegree)
+	# WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
+	# Wb = multiply(warpWeights_double, imagePoints.reshape(-1,1))
+	# iM = linalg.lstsq(WA,Wb)[0]
+		
 	imagePoints_warp = (A_all * M).reshape(-1,2)
 	
-	imageData['X'] = array(imagePoints_warp[:,0])[:,0]
-	imageData['Y'] = array(imagePoints_warp[:,1])[:,0]
-	imageData['residuals'] = (Wb - WA*M)
+	imageData['X'] = array(imagePoints_warp[:,0])[:,0] + pivot[0]
+	imageData['Y'] = array(imagePoints_warp[:,1])[:,0] + pivot[1]
+	imageData['residuals'] = resid
 	imageData['warpM'] = M
-		
-	return imageData
+	# imageData['iwarpM'] = iM
 
 
 def tweakImage(imageData, catalogData, warpDegree):
@@ -198,7 +223,7 @@ def tweakImage(imageData, catalogData, warpDegree):
 		imageData['dists'] = dists_all[toKeep,:]
 		imageData['weights'] = weights_all[toKeep,:]
 		
-		imageData = polyWarp(imageData, catalogData, warpDegree)
+		polyWarp(imageData, catalogData, warpDegree)
 		
 		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(imageData['residuals'])))
 
@@ -210,6 +235,4 @@ def tweakImage(imageData, catalogData, warpDegree):
 				redist_countdown = 0
 	
 	print 'image tweaked in', iter, 'iterations'
-		
-	return imageData
 
