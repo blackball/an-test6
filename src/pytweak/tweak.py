@@ -106,11 +106,11 @@ while True:
 	
 	centerShift = array(imageData['warpM'].reshape(2,-1)[:,-1].T)[0]
 	centerShiftDist = sqrt(sum(square(centerShift)))
-	print 'tangent point shift of', centerShiftDist
 	linearWarp = imageData['warpM'].reshape(2,-1)[:,-3:-1]
 	linearWarpAmount = sqrt(sum(square(array(linearWarp - eye(2,2)))))
 	# linearWarpAmount = abs(1-linalg.det(linearWarp))
-	print 'linear warp amount of', linearWarpAmount
+	
+	print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
 	
 	if ((centerShiftDist > MAX_SHIFT_AMOUNT) | (linearWarpAmount > MAX_LWARP_AMOUNT)) & (iter < MAX_TAN_ITERS):
 		
