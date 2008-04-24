@@ -19,7 +19,7 @@ warpDegree = ()
 progressiveWarp = DEFAULT_PROGRESSIVE_WARP
 
 # Debug stuff
-folder = './data/tweaktest1/'
+folder = 'data/tweaktest1/'
 catalogRDFilename = folder + 'index.rd.fits'
 imageXYFilename = folder + 'field.xy.fits'
 inputWCSFilename = folder + 'wcs.fits'
@@ -196,10 +196,41 @@ if outputWCSFilename != ():
 		junk = 1
 
 	WCS.write_to_file(outputWCSFilename)
-	print 'WCS writtent to ' + outputWCSFilename
+	print 'WCS written to ' + outputWCSFilename
+	print 'rereading WCS header'
+	
+	WCSFITS_old = pyfits.open(inputWCSFilename)
+	WCSFITS_new = pyfits.open(outputWCSFilename)
+
+	for history in WCSFITS_old[0].header.get_history():
+		WCSFITS_new[0].header.add_history(history)
+
+	for comment in WCSFITS_old[0].header.get_comment():
+		if comment[0:5] == 'Tweak':
+			WCSFITS_new[0].header.add_comment('Tweak: yes')
+			WCSFITS_new[0].header.add_comment('Tweak AB order: ' + str(WCS.a_order))
+			WCSFITS_new[0].header.add_comment('Tweak ABP order: ' + str(WCS.ap_order))
+		else:
+			WCSFITS_new[0].header.add_comment(comment)
+
+	WCSFITS_new[0].header.add_comment('AN_JOBID: ' + WCSFITS_old[0].header.get('AN_JOBID'))
+	WCSFITS_new[0].header.add_comment('DATE: ' + WCSFITS_old[0].header.get('DATE'))
+	WCSFITS_new[0].update_header()
+	
+	try:
+		os.remove(outputWCSFilename)
+		print 'deleted existing ' + outputWCSFilename + ' again'
+	except:
+		junk = 1
+	
+	pyfits.writeto(outputWCSFilename, array([]), WCSFITS_new[0].header)
+	
+	print 'WCS + Comments/History written to ' + outputWCSFilename
+	
 	WCS_out = sip.Sip(outputWCSFilename)
 
-# WCS_out = sip.Sip(folder + 'AN-SIP.wcs.fits')
+
+
 
 print '\ncalling wcs-xy2rd'
 if os.system('./wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
@@ -230,10 +261,6 @@ title('Fit (With SIP) on Sphere')
 savefig('4-after-NoSIP-sphere.png')
 show()
 
-# WCS_ground = sip.Sip('data/tweaktest4/wcs_An_Sip.fits')
-
-# WCSFITS_old = pyfits.open(inputWCSFilename)
-# WCSFITS_new = pyfits.open(outputWCSFilename)
 
 ## Write the image FITS
 # for i in arange(0, imageFITS[1].data.field('X').shape[0]):
