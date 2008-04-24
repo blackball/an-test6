@@ -19,7 +19,7 @@ warpDegree = ()
 progressiveWarp = DEFAULT_PROGRESSIVE_WARP
 
 # Debug stuff
-folder = 'data/tweaktest1/'
+folder = './data/tweaktest1/'
 catalogRDFilename = folder + 'index.rd.fits'
 imageXYFilename = folder + 'field.xy.fits'
 inputWCSFilename = folder + 'wcs.fits'
@@ -202,13 +202,13 @@ if outputWCSFilename != ():
 # WCS_out = sip.Sip(folder + 'AN-SIP.wcs.fits')
 
 print '\ncalling wcs-xy2rd'
-if os.system('wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
+if os.system('./wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
 	print 'failed to convert image X/Y -> RA/Dec'
 else:
 	print 'image RA/Dec written to ' + imageRDFilename
 
 print '\ncalling wcs-rd2xy'
-if os.system('wcs-rd2xy -w ' + outputWCSFilename + ' -i ' + catalogRDFilename + ' -o ' + catalogXYFilename):
+if os.system('./wcs-rd2xy -w ' + outputWCSFilename + ' -i ' + catalogRDFilename + ' -o ' + catalogXYFilename):
 	print 'failed to convert catalog RA/Dec -> XY'
 else:
 	print 'catalog X/Y written to ' + catalogXYFilename
