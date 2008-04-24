@@ -6,11 +6,6 @@ import util.sip as sip
 
 import pdb
 
-# def loadWCS(WCSFilename):
-# 	WCSFITS = pyfits.open(WCSFilename)
-# 	WCSData = WCSFITS[0].header.items()
-# 	return (WCSFITS, WCSData)
-
 def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
 	y = zeros(ra.shape)
@@ -38,7 +33,7 @@ def loadCatalogRDData(catalogFilename):
 	catalogData = {}
 	catalogData['RA'] = double(catalogFITS[1].data.field('RA'))
 	catalogData['DEC'] = double(catalogFITS[1].data.field('DEC'))
-	return catalogData
+	return (catalogData, catalogFITS)
 
 
 def loadImageData(imageFilename):
