@@ -20,29 +20,15 @@ def WCS_xy2rd(WCS, x, y):
 		(ra[i], dec[i]) = WCS.pixelxy2radec(x[i], y[i])
 	return (ra,dec)
 
-def loadCatalogXYData(catalogFilename):
-	catalogFITS = pyfits.open(catalogFilename)
-	catalogData = {}
-	catalogData['X'] = double(catalogFITS[1].data.field('X'))
-	catalogData['Y'] = double(catalogFITS[1].data.field('Y'))
-	return catalogData
-
-
-def loadCatalogRDData(catalogFilename):
-	catalogFITS = pyfits.open(catalogFilename)
-	catalogData = {}
-	catalogData['RA'] = double(catalogFITS[1].data.field('RA'))
-	catalogData['DEC'] = double(catalogFITS[1].data.field('DEC'))
-	return (catalogData, catalogFITS)
-
+def loadFITS(filename, fields):
+	FITS = pyfits.open(filename)
+	data = {}
+	for f in fields:
+		data[f] = double(FITS[1].data.field(f))
+	return (data, FITS)
 
 def loadImageData(imageFilename):
-	imageFITS = pyfits.open(imageFilename)
-	imageData = {}
-	imageData['X'] = double(imageFITS[1].data.field('X'))
-	imageData['Y'] = double(imageFITS[1].data.field('Y'))
-	imageData['FLUX'] = double(imageFITS[1].data.field('FLUX'))
-	imageData['BACK'] = double(imageFITS[1].data.field('BACKGROUND'))
+	(imageData, imageFITS) = loadFITS(imageFilename, ['X', 'Y', 'FLUX', 'BACKGROUND'])
 	imageData['X_INITIAL'] = imageData['X']
 	imageData['Y_INITIAL'] = imageData['Y']
 	imageData['ERRS'] = 0*imageData['X'] + 1.0

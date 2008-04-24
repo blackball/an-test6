@@ -6,60 +6,63 @@ import getopt
 import os
 import util.sip as sip
 
-catalogXYFilename = ()
+
 catalogRDFilename = ()
-WCSFilename = ()
-imageFilename = ()
+imageXYFilename = ()
+inputWCSFilename = ()
+
+catalogXYFilename = ()
+imageRDFilename = ()
 outputWCSFilename = ()
+
 warpDegree = ()
 progressiveWarp = DEFAULT_PROGRESSIVE_WARP
 
 # Debug stuff
 folder = 'data/tweaktest1/'
 catalogRDFilename = folder + 'index.rd.fits'
-WCSFilename = folder + 'wcs.fits'
-imageFilename = folder + 'field.xy.fits'
+imageXYFilename = folder + 'field.xy.fits'
+inputWCSFilename = folder + 'wcs.fits'
+
+catalogXYFilename = folder + 'index.xy.fits'
+imageRDFilename = folder + 'field.rd.fits'
 outputWCSFilename = folder + 'out.wcs.fits'
 
 (opts, args) = getopt.getopt(sys.argv[1:], 'w:i:f:o:s:d:p:')
 
 for opt in opts:
-	if opt[0] == '-w':
-		WCSFilename = opt[1]
-	elif opt[0] == '-f':
-		imageFilename = opt[1]
-	elif opt[0] == '-i':
+
+	if opt[0] == '-i':
 		catalogRDFilename = opt[1]
-	elif opt[0] == '-o':
-		outputImageFilename = opt[1]
+	elif opt[0] == '-f':
+		imageXYFilename = opt[1]
+	elif opt[0] == '-w':
+		inputWCSFilename = opt[1]
+
+	elif opt[0] == '-x':
+		catalogXYFilename = opt[1]
+	elif opt[0] == '-r':
+		imageRDFilename = opt[1]
 	elif opt[0] == '-s':
-		outputSIPFilename = opt[1]
+		outputWCSFilename = opt[1]
+
 	elif opt[0] == '-d':
 		warpDegree = opt[1]
 	elif opt[0] == '-p':
 		progressiveWarp = True
 
-if not((imageFilename != ()) & (catalogRDFilename != ()) & (WCSFilename != ())):
+if ((imageXYFilename == ()) | (catalogRDFilename == ()) | (inputWCSFilename == ())):
 	print 'insufficient input arguments'
-	print 'usage: python tweak -w WCS_FITS -i index_RD_FITS -f field_FITS [-o output_FITS -s output_WCS -p]'
+	print 'usage: python tweak -w WCS_FITS -i index_RD_FITS -f field_XY_FITS [-x index_XY_FITS -r field_RD_FITS -s output_WCS_FITS -d order -p]'
 	raise SystemExit
-
-# if (catalogXYFilename != ()) & ((catalogRDFilename != ()) | (WCSFilename != ())):
-# 	print 'redundant catalog information, pass either:'
-# 	print ' 1) catalogXY'
-# 	print ' 2) catalogRD & WCS'
-# 	print 'not both'
-# 	raise SystemExit
 
 if warpDegree == ():
 	print 'warp degree not specified, using default of', DEFAULT_WARP_DEGREE
 	warpDegree = DEFAULT_WARP_DEGREE
 
-(imageData, imageFITS) = loadImageData(imageFilename)
-
-WCS = sip.Sip(WCSFilename)
-
-(catalogData, catalogFITS) = loadCatalogRDData(catalogRDFilename)
+imageData = loadImageData(imageXYFilename)[0]
+catalogData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
+WCS = sip.Sip(inputWCSFilename)
 
 (catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 
@@ -86,9 +89,6 @@ polyWarp(imageData, catalogData, warpDegree)
 
 
 iter = 0
-MAX_TAN_ITERS = 20
-MAX_SHIFT_AMOUNT = 10**-8
-MAX_LWARP_AMOUNT = 10**-8
 while True:
 	iter = iter + 1
 	
@@ -187,40 +187,61 @@ for d in arange(maxDeg_cat2im, minDeg_cat2im-1, -1):
 		WCS.bp[idx] = SIP_cat2im[col+SIP_cat2im.shape[0]/2]
 		col = col + 1;
 
+print '\nwriting new WCS to disk'
 if outputWCSFilename != ():
 	try:
 		os.remove(outputWCSFilename)
-		print 'deleted existing output WCS file'
+		print 'deleted existing ' + outputWCSFilename
 	except:
 		junk = 1
 
 	WCS.write_to_file(outputWCSFilename)
-	print 'WCS writtent to disk'
+	print 'WCS writtent to ' + outputWCSFilename
 	WCS_out = sip.Sip(outputWCSFilename)
 
-(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS_out, catalogData['RA'], catalogData['DEC'])
-renderCatalogImage(catalogData, imageData, WCS_out)
+print '\ncalling wcs-xy2rd'
+if os.system('wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
+	print 'failed to convert image X/Y -> RA/Dec'
+else:
+	print 'image RA/Dec written to ' + imageRDFilename
+
+print '\ncalling wcs-rd2xy'
+if os.system('wcs-rd2xy -w ' + outputWCSFilename + ' -i ' + catalogRDFilename + ' -o ' + catalogXYFilename):
+	print 'failed to convert catalog RA/Dec -> XY'
+else:
+	print 'catalog X/Y written to ' + catalogXYFilename
+
+# catalogRDData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
+# imageXYData = loadFITS(imageXYFilename, ['X', 'Y'])[0]
+# imageXYData['X_INITIAL'] = imageXYData['X']
+# imageXYData['Y_INITIAL'] = imageXYData['Y']
+
+catalogXYData = loadFITS(catalogXYFilename, ['X', 'Y'])[0]
+imageRDData = loadFITS(imageRDFilename, ['RA', 'DEC'])[0]
+
+renderCatalogImage(catalogXYData, imageData, WCS_out)
 title('Fit (With SIP)')
 savefig('3-after-NoSIP.png')
 
-(imageData['RA'], imageData['DEC']) = WCS_xy2rd(WCS_out, imageData['X'], imageData['Y'])
-renderCatalogImageRADec(catalogData, imageData, WCS_out)
+renderCatalogImageRADec(catalogData, imageRDData, WCS_out)
 title('Fit (With SIP) on Sphere')
 savefig('4-after-NoSIP-sphere.png')
 show()
+
+WCS_ground = sip.Sip('data/tweaktest4/wcs_An_Sip.fits')
 
 ## Write the image FITS
 # for i in arange(0, imageFITS[1].data.field('X').shape[0]):
 # 	imageFITS[1].data.field('X')[i] = imageData['X'][i]
 # 	imageFITS[1].data.field('Y')[i] = imageData['X'][i]
 # 
-# if outputImageFilename != ():
+# if outputimageXYFilename != ():
 # 	try:
-# 		os.remove(outputImageFilename)
+# 		os.remove(outputimageXYFilename)
 # 		print 'deleted existing output image file'
 # 	except:
 # 		junk = 1
-# 	print 'writing warped image to', outputImageFilename
-# 	imageFITS.writeto(outputImageFilename)
+# 	print 'writing warped image to', outputimageXYFilename
+# 	imageFITS.writeto(outputimageXYFilename)
 # else:
 # 	print 'no output image specified, warped image not written'
