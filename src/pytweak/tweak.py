@@ -53,7 +53,7 @@ for opt in opts:
 
 if ((imageXYFilename == ()) | (catalogRDFilename == ()) | (inputWCSFilename == ())):
 	print 'insufficient input arguments'
-	print 'usage: python tweak -w WCS_FITS -i index_RD_FITS -f field_XY_FITS [-x index_XY_FITS -r field_RD_FITS -s output_WCS_FITS -d order -p]'
+	print 'usage: python tweak.py -w WCS_FITS -i index_RD_FITS -f field_XY_FITS [-x index_XY_FITS -r field_RD_FITS -s output_WCS_FITS -d order -p]'
 	raise SystemExit
 
 if warpDegree == ():
@@ -199,6 +199,8 @@ if outputWCSFilename != ():
 	print 'WCS writtent to ' + outputWCSFilename
 	WCS_out = sip.Sip(outputWCSFilename)
 
+# WCS_out = sip.Sip(folder + 'AN-SIP.wcs.fits')
+
 print '\ncalling wcs-xy2rd'
 if os.system('wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
 	print 'failed to convert image X/Y -> RA/Dec'
@@ -228,7 +230,10 @@ title('Fit (With SIP) on Sphere')
 savefig('4-after-NoSIP-sphere.png')
 show()
 
-WCS_ground = sip.Sip('data/tweaktest4/wcs_An_Sip.fits')
+# WCS_ground = sip.Sip('data/tweaktest4/wcs_An_Sip.fits')
+
+# WCSFITS_old = pyfits.open(inputWCSFilename)
+# WCSFITS_new = pyfits.open(outputWCSFilename)
 
 ## Write the image FITS
 # for i in arange(0, imageFITS[1].data.field('X').shape[0]):
