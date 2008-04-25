@@ -229,16 +229,16 @@ if __name__ == '__main__':
 	progressiveWarp = DEFAULT_PROGRESSIVE_WARP
 	renderOutput = False
 
-	# # Debug stuff
-	# folder = 'data/tweaktest1/'
-	# catalogRDFilename = folder + 'index.rd.fits'
-	# imageXYFilename = folder + 'field.xy.fits'
-	# inputWCSFilename = folder + 'wcs.fits'
-	# 
-	# catalogXYFilename = folder + 'index.xy.fits'
-	# imageRDFilename = folder + 'field.rd.fits'
-	# outputWCSFilename = folder + 'out.wcs.fits'
-	# renderOutput = True
+	# Debug stuff
+	folder = 'data/tweaktest2/'
+	catalogRDFilename = folder + 'index.rd.fits'
+	imageXYFilename = folder + 'field.xy.fits'
+	inputWCSFilename = folder + 'wcs.fits'
+	
+	catalogXYFilename = folder + 'index.xy.fits'
+	imageRDFilename = folder + 'field.rd.fits'
+	outputWCSFilename = folder + 'out.wcs.fits'
+	renderOutput = True
 	
 	(opts, args) = getopt.getopt(sys.argv[1:], 'i:f:w:x:r:s:d:pv')
 
