@@ -7,7 +7,9 @@ import os
 import util.sip as sip
 
 
-def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree, progressiveWarp=False, renderOutput=False):
+def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
+          outputWCSFilename, catalogXYFilename, imageRDFilename,
+          warpDegree, progressiveWarp=False, renderOutput=False):
 	imageData = loadImageData(imageXYFilename)[0]
 	catalogData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
 	WCS = sip.Sip(inputWCSFilename)
