@@ -798,7 +798,7 @@ function process_data ($vals) {
 		"    " . $tabmerge . " \$FN+1 " . $match_fn . ".tmp+1\n" .
 		"  done\n" .
 		"  echo Sorting match file...\n" .
-		"  " . $tabsort . " -i " . $match_fn . ".tmp -o " . $match_fn . " -c logodds -d\n" .
+		"  " . $tabsort . " -d logodds " . $match_fn . ".tmp " . $match_fn . "\n" .
 		"  rm " . $match_fn . ".tmp\n" .
 		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . "\n" .
 		"  echo Adding jobid to FITS headers...\n" .
