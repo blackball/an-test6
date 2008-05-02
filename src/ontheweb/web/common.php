@@ -100,7 +100,7 @@ END;
 $host  = $_SERVER['HTTP_HOST'];
 
 $quads = $base . "astrometry/blind/";
-$utils = $base . "astrometry/utils/";
+$utils = $base . "astrometry/util/";
 
 $resultdir = "/home/gmaps/ontheweb-data/";
 $indexdir = "/home/gmaps/ontheweb-indexes/";
