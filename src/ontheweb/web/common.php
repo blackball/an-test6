@@ -100,6 +100,7 @@ END;
 $host  = $_SERVER['HTTP_HOST'];
 
 $quads = $base . "astrometry/blind/";
+$utils = $base . "astrometry/utils/";
 
 $resultdir = "/home/gmaps/ontheweb-data/";
 $indexdir = "/home/gmaps/ontheweb-indexes/";
@@ -128,7 +129,7 @@ $wcs_rd2xy = $quads . "wcs-rd2xy";
 $fits_guess_scale = $quads . "fits-guess-scale";
 $get_wcs = $quads . "get-wcs";
 $an_fitstopnm = $quads . "an-fitstopnm";
-$fits_filter = $quads . "fits2fits.py %s %s";
+$fits_filter = $utils . "fits2fits.py %s %s";
 $new_wcs = $quads . "new-wcs";
 
 $headers = $_REQUEST;
