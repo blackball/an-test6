@@ -3,7 +3,6 @@ from pylab import *
 from tweak_lib import *
 from constants import *
 import getopt
-import os
 import util.sip as sip
 
 
@@ -32,10 +31,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		title('Fixed CRPix')
 		savefig('1-crpix.png')
 	
-	iter = 0
-	while True:
-		iter = iter + 1
-	
+	for iter in range(1, MAX_CAMERA_ITERS):
 		if progressiveWarp:
 			for deg in arange(1, warpDegree+1):
 				WCS.warpDegree = deg
@@ -43,111 +39,31 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 			WCS.warpDegree = warpDegree
 		else:
 			tweakImage(imageData, catalogData, WCS)
-	
+		
+		imageData['X'] = imageData['X_INITIAL']
+		imageData['Y'] = imageData['Y_INITIAL']
+		
 		centerShiftDist = sqrt(sum(square(array(imageData['warpM'].reshape(2,-1)[:,-1].T)[0])))
 		linearWarpAmount = sqrt(sum(square(array(imageData['warpM'].reshape(2,-1)[:,-3:-1] - eye(2,2)))))
 		# linearWarpAmount = abs(1-linalg.det(linearWarp))
-	
+				
 		print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
+
+		affinewarp2WCS(imageData, WCS)
+		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])	
 	
-		if ((centerShiftDist > MAX_SHIFT_AMOUNT) | (linearWarpAmount > MAX_LWARP_AMOUNT)) & (iter < MAX_TAN_ITERS):
-			
-			affinewarp2WCS(imageData, WCS)
-					
-			(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-			imageData['X'] = imageData['X_INITIAL']
-			imageData['Y'] = imageData['Y_INITIAL']
-			
-		else:
+		if ((centerShiftDist < MAX_SHIFT_AMOUNT) & (linearWarpAmount < MAX_LWARP_AMOUNT)):
 			break
 	
-	imageData['X'] = imageData['X_INITIAL']
-	imageData['Y'] = imageData['Y_INITIAL']
-
-
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Fit (No SIP)')
 		savefig('2-after-SIP.png')
 	
 	polywarp2WCS(imageData, WCS)
-
-	if outputWCSFilename != ():
-		print '\nwriting new WCS to disk'
-		try:
-			os.remove(outputWCSFilename)
-			print 'deleted existing ' + outputWCSFilename
-		except:
-			junk = 1
-
-		WCS.write_to_file(outputWCSFilename)
-		print 'WCS written to ' + outputWCSFilename
-		print 'rereading WCS header'
 	
-		WCSFITS_old = pyfits.open(inputWCSFilename)
-		WCSFITS_new = pyfits.open(outputWCSFilename)
-
-		for history in WCSFITS_old[0].header.get_history():
-			WCSFITS_new[0].header.add_history(history)
-
-		for comment in WCSFITS_old[0].header.get_comment():
-			if comment[0:5] == 'Tweak':
-				WCSFITS_new[0].header.add_comment('Tweak: yes')
-				WCSFITS_new[0].header.add_comment('Tweak AB order: ' + str(WCS.a_order))
-				WCSFITS_new[0].header.add_comment('Tweak ABP order: ' + str(WCS.ap_order))
-			else:
-				WCSFITS_new[0].header.add_comment(comment)
-
-		WCSFITS_new[0].header.add_comment('AN_JOBID: ' + WCSFITS_old[0].header.get('AN_JOBID'))
-		WCSFITS_new[0].header.add_comment('DATE: ' + WCSFITS_old[0].header.get('DATE'))
-		WCSFITS_new[0].update_header()
+	writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput)
 	
-		try:
-			os.remove(outputWCSFilename)
-			print 'deleted existing ' + outputWCSFilename + ' again'
-		except:
-			junk = 1
-	
-		pyfits.writeto(outputWCSFilename, array([]), WCSFITS_new[0].header)
-	
-		print 'WCS + Comments/History written to ' + outputWCSFilename
-	
-		WCS_out = sip.Sip(outputWCSFilename)
-	
-		if catalogXYFilename != ():
-			print '\ncalling wcs-rd2xy'
-			if os.system('./wcs-rd2xy -w ' + outputWCSFilename + ' -i ' + catalogRDFilename + ' -o ' + catalogXYFilename):
-				print 'failed to convert catalog RA/Dec -> XY'
-			else:
-				print 'catalog X/Y written to ' + catalogXYFilename
-	
-		if imageRDFilename != ():
-			print '\ncalling wcs-xy2rd'
-			if os.system('./wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
-				print 'failed to convert image X/Y -> RA/Dec'
-			else:
-				print 'image RA/Dec written to ' + imageRDFilename
-	
-		if renderOutput:
-	
-			if catalogXYFilename != ():
-				catalogXYData = loadFITS(catalogXYFilename, ['X', 'Y'])[0]
-				renderCatalogImage(catalogXYData, imageData, WCS_out)
-				title('Fit (With SIP)')
-				savefig('3-after-NoSIP.png')
-			else:
-				print 'not rendering warped catalog because catalog output not specified'
-	
-			if imageRDFilename != ():
-				imageRDData = loadFITS(imageRDFilename, ['RA', 'DEC'])[0]
-				renderCatalogImageRADec(catalogData, imageRDData, WCS_out)
-				title('Fit (With SIP) on Sphere')
-				savefig('4-after-NoSIP-sphere.png')
-			else:
-				print 'not rendering warped image because image output not specified'
-	else:
-		print 'not writing WCS output, so not writing any output!'
-
 	if renderOutput:	
 		show()
 
@@ -164,7 +80,7 @@ if __name__ == '__main__':
 
 	warpDegree = ()
 	progressiveWarp = DEFAULT_PROGRESSIVE_WARP
-	renderOutput = False
+	renderOutput = DEFAULT_RENDER_OUTPUT
 
 	# Debug stuff
 	folder = 'data/tweaktest2/'

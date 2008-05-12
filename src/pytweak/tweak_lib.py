@@ -3,6 +3,7 @@ from numpy import *
 from constants import *
 import pyfits
 import util.sip as sip
+import os
 
 import pdb
 
@@ -18,8 +19,8 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	WCS.ap_order = WCS.warpDegree
 	WCS.bp_order = WCS.warpDegree
 	
-	WCS.ab_order_min = 2 # THIS IS A CHOICE, SHOULD BE A CONSTANT
-	WCS.abp_order_min = 1
+	WCS.ab_order_min = MIN_AB_ORDER
+	WCS.abp_order_min = MIN_ABP_ORDER
 
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 
@@ -35,7 +36,13 @@ def fixCRPix(imageData, catalogData, WCS):
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (imageData['PIVOT'][0], imageData['PIVOT'][1])
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 		
-	polyWarpWCS(imageData, catalogData, WCS)
+	polyWarp(imageData, catalogData, WCS.warpDegree)
+	
+	affinewarp2WCS(imageData, WCS)
+	
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	imageData['X'] = imageData['X_INITIAL']
+	imageData['Y'] = imageData['Y_INITIAL']
 
 
 def WCS_rd2xy(WCS, ra, dec):
@@ -63,8 +70,11 @@ def loadImageData(imageFilename):
 	(imageData, imageFITS) = loadFITS(imageFilename, ['X', 'Y', 'FLUX', 'BACKGROUND'])
 	imageData['X_INITIAL'] = imageData['X']
 	imageData['Y_INITIAL'] = imageData['Y']
+	
+	# These two are also fudged:
 	imageData['ERRS'] = 0*imageData['X'] + 1.0
 	imageData['RADII'] = 0*imageData['X'] + 1.0
+	
 	imageData['PIVOT'] = [0.,0.]
 	return (imageData, imageFITS)
 
@@ -82,7 +92,10 @@ def renderCatalogImage(catalogData, imageData, WCS):
 	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
 	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
 	axis('image')
-	axis((min(imageData['X_INITIAL']), max(imageData['X_INITIAL']), min(imageData['Y_INITIAL']), max(imageData['Y_INITIAL'])))
+	try:
+		axis((min(imageData['X_INITIAL']), max(imageData['X_INITIAL']), min(imageData['Y_INITIAL']), max(imageData['Y_INITIAL'])))
+	except:
+		axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
 
 def renderCatalogImageRADec(catalogData, imageData, WCS):
 	figure()
@@ -199,16 +212,6 @@ def polyExpand(imagePoints, D, Dstart = 0):
 	A[1::2,width:(2*width)] = A_sub
 	return A
 
-def polyWarpWCS(imageData, catalogData, WCS):
-	polyWarp(imageData, catalogData, WCS.warpDegree)
-
-	affinewarp2WCS(imageData, WCS)
-
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	imageData['X'] = imageData['X_INITIAL']
-	imageData['Y'] = imageData['Y_INITIAL']
-
-
 def polyWarp(imageData, catalogData, warpDegree):
 	pivot = imageData['PIVOT']
 	pairs = imageData['pairs']
@@ -303,4 +306,82 @@ def tweakImage(imageData, catalogData, WCS):
 	
 	print 'image tweaked in', iter, 'iterations'
 
+def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput):
+	if outputWCSFilename != ():
+		print '\nwriting new WCS to disk'
+		try:
+			os.remove(outputWCSFilename)
+			print 'deleted existing ' + outputWCSFilename
+		except:
+			junk = 1
+
+		WCS.write_to_file(outputWCSFilename)
+		print 'WCS written to ' + outputWCSFilename
+		print 'rereading WCS header'
+	
+		WCSFITS_old = pyfits.open(inputWCSFilename)
+		WCSFITS_new = pyfits.open(outputWCSFilename)
+
+		for history in WCSFITS_old[0].header.get_history():
+			WCSFITS_new[0].header.add_history(history)
+
+		for comment in WCSFITS_old[0].header.get_comment():
+			if comment[0:5] == 'Tweak':
+				WCSFITS_new[0].header.add_comment('Tweak: yes')
+				WCSFITS_new[0].header.add_comment('Tweak AB order: ' + str(WCS.a_order))
+				WCSFITS_new[0].header.add_comment('Tweak ABP order: ' + str(WCS.ap_order))
+			else:
+				WCSFITS_new[0].header.add_comment(comment)
+
+		WCSFITS_new[0].header.add_comment('AN_JOBID: ' + WCSFITS_old[0].header.get('AN_JOBID'))
+		WCSFITS_new[0].header.add_comment('DATE: ' + WCSFITS_old[0].header.get('DATE'))
+		WCSFITS_new[0].update_header()
+	
+		try:
+			os.remove(outputWCSFilename)
+			print 'deleted existing ' + outputWCSFilename + ' again'
+		except:
+			junk = 1
+	
+		pyfits.writeto(outputWCSFilename, array([]), WCSFITS_new[0].header)
+	
+		print 'WCS + Comments/History written to ' + outputWCSFilename
+	
+		WCS_out = sip.Sip(outputWCSFilename)
+	
+		if catalogXYFilename != ():
+			print '\ncalling wcs-rd2xy'
+			if os.system('./wcs-rd2xy -w ' + outputWCSFilename + ' -i ' + catalogRDFilename + ' -o ' + catalogXYFilename):
+				print 'failed to convert catalog RA/Dec -> XY'
+			else:
+				print 'catalog X/Y written to ' + catalogXYFilename
+	
+		if imageRDFilename != ():
+			print '\ncalling wcs-xy2rd'
+			if os.system('./wcs-xy2rd -w ' + outputWCSFilename + ' -i ' + imageXYFilename + ' -o ' + imageRDFilename):
+				print 'failed to convert image X/Y -> RA/Dec'
+			else:
+				print 'image RA/Dec written to ' + imageRDFilename
+	
+		if renderOutput:
+	
+			if catalogXYFilename != ():
+				catalogXYData = loadFITS(catalogXYFilename, ['X', 'Y'])[0]
+				imageXYData = loadFITS(imageXYFilename, ['X', 'Y'])[0]
+				renderCatalogImage(catalogXYData, imageXYData, WCS_out)
+				title('Fit (With SIP)')
+				savefig('3-after-NoSIP.png')
+			else:
+				print 'not rendering warped catalog because catalog output not specified'
+	
+			if imageRDFilename != ():
+				imageRDData = loadFITS(imageRDFilename, ['RA', 'DEC'])[0]
+				catalogRDData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
+				renderCatalogImageRADec(catalogRDData, imageRDData, WCS_out)
+				title('Fit (With SIP) on Sphere')
+				savefig('4-after-NoSIP-sphere.png')
+			else:
+				print 'not rendering warped image because image output not specified'
+	else:
+		print 'not writing WCS output, so not writing any output!'
 
