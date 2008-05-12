@@ -6,6 +6,38 @@ import util.sip as sip
 
 import pdb
 
+def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
+	imageData = loadImageData(imageXYFilename)[0]
+	catalogData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
+	WCS = sip.Sip(inputWCSFilename)
+	
+	WCS.warpDegree = warpDegree;
+	
+	WCS.a_order = WCS.warpDegree
+	WCS.b_order = WCS.warpDegree
+	WCS.ap_order = WCS.warpDegree
+	WCS.bp_order = WCS.warpDegree
+	
+	WCS.ab_order_min = 2 # THIS IS A CHOICE, SHOULD BE A CONSTANT
+	WCS.abp_order_min = 1
+
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+
+	# Fudge factor until we get the real data
+	catalogData['SIGMA_X'] = 0*catalogData['X'] + 1.0
+	catalogData['SIGMA_Y'] = 0*catalogData['X'] + 1.0
+	
+	return (imageData, catalogData, WCS)
+	
+def fixCRPix(imageData, catalogData, WCS):
+	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
+	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(imageData['PIVOT'][0], imageData['PIVOT'][1])
+	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (imageData['PIVOT'][0], imageData['PIVOT'][1])
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+		
+	polyWarpWCS(imageData, catalogData, WCS)
+
+
 def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
 	y = zeros(ra.shape)
@@ -103,6 +135,51 @@ def getWeight(dists, sigmas, d_dists=(), d_sigmas=(), dd_dists=(), dd_sigmas=())
 	
 	return (w, e, d_w, dd_w)
 
+def affinewarp2WCS(imageData, WCS):
+	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
+	centerShift = array(imageData['warpM'].reshape(2,-1)[:,-1].T)[0]
+	linearWarp = imageData['warpM'].reshape(2,-1)[:,-3:-1]
+
+	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix - centerShift
+	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(startCRPix[0], startCRPix[1])
+	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix
+
+	CD = matrix(WCS.wcstan.cd[:]).reshape(2,2)
+	CD2 = (CD*linearWarp).reshape(-1,1)
+	for i in arange(0,4):
+		WCS.wcstan.cd[i] = CD2[i]
+	
+
+def polywarp2WCS(imageData, WCS):
+	SIP_im2cat = imageData['warpM'].reshape(2,-1)[:,:-3].reshape(-1,1).copy()
+
+	interval = 0.025
+	count = int(1/interval)+1
+	gridBase = 1.0 - 2.0*matrix(arange(0, 1+interval, interval)).T
+
+	gridStart = concatenate((repeat( (WCS.wcstan.imagew-imageData['PIVOT'][0]) * gridBase, count, 0), tile( (WCS.wcstan.imageh-imageData['PIVOT'][1]) * gridBase, (count,1))), 1)
+	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
+		
+	SIP_cat2im = linalg.lstsq(polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))[0]
+	gridStart_approx = gridEnd + (polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min)*SIP_cat2im).reshape(-1,2)
+
+	print 'warp inversion error:', sum(abs(gridStart_approx - gridStart),0)/gridStart.shape[0]
+	
+	col = 0
+	for d in arange(WCS.a_order, WCS.ab_order_min-1, -1):
+		for i in arange(0, d+1):
+			idx = (d-i)*10+i
+			WCS.a[idx] = SIP_im2cat[col]
+			WCS.b[idx] = SIP_im2cat[col+SIP_im2cat.shape[0]/2]
+			col = col + 1;
+
+	col = 0
+	for d in arange(WCS.ap_order, WCS.abp_order_min-1, -1):
+		for i in arange(0, d+1):
+			idx = (d-i)*10+i
+			WCS.ap[idx] = SIP_cat2im[col]
+			WCS.bp[idx] = SIP_cat2im[col+SIP_cat2im.shape[0]/2]
+			col = col + 1;
 
 def polyExpand(imagePoints, D, Dstart = 0):
 	x = imagePoints[:,0]
@@ -121,6 +198,15 @@ def polyExpand(imagePoints, D, Dstart = 0):
 	A[::2,0:width] = A_sub
 	A[1::2,width:(2*width)] = A_sub
 	return A
+
+def polyWarpWCS(imageData, catalogData, WCS):
+	polyWarp(imageData, catalogData, WCS.warpDegree)
+
+	affinewarp2WCS(imageData, WCS)
+
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	imageData['X'] = imageData['X_INITIAL']
+	imageData['Y'] = imageData['Y_INITIAL']
 
 
 def polyWarp(imageData, catalogData, warpDegree):
@@ -166,7 +252,7 @@ def polyWarp(imageData, catalogData, warpDegree):
 	# imageData['iwarpM'] = iM
 
 
-def tweakImage(imageData, catalogData, warpDegree):
+def tweakImage(imageData, catalogData, WCS):
 	MINWEIGHT = (getWeight(MINWEIGHT_DOS,1))[0]
 	MAXERROR = MINWEIGHT*(MINWEIGHT_DOS**2);
 
@@ -182,7 +268,7 @@ def tweakImage(imageData, catalogData, warpDegree):
 	totalResiduals = []
 	redist_countdown = 0
 
-	print 'tweaking image with degree =', warpDegree
+	print 'tweaking image with degree =', WCS.warpDegree
 
 	for iter in arange(0,TWEAK_MAX_NUM_ITERS):
 
@@ -204,7 +290,7 @@ def tweakImage(imageData, catalogData, warpDegree):
 		imageData['dists'] = dists_all[toKeep,:]
 		imageData['weights'] = weights_all[toKeep,:]
 		
-		polyWarp(imageData, catalogData, warpDegree)
+		polyWarp(imageData, catalogData, WCS.warpDegree)
 		
 		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(imageData['residuals'])))
 
@@ -216,4 +302,5 @@ def tweakImage(imageData, catalogData, warpDegree):
 				redist_countdown = 0
 	
 	print 'image tweaked in', iter, 'iterations'
+
 

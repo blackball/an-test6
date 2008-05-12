@@ -8,132 +8,69 @@ import util.sip as sip
 
 
 def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
-          outputWCSFilename, catalogXYFilename, imageRDFilename,
-          warpDegree, progressiveWarp=False, renderOutput=False):
-	imageData = loadImageData(imageXYFilename)[0]
-	catalogData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
-	WCS = sip.Sip(inputWCSFilename)
-
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-
-	# Fudge factor until we get the real data
-	catalogData['SIGMA_X'] = 0*catalogData['X'] + 1.0
-	catalogData['SIGMA_Y'] = 0*catalogData['X'] + 1.0
-
+          outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree,
+		  progressiveWarp=DEFAULT_PROGRESSIVE_WARP,
+		  renderOutput=DEFAULT_RENDER_OUTPUT):
+	
+	(imageData, catalogData, WCS) = loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree)
+	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Original Fit')
 		savefig('1-initial.png')
 
-	tweakImage(imageData, catalogData, warpDegree)
+	tweakImage(imageData, catalogData, WCS)
 
 	imageData['PIVOT'][0] = WCS.wcstan.imagew/2 + 0.5
 	imageData['PIVOT'][1] = WCS.wcstan.imageh/2 + 0.5
 	#  We add the 0.5 to account for the pixel representation, where center = 1. Right?
-
-	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
-	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(imageData['PIVOT'][0], imageData['PIVOT'][1])
-	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (imageData['PIVOT'][0], imageData['PIVOT'][1])
-
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	polyWarp(imageData, catalogData, warpDegree)
-
-
+	
+	fixCRPix(imageData, catalogData, WCS)
+		
+	if renderOutput:
+		renderCatalogImage(catalogData, imageData, WCS)
+		title('Fixed CRPix')
+		savefig('1-crpix.png')
+	
 	iter = 0
 	while True:
 		iter = iter + 1
 	
 		if progressiveWarp:
 			for deg in arange(1, warpDegree+1):
-				tweakImage(imageData, catalogData, deg)
+				WCS.warpDegree = deg
+				tweakImage(imageData, catalogData, WCS)
+			WCS.warpDegree = warpDegree
 		else:
-			tweakImage(imageData, catalogData, warpDegree)
+			tweakImage(imageData, catalogData, WCS)
 	
-		centerShift = array(imageData['warpM'].reshape(2,-1)[:,-1].T)[0]
-		centerShiftDist = sqrt(sum(square(centerShift)))
-		linearWarp = imageData['warpM'].reshape(2,-1)[:,-3:-1]
-		linearWarpAmount = sqrt(sum(square(array(linearWarp - eye(2,2)))))
+		centerShiftDist = sqrt(sum(square(array(imageData['warpM'].reshape(2,-1)[:,-1].T)[0])))
+		linearWarpAmount = sqrt(sum(square(array(imageData['warpM'].reshape(2,-1)[:,-3:-1] - eye(2,2)))))
 		# linearWarpAmount = abs(1-linalg.det(linearWarp))
 	
 		print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
 	
 		if ((centerShiftDist > MAX_SHIFT_AMOUNT) | (linearWarpAmount > MAX_LWARP_AMOUNT)) & (iter < MAX_TAN_ITERS):
-		
-			startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
-		
-			(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix - centerShift
-			(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(startCRPix[0], startCRPix[1])
-			(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix
-		
-			CD = matrix(WCS.wcstan.cd[:]).reshape(2,2)
-			CD2 = (CD*linearWarp).reshape(-1,1)
-			for i in arange(0,4):
-				WCS.wcstan.cd[i] = CD2[i]
-		
+			
+			affinewarp2WCS(imageData, WCS)
+					
 			(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-		
-			# This...
-			Mpoly = imageData['warpM'].reshape(2,-1)[:,:-3].reshape(-1,1).copy()
-			xy = matrix(column_stack((imageData['X_INITIAL'] - imageData['PIVOT'][0], imageData['Y_INITIAL']  - imageData['PIVOT'][1])))
-			xy_warp = xy + (polyExpand(xy, warpDegree,2)*Mpoly).reshape(-1,2)
-			imageData['X'] = array(xy_warp[:,0])[:,0] + imageData['PIVOT'][0]
-			imageData['Y'] = array(xy_warp[:,1])[:,0] + imageData['PIVOT'][1]
-		
-			# is effectively equivalent to this, but much faster and more elegant:
-			# polyWarp(imageData, catalogData, warpDegree)
+			imageData['X'] = imageData['X_INITIAL']
+			imageData['Y'] = imageData['Y_INITIAL']
+			
 		else:
 			break
-
-
+	
 	imageData['X'] = imageData['X_INITIAL']
 	imageData['Y'] = imageData['Y_INITIAL']
+
 
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Fit (No SIP)')
 		savefig('2-after-SIP.png')
-
-	minDeg_im2cat = 2
-	maxDeg_im2cat = warpDegree
-	SIP_im2cat = imageData['warpM'].reshape(2,-1)[:,:-3].reshape(-1,1).copy()
-
-	interval = 0.025
-	count = int(1/interval)+1
-	gridBase = 1.0 - 2.0*matrix(arange(0, 1+interval, interval)).T
-
-	gridStart = concatenate((repeat( (WCS.wcstan.imagew-imageData['PIVOT'][0]) * gridBase, count, 0), tile( (WCS.wcstan.imageh-imageData['PIVOT'][1]) * gridBase, (count,1))), 1)
-	gridEnd = gridStart + (polyExpand(gridStart, warpDegree,2)*SIP_im2cat).reshape(-1,2)
-
-	minDeg_cat2im = 1
-	maxDeg_cat2im = warpDegree
-	SIP_cat2im = linalg.lstsq(polyExpand(gridEnd, maxDeg_cat2im, minDeg_cat2im),(gridStart-gridEnd).reshape(-1,1))[0]
-	gridStart_approx = gridEnd + (polyExpand(gridEnd, maxDeg_cat2im, minDeg_cat2im)*SIP_cat2im).reshape(-1,2)
-
-	print 'warp inversion error:', sum(abs(gridStart_approx - gridStart),0)/gridStart.shape[0]
-
-
-	WCS.a_order = maxDeg_im2cat
-	WCS.b_order = maxDeg_im2cat
-
-	col = 0
-	for d in arange(maxDeg_im2cat, minDeg_im2cat-1, -1):
-		for i in arange(0, d+1):
-			idx = (d-i)*10+i
-			WCS.a[idx] = SIP_im2cat[col]
-			WCS.b[idx] = SIP_im2cat[col+SIP_im2cat.shape[0]/2]
-			col = col + 1;
-
-
-	WCS.ap_order = maxDeg_cat2im
-	WCS.bp_order = maxDeg_cat2im
-
-	col = 0
-	for d in arange(maxDeg_cat2im, minDeg_cat2im-1, -1):
-		for i in arange(0, d+1):
-			idx = (d-i)*10+i
-			WCS.ap[idx] = SIP_cat2im[col]
-			WCS.bp[idx] = SIP_cat2im[col+SIP_cat2im.shape[0]/2]
-			col = col + 1;
+	
+	polywarp2WCS(imageData, WCS)
 
 	if outputWCSFilename != ():
 		print '\nwriting new WCS to disk'
@@ -213,8 +150,6 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 
 	if renderOutput:	
 		show()
-
-
 
 
 if __name__ == '__main__':
