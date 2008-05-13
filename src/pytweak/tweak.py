@@ -20,11 +20,10 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 
 	tweakImage(imageData, catalogData, WCS)
 
-	imageData['PIVOT'][0] = WCS.wcstan.imagew/2 + 0.5
-	imageData['PIVOT'][1] = WCS.wcstan.imageh/2 + 0.5
+	goal_crpix = [WCS.wcstan.imagew/2 + 0.5, WCS.wcstan.imageh/2 + 0.5]
 	#  We add the 0.5 to account for the pixel representation, where center = 1. Right?
 	
-	fixCRPix(imageData, catalogData, WCS)
+	fixCRPix(imageData, catalogData, WCS, goal_crpix)
 		
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
@@ -43,13 +42,13 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		imageData['X'] = imageData['X_INITIAL']
 		imageData['Y'] = imageData['Y_INITIAL']
 		
-		centerShiftDist = sqrt(sum(square(array(imageData['warpM'].reshape(2,-1)[:,-1].T)[0])))
-		linearWarpAmount = sqrt(sum(square(array(imageData['warpM'].reshape(2,-1)[:,-3:-1] - eye(2,2)))))
+		centerShiftDist = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
+		linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))
 		# linearWarpAmount = abs(1-linalg.det(linearWarp))
 				
-		print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
+		# print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
 
-		affinewarp2WCS(imageData, WCS)
+		pushAffine2WCS(WCS)
 		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])	
 	
 		if ((centerShiftDist < MAX_SHIFT_AMOUNT) & (linearWarpAmount < MAX_LWARP_AMOUNT)):
@@ -60,7 +59,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		title('Fit (No SIP)')
 		savefig('2-after-SIP.png')
 	
-	polywarp2WCS(imageData, WCS)
+	pushPoly2WCS(WCS)
 	
 	writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput)
 	
