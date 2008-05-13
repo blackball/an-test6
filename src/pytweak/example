@@ -1,0 +1,1 @@
+python tweak.py --wcs_in=data/tweaktest1/wcs.fits --catalog_rd=data/tweaktest1/index.rd.fits --image_xy=data/tweaktest1/field.xy.fits --catalog_xy data/tweaktest1/index.xy.fits --image_rd data/tweaktest1/field.rd.fits --wcs_out data/tweaktest1/out.wcs.fits --order 3 --display --crpix_x=30.5 --crpix_y=500

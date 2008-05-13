@@ -9,7 +9,8 @@ import util.sip as sip
 def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
           outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree,
 		  progressiveWarp=DEFAULT_PROGRESSIVE_WARP,
-		  renderOutput=DEFAULT_RENDER_OUTPUT):
+		  renderOutput=DEFAULT_RENDER_OUTPUT, goal_CRPix_X=(),
+		  goal_CRPix_Y=()):
 	
 	(imageData, catalogData, WCS) = loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree)
 	
@@ -22,6 +23,11 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 
 	goal_crpix = [WCS.wcstan.imagew/2 + 0.5, WCS.wcstan.imageh/2 + 0.5]
 	#  We add the 0.5 to account for the pixel representation, where center = 1. Right?
+	
+	if goal_CRPix_X != ():
+		goal_crpix[0] = goal_CRPix_X
+	if goal_CRPix_Y != ():
+		goal_crpix[1] = goal_CRPix_Y
 	
 	fixCRPix(imageData, catalogData, WCS, goal_crpix)
 		
@@ -46,7 +52,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))
 		# linearWarpAmount = abs(1-linalg.det(linearWarp))
 				
-		# print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
+		print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
 
 		pushAffine2WCS(WCS)
 		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])	
@@ -80,6 +86,9 @@ if __name__ == '__main__':
 	warpDegree = ()
 	progressiveWarp = DEFAULT_PROGRESSIVE_WARP
 	renderOutput = DEFAULT_RENDER_OUTPUT
+	
+	goal_CRPix_X = ()
+	goal_CRPix_Y = ()
 
 	# Debug stuff
 	folder = 'data/tweaktest2/'
@@ -92,39 +101,48 @@ if __name__ == '__main__':
 	outputWCSFilename = folder + 'out.wcs.fits'
 	renderOutput = True
 	
-	(opts, args) = getopt.getopt(sys.argv[1:], 'i:f:w:x:r:s:d:pv')
-
+	(opts, args) = getopt.getopt(sys.argv[1:], '', ['catalog_rd=', 'catalog_xy=', 'image_rd=', 'image_xy=', 'wcs_in=', 'wcs_out=', 'order=', 'crpix_x=', 'crpix_y=', 'progressive', 'display'])
+	
 	for opt in opts:
-
-		if opt[0] == '-i':
+		
+		if opt[0] == '--catalog_rd':
 			catalogRDFilename = opt[1]
-		elif opt[0] == '-f':
+		elif opt[0] == '--image_xy':
 			imageXYFilename = opt[1]
-		elif opt[0] == '-w':
+		elif opt[0] == '--wcs_in':
 			inputWCSFilename = opt[1]
-		elif opt[0] == '-x':
+		elif opt[0] == '--catalog_xy':
 			catalogXYFilename = opt[1]
-		elif opt[0] == '-r':
+		elif opt[0] == '--image_rd':
 			imageRDFilename = opt[1]
-		elif opt[0] == '-s':
+		elif opt[0] == '--wcs_out':
 			outputWCSFilename = opt[1]
-		elif opt[0] == '-d':
+		elif opt[0] == '--order':
 			warpDegree = int(opt[1])
-		elif opt[0] == '-p':
+		elif opt[0] == '--crpix_x':
+			goal_CRPix_X = float(opt[1])
+		elif opt[0] == '--crpix_y':
+			goal_CRPix_Y = float(opt[1])
+		elif opt[0] == '--progressive':
 			progressiveWarp = True
-		elif opt[0] == '-v':
+		elif opt[0] == '--display':
 			renderOutput = True
 
 	if ((imageXYFilename == ()) | (catalogRDFilename == ()) | (inputWCSFilename == ())):
 		print 'insufficient input arguments'
-		print 'usage: python tweak.py -w WCS_FITS -i index_RD_FITS -f field_XY_FITS [-x index_XY_FITS -r field_RD_FITS -s output_WCS_FITS -d order -p -r]'
-		print '-p does progressive warping'
-		print '-v renders visible output'
+		print 'usage: python tweak.py --wcs_in=INPUT_WCS_FITS --catalog_rd=CATALOG_RD_FITS --image_xy=IMAGE_XY_FITS [--catalog_xy CATALOG_XY_FITS --image_rd IMAGE_RD_FITS --wcs_out OUTPUT_WCS_FITS --order WARP_ORDER --progressive --display]'
+		print ' [--progressive] Does progressive warping'
+		print ' [--render] Renders visible output'
 		raise SystemExit
 
 	if warpDegree == ():
 		print 'warp degree not specified, using default of', DEFAULT_WARP_DEGREE
 		warpDegree = DEFAULT_WARP_DEGREE
-
-	tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree, progressiveWarp, renderOutput)
+	
+	if (goal_CRPix_X == ()) & (goal_CRPix_Y == ()):
+		print 'no crpix values specified, defaulting to image center'
+	elif not((goal_CRPix_X != ()) & (goal_CRPix_Y != ())):
+		print 'warning: only one crpix value specified. Unspecified value defaulting to image center'
+		
+	tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree, progressiveWarp, renderOutput, goal_CRPix_X, goal_CRPix_Y)
 

@@ -35,7 +35,7 @@ def fixCRPix(imageData, catalogData, WCS, goal_crpix):
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-		
+	
 	polyWarp(imageData, catalogData, WCS)
 	
 	pushAffine2WCS(WCS)
@@ -228,7 +228,7 @@ def tweakImage(imageData, catalogData, WCS):
 	# print 'tweaking image with degree =', WCS.warpDegree
 
 	for iter in range(0,TWEAK_MAX_NUM_ITERS):
-
+				
 		just_requeried = 0;
 		if redist_countdown == 0:
 			(pairs_all, dists_all) = findAllPairs(column_stack((imageData['X'], imageData['Y'])), column_stack((catalogData['X'], catalogData['Y'])), maxImageDist)
@@ -250,7 +250,7 @@ def tweakImage(imageData, catalogData, WCS):
 		polyWarp(imageData, catalogData, WCS)
 		
 		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(imageData['residuals'])))
-
+		
 		redist_countdown = redist_countdown - 1
 		if (iter > 3) & all(abs(totalResiduals[-3:-1] - totalResiduals[-1]) <= MIN_IRLS_ACCURACY):
 			if just_requeried:
@@ -260,7 +260,7 @@ def tweakImage(imageData, catalogData, WCS):
 	
 	print 'image tweaked in', iter, 'iterations'
 
-
+# This "adds" the affine warp in WCS.warpM to CD
 def pushAffine2WCS(WCS):
 	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
 	centerShift = array(WCS.warpM.reshape(2,-1)[:,-1].T)[0]
@@ -274,8 +274,11 @@ def pushAffine2WCS(WCS):
 	CD2 = (CD*linearWarp).reshape(-1,1)
 	for i in arange(0,4):
 		WCS.wcstan.cd[i] = CD2[i]
+	
+	# Flush warp out of WCS.warpM
+	WCS.warpM.reshape(2,-1)[:,-3:] = mat([1., 0., 0. , 0., 1., 0.]).reshape(2,3)
 
-
+# This *replaces* the SIP warp in the WCS with the higher-order terms in WCS.warpM
 def pushPoly2WCS(WCS):
 	SIP_im2cat = WCS.warpM.reshape(2,-1)[:,:-3].reshape(-1,1).copy()
 
@@ -306,6 +309,9 @@ def pushPoly2WCS(WCS):
 			WCS.ap[idx] = SIP_cat2im[col]
 			WCS.bp[idx] = SIP_cat2im[col+SIP_cat2im.shape[0]/2]
 			col = col + 1
+	
+	# Flush polynomial warp out of warpM
+	WCS.warpM.reshape(2,-1)[:,:-3] = 0
 
 
 def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput):
@@ -385,4 +391,4 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 			else:
 				print 'not rendering warped image because image output not specified'
 	else:
-		print 'not writing WCS output, so not writing any output!'
+		print 'cannot write WCS output, all output aborted'
