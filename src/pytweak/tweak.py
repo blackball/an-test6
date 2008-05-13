@@ -19,8 +19,6 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		title('Original Fit')
 		savefig('1-initial.png')
 
-	tweakImage(imageData, catalogData, WCS)
-
 	goal_crpix = [WCS.wcstan.imagew/2 + 0.5, WCS.wcstan.imageh/2 + 0.5]
 	#  We add the 0.5 to account for the pixel representation, where center = 1. Right?
 	
@@ -65,6 +63,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		title('Fit (No SIP)')
 		savefig('2-after-SIP.png')
 	
+	# Here I should really resolve for only higher order warp, force affine to 0.
 	pushPoly2WCS(WCS)
 	
 	writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput)

@@ -31,6 +31,11 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	return (imageData, catalogData, WCS)
 	
 def fixCRPix(imageData, catalogData, WCS, goal_crpix):
+	tweakImage(imageData, catalogData, WCS)
+	
+	imageData['X'] = imageData['X_INITIAL']
+	imageData['Y'] = imageData['Y_INITIAL']
+	
 	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
