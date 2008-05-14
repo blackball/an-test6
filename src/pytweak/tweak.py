@@ -34,36 +34,24 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		title('Fixed CRPix')
 		savefig('1-crpix.png')
 	
-	for iter in range(1, MAX_CAMERA_ITERS):
-		if progressiveWarp:
-			for deg in arange(1, warpDegree+1):
-				WCS.warpDegree = deg
-				tweakImage(imageData, catalogData, WCS)
-			WCS.warpDegree = warpDegree
-		else:
+	if progressiveWarp:
+		for deg in arange(1, warpDegree+1):
+			WCS.warpDegree = deg
 			tweakImage(imageData, catalogData, WCS)
-		
-		imageData['X'] = imageData['X_INITIAL']
-		imageData['Y'] = imageData['Y_INITIAL']
-		
-		centerShiftDist = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
-		linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))
-		# linearWarpAmount = abs(1-linalg.det(linearWarp))
-				
-		print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
-
-		pushAffine2WCS(WCS)
-		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])	
+		WCS.warpDegree = warpDegree
+	else:
+		tweakImage(imageData, catalogData, WCS)
 	
-		if ((centerShiftDist < MAX_SHIFT_AMOUNT) & (linearWarpAmount < MAX_LWARP_AMOUNT)):
-			break
+	imageData['X'] = imageData['X_INITIAL']
+	imageData['Y'] = imageData['Y_INITIAL']
+		
+	polyWarpWCS_repeat(imageData, catalogData, WCS)	
 	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Fit (No SIP)')
 		savefig('2-after-SIP.png')
 	
-	# Here I should really resolve for only higher order warp, force affine to 0.
 	pushPoly2WCS(WCS)
 	
 	writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput)

@@ -31,6 +31,7 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	return (imageData, catalogData, WCS)
 	
 def fixCRPix(imageData, catalogData, WCS, goal_crpix):
+	
 	tweakImage(imageData, catalogData, WCS)
 	
 	imageData['X'] = imageData['X_INITIAL']
@@ -41,14 +42,7 @@ def fixCRPix(imageData, catalogData, WCS, goal_crpix):
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 	
-	polyWarp(imageData, catalogData, WCS)
-	
-	pushAffine2WCS(WCS)
-	
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	imageData['X'] = imageData['X_INITIAL']
-	imageData['Y'] = imageData['Y_INITIAL']
-
+	polyWarpWCS_repeat(imageData, catalogData, WCS)
 
 def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
@@ -171,6 +165,30 @@ def polyExpand(imagePoints, D, Dstart = 0):
 	A[1::2,width:(2*width)] = A_sub
 	return A
 
+def polyWarpWCS_repeat(imageData, catalogData, WCS):
+	for iter in range(1, MAX_CAMERA_ITERS):
+		(centerShiftDist, linearWarpAmount) = polyWarpWCS(imageData, catalogData, WCS)	
+		if ((centerShiftDist < MAX_SHIFT_AMOUNT) & (linearWarpAmount < MAX_LWARP_AMOUNT)):
+				break
+	
+
+def polyWarpWCS(imageData, catalogData, WCS):
+	polyWarp(imageData, catalogData, WCS)
+	
+	centerShiftDist = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
+	linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))
+	# linearWarpAmount = abs(1-linalg.det(linearWarp))
+			
+	print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
+	
+	pushAffine2WCS(WCS)
+	
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	imageData['X'] = imageData['X_INITIAL']
+	imageData['Y'] = imageData['Y_INITIAL']
+	
+	return (centerShiftDist, linearWarpAmount)
+
 def polyWarp(imageData, catalogData, WCS):
 	pivot = WCS.wcstan.crpix
 	pairs = imageData['pairs']
@@ -286,19 +304,22 @@ def pushAffine2WCS(WCS):
 # This *replaces* the SIP warp in the WCS with the higher-order terms in WCS.warpM
 def pushPoly2WCS(WCS):
 	SIP_im2cat = WCS.warpM.reshape(2,-1)[:,:-3].reshape(-1,1).copy()
-
+	
 	interval = 0.025
 	count = int(1/interval)+1
-	gridBase = 1.0 - 2.0*matrix(arange(0, 1+interval, interval)).T
+	# gridBase = 1.0 - 2.0*matrix(arange(0, 1+interval, interval)).T	
+	# gridStart = concatenate((repeat( (WCS.wcstan.imagew-WCS.wcstan.crpix[0]) * gridBase, count, 0), tile( (WCS.wcstan.imageh-WCS.wcstan.crpix[1]) * gridBase, (count,1))), 1)
+	
+	gridBase = matrix(arange(0, 1+interval, interval)).T	
+	gridStart = concatenate((repeat( gridBase * WCS.wcstan.imagew - WCS.wcstan.crpix[0], count, 0), tile( gridBase * WCS.wcstan.imageh - WCS.wcstan.crpix[1], (count,1))), 1)
 
-	gridStart = concatenate((repeat( (WCS.wcstan.imagew-WCS.wcstan.crpix[0]) * gridBase, count, 0), tile( (WCS.wcstan.imageh-WCS.wcstan.crpix[1]) * gridBase, (count,1))), 1)
 	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
-
-	SIP_cat2im = linalg.lstsq(polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))[0]
+	
+	SIP_cat2im = linalg.lstsq(polyExpand(gridStart, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))[0]
 	gridStart_approx = gridEnd + (polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min)*SIP_cat2im).reshape(-1,2)
-
+	
 	print 'warp inversion error:', sum(abs(gridStart_approx - gridStart),0)/gridStart.shape[0]
-
+	
 	col = 0
 	for d in arange(WCS.a_order, WCS.ab_order_min-1, -1):
 		for i in arange(0, d+1):
