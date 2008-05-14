@@ -29,10 +29,14 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	catalogData['SIGMA_Y'] = 0*catalogData['X'] + 1.0
 	
 	return (imageData, catalogData, WCS)
+
+def fixCRPix(imageData, catalogData, WCS, goal_crpix, renderOutput=False):
 	
-def fixCRPix(imageData, catalogData, WCS, goal_crpix):
-	
-	tweakImage(imageData, catalogData, WCS)
+	tweakImage(imageData, catalogData, WCS)	
+	if renderOutput:
+		renderCatalogImage(catalogData, imageData, WCS)
+		title('Tweaked (Fiducial CRPix)')
+		savefig('2_Tweaked_Fiducial.png')
 	
 	imageData['X'] = imageData['X_INITIAL']
 	imageData['Y'] = imageData['Y_INITIAL']
@@ -403,8 +407,8 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 				catalogXYData = loadFITS(catalogXYFilename, ['X', 'Y'])[0]
 				imageXYData = loadFITS(imageXYFilename, ['X', 'Y'])[0]
 				renderCatalogImage(catalogXYData, imageXYData, WCS_out)
-				title('Fit (With SIP)')
-				savefig('3-after-NoSIP.png')
+				title('Fit (TAN+SIP)')
+				savefig('5_TAN_SIP.png')
 			else:
 				print 'not rendering warped catalog because catalog output not specified'
 	
@@ -412,8 +416,8 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 				imageRDData = loadFITS(imageRDFilename, ['RA', 'DEC'])[0]
 				catalogRDData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
 				renderCatalogImageRADec(catalogRDData, imageRDData, WCS_out)
-				title('Fit (With SIP) on Sphere')
-				savefig('4-after-NoSIP-sphere.png')
+				title('Fit (TAN+SIP) on Sphere')
+				savefig('6_TAN_SIP_sphere.png')
 			else:
 				print 'not rendering warped image because image output not specified'
 	else:

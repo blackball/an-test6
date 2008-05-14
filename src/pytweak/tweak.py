@@ -16,8 +16,8 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
-		title('Original Fit')
-		savefig('1-initial.png')
+		title('Initial WCS')
+		savefig('1_Initial.png')
 
 	goal_crpix = [WCS.wcstan.imagew/2 + 0.5, WCS.wcstan.imageh/2 + 0.5]
 	#  We add the 0.5 to account for the pixel representation, where center = 1. Right?
@@ -27,12 +27,12 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	if goal_CRPix_Y != ():
 		goal_crpix[1] = goal_CRPix_Y
 	
-	fixCRPix(imageData, catalogData, WCS, goal_crpix)
+	fixCRPix(imageData, catalogData, WCS, goal_crpix, renderOutput)
 		
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Fixed CRPix')
-		savefig('1-crpix.png')
+		savefig('3_Fixed_CRPix.png')
 	
 	if progressiveWarp:
 		for deg in arange(1, warpDegree+1):
@@ -49,8 +49,8 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
-		title('Fit (No SIP)')
-		savefig('2-after-SIP.png')
+		title('Fit (TAN)')
+		savefig('4_TAN.png')
 	
 	pushPoly2WCS(WCS)
 	
