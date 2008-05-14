@@ -14,14 +14,6 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	
 	WCS.warpDegree = warpDegree;
 	
-	WCS.a_order = WCS.warpDegree
-	WCS.b_order = WCS.warpDegree
-	WCS.ap_order = WCS.warpDegree
-	WCS.bp_order = WCS.warpDegree
-	
-	WCS.ab_order_min = MIN_AB_ORDER
-	WCS.abp_order_min = MIN_ABP_ORDER
-
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 
 	# Fudge factor until we get the real data
@@ -30,9 +22,13 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	
 	return (imageData, catalogData, WCS)
 
-def fixCRPix(imageData, catalogData, WCS, goal_crpix, renderOutput=False):
+def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, renderOutput=False):
 	
-	tweakImage(imageData, catalogData, WCS)	
+	if progressiveWarp:
+		tweakImage_progressive(imageData, catalogData, WCS)
+	else:
+		tweakImage(imageData, catalogData, WCS)
+	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Tweaked (Fiducial CRPix)')
@@ -41,11 +37,12 @@ def fixCRPix(imageData, catalogData, WCS, goal_crpix, renderOutput=False):
 	imageData['X'] = imageData['X_INITIAL']
 	imageData['Y'] = imageData['Y_INITIAL']
 	
-	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 	
+	# We probably wouldn't have to do this if we could rotate the CD matrix
+	# correctly, to account for the change in RA (right?)
 	polyWarpWCS_repeat(imageData, catalogData, WCS)
 
 def WCS_rd2xy(WCS, ra, dec):
@@ -93,7 +90,7 @@ def renderCatalogImage(catalogData, imageData, WCS):
 	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
 	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
 	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
-	axis('image')
+	axis('equal')
 	try:
 		axis((min(imageData['X_INITIAL']), max(imageData['X_INITIAL']), min(imageData['Y_INITIAL']), max(imageData['Y_INITIAL'])))
 	except:
@@ -118,6 +115,7 @@ def renderImageMotion(imageData, WCS):
 
 def findAllPairs(a, b, maxDist):
 	distSqMat = tile(mat(sum(square(a),1)).T, (1,b.shape[0])) + tile(mat(sum(square(b),1)), (a.shape[0],1)) - 2*(mat(a)*mat(b).T)
+	distSqMat[distSqMat<0.0] = 0.0
 	#  Identical to Matlab
 	# [i,j] = where(distSqMat.T < square(maxDist))
 	# pairs = concatenate((j,i),0).transpose()
@@ -219,8 +217,12 @@ def polyWarp(imageData, catalogData, WCS):
 	
 	WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
 	Wb = multiply(warpWeights_double, b)
-	M = linalg.lstsq(WA,Wb)[0]
+	(M, junk1, rank, junk2) = linalg.lstsq(WA,Wb)
 	resid = (Wb - WA*M)
+	
+	if rank < WA.shape[1]:
+		# Yes, this is deprecated
+		raise 'rank defficient transformation! Lower the order or do progressive warping'
 	
 	# A = polyExpand(catalogPoints, warpDegree)
 	# WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
@@ -234,6 +236,14 @@ def polyWarp(imageData, catalogData, WCS):
 	imageData['residuals'] = resid
 	WCS.warpM = M
 	# imageData['iwarpM'] = iM
+
+
+def tweakImage_progressive(imageData, catalogData, WCS):
+	warpDegree = WCS.warpDegree
+	for deg in arange(1, warpDegree+1):
+		WCS.warpDegree = deg
+		tweakImage(imageData, catalogData, WCS)
+	WCS.warpDegree = warpDegree
 
 
 def tweakImage(imageData, catalogData, WCS):
@@ -255,7 +265,7 @@ def tweakImage(imageData, catalogData, WCS):
 	# print 'tweaking image with degree =', WCS.warpDegree
 
 	for iter in range(0,TWEAK_MAX_NUM_ITERS):
-				
+		
 		just_requeried = 0;
 		if redist_countdown == 0:
 			(pairs_all, dists_all) = findAllPairs(column_stack((imageData['X'], imageData['Y'])), column_stack((catalogData['X'], catalogData['Y'])), maxImageDist)
@@ -264,7 +274,7 @@ def tweakImage(imageData, catalogData, WCS):
 			redist_countdown = REDIST_INTERVAL
 		else:
 			dists_all = sqrt(square(imageData['X'][pairs_all[:,0]] - catalogData['X'][pairs_all[:,1]]) + square(imageData['Y'][pairs_all[:,0]] - catalogData['Y'][pairs_all[:,1]]))
-
+		
 		weights_all = getWeight(dists_all, sigmas_all)[0]
 
 		toKeep = weights_all > MINWEIGHT
@@ -307,6 +317,15 @@ def pushAffine2WCS(WCS):
 
 # This *replaces* the SIP warp in the WCS with the higher-order terms in WCS.warpM
 def pushPoly2WCS(WCS):
+	
+	WCS.a_order = WCS.warpDegree
+	WCS.b_order = WCS.warpDegree
+	WCS.ap_order = WCS.warpDegree
+	WCS.bp_order = WCS.warpDegree
+	
+	WCS.ab_order_min = MIN_AB_ORDER
+	WCS.abp_order_min = MIN_ABP_ORDER
+	
 	SIP_im2cat = WCS.warpM.reshape(2,-1)[:,:-3].reshape(-1,1).copy()
 	
 	interval = 0.025
@@ -345,6 +364,7 @@ def pushPoly2WCS(WCS):
 
 
 def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput):
+	
 	if outputWCSFilename != ():
 		print '\nwriting new WCS to disk'
 		try:

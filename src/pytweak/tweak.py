@@ -27,7 +27,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	if goal_CRPix_Y != ():
 		goal_crpix[1] = goal_CRPix_Y
 	
-	fixCRPix(imageData, catalogData, WCS, goal_crpix, renderOutput)
+	fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp, renderOutput)
 		
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
@@ -35,10 +35,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		savefig('3_Fixed_CRPix.png')
 	
 	if progressiveWarp:
-		for deg in arange(1, warpDegree+1):
-			WCS.warpDegree = deg
-			tweakImage(imageData, catalogData, WCS)
-		WCS.warpDegree = warpDegree
+		tweakImage_progressive(imageData, catalogData, WCS)
 	else:
 		tweakImage(imageData, catalogData, WCS)
 	
@@ -78,7 +75,7 @@ if __name__ == '__main__':
 	goal_CRPix_Y = ()
 
 	# Debug stuff
-	folder = 'data/tweaktest2/'
+	folder = 'data/tweaktest1/'
 	catalogRDFilename = folder + 'index.rd.fits'
 	imageXYFilename = folder + 'field.xy.fits'
 	inputWCSFilename = folder + 'wcs.fits'
