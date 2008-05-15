@@ -207,6 +207,10 @@ def polyWarpWCS(imageData, catalogData, WCS):
 	# linearWarpAmount = abs(1-linalg.det(linearWarp))
 			
 	print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
+	# print 'shift:'
+	# print WCS.warpM.reshape(2,-1)[:,-1].T
+	# print 'warp:'
+	# print WCS.warpM.reshape(2,-1)[:,-3:-1]
 	
 	pushAffine2WCS(WCS)
 	
@@ -324,7 +328,7 @@ def pushAffine2WCS(WCS):
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix - centerShift
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(startCRPix[0], startCRPix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix
-
+	
 	CD = matrix(WCS.wcstan.cd[:]).reshape(2,2)
 	CD2 = (CD*linearWarp).reshape(-1,1)
 	for i in arange(0,4):
@@ -346,12 +350,10 @@ def pushPoly2WCS(WCS):
 	
 	SIP_im2cat = WCS.warpM.reshape(2,-1)[:,:-3].reshape(-1,1).copy()
 	
-	interval = 0.025
-	count = int(1/interval)+1
-	# gridBase = 1.0 - 2.0*matrix(arange(0, 1+interval, interval)).T	
-	# gridStart = concatenate((repeat( (WCS.wcstan.imagew-WCS.wcstan.crpix[0]) * gridBase, count, 0), tile( (WCS.wcstan.imageh-WCS.wcstan.crpix[1]) * gridBase, (count,1))), 1)
+	count = 50
+	print 'inverting warp with', count, 'by', count, 'grid'
 	
-	gridBase = matrix(arange(0, 1+interval, interval)).T	
+	gridBase = matrix(arange(0, count)/float(count-1)).T
 	gridStart = concatenate((repeat( gridBase * WCS.wcstan.imagew - WCS.wcstan.crpix[0], count, 0), tile( gridBase * WCS.wcstan.imageh - WCS.wcstan.crpix[1], (count,1))), 1)
 
 	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
