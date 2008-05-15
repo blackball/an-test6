@@ -12,6 +12,10 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 		  renderOutput=DEFAULT_RENDER_OUTPUT, goal_CRPix_X=(),
 		  goal_CRPix_Y=()):
 	
+	if warpDegree < 1:
+		print 'warning: order set to less than 1, resetting order to 1'
+		warpDegree = 1
+	
 	(imageData, catalogData, WCS) = loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree)
 	
 	if renderOutput:
@@ -72,7 +76,7 @@ if __name__ == '__main__':
 	goal_CRPix_Y = ()
 
 	# Debug stuff
-	folder = 'data/tweaktest1/'
+	folder = 'data/tweaktest4/'
 	catalogRDFilename = folder + 'index.rd.fits'
 	imageXYFilename = folder + 'field.xy.fits'
 	inputWCSFilename = folder + 'wcs.fits'
@@ -117,11 +121,11 @@ if __name__ == '__main__':
 		raise SystemExit
 
 	if warpDegree == ():
-		print 'warp degree not specified, using default of', DEFAULT_WARP_DEGREE
+		print 'warning: warp degree not specified, using default of', DEFAULT_WARP_DEGREE
 		warpDegree = DEFAULT_WARP_DEGREE
 	
 	if (goal_CRPix_X == ()) & (goal_CRPix_Y == ()):
-		print 'no crpix values specified, defaulting to image center'
+		print 'warning: no crpix values specified, defaulting to image center'
 	elif not((goal_CRPix_X != ()) & (goal_CRPix_Y != ())):
 		print 'warning: only one crpix value specified. Unspecified value defaulting to image center'
 		

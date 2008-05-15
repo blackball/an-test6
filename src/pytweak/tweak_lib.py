@@ -13,6 +13,18 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 	
 	WCS = sip.Sip(inputWCSFilename)
 	
+	if any(array(WCS.a)!=0) | any(array(WCS.b)!=0) | any(array(WCS.ap)!=0) | any(array(WCS.bp)!=0) | (WCS.a_order!=0) | (WCS.b_order!=0) | (WCS.ap_order!=0) | (WCS.bp_order!=0):
+		print 'warning: WCS already has SIP components, ignoring them.'
+		for i in range(0,100):
+			WCS.a[i] = 0.
+			WCS.b[i] = 0.
+			WCS.ap[i] = 0.
+			WCS.bp[i] = 0.
+		WCS.a_order=0
+		WCS.b_order=0
+		WCS.ap_order=0
+		WCS.bp_order=0
+	
 	WCS.warpDegree = warpDegree;
 	
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
@@ -370,7 +382,6 @@ def pushPoly2WCS(WCS):
 
 
 def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput):
-	
 	if outputWCSFilename != ():
 		print '\nwriting new WCS to disk'
 		try:
@@ -390,15 +401,18 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 			WCSFITS_new[0].header.add_history(history)
 
 		for comment in WCSFITS_old[0].header.get_comment():
-			if comment[0:5] == 'Tweak':
-				WCSFITS_new[0].header.add_comment('Tweak: yes')
-				WCSFITS_new[0].header.add_comment('Tweak AB order: ' + str(WCS.a_order))
-				WCSFITS_new[0].header.add_comment('Tweak ABP order: ' + str(WCS.ap_order))
-			else:
+			if comment[0:5] != 'Tweak':
 				WCSFITS_new[0].header.add_comment(comment)
+		
+		WCSFITS_new[0].header.add_comment('Tweak: yes')
+		WCSFITS_new[0].header.add_comment('Tweak AB order: ' + str(WCS.a_order))
+		WCSFITS_new[0].header.add_comment('Tweak ABP order: ' + str(WCS.ap_order))
+		
+		if WCSFITS_old[0].header.get('AN_JOBID') != None:
+			WCSFITS_new[0].header.add_comment('AN_JOBID: ' + WCSFITS_old[0].header.get('AN_JOBID'))
+		if WCSFITS_old[0].header.get('DATE') != None:
+			WCSFITS_new[0].header.add_comment('DATE: ' + WCSFITS_old[0].header.get('DATE'))
 
-		WCSFITS_new[0].header.add_comment('AN_JOBID: ' + WCSFITS_old[0].header.get('AN_JOBID'))
-		WCSFITS_new[0].header.add_comment('DATE: ' + WCSFITS_old[0].header.get('DATE'))
 		WCSFITS_new[0].update_header()
 	
 		try:
