@@ -76,7 +76,7 @@ if __name__ == '__main__':
 	goal_CRPix_Y = ()
 
 	# Debug stuff
-	folder = 'data/tweaktest4/'
+	folder = 'data/tweaktest1/'
 	catalogRDFilename = folder + 'index.rd.fits'
 	imageXYFilename = folder + 'field.xy.fits'
 	inputWCSFilename = folder + 'wcs.fits'
