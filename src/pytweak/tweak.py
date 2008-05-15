@@ -39,9 +39,6 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	else:
 		tweakImage(imageData, catalogData, WCS)
 	
-	imageData['X'] = imageData['X_INITIAL']
-	imageData['Y'] = imageData['Y_INITIAL']
-		
 	polyWarpWCS_repeat(imageData, catalogData, WCS)	
 	
 	if renderOutput:
