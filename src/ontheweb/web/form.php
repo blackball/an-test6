@@ -870,6 +870,7 @@ function process_data ($vals) {
 			}
 
 			$str .= 
+                "verbose\n" .
 				"field " . $xyls_fn . "\n" .
 				"match " . sprintf($match_pat, $stripenum) . "\n" .
 				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
