@@ -113,29 +113,32 @@ def loadCatalogData(catalogRDFilename):
 
 def renderCatalogImage(catalogData, imageData, WCS):
 	figure()
-	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
-	scatter(imageData['X'], imageData['Y'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(imageData['X'], imageData['Y'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
 	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
 	axis('equal')
 	try:
 		axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
 	except:
 		axis((min(imageData['X_WARP']), max(imageData['X_WARP']), min(imageData['Y_WARP']), max(imageData['Y_WARP'])))
+	legend(('image star', 'catalog star'))
 
 def renderCatalogImageRADec(catalogData, imageData, WCS):
 	figure()
-	scatter(catalogData['RA'], catalogData['DEC'], marker = 'o', s=30, facecolor=COLOR1, edgecolor=(1,1,1,0))
-	scatter(imageData['RA'], imageData['DEC'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(imageData['RA'], imageData['DEC'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(catalogData['RA'], catalogData['DEC'], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
 	scatter(array([WCS.wcstan.crval[0]]), array([WCS.wcstan.crval[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
 	axis('image')
+	legend(('image star', 'catalog star'))
 
 def renderImageMotion(imageData, WCS):
 	figure()
-	scatter(imageData['X'], imageData['Y'], marker = 'o', s=30, facecolor=(1,1,1,0), edgecolor=COLOR1)
-	scatter(imageData['X_WARP'], imageData['Y_WARP'], marker = 'd', s=30, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(imageData['X_WARP'], imageData['Y_WARP'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(imageData['X'], imageData['Y'], marker = 'o', s=20, facecolor=(1,1,1,0), edgecolor=COLOR1)
 	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
 	axis('image')
 	axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
+	legend(('image star', 'catalog star'))
 
 
 def findAllPairs(a, b, maxDist):
