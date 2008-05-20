@@ -203,25 +203,40 @@ def polyWarpWCS_repeat(imageData, catalogData, WCS):
 	
 
 def polyWarpWCS(imageData, catalogData, WCS):
+	shift_total = array([0., 0.])
+	
+	for iter in range(1, MAX_CAMERA_ITERS):
+		polyWarp(imageData, catalogData, WCS)
+		
+		shift = array(WCS.warpM.reshape(2,-1)[:,-1].T)[0]
+		if iter == 1:
+			shift_first = shift
+		shift_total = shift_total + shift
+		
+		shiftAmount = sqrt(sum(square(shift)))
+		print 'shift =', shiftAmount
+		pushShift2WCS(WCS)
+	
+		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+		imageData['X_WARP'] = imageData['X']
+		imageData['Y_WARP'] = imageData['Y']
+		
+		if shiftAmount < MAX_SHIFT_AMOUNT:
+			break
+	
+	shift_error = shift_first - shift_total
+	
 	polyWarp(imageData, catalogData, WCS)
 	
-	centerShiftDist = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
-	linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))
-	# linearWarpAmount = abs(1-linalg.det(linearWarp))
-			
-	print '(shift, warp) = ', (centerShiftDist, linearWarpAmount)
-	# print 'shift:'
-	# print WCS.warpM.reshape(2,-1)[:,-1].T
-	# print 'warp:'
-	# print WCS.warpM.reshape(2,-1)[:,-3:-1]
-	
-	pushAffine2WCS(WCS)
+	linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))	
+	print 'lwarp =', linearWarpAmount	
+	pushLinear2WCS(WCS)
 	
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 	imageData['X_WARP'] = imageData['X']
 	imageData['Y_WARP'] = imageData['Y']
 	
-	return (centerShiftDist, linearWarpAmount)
+	return (shiftAmount, linearWarpAmount)
 
 def polyWarp(imageData, catalogData, WCS):
 	pivot = WCS.wcstan.crpix
@@ -324,21 +339,27 @@ def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 
 # This "adds" the affine warp in WCS.warpM to CD
 def pushAffine2WCS(WCS):
-	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])
+	pushShift2WCS(WCS)
+	pushLinear2WCS(WCS)
+
+def pushShift2WCS(WCS):
+	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])	
 	centerShift = array(WCS.warpM.reshape(2,-1)[:,-1].T)[0]
-	linearWarp = WCS.warpM.reshape(2,-1)[:,-3:-1]
-	
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix - centerShift
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(startCRPix[0], startCRPix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix
+	
+	WCS.warpM.reshape(2,-1)[:,-1] = mat([0. , 0.]).T
+
+def pushLinear2WCS(WCS):
+	linearWarp = WCS.warpM.reshape(2,-1)[:,-3:-1]
 	
 	CD = matrix(WCS.wcstan.cd[:]).reshape(2,2)
 	CD2 = (CD*linearWarp).reshape(-1,1)
 	for i in arange(0,4):
 		WCS.wcstan.cd[i] = CD2[i]
 	
-	# Flush warp out of WCS.warpM
-	WCS.warpM.reshape(2,-1)[:,-3:] = mat([1., 0., 0. , 0., 1., 0.]).reshape(2,3)
+	WCS.warpM.reshape(2,-1)[:,-3:-1] = mat([1., 0., 0., 1.]).reshape(2,2)
 
 # This *replaces* the SIP warp in the WCS with the higher-order terms in WCS.warpM
 def pushPoly2WCS(WCS):
