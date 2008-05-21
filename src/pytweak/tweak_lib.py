@@ -50,7 +50,7 @@ def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, ren
 	
 	# We probably wouldn't have to do this if we could rotate the CD matrix
 	# correctly, to account for the change in RA (right?)
-	polyWarpWCS(imageData, catalogData, WCS)
+	pushAffine2WCS(imageData, catalogData, WCS)
 
 def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
@@ -183,8 +183,7 @@ def polyExpand(imagePoints, D, Dstart = 0):
 	A[1::2,width:(2*width)] = A_sub
 	return A
 
-
-def polyWarpWCS(imageData, catalogData, WCS):
+def pushAffine2WCS(imageData, catalogData, WCS):
 	shiftAmount_last = Inf
 	for iter in range(1, MAX_CAMERA_ITERS):
 		polyWarp(imageData, catalogData, WCS)
@@ -205,19 +204,23 @@ def polyWarpWCS(imageData, catalogData, WCS):
 	pushLinear2WCS(WCS)
 	
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	
+	# This is to check that this iterative process is enough.
+	# We can drop these lines when we're confident
+	polyWarp(imageData, catalogData, WCS)
+	assert(all(WCS.warpM.reshape(2,-1)[:,-1] < MAX_SHIFT_AMOUNT))
+	assert(all((WCS.warpM.reshape(2,-1)[:,-3:-1] - matrix([1., 0., 0., 1.]).reshape(2,2)) < MAX_LWARP_AMOUNT))
 
 def polyWarp(imageData, catalogData, WCS):
-	pivot = WCS.wcstan.crpix
+	crpix = WCS.wcstan.crpix
 	pairs = imageData['pairs']
-	x_init = imageData['X'] - pivot[0]
-	y_init = imageData['Y'] - pivot[1]
-	x = imageData['X_WARP'] - pivot[0]
-	y = imageData['Y_WARP'] - pivot[1]
-	cx = catalogData['X'] - pivot[0]
-	cy = catalogData['Y'] - pivot[1]
+	ix = imageData['X'] - crpix[0]
+	iy = imageData['Y'] - crpix[1]
+	cx = catalogData['X'] - crpix[0]
+	cy = catalogData['Y'] - crpix[1]
 	
-	imagePoints_all = matrix(column_stack((x_init, y_init)))
-	imagePoints = matrix(column_stack((x_init[pairs[:,0]], y_init[pairs[:,0]])))
+	imagePoints_all = matrix(column_stack((ix, iy)))
+	imagePoints = matrix(column_stack((ix[pairs[:,0]], iy[pairs[:,0]])))
 	catalogPoints = matrix(column_stack((cx[pairs[:,1]], cy[pairs[:,1]])))
 	warpWeights = matrix(sqrt(imageData['weights'])/imageData['sigmas']).T
 	
@@ -246,8 +249,8 @@ def polyWarp(imageData, catalogData, WCS):
 		
 	imagePoints_warp = (A_all * M).reshape(-1,2)
 	
-	imageData['X_WARP'] = array(imagePoints_warp[:,0])[:,0] + pivot[0]
-	imageData['Y_WARP'] = array(imagePoints_warp[:,1])[:,0] + pivot[1]
+	imageData['X_WARP'] = array(imagePoints_warp[:,0])[:,0] + crpix[0]
+	imageData['Y_WARP'] = array(imagePoints_warp[:,1])[:,0] + crpix[1]
 	imageData['residuals'] = resid
 	WCS.warpM = M
 
@@ -308,11 +311,7 @@ def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 	
 	print 'image tweaked in', iter, 'iterations'
 
-# This "adds" the affine warp in WCS.warpM to CD
-def pushAffine2WCS(WCS):
-	pushShift2WCS(WCS)
-	pushLinear2WCS(WCS)
-
+# This *adds* the shift in WCS.warpM to CRVal
 def pushShift2WCS(WCS):
 	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])	
 	startCRVal = array((WCS.wcstan.crval[0], WCS.wcstan.crval[1]))
@@ -320,13 +319,12 @@ def pushShift2WCS(WCS):
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix - centerShift
 	newCRVal = array(WCS.pixelxy2radec(startCRPix[0], startCRPix[1]))
 	
-	# newCRVal = 1./cos(newCRVal - startCRVal) * (newCRVal - startCRVal) + startCRVal
-	
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = newCRVal
 	
 	WCS.warpM.reshape(2,-1)[:,-1] = mat([0. , 0.]).T
 
+# This *multiplies* the warp in CD by the linear component of WCS.warpM
 def pushLinear2WCS(WCS):
 	linearWarp = WCS.warpM.reshape(2,-1)[:,-3:-1]
 	
@@ -338,31 +336,14 @@ def pushLinear2WCS(WCS):
 	WCS.warpM.reshape(2,-1)[:,-3:-1] = mat([1., 0., 0., 1.]).reshape(2,2)
 
 # This *replaces* the SIP warp in the WCS with the higher-order terms in WCS.warpM
+# Here we also construct the inverse of the SIP warp.
 def pushPoly2WCS(WCS):
 	
 	WCS.a_order = WCS.warpDegree
-	WCS.b_order = WCS.warpDegree
-	WCS.ap_order = WCS.warpDegree
-	WCS.bp_order = WCS.warpDegree
-	
-	WCS.ab_order_min = MIN_AB_ORDER
-	WCS.abp_order_min = MIN_ABP_ORDER
+	WCS.b_order = WCS.warpDegree	
+	WCS.ab_order_min = AB_ORDER_MIN
 	
 	SIP_im2cat = WCS.warpM.reshape(2,-1)[:,:-3].reshape(-1,1).copy()
-	
-	count = 50
-	print 'inverting warp with', count, 'by', count, 'grid'
-	
-	gridBase = matrix(arange(0, count)/float(count-1)).T
-	gridStart = concatenate((repeat( gridBase * WCS.wcstan.imagew - WCS.wcstan.crpix[0], count, 0), tile( gridBase * WCS.wcstan.imageh - WCS.wcstan.crpix[1], (count,1))), 1)
-
-	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
-	
-	SIP_cat2im = linalg.lstsq(polyExpand(gridStart, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))[0]
-	gridStart_approx = gridEnd + (polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min)*SIP_cat2im).reshape(-1,2)
-	
-	print 'warp inversion error:', sum(abs(gridStart_approx - gridStart),0)/gridStart.shape[0]
-	
 	col = 0
 	for d in arange(WCS.a_order, WCS.ab_order_min-1, -1):
 		for i in arange(0, d+1):
@@ -370,7 +351,37 @@ def pushPoly2WCS(WCS):
 			WCS.a[idx] = SIP_im2cat[col]
 			WCS.b[idx] = SIP_im2cat[col+SIP_im2cat.shape[0]/2]
 			col = col + 1
-
+	
+	
+	WCS.ap_order = WCS.warpDegree
+	WCS.bp_order = WCS.warpDegree
+	WCS.abp_order_min = ABP_ORDER_MIN
+	
+	count = 50
+	print 'inverting warp with', count, 'by', count, 'grid'
+	
+	gridBase = matrix(arange(0, count)/float(count-1)).T
+	gridStart = concatenate((repeat( gridBase * WCS.wcstan.imagew - WCS.wcstan.crpix[0], count, 0), tile( gridBase * WCS.wcstan.imageh - WCS.wcstan.crpix[1], (count,1))), 1)
+	
+	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
+	
+	lstsq = linalg.lstsq(polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))
+	SIP_cat2im = lstsq[0]
+	resids = lstsq[1]/gridEnd.shape[0]
+	print "warp inversion avg residual =", resids
+	
+	# gridStart_approx = gridEnd + (polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min)*SIP_cat2im).reshape(-1,2)
+	# 
+	# figure()
+	# scatter(gridStart[:,0], gridStart[:,1], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	# scatter(gridStart_approx[:,0], gridStart_approx[:,1], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
+	# scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	# axis('equal')
+	# axis((min(gridStart[:,0]), max(gridStart[:,0]), min(gridStart[:,1]), max(gridStart[:,1])))
+	# legend(('start', 'approx'))
+	# 	
+	# print 'warp inversion error:', sum(abs(gridStart_approx - gridStart),0)/gridStart.shape[0]
+	
 	col = 0
 	for d in arange(WCS.ap_order, WCS.abp_order_min-1, -1):
 		for i in arange(0, d+1):

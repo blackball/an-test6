@@ -43,7 +43,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	else:
 		tweakImage(imageData, catalogData, WCS)
 	
-	polyWarpWCS(imageData, catalogData, WCS)
+	pushAffine2WCS(imageData, catalogData, WCS)
 	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
