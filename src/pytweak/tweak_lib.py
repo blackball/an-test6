@@ -40,26 +40,17 @@ def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
 
 def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, renderOutput=False):
 	print "fixing crpix"
-	# if progressiveWarp:
-	# 	tweakImage_progressive(imageData, catalogData, WCS)
-	# else:
-	# 	tweakImage(imageData, catalogData, WCS)
 	
 	# Calling this does not tweak the image, just gets the correspondences
 	tweakImage(imageData, catalogData, WCS, True)
-	
-	if renderOutput:
-		renderCatalogImage(catalogData, imageData, WCS)
-		title('Tweaked (Fiducial CRPix)')
-		savefig('2_Tweaked_Fiducial.png')
-	
+		
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
 	
 	# We probably wouldn't have to do this if we could rotate the CD matrix
 	# correctly, to account for the change in RA (right?)
-	polyWarpWCS_repeat(imageData, catalogData, WCS)
+	polyWarpWCS(imageData, catalogData, WCS)
 
 def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
@@ -84,9 +75,6 @@ def loadFITS(filename, fields):
 
 def loadImageData(imageXYFilename):
 	(imageData, imageFITS) = loadFITS(imageXYFilename, ['X', 'Y', 'FLUX', 'BACKGROUND'])
-	
-	imageData['X_WARP'] = imageData['X']
-	imageData['Y_WARP'] = imageData['Y']
 	
 	# These two are fudged:
 	imageData['ERRS'] = 0*imageData['X'] + 1.0
@@ -195,48 +183,28 @@ def polyExpand(imagePoints, D, Dstart = 0):
 	A[1::2,width:(2*width)] = A_sub
 	return A
 
-def polyWarpWCS_repeat(imageData, catalogData, WCS):
-	for iter in range(1, MAX_CAMERA_ITERS):
-		(centerShiftDist, linearWarpAmount) = polyWarpWCS(imageData, catalogData, WCS)	
-		if ((centerShiftDist < MAX_SHIFT_AMOUNT) & (linearWarpAmount < MAX_LWARP_AMOUNT)):
-				break
-	
 
 def polyWarpWCS(imageData, catalogData, WCS):
-	shift_total = array([0., 0.])
-	
+	shiftAmount_last = Inf
 	for iter in range(1, MAX_CAMERA_ITERS):
 		polyWarp(imageData, catalogData, WCS)
 		
-		shift = array(WCS.warpM.reshape(2,-1)[:,-1].T)[0]
-		if iter == 1:
-			shift_first = shift
-		shift_total = shift_total + shift
+		shiftAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
 		
-		shiftAmount = sqrt(sum(square(shift)))
-		print 'shift =', shiftAmount
 		pushShift2WCS(WCS)
-	
-		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-		imageData['X_WARP'] = imageData['X']
-		imageData['Y_WARP'] = imageData['Y']
 		
-		if shiftAmount < MAX_SHIFT_AMOUNT:
+		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+		
+		if shiftAmount >= shiftAmount_last:
 			break
-	
-	shift_error = shift_first - shift_total
+		
+		shiftAmount_last = shiftAmount
 	
 	polyWarp(imageData, catalogData, WCS)
 	
-	linearWarpAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-3:-1] - eye(2,2)))))	
-	print 'lwarp =', linearWarpAmount	
 	pushLinear2WCS(WCS)
 	
 	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	imageData['X_WARP'] = imageData['X']
-	imageData['Y_WARP'] = imageData['Y']
-	
-	return (shiftAmount, linearWarpAmount)
 
 def polyWarp(imageData, catalogData, WCS):
 	pivot = WCS.wcstan.crpix
@@ -294,6 +262,9 @@ def tweakImage_progressive(imageData, catalogData, WCS):
 
 def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 	
+	imageData['X_WARP'] = imageData['X']
+	imageData['Y_WARP'] = imageData['Y']
+	
 	numAllPairs = imageData['X'].shape[0]*catalogData['X'].shape[0]
 	
 	totalResiduals = []
@@ -344,10 +315,15 @@ def pushAffine2WCS(WCS):
 
 def pushShift2WCS(WCS):
 	startCRPix = array([WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]])	
+	startCRVal = array((WCS.wcstan.crval[0], WCS.wcstan.crval[1]))
 	centerShift = array(WCS.warpM.reshape(2,-1)[:,-1].T)[0]
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix - centerShift
-	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(startCRPix[0], startCRPix[1])
+	newCRVal = array(WCS.pixelxy2radec(startCRPix[0], startCRPix[1]))
+	
+	# newCRVal = 1./cos(newCRVal - startCRVal) * (newCRVal - startCRVal) + startCRVal
+	
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = startCRPix
+	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = newCRVal
 	
 	WCS.warpM.reshape(2,-1)[:,-1] = mat([0. , 0.]).T
 
@@ -474,7 +450,7 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 				imageXYData = loadFITS(imageXYFilename, ['X', 'Y'])[0]
 				renderCatalogImage(catalogXYData, imageXYData, WCS_out)
 				title('Fit (TAN+SIP)')
-				savefig('5_TAN_SIP.png')
+				savefig('4_TAN_SIP.png')
 			else:
 				print 'not rendering warped catalog because catalog output not specified'
 	
@@ -483,7 +459,7 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 				catalogRDData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
 				renderCatalogImageRADec(catalogRDData, imageRDData, WCS_out)
 				title('Fit (TAN+SIP) on Sphere')
-				savefig('6_TAN_SIP_sphere.png')
+				savefig('5_TAN_SIP_sphere.png')
 			else:
 				print 'not rendering warped image because image output not specified'
 	else:

@@ -36,19 +36,19 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Fixed CRPix')
-		savefig('3_Fixed_CRPix.png')
+		savefig('2_Fixed_CRPix.png')
 	
 	if progressiveWarp:
 		tweakImage_progressive(imageData, catalogData, WCS)
 	else:
 		tweakImage(imageData, catalogData, WCS)
 	
-	polyWarpWCS_repeat(imageData, catalogData, WCS)	
+	polyWarpWCS(imageData, catalogData, WCS)
 	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
 		title('Fit (TAN)')
-		savefig('4_TAN.png')
+		savefig('3_TAN.png')
 	
 	pushPoly2WCS(WCS)
 	
