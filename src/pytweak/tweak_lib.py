@@ -87,7 +87,7 @@ def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, ren
 	
 	# WCS.order = 1
 	# Calling this does not tweak the image, just gets the correspondences
-	tweakImage(imageData, catalogData, WCS, True)
+	tweakImage(imageData, catalogData, WCS)#, True)
 		
 	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
 	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
@@ -96,7 +96,6 @@ def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, ren
 	# We probably wouldn't have to do this if we could rotate the CD matrix
 	# correctly, to account for the change in RA (right?)
 	pushAffine2WCS(imageData, catalogData, WCS)
-	# WCS.order = WCS.goalOrder
 
 
 def findAllPairs(a, b, maxDist):
@@ -196,7 +195,6 @@ def findWarp(imageData, catalogData, WCS):
 	WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
 	Wb = multiply(warpWeights_double, b)
 	(M, junk1, rank, junk2) = linalg.lstsq(WA,Wb)
-	# pdb.set_trace()
 	resid = (Wb - WA*M)
 	
 	if rank < WA.shape[1]:
@@ -210,10 +208,10 @@ def findWarp(imageData, catalogData, WCS):
 	WCS.warpM = M
 
 
-def tweakImage_progressive(imageData, catalogData, WCS):
-	for deg in arange(1, WCS.goalOrder+1):
-		WCS.order = deg
-		tweakImage(imageData, catalogData, WCS)
+# def tweakImage_progressive(imageData, catalogData, WCS):
+# 	for deg in arange(1, WCS.goalOrder+1):
+# 		WCS.order = deg
+# 		tweakImage(imageData, catalogData, WCS)
 
 
 def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
@@ -231,7 +229,7 @@ def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 	else:
 		print 'tweaking image with order ' + str(WCS.order) + '...', 
 	
-	for iter in range(0,TWEAK_MAX_NUM_ITERS):
+	for iter in range(1,1+TWEAK_MAX_NUM_ITERS):
 		
 		just_requeried = 0;
 		if redist_countdown == 0:
@@ -364,8 +362,8 @@ def pushPoly2WCS(WCS):
 	gridBase = matrix(arange(0, count)/float(count-1)).T
 	gridStart = concatenate((repeat( gridBase * WCS.wcstan.imagew - WCS.wcstan.crpix[0], count, 0), tile( gridBase * WCS.wcstan.imageh - WCS.wcstan.crpix[1], (count,1))), 1)
 	
-	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
 	
+	gridEnd = gridStart + (polyExpand(gridStart, WCS.a_order,WCS.ab_order_min)*SIP_im2cat).reshape(-1,2)
 	lstsq = linalg.lstsq(polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))
 	SIP_cat2im = lstsq[0]
 	resids = lstsq[1]/gridEnd.shape[0]

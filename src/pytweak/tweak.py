@@ -27,18 +27,30 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	if goal_CRPix_Y != ():
 		goal_crpix[1] = goal_CRPix_Y
 	
-	fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp, renderOutput)
+	while True:
+		try:
+			fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp, renderOutput)
+	
+			if renderOutput:
+				renderCatalogImage(catalogData, imageData, WCS)
+				title('Fixed CRPix')
+				savefig('2_Fixed_CRPix.png')
+	
+			# if progressiveWarp:
+			# 	tweakImage_progressive(imageData, catalogData, WCS)
+			# else:
+			# 	tweakImage(imageData, catalogData, WCS)
+	
+			tweakImage(imageData, catalogData, WCS)
+			break
+			
+		except RankError, e:
+			print 'failure: switching order to', e.neworder
+			WCS.order = e.neworder
+	
+	if WCS.order < WCS.goalOrder:
+		print 'warning: specified order of', WCS.goalOrder, 'not possible, instead used order of', WCS.order
 		
-	if renderOutput:
-		renderCatalogImage(catalogData, imageData, WCS)
-		title('Fixed CRPix')
-		savefig('2_Fixed_CRPix.png')
-	
-	if progressiveWarp:
-		tweakImage_progressive(imageData, catalogData, WCS)
-	else:
-		tweakImage(imageData, catalogData, WCS)
-	
 	pushAffine2WCS(imageData, catalogData, WCS)
 	
 	if renderOutput:
@@ -72,7 +84,7 @@ if __name__ == '__main__':
 	goal_CRPix_Y = ()
 
 	# Debug stuff, kill this paragraph eventually:
-	folder = 'data/tweaktest2/'
+	folder = 'data/tweaktest4/'
 	catalogRDFilename = folder + 'index.rd.fits'
 	imageXYFilename = folder + 'field.xy.fits'
 	inputWCSFilename = folder + 'wcs.fits'
@@ -80,6 +92,7 @@ if __name__ == '__main__':
 	imageRDFilename = folder + 'field.rd.fits'
 	outputWCSFilename = folder + 'out.wcs.fits'
 	renderOutput = True
+	goalOrder = 3
 	
 	(opts, args) = getopt.getopt(sys.argv[1:], '', ['catalog_rd=', 'catalog_xy=', 'image_rd=', 'image_xy=', 'wcs_in=', 'wcs_out=', 'order=', 'crpix_x=', 'crpix_y=', 'progressive', 'display'])
 	
