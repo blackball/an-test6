@@ -4,53 +4,16 @@ from constants import *
 import pyfits
 import util.sip as sip
 import os
-
 import pdb
 
-def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree):
-	imageData = loadImageData(imageXYFilename)[0]
-	catalogData = loadCatalogData(catalogRDFilename)[0]
-	
-	WCS = sip.Sip(inputWCSFilename)
-	
-	if any(array(WCS.a)!=0) | any(array(WCS.b)!=0) | any(array(WCS.ap)!=0) | any(array(WCS.bp)!=0) | (WCS.a_order!=0) | (WCS.b_order!=0) | (WCS.ap_order!=0) | (WCS.bp_order!=0):
-		print 'warning: WCS already has SIP components, ignoring them.'
-		for i in range(0,100):
-			WCS.a[i] = 0.
-			WCS.b[i] = 0.
-			WCS.ap[i] = 0.
-			WCS.bp[i] = 0.
-		WCS.a_order=0
-		WCS.b_order=0
-		WCS.ap_order=0
-		WCS.bp_order=0
-	
-	WCS.warpDegree = warpDegree;
-	
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	
-	# This constructs a rough "maximum" distance we should search in the 
-	# image plane.
-	minSize = array([catalogData['SIGMA_X'].shape[0], imageData['ERRS'].shape[0]]).min()
-	maxSigmas = mean(sqrt(column_stack((imageData['ERRS'][1:minSize], imageData['ERRS'][1:minSize]))**2 + column_stack((catalogData['SIGMA_X'][1:minSize], catalogData['SIGMA_Y'][1:minSize]))**2),1)
-	maxSigma = mean(maxSigmas) + 3*std(maxSigmas)
-	imageData['maxImageDist'] = MAXDIST_MULT*sqrt(maxSigma*((WEIGHT_SIGMA**2)*(1-MINWEIGHT)/MINWEIGHT))
-	
-	return (imageData, catalogData, WCS)
+class RankError(Exception):
+	def __init__(self, rank, neworder):
+		self.rank = rank
+		self.neworder = neworder
+	def __str__(self):
+		return 'rank of', self.rank, 'not sufficient, try using order=', self.neworder 
 
-def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, renderOutput=False):
-	print "fixing crpix"
-	
-	# Calling this does not tweak the image, just gets the correspondences
-	tweakImage(imageData, catalogData, WCS, True)
-		
-	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
-	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	
-	# We probably wouldn't have to do this if we could rotate the CD matrix
-	# correctly, to account for the change in RA (right?)
-	pushAffine2WCS(imageData, catalogData, WCS)
+####### UTILITIES ############################################################
 
 def WCS_rd2xy(WCS, ra, dec):
 	x = zeros(ra.shape)
@@ -66,6 +29,8 @@ def WCS_xy2rd(WCS, x, y):
 		(ra[i], dec[i]) = WCS.pixelxy2radec(x[i], y[i])
 	return (ra,dec)
 
+####### LOADING FILES ########################################################
+
 def loadFITS(filename, fields):
 	FITS = pyfits.open(filename)
 	data = {}
@@ -73,60 +38,65 @@ def loadFITS(filename, fields):
 		data[f] = double(FITS[1].data.field(f))
 	return (data, FITS)
 
-def loadImageData(imageXYFilename):
-	(imageData, imageFITS) = loadFITS(imageXYFilename, ['X', 'Y', 'FLUX', 'BACKGROUND'])
-	
-	# These two are fudged:
-	imageData['ERRS'] = 0*imageData['X'] + 1.0
-	imageData['RADII'] = 0*imageData['X'] + 1.0
-		
-	return (imageData, imageFITS)
 
-def loadCatalogData(catalogRDFilename):
-	(catalogData, catalogFITS) = loadFITS(catalogRDFilename, ['RA', 'DEC'])
+def loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, goalOrder):
+	imageData = loadFITS(imageXYFilename, ['X', 'Y', 'FLUX', 'BACKGROUND'])[0]
 	
 	# Fudge factor until we get the real data
+	imageData['ERRS'] = 0*imageData['X'] + 1.0
+	imageData['RADII'] = 0*imageData['X'] + 1.0
+	
+	catalogData = loadFITS(catalogRDFilename, ['RA', 'DEC'])[0]
+	# These two are also fudged:
 	catalogData['SIGMA_X'] = 0*catalogData['RA'] + 1.0
 	catalogData['SIGMA_Y'] = 0*catalogData['RA'] + 1.0
 	
-	return (catalogData, catalogFITS)
+	WCS = sip.Sip(inputWCSFilename)
+	
+	if any(array(WCS.a)!=0) | any(array(WCS.b)!=0) | any(array(WCS.ap)!=0) | any(array(WCS.bp)!=0) | (WCS.a_order!=0) | (WCS.b_order!=0) | (WCS.ap_order!=0) | (WCS.bp_order!=0):
+		print 'warning: WCS already has SIP components, ignoring them.'
+		for i in range(0,100):
+			WCS.a[i] = 0.
+			WCS.b[i] = 0.
+			WCS.ap[i] = 0.
+			WCS.bp[i] = 0.
+		WCS.a_order=0
+		WCS.b_order=0
+		WCS.ap_order=0
+		WCS.bp_order=0
+	
+	WCS.goalOrder = goalOrder;
+	WCS.order = goalOrder;
+	
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	
+	# This constructs a rough "maximum" distance we should search in the 
+	# image plane.
+	minSize = array([catalogData['SIGMA_X'].shape[0], imageData['ERRS'].shape[0]]).min()
+	maxSigmas = mean(sqrt(column_stack((imageData['ERRS'][1:minSize], imageData['ERRS'][1:minSize]))**2 + column_stack((catalogData['SIGMA_X'][1:minSize], catalogData['SIGMA_Y'][1:minSize]))**2),1)
+	maxSigma = mean(maxSigmas) + 3*std(maxSigmas)
+	imageData['maxImageDist'] = MAXDIST_MULT*sqrt(maxSigma*((WEIGHT_SIGMA**2)*(1-MINWEIGHT)/MINWEIGHT))
+	
+	return (imageData, catalogData, WCS)
 
-# Using this is a bad idea, probably
-# def trimCatalog2Image(catalogData, imageData):
-# 	inImageIdx = all([catalogData['X']>=imageData['X'].min(), catalogData['X']<=imageData['X'].max(), catalogData['Y']>=imageData['Y'].min(),catalogData['Y']<=imageData['Y'].max()],0)
-# 	for k in catalogData.keys():
-# 		catalogData[k] = catalogData[k][inImageIdx]
-# 	return catalogData
 
+###### TWEAKING ##############################################################
 
-def renderCatalogImage(catalogData, imageData, WCS):
-	figure()
-	scatter(imageData['X'], imageData['Y'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
-	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
-	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
-	axis('equal')
-	try:
-		axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
-	except:
-		axis((min(imageData['X_WARP']), max(imageData['X_WARP']), min(imageData['Y_WARP']), max(imageData['Y_WARP'])))
-	legend(('image star', 'catalog star'))
-
-def renderCatalogImageRADec(catalogData, imageData, WCS):
-	figure()
-	scatter(imageData['RA'], imageData['DEC'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
-	scatter(catalogData['RA'], catalogData['DEC'], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
-	scatter(array([WCS.wcstan.crval[0]]), array([WCS.wcstan.crval[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
-	axis('image')
-	legend(('image star', 'catalog star'))
-
-def renderImageMotion(imageData, WCS):
-	figure()
-	scatter(imageData['X_WARP'], imageData['Y_WARP'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
-	scatter(imageData['X'], imageData['Y'], marker = 'o', s=20, facecolor=(1,1,1,0), edgecolor=COLOR1)
-	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
-	axis('image')
-	axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
-	legend(('image star', 'catalog star'))
+def fixCRPix(imageData, catalogData, WCS, goal_crpix, progressiveWarp=False, renderOutput=False):
+	print "fixing crpix"
+	
+	# WCS.order = 1
+	# Calling this does not tweak the image, just gets the correspondences
+	tweakImage(imageData, catalogData, WCS, True)
+		
+	(WCS.wcstan.crval[0], WCS.wcstan.crval[1]) = WCS.pixelxy2radec(goal_crpix[0], goal_crpix[1])
+	(WCS.wcstan.crpix[0], WCS.wcstan.crpix[1]) = (goal_crpix[0], goal_crpix[1])
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	
+	# We probably wouldn't have to do this if we could rotate the CD matrix
+	# correctly, to account for the change in RA (right?)
+	pushAffine2WCS(imageData, catalogData, WCS)
+	# WCS.order = WCS.goalOrder
 
 
 def findAllPairs(a, b, maxDist):
@@ -149,6 +119,8 @@ def getWeight(dists, sigmas, d_dists=(), d_sigmas=(), dd_dists=(), dd_sigmas=())
 	d_w = ()
 	dd_w = ()
 	
+	# I have no idea if the d_ or dd_ vars are set correctly. They only 
+	# exist for eventually extending this to do Blind-Date.
 	if all(d_dists != (), d_sigmas != ()):
 		d_dos = sigmas**(-2)*(sigmas*d_dists+(-1)*dists*d_sigmas)
 		d_w = (-2)*sig**2*dos*(sig**2+dos**2)**(-2)*d_dos
@@ -164,13 +136,22 @@ def getWeight(dists, sigmas, d_dists=(), d_sigmas=(), dd_dists=(), dd_sigmas=())
 	
 	return (w, e, d_w, dd_w)
 
+def getMaxOrder(rank):
+	return int(floor((-3. + sqrt(3.*3. - 4.*(2.-rank)))/2.))
+
+def getFreedom(D, Dstart = 0):
+	# return ((D*(D+3)) - (Dstart*(Dstart+1))) + 2.
+	return (D+1)*(D+2) - (Dstart)*(Dstart+1)
 
 def polyExpand(imagePoints, D, Dstart = 0):
 	x = imagePoints[:,0]
 	y = imagePoints[:,1]
 	
-	width = 0.5*((D*(D+3)) - (Dstart*(Dstart+1))) + 1
-	A_sub = double(mat(zeros((x.shape[0], width))))
+	# width = (((D*(D+3)) - (Dstart*(Dstart+1))) + 2.)/2.
+	width = getFreedom(D, Dstart)
+	halfwidth = width/2.
+	
+	A_sub = double(mat(zeros((x.shape[0], halfwidth))))
 	
 	col = 0
 	for d in arange(D, Dstart-1, -1):
@@ -178,50 +159,29 @@ def polyExpand(imagePoints, D, Dstart = 0):
 			A_sub[:,col] = multiply(power(x,(d-i)), power(y,i))
 			col = col + 1;
 	
-	A = zeros((2*x.shape[0], 2*(width)))
-	A[::2,0:width] = A_sub
-	A[1::2,width:(2*width)] = A_sub
+	A = zeros((2*x.shape[0], width))
+	A[::2,0:halfwidth] = A_sub
+	A[1::2,halfwidth:width] = A_sub
 	return A
 
-def pushAffine2WCS(imageData, catalogData, WCS):
-	shiftAmount_last = Inf
-	for iter in range(1, MAX_CAMERA_ITERS):
-		polyWarp(imageData, catalogData, WCS)
-		
-		shiftAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
-		
-		pushShift2WCS(WCS)
-		
-		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-		
-		if shiftAmount >= shiftAmount_last:
-			break
-		
-		shiftAmount_last = shiftAmount
-	
-	polyWarp(imageData, catalogData, WCS)
-	
-	pushLinear2WCS(WCS)
-	
-	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
-	
-	# This is to check that this iterative process is enough.
-	# We can drop these lines when we're confident
-	polyWarp(imageData, catalogData, WCS)
-	assert(all(WCS.warpM.reshape(2,-1)[:,-1] < MAX_SHIFT_AMOUNT))
-	assert(all((WCS.warpM.reshape(2,-1)[:,-3:-1] - matrix([1., 0., 0., 1.]).reshape(2,2)) < MAX_LWARP_AMOUNT))
+# def findWarp_robust(imageData, catalogData, WCS):
+# 	WCS.order = WCS.goalOrder
+# 	while True:
+# 		try:
+# 			findWarp(imageData, catalogData, WCS)
+# 			break
+# 		except RankError, e:
+# 			print 'switching order to', e.neworder
+# 			WCS.order = e.neworder
 
-def polyWarp(imageData, catalogData, WCS):
+
+def findWarp(imageData, catalogData, WCS):
 	crpix = WCS.wcstan.crpix
 	pairs = imageData['pairs']
-	ix = imageData['X'] - crpix[0]
-	iy = imageData['Y'] - crpix[1]
-	cx = catalogData['X'] - crpix[0]
-	cy = catalogData['Y'] - crpix[1]
 	
-	imagePoints_all = matrix(column_stack((ix, iy)))
-	imagePoints = matrix(column_stack((ix[pairs[:,0]], iy[pairs[:,0]])))
-	catalogPoints = matrix(column_stack((cx[pairs[:,1]], cy[pairs[:,1]])))
+	imagePoints_all = matrix(column_stack((imageData['X'] - crpix[0], imageData['Y'] - crpix[1])))
+	imagePoints = imagePoints_all[pairs[:,0]]
+	catalogPoints = matrix(column_stack((catalogData['X'][pairs[:,1]] - crpix[0], catalogData['Y'][pairs[:,1]] - crpix[1])))
 	warpWeights = matrix(sqrt(imageData['weights'])/imageData['sigmas']).T
 	
 	if warpWeights.shape[1] < 2:
@@ -230,23 +190,18 @@ def polyWarp(imageData, catalogData, WCS):
 		warpWeights_double = warpWeights.reshape(-1,1)
 	
 	b = catalogPoints.reshape(-1,1)
-	A = polyExpand(imagePoints, WCS.warpDegree)
-	A_all = polyExpand(imagePoints_all, WCS.warpDegree)
+	A = polyExpand(imagePoints, WCS.order)
+	A_all = polyExpand(imagePoints_all, WCS.order)
 	
 	WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
 	Wb = multiply(warpWeights_double, b)
 	(M, junk1, rank, junk2) = linalg.lstsq(WA,Wb)
+	# pdb.set_trace()
 	resid = (Wb - WA*M)
 	
 	if rank < WA.shape[1]:
-		# Yes, this is deprecated
-		raise 'rank defficient transformation! Lower the order or do progressive warping'
+		raise RankError(rank, getMaxOrder(rank))
 	
-	# A = polyExpand(catalogPoints, warpDegree)
-	# WA = multiply(warpWeights_double.repeat(A.shape[1],1), A)
-	# Wb = multiply(warpWeights_double, imagePoints.reshape(-1,1))
-	# iM = linalg.lstsq(WA,Wb)[0]
-		
 	imagePoints_warp = (A_all * M).reshape(-1,2)
 	
 	imageData['X_WARP'] = array(imagePoints_warp[:,0])[:,0] + crpix[0]
@@ -256,11 +211,9 @@ def polyWarp(imageData, catalogData, WCS):
 
 
 def tweakImage_progressive(imageData, catalogData, WCS):
-	warpDegree = WCS.warpDegree
-	for deg in arange(1, warpDegree+1):
-		WCS.warpDegree = deg
+	for deg in arange(1, WCS.goalOrder+1):
+		WCS.order = deg
 		tweakImage(imageData, catalogData, WCS)
-	WCS.warpDegree = warpDegree
 
 
 def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
@@ -273,7 +226,10 @@ def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 	totalResiduals = []
 	redist_countdown = 0
 	
-	# print 'tweaking image with degree =', WCS.warpDegree
+	if onlyCorrespondences:
+		print 'finding weighted correspondences'
+	else:
+		print 'tweaking image with order ' + str(WCS.order) + '...', 
 	
 	for iter in range(0,TWEAK_MAX_NUM_ITERS):
 		
@@ -298,7 +254,7 @@ def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 		if onlyCorrespondences:
 			return
 		
-		polyWarp(imageData, catalogData, WCS)
+		findWarp(imageData, catalogData, WCS)
 		
 		totalResiduals.append(numDropped*MINWEIGHT*(MINWEIGHT_DOS**2) + sum(square(imageData['residuals'])))
 		
@@ -309,7 +265,34 @@ def tweakImage(imageData, catalogData, WCS, onlyCorrespondences=False):
 			else:
 				redist_countdown = 0
 	
-	print 'image tweaked in', iter, 'iterations'
+	print 'tweaked in', iter, 'iterations'
+
+
+####### WCS MANIPULATION #####################################################
+
+# This can be called after correspondences have been found in tweakImage
+def pushAffine2WCS(imageData, catalogData, WCS):
+	shiftAmount_last = Inf
+	for iter in range(1, MAX_CAMERA_ITERS):
+		findWarp(imageData, catalogData, WCS)	
+		shiftAmount = sqrt(sum(square(array(WCS.warpM.reshape(2,-1)[:,-1].T)[0])))
+		pushShift2WCS(WCS)
+		(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+		
+		if shiftAmount >= shiftAmount_last:
+			break
+		shiftAmount_last = shiftAmount
+	
+	findWarp(imageData, catalogData, WCS)
+	pushLinear2WCS(WCS)
+	(catalogData['X'], catalogData['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+	
+	# This is to check that this iterative process is enough.
+	# We can drop these lines when we're confident
+	findWarp(imageData, catalogData, WCS)
+	assert(all(WCS.warpM.reshape(2,-1)[:,-1] < MAX_SHIFT_AMOUNT))
+	assert(all((WCS.warpM.reshape(2,-1)[:,-3:-1] - matrix([1., 0., 0., 1.]).reshape(2,2)) < MAX_LWARP_AMOUNT))
+
 
 # This *adds* the shift in WCS.warpM to CRVal
 def pushShift2WCS(WCS):
@@ -339,8 +322,26 @@ def pushLinear2WCS(WCS):
 # Here we also construct the inverse of the SIP warp.
 def pushPoly2WCS(WCS):
 	
-	WCS.a_order = WCS.warpDegree
-	WCS.b_order = WCS.warpDegree	
+	# If the warp doesn't include higher order components, the SIP parts of
+	# the WCS should look as empty as possible (ideally, they shouldn't appear
+	# at all)
+	if WCS.order <= 1:
+		WCS.a_order = 0
+		WCS.b_order = 0
+		WCS.ab_order_min = 0
+		WCS.ap_order = 0
+		WCS.bp_order = 0
+		WCS.abp_order_min = 0
+		for i in range(0,100):
+			WCS.a[i] = 0.
+			WCS.b[i] = 0.
+			WCS.ap[i] = 0.
+			WCS.bp[i] = 0.
+		return
+	
+	# We dump the image->catalog warp (which we directly computed) into SIP
+	WCS.a_order = WCS.order
+	WCS.b_order = WCS.order	
 	WCS.ab_order_min = AB_ORDER_MIN
 	
 	SIP_im2cat = WCS.warpM.reshape(2,-1)[:,:-3].reshape(-1,1).copy()
@@ -352,9 +353,9 @@ def pushPoly2WCS(WCS):
 			WCS.b[idx] = SIP_im2cat[col+SIP_im2cat.shape[0]/2]
 			col = col + 1
 	
-	
-	WCS.ap_order = WCS.warpDegree
-	WCS.bp_order = WCS.warpDegree
+	# We compute the catalog->image warp seperately
+	WCS.ap_order = WCS.order
+	WCS.bp_order = WCS.order
 	WCS.abp_order_min = ABP_ORDER_MIN
 	
 	count = 50
@@ -368,10 +369,9 @@ def pushPoly2WCS(WCS):
 	lstsq = linalg.lstsq(polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min),(gridStart-gridEnd).reshape(-1,1))
 	SIP_cat2im = lstsq[0]
 	resids = lstsq[1]/gridEnd.shape[0]
-	print "warp inversion avg residual =", resids
+	print "warp inversion avg residual =", resids[0]
 	
 	# gridStart_approx = gridEnd + (polyExpand(gridEnd, WCS.ap_order, WCS.abp_order_min)*SIP_cat2im).reshape(-1,2)
-	# 
 	# figure()
 	# scatter(gridStart[:,0], gridStart[:,1], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
 	# scatter(gridStart_approx[:,0], gridStart_approx[:,1], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
@@ -379,9 +379,9 @@ def pushPoly2WCS(WCS):
 	# axis('equal')
 	# axis((min(gridStart[:,0]), max(gridStart[:,0]), min(gridStart[:,1]), max(gridStart[:,1])))
 	# legend(('start', 'approx'))
-	# 	
 	# print 'warp inversion error:', sum(abs(gridStart_approx - gridStart),0)/gridStart.shape[0]
 	
+	# We dump the inverse warp into the ap/bp component of the SIP
 	col = 0
 	for d in arange(WCS.ap_order, WCS.abp_order_min-1, -1):
 		for i in arange(0, d+1):
@@ -476,7 +476,43 @@ def writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, cat
 	else:
 		print 'cannot write WCS output, all output aborted'
 
+
+
+####### RENDERING ############################################################
+
+def renderCatalogImage(catalogData, imageData, WCS):
+	figure()
+	scatter(imageData['X'], imageData['Y'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(catalogData['X'], catalogData['Y'], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
+	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	axis('equal')
+	try:
+		axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
+	except:
+		axis((min(imageData['X_WARP']), max(imageData['X_WARP']), min(imageData['Y_WARP']), max(imageData['Y_WARP'])))
+	legend(('image star', 'catalog star'))
+
+def renderCatalogImageRADec(catalogData, imageData, WCS):
+	figure()
+	scatter(imageData['RA'], imageData['DEC'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(catalogData['RA'], catalogData['DEC'], marker = 'o', s=20, facecolor=COLOR1, edgecolor=(1,1,1,0))
+	scatter(array([WCS.wcstan.crval[0]]), array([WCS.wcstan.crval[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	axis('image')
+	legend(('image star', 'catalog star'))
+
+def renderImageMotion(imageData, WCS):
+	figure()
+	scatter(imageData['X_WARP'], imageData['Y_WARP'], marker = 'o', s=40, facecolor=(1,1,1,0), edgecolor=COLOR2)
+	scatter(imageData['X'], imageData['Y'], marker = 'o', s=20, facecolor=(1,1,1,0), edgecolor=COLOR1)
+	scatter(array([WCS.wcstan.crpix[0]]), array([WCS.wcstan.crpix[1]]), marker = '^', s=200, facecolor=(0.3,1,0.5,0.3), edgecolor=(0,0,0,0.5))
+	axis('image')
+	axis((min(imageData['X']), max(imageData['X']), min(imageData['Y']), max(imageData['Y'])))
+	legend(('image star', 'catalog star'))
+
+
+####### BONUS STUFF ##########################################################
+
 # It's pretty silly that this has to be here, but it needs constants.py
-# and refers to getWeight()
+# and refers to getWeight(), and doesn't make sense to include in a function
 MINWEIGHT = (getWeight(MINWEIGHT_DOS,1))[0]
 MAXERROR = MINWEIGHT*(MINWEIGHT_DOS**2);

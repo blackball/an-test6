@@ -1,22 +1,18 @@
-from numpy import *
-from pylab import *
 from tweak_lib import *
-from constants import *
 import getopt
-import util.sip as sip
 
 
 def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
-          outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree,
+          outputWCSFilename, catalogXYFilename, imageRDFilename, goalOrder,
 		  progressiveWarp=DEFAULT_PROGRESSIVE_WARP,
 		  renderOutput=DEFAULT_RENDER_OUTPUT, goal_CRPix_X=(),
 		  goal_CRPix_Y=()):
 	
-	if warpDegree < 1:
+	if goalOrder < 1:
 		print 'warning: order set to less than 1, resetting order to 1'
-		warpDegree = 1
+		goalOrder = 1
 	
-	(imageData, catalogData, WCS) = loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, warpDegree)
+	(imageData, catalogData, WCS) = loadData(imageXYFilename, catalogRDFilename, inputWCSFilename, goalOrder)
 	
 	if renderOutput:
 		renderCatalogImage(catalogData, imageData, WCS)
@@ -68,19 +64,18 @@ if __name__ == '__main__':
 	imageRDFilename = ()
 	outputWCSFilename = ()
 
-	warpDegree = ()
+	goalOrder = ()
 	progressiveWarp = DEFAULT_PROGRESSIVE_WARP
 	renderOutput = DEFAULT_RENDER_OUTPUT
 	
 	goal_CRPix_X = ()
 	goal_CRPix_Y = ()
 
-	# Debug stuff
+	# Debug stuff, kill this paragraph eventually:
 	folder = 'data/tweaktest2/'
 	catalogRDFilename = folder + 'index.rd.fits'
 	imageXYFilename = folder + 'field.xy.fits'
 	inputWCSFilename = folder + 'wcs.fits'
-	
 	catalogXYFilename = folder + 'index.xy.fits'
 	imageRDFilename = folder + 'field.rd.fits'
 	outputWCSFilename = folder + 'out.wcs.fits'
@@ -103,7 +98,7 @@ if __name__ == '__main__':
 		elif opt[0] == '--wcs_out':
 			outputWCSFilename = opt[1]
 		elif opt[0] == '--order':
-			warpDegree = int(opt[1])
+			goalOrder = int(opt[1])
 		elif opt[0] == '--crpix_x':
 			goal_CRPix_X = float(opt[1])
 		elif opt[0] == '--crpix_y':
@@ -114,20 +109,20 @@ if __name__ == '__main__':
 			renderOutput = True
 
 	if ((imageXYFilename == ()) | (catalogRDFilename == ()) | (inputWCSFilename == ())):
-		print 'insufficient input arguments'
+		print 'error: insufficient input arguments'
 		print 'usage: python tweak.py --wcs_in=INPUT_WCS_FITS --catalog_rd=CATALOG_RD_FITS --image_xy=IMAGE_XY_FITS [--catalog_xy CATALOG_XY_FITS --image_rd IMAGE_RD_FITS --wcs_out OUTPUT_WCS_FITS --order WARP_ORDER --progressive --display]'
 		print ' [--progressive] Does progressive warping'
 		print ' [--render] Renders visible output'
 		raise SystemExit
 
-	if warpDegree == ():
-		print 'warning: warp degree not specified, using default of', DEFAULT_WARP_DEGREE
-		warpDegree = DEFAULT_WARP_DEGREE
+	if goalOrder == ():
+		print 'warning: order not specified, using default of', DEFAULT_GOAL_ORDER
+		goalOrder = DEFAULT_GOAL_ORDER
 	
 	if (goal_CRPix_X == ()) & (goal_CRPix_Y == ()):
 		print 'warning: no crpix values specified, defaulting to image center'
 	elif not((goal_CRPix_X != ()) & (goal_CRPix_Y != ())):
 		print 'warning: only one crpix value specified. Unspecified value defaulting to image center'
 		
-	tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, warpDegree, progressiveWarp, renderOutput, goal_CRPix_X, goal_CRPix_Y)
+	tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, goalOrder, progressiveWarp, renderOutput, goal_CRPix_X, goal_CRPix_Y)
 
