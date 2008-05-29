@@ -289,7 +289,7 @@ def pushAffine2WCS(imageData, catalogData, WCS):
 	# We can drop these lines when we're confident
 	findWarp(imageData, catalogData, WCS)
 	assert(all(WCS.warpM.reshape(2,-1)[:,-1] < MAX_SHIFT_AMOUNT))
-	assert(all((WCS.warpM.reshape(2,-1)[:,-3:-1] - matrix([1., 0., 0., 1.]).reshape(2,2)) < MAX_LWARP_AMOUNT))
+	assert(all(abs((WCS.warpM.reshape(2,-1)[:,-3:-1] - matrix([1., 0., 0., 1.]).reshape(2,2))) < MAX_LWARP_AMOUNT))
 
 
 # This *adds* the shift in WCS.warpM to CRVal

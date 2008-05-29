@@ -90,11 +90,11 @@ if __name__ == '__main__':
 	inputWCSFilename = folder + 'wcs.fits'
 	catalogXYFilename = folder + 'index.xy.fits'
 	imageRDFilename = folder + 'field.rd.fits'
-	outputWCSFilename = folder + 'out.wcs.fits'
+	outputWCSFilename = folder + 'tweaked.wcs.fits'
 	renderOutput = True
 	goalOrder = 3
 	
-	(opts, args) = getopt.getopt(sys.argv[1:], '', ['catalog_rd=', 'catalog_xy=', 'image_rd=', 'image_xy=', 'wcs_in=', 'wcs_out=', 'order=', 'crpix_x=', 'crpix_y=', 'progressive', 'display'])
+	(opts, args) = getopt.getopt(sys.argv[1:], '', ['catalog_rd=', 'catalog_xy=', 'image_rd=', 'image_xy=', 'wcs_in=', 'wcs_tweaked=', 'order=', 'crpix_x=', 'crpix_y=', 'progressive', 'display'])
 	
 	for opt in opts:
 		
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 			catalogXYFilename = opt[1]
 		elif opt[0] == '--image_rd':
 			imageRDFilename = opt[1]
-		elif opt[0] == '--wcs_out':
+		elif opt[0] == '--wcs_tweaked':
 			outputWCSFilename = opt[1]
 		elif opt[0] == '--order':
 			goalOrder = int(opt[1])
@@ -123,7 +123,7 @@ if __name__ == '__main__':
 
 	if ((imageXYFilename == ()) | (catalogRDFilename == ()) | (inputWCSFilename == ())):
 		print 'error: insufficient input arguments'
-		print 'usage: python tweak.py --wcs_in=INPUT_WCS_FITS --catalog_rd=CATALOG_RD_FITS --image_xy=IMAGE_XY_FITS [--catalog_xy CATALOG_XY_FITS --image_rd IMAGE_RD_FITS --wcs_out OUTPUT_WCS_FITS --order WARP_ORDER --progressive --display]'
+		print 'usage: python tweak.py --wcs_in=INPUT_WCS_FITS --catalog_rd=CATALOG_RD_FITS --image_xy=IMAGE_XY_FITS [--catalog_xy=CATALOG_XY_FITS --image_rd=IMAGE_RD_FITS --wcs_twaked=OUTPUT_WCS_FITS --order=WARP_ORDER --progressive --display]'
 		print ' [--progressive] Does progressive warping'
 		print ' [--render] Renders visible output'
 		raise SystemExit
