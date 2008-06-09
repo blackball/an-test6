@@ -132,6 +132,17 @@ if ($getfile) {
 		readfile($fn);
 		exit;
 
+    } else if (!strcmp($getfile, 'json-annotations')) {
+        $jsonfile = $mydir . $const_json_fn;
+        if (!file_exists($jsonfile)) {
+            $pixscale = $jd['pixscale'];
+            $fldsz = $pixscale * sqrt($fullW * $fullH);
+            render_const_overlay($mydir, TRUE, $jd, $fldsz);
+        }
+        header('Content-type: text/plain');
+        readfile($jsonfile);
+        exit;
+
 	} else if (!strcmp($getfile, $newheader_fn)) {
 		render_newheader($fn, $mydir, $jd, $todelete);
 
@@ -1151,6 +1162,7 @@ function run_command($cmd, $briefname) {
 
 function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 	global $const_list_fn;
+    global $const_json_fn;
 	global $const_overlay_fn;
 	global $const_bigoverlay_fn;
 	global $wcs_fn;
@@ -1161,9 +1173,10 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 	$overlayfile = $mydir . $const_overlay_fn;
 	$bigoverlayfile = $mydir . $const_bigoverlay_fn;
 	$listfile = $mydir . $const_list_fn;
+    $jsonfile = $mydir . $const_json_fn;
 	$wcsfile = $mydir . $wcs_fn;
 
-	if ($big && file_exists($bigoverlayfile)) {
+	if ($big && file_exists($bigoverlayfile) && file_exists($jsonfile)) {
 		return $bigoverlayfile;
 	}
 	if (!$big && file_exists($overlayfile) && file_exists($listfile)) {
@@ -1239,7 +1252,8 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 	}
 
 	if ($big) {
-		$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
+        $cmd .= " -J";
+		$cmd .= " >> " . $mydir . "plot-const.log" . " 2> " . $jsonfile;
 	} else {
 		$cmd .= " > " . $listfile . " 2>> " . $mydir . "plot-const.log";
 	}

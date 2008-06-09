@@ -55,6 +55,7 @@ $bigoverlay_fn="overlay-big.png";
 $const_overlay_fn="const-overlay.png";
 $const_bigoverlay_fn="const-overlay-big.png";
 $const_list_fn = "const-list.txt";
+$const_json_fn = "const-list.json";
 $xylsinfo_fn="xylsinfo";
 $rdlsinfo_fn="rdlsinfo";
 $wcsinfo_fn="wcsinfo";
