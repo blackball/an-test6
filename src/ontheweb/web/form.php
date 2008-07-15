@@ -1431,6 +1431,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
     if ($W * $H >= 5000000) {
         $cmd .= " -H";
     }
+    $cmd .= " -D 4";
     $cmd .= " " . $fitsimg . " > " . $image2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
