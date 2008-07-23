@@ -6,7 +6,7 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
           outputWCSFilename, catalogXYFilename, imageRDFilename, goalOrder,
 		  progressiveWarp=DEFAULT_PROGRESSIVE_WARP,
 		  renderOutput=DEFAULT_RENDER_OUTPUT, goal_CRPix_X=(),
-		  goal_CRPix_Y=()):
+		  goal_CRPix_Y=(), verifyOutput=False, catalogXYGroundFilename=(), imageRDGroundFilename=()):
 	
 	if goalOrder < 1:
 		print 'warning: order set to less than 1, resetting order to 1'
@@ -62,6 +62,22 @@ def tweak(inputWCSFilename, catalogRDFilename, imageXYFilename,
 	
 	writeOutput(WCS, inputWCSFilename, outputWCSFilename, catalogXYFilename, catalogRDFilename, imageXYFilename, imageRDFilename, renderOutput)
 	
+	if verifyOutput & ((imageRDGroundFilename != ()) | (catalogXYGroundFilename != ())):
+		
+		print '\n================== VERIFYING OUTPUT =================='
+		
+		if imageRDGroundFilename != ():
+			(imageRDGround, junk) = loadFITS(imageRDGroundFilename, ['RA', 'DEC'])
+			imageRD = {}
+			(imageRD['RA'], imageRD['DEC']) = WCS_xy2rd(WCS, imageData['X'], imageData['Y'])
+			compareRD(imageRD, imageRDGround)
+			
+		if catalogXYGroundFilename != ():
+			(catalogXYGround, junk) = loadFITS(catalogXYGroundFilename, ['X', 'Y'])
+			catalogXY = {}
+			(catalogXY['X'], catalogXY['Y']) = WCS_rd2xy(WCS, catalogData['RA'], catalogData['DEC'])
+			compareXY(catalogXY, catalogXYGround)
+	
 	if renderOutput:	
 		show()
 
@@ -82,23 +98,42 @@ if __name__ == '__main__':
 	
 	goal_CRPix_X = ()
 	goal_CRPix_Y = ()
-
-	# Debug stuff, kill this paragraph eventually:
-	folder = 'data/tweaktest4/'
-	catalogRDFilename = folder + 'index.rd.fits'
-	imageXYFilename = folder + 'field.xy.fits'
-	inputWCSFilename = folder + 'wcs.fits'
-	catalogXYFilename = folder + 'index.xy.fits'
-	imageRDFilename = folder + 'field.rd.fits'
-	outputWCSFilename = folder + 'tweaked.wcs.fits'
-	renderOutput = True
-	goalOrder = 3
 	
-	(opts, args) = getopt.getopt(sys.argv[1:], '', ['catalog_rd=', 'catalog_xy=', 'image_rd=', 'image_xy=', 'wcs_in=', 'wcs_tweaked=', 'order=', 'crpix_x=', 'crpix_y=', 'progressive', 'display'])
+	catalogXYGroundFilename = ()
+	imageRDGroundFilename = ()
+	verifyOutput = False
+
+	# Debug stuff, useful if you want to run within python.
+	# folder = 'data/tweaktest4/'
+	# catalogRDFilename = folder + 'index.rd.fits'
+	# imageXYFilename = folder + 'field.xy.fits'
+	# inputWCSFilename = folder + 'wcs.fits'
+	# catalogXYFilename = folder + 'index.xy.fits'
+	# imageRDFilename = folder + 'field.rd.fits'
+	# outputWCSFilename = folder + 'tweaked.wcs.fits'
+	# renderOutput = True
+	# goalOrder = 3
+	# catalogXYGroundFilename = folder + 'index.xy.fits_GROUND'
+	# imageRDGroundFilename = folder + 'field.rd.fits_GROUND'
+	# verifyOutput = True
+	
+	(opts, args) = getopt.getopt(sys.argv[1:], '', ['folder=', 'catalog_rd=', 'catalog_xy=', 'image_rd=', 'image_xy=', 'wcs_in=', 'wcs_tweaked=', 'order=', 'crpix_x=', 'crpix_y=', 'progressive', 'display'])
 	
 	for opt in opts:
 		
-		if opt[0] == '--catalog_rd':
+		if opt[0] == '--folder':
+			catalogRDFilename = opt[1] + 'index.rd.fits'
+			imageXYFilename = opt[1] + 'field.xy.fits'
+			inputWCSFilename = opt[1] + 'wcs.fits'
+			catalogXYFilename = opt[1] + 'index.xy.fits'
+			imageRDFilename = opt[1] + 'field.rd.fits'
+			outputWCSFilename = opt[1] + 'tweaked.wcs.fits'
+			
+			catalogXYGroundFilename = opt[1] + 'index.xy.fits_GROUND'
+			imageRDGroundFilename = opt[1] + 'field.rd.fits_GROUND'
+			verifyOutput = True
+			
+		elif opt[0] == '--catalog_rd':
 			catalogRDFilename = opt[1]
 		elif opt[0] == '--image_xy':
 			imageXYFilename = opt[1]
@@ -137,5 +172,4 @@ if __name__ == '__main__':
 	elif not((goal_CRPix_X != ()) & (goal_CRPix_Y != ())):
 		print 'warning: only one crpix value specified. Unspecified value defaulting to image center'
 		
-	tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, goalOrder, progressiveWarp, renderOutput, goal_CRPix_X, goal_CRPix_Y)
-
+	tweak(inputWCSFilename, catalogRDFilename, imageXYFilename, outputWCSFilename, catalogXYFilename, imageRDFilename, goalOrder, progressiveWarp, renderOutput, goal_CRPix_X, goal_CRPix_Y, verifyOutput, catalogXYGroundFilename, imageRDGroundFilename)

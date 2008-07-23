@@ -1,0 +1,2 @@
+#!/bin/sh
+python2.4 tweak.py --folder=data/tweaktest2/ --order=3 --display 

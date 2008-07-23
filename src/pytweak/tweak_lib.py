@@ -508,6 +508,23 @@ def renderImageMotion(imageData, WCS):
 	legend(('image star', 'catalog star'))
 
 
+
+####### VERIFICATION #########################################################
+
+def compareRD(RD1, RD2):
+	RADiff = RD1['RA'] - RD2['RA']
+	DECDiff = RD1['DEC'] - RD2['DEC']
+	dist = sqrt(RADiff*RADiff + DECDiff*DECDiff)
+	print ' max RA/DEC distance from ground truth in degrees: ', max(dist)
+	print 'mean RA/DEC distance from ground truth in degrees: ', mean(dist)
+
+def compareXY(XY1, XY2):
+	XDiff = XY1['X'] - XY2['X']
+	YDiff = XY1['Y'] - XY2['Y']
+	dist = sqrt(XDiff*XDiff + YDiff*YDiff)
+	print ' max X/Y distance from ground truth in pixels: ', max(dist)
+	print 'mean X/Y distance from ground truth in pixels: ', mean(dist)
+
 ####### BONUS STUFF ##########################################################
 
 # It's pretty silly that this has to be here, but it needs constants.py
