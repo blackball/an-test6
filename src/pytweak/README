@@ -1,0 +1,12 @@
+Pytweak!
+
+Dependencies: I'm not good at python trickery, so I use a symlink to fake a connection from this folder to the util/ folder elsewhere, so that code can access the python-hooks to the wcs functions. There's probably a better way to do this. Also, I have symlinks to the wcs-executables, which I use to generate the final output files.
+
+Python junk: I used pylab and numpy. I think matplotlib is used, but that's inside pylab. I developed in python2.4, on a mac, using macports.
+
+Look at runtest for an example of how to run. It does folder-mode, which takes in a folder and automatically verifies.
+
+Look at tweak.py, in the "main" section, to see how to pass it more specific arguments.
+
+The data/tweaktest*/ folders have full test images, with "ground truth" fits files. These are just copies of the output of previous runs, when I knew that the system was working correctly. There's not absolute verification step, it just looks at how close the new calibration is to the old one, and spits out some (usually extremely small) distance values. Absolute thresholds could be developed. Also, running with "--display" is a good way to visualize success/failure.
+
