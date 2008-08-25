@@ -18,8 +18,6 @@ for filepath in $(ls ~/public_html/rc3/*irg.jpg); do
   fi
   ii=$(expr $ii + 1)
 
-if [ $aa == 6 ]; then
-
   echo ./picasaweb_upload_image $filepath
   ./picasaweb_upload_image $filepath > foo
   source foo
@@ -164,7 +162,5 @@ if [ $aa == 6 ]; then
     ./picasaweb_create_tag UGC
     ./picasaweb_create_tag $tag
   fi
-
-fi
 
 done
