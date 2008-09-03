@@ -145,8 +145,12 @@ if ($getfile) {
 
     } else if (!strcmp($getfile, 'json-annotations')) {
         header('Content-type: text/plain');
+        if (!$job_done) {
+            echo '{ "status": "in-progress" }';
+            exit;
+        }
         if (!$didsolve) {
-            echo "{ \"solved\": false }";
+            echo '{ "status": "failed" }';
             exit;
         }
         $jsonfile = $mydir . $const_json_fn;
