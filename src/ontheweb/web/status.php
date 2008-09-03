@@ -108,6 +108,17 @@ if (!($fullW && $fullH)) {
 	}
 }
 
+$input_exists = file_exists($inputfile);
+$job_submitted = $input_exists;
+$job_started = file_exists($startfile);
+$job_done = file_exists($donefile);
+$job_queued = $job_submitted && !($job_started);
+if ($job_done) {
+	 $didsolve = field_solved($solvedfile, $msg);
+} else {
+	$didsolve = FALSE;
+}
+$didcancel = file_exists($cancelfile);
 
 if ($getfile) {
 	if (strstr($getfile, '/') ||
@@ -133,13 +144,17 @@ if ($getfile) {
 		exit;
 
     } else if (!strcmp($getfile, 'json-annotations')) {
+        header('Content-type: text/plain');
+        if (!$didsolve) {
+            echo "{ \"solved\": false }";
+            exit;
+        }
         $jsonfile = $mydir . $const_json_fn;
         if (!file_exists($jsonfile)) {
             $pixscale = $jd['pixscale'];
             $fldsz = $pixscale * sqrt($fullW * $fullH);
             render_const_overlay($mydir, TRUE, $jd, $fldsz);
         }
-        header('Content-type: text/plain');
         readfile($jsonfile);
         exit;
 
@@ -222,17 +237,6 @@ if ($addpreset) {
 	exit;
 }
 
-$input_exists = file_exists($inputfile);
-$job_submitted = $input_exists;
-$job_started = file_exists($startfile);
-$job_done = file_exists($donefile);
-$job_queued = $job_submitted && !($job_started);
-if ($job_done) {
-	 $didsolve = field_solved($solvedfile, $msg);
-} else {
-	$didsolve = FALSE;
-}
-$didcancel = file_exists($cancelfile);
 $do_refresh = !array_key_exists("norefresh", $headers);
 
 if (!$job_submitted) {
