@@ -40,7 +40,81 @@ alpha testing period.</p>
 <hr />
 
 <dl>
-<dt class="qanda">Q: <b>What kinds of images will solve?</b></dt>
+<dt class="qanda">Q1: <b>What image formats can I submit?</b></dt>
+
+<dd class="qanda">A: FITS, JPEG, PNG, GIF, PPM, PGM, and TIFF.
+</dd>
+
+<dt class="qanda">Q2: <b>Where do I enter the approximate RA,Dec?</b></dt>
+
+<dd class="qanda">A: There's no need to give our system any hints about
+the WCS of your image.  (See also <a href="#Q5">Q5</a> below.)
+</dd>
+
+<dt class="qanda">Q2.1: <b>Do we know what formats or what types of astronomical fields (sparse,  
+crowded, wide field, large/small image scale, images with emission line filters, etc) tend NOT to work?</b></dt>
+
+<dd class="qanda">A: Your field must typically contain more than about 20 detected sources, because
+we use a fairly strong statistical test that needs lots of evidence.  Smallish fields work fine (eg,
+SDSS images at 13x9 arcmin get over 99% success rate).  Very small fields (less than about 5 arcmin)
+tend not to work because the astrometric reference catalog we are using (USNO-B) don't contain enough
+stars at that scale.  Wide fields generally work, except that consumer-grade lenses tend to show
+a fair bit of radial distortion, which we don't handle very well at the moment.  Fish-eye images usually
+won't work because our software assumes tangential projection.  Sometimes you can get fish-eye images to work
+by taking just the middle of the image where the distortion isn't too bad.  Also, we assume your image has
+square pixels.  Currently, the index we use to solve your images is optimized for <b>red</b> optical images,
+so if your images are far from there, you might get lower success rate; we've had good success with GALEX
+near-UV but far-UV is much less successful.
+</dd>
+
+<dt class="qanda">Q2.2: <b>Are their simple ways of improving the success rate?</b></dt>
+<dd class="qanda">A: Many of our failures can be attributed to failures in source extraction.
+See <a href="#Q14">Q14</a> for more about that.  For wide-field images, you will usually get much faster
+solutions by increasing the "lower bound" scale of the image: even changing it from 0.1 degree to 1 degree
+wide should do the trick.
+</dd>
+
+<dt class="qanda">Q2.3: <b>What is the typical turn-around speed?</b></dt>
+<dd class="qanda">A: It varies a lot.  It can be a few seconds or many minutes of CPU time.
+We use a shared compute server, so the "wall time" varies even more.
+</dd>
+
+<dt class="qanda">Q2.4: <b>Are the jobs batch processed, or individual submission?</b></dt>
+<dd class="qanda">A: We have a queue of jobs to be processed, but the queue is usually empty
+so your job will usually start running right away.</dd>
+
+<dt class="qanda">Q2.5: <b>There are a number of parameters that can be tweaked in the upload window.
+Is there any heuristics about which ones are worth the time to setup?</b></dt>
+<dd class="qanda">A:
+The defaults should usually work.  The "image scale" has the greatest effect on the speed.
+If you know exactly what your image scale is, you might want to set the range to +-5%.
+See the next question about "parity".  The "index to use" and "star positional error" are
+probably not work fiddling with; they'll probably disappear in future versions.
+The "tweak" option is just a post-processing step: it
+doesn't affect whether your image will solve, it'll just affect what the solution looks like.
+</dd>
+
+<dt class="qanda">Q2.6: <b>What's this "parity" thing?</b></dt>
+<dd class="qanda">A: 
+If you take an image and flip it, you reverse its "parity".  By default, we check both
+possibilities.  If you're processing a lot of images and you know for sure which one your
+images are (you can try solving one image and read out the answer from the results page),
+you might want to set the parity: this should make the solving phase about twice as fast.
+</dd>
+
+<dt class="qanda">Q2.7: <b>
+If one works with several telescopes habitually, is there the concept of a
+"profile" for the scope/CCD/image parameters?
+</b></dt>
+<dd class="qanda">A: 
+Unfortunately not, at least not in a user-friendly way.
+There is one way to set the "default" values of the form by adding to the URL, eg: 
+<tt>http://live.astrometry.net/?parity=1&amp;uname=JoeBlow&amp;tweak=yes&amp;fsl=5</tt>
+You could then bookmark this URL and use it when submitting your images.
+</dd>
+
+
+<dt class="qanda">Q3: <b>What kinds of images will solve?</b></dt>
 
 <dd class="qanda">A: We don't know!  That's why you are testing the service.  What
 we <i>do</i> know is that we have solved images that range in size
@@ -48,7 +122,7 @@ from under 10&nbsp;arcmin to over 80&nbsp;deg.  We also know that we
 have solved images taken in bandpasses ranging from the near
 ultraviolet to the near infrared.</dd>
 
-<dt class="qanda">Q: <b>Why didn't my image solve?</b></dt>
+<dt class="qanda">Q4: <b>Why didn't my image solve?</b></dt>
 
 <dd class="qanda">A: There are lots of reasons we can fail.  Here are some debugging
 suggestions: Try looking at the links to the "png" files that show how
@@ -65,7 +139,7 @@ detectable stars?  That would also be a problem.  However, maybe you
 have detectable stars in differenced or flattened or sky-subtracted
 images?  If so, send <i>those</i> in.</dd>
 
-<dt class="qanda">Q: <b>I submitted an image and it didn't solve even though it had
+<dt class="qanda"><a name="Q5">Q5</a>: <b>I submitted an image and it didn't solve even though it had
 an almost exactly correct WCS header to begin.</b> How can you guys
 suck so badly that you can't even solve an image when I give you the
 right answer?</dt>
@@ -79,7 +153,7 @@ it exists, to guess the image scale, but beyond that all meta-data in
 the image are ignored.  That is the magic, and principal limitation,
 of the service.</dd>
 
-<dt class="qanda">Q: <b>Can I do precision proper-motion analyses with your
+<dt class="qanda">Q6: <b>Can I do precision proper-motion analyses with your
 output?</b></dt>
 
 <dd class="qanda">A: Right now we don't do extremely precise, proper-motion-grade
@@ -91,7 +165,7 @@ If you want precision, multi-image astrometry, we currently recommend
 taking the output of astrometry.net and using it as the input for <a
 href="http://terapix.iap.fr/rubrique.php?id_rubrique=105">SCAMP</a>.</dd>
 
-<dt class="qanda">Q: <b>Can I use your output to build panoramic or mosaic images
+<dt class="qanda">Q7: <b>Can I use your output to build panoramic or mosaic images
 from many individual images?</b></dt>
 
 <dd class="qanda">A: Yes!  However, see our answer to the previous question: We are
@@ -100,7 +174,7 @@ distortions; if you want awesome mosaics, use Bertin's SCAMP and then
 its sister software, SWarp.  Mosaic-quality WCS and automatic
 mosaicing of input data are both on our medium-term to-do lists.</dd>
 
-<dt class="qanda">Q: <b>I have no idea about the scale of my image.</b> What do I
+<dt class="qanda">Q8: <b>I have no idea about the scale of my image.</b> What do I
 do?</dt>
 
 <dd class="qanda">A: Your estimate of the plate scale is not really necessary, it only
@@ -113,7 +187,7 @@ about 2&nbsp;deg.  Eventually we plan to fully parallelize the
 service; when this happens no estimate of scale will be necessary for
 a fast result.</dd>
 
-<dt class="qanda">Q: <b>My image didn't solve even though I put in a correct
+<dt class="qanda">Q9: <b>My image didn't solve even though I put in a correct
 estimate of the scale and I can see that your source extraction
 correctly extracted many USNO-B stars.</b></dt>
 
@@ -126,7 +200,7 @@ it still isn't solving, send email to <q>alpha@astrometry.net</q> with
 your jobid, because you clearly have a useful image for
 debugging.</dd>
 
-<dt class="qanda">Q: <b>My HST ACS images won't solve!</b> Can't you even solve a
+<dt class="qanda">Q10: <b>My HST ACS images won't solve!</b> Can't you even solve a
 perfectly calibrated and highly recognizable piece of astronomical
 data?</dt>
 
@@ -135,19 +209,19 @@ solve any image below about 5&nbsp;arcmin on a side.  Don't even
 bother trying.  We hope to overcome this eventually, but don't hold
 your breath!</dd>
 
-<dt class="qanda">Q: <b>Why does my submission die silently without returning a
+<dt class="qanda">Q11: <b>Why does my submission die silently without returning a
 jobid?</b></dt>
 
 <dd class="qanda">A: Did your job exceed the 250M size limit?  If so, try gzip (yes,
 we take gz files).  If not, there is a bug; send email to
 <q>alpha@astrometry.net</q>.</dd>
 
-<dt class="qanda">Q: <b>What does the system do with multi-extension FITS
+<dt class="qanda">Q12: <b>What does the system do with multi-extension FITS
 files?</b></dt>
 
 <dd class="qanda">A: It just looks at the first image-like FITS extension.</dd>
 
-<dt class="qanda">Q: <b>I have tons of images I want to solve.</b> Typing my email
+<dt class="qanda">Q13: <b>I have tons of images I want to solve.</b> Typing my email
 and the size parameters and the image urls into your lame web form
 over and over again is driving me crazy. Aren't you guys real
 scientists? Can't you give me a high-throughput option?</dt>
@@ -170,7 +244,7 @@ uploading multiple files you can <a
 href="http://www.slac.stanford.edu/~pjm/astrometry/hansel.csh">grab
 here</a>.</dd>
 
-<dt class="qanda">Q: I looked at the source extraction preview image on the status
+<dt class="qanda"><a name="Q14" />Q14: I looked at the source extraction preview image on the status
 page for one of my jobs, and <b>your system totally failed to find
 tons of perfectly obvious sources in my image</b>.  What's up?</dt>
 
@@ -183,26 +257,14 @@ extraction yourself and just send us a list of the X,Y (horizontal and
 vertical) positions of the sources within your image. The format is a
 simple FITS file which you upload to the web form. If you want an
 example of the format, you can download the FITS file of the sources
-as we extracted them.</dd>
+as we extracted them (<tt>field.xy.fits</tt>).</dd>
 
-<dt class="qanda">Q: <b>Is there a way for me to install the system locally on my
+<dt class="qanda">Q15: <b>Is there a way for me to install the system locally on my
 own machine?</b></dt>
 
-<dd class="qanda">A: Not yet. But after we incorporate the feedback, improvements,
-and bug-fixes we get during the alpha testing phase (that's you!) we
-will release a complete source package and the data files necessary to
-reproduce a complete local installation. We use such local
-installations for our own science so we totally understand how useful
-they can be. Please email us and let us know you are interested and
-we'll notify you when the code comes out.</dd>
+<dd class="qanda">A: Yes; see the "download" option at <a href="http://astrometry.net/use.html">http://astrometry.net/use.html</a>.
+</dd>
 
-<dt class="qanda">Q: Speaking of releasing code, <b>when will you release the
-code?</b> I want to look at the source!</dt>
-
-<dd class="qanda">A: Yeah, right. Sure you do. But seriously, we will be releasing
-code, right after the alpha test. Email code@astrometry.net and we'll
-put you on the list. If you are super-keen you can browse the source
-off of our trac pages: trac.astrometry.net</dd>
 </dl>
 
 <div class="menu">
