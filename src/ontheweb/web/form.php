@@ -772,19 +772,19 @@ function process_data ($vals) {
 		"  echo Running rdlsinfo...;\n" .
 		"  " . $rdlsinfo . " " . $rdls_fn . " > " . $rdlsinfo_fn . ";\n" .
 		"  echo Merging index rdls file...\n" .
-		"  " . $fitsgetext . " -e 0 -e 1 -i " . sprintf($indexrdls_pat, 1) . " -o " . $indexrdls_fn . ".tmp\n" .
 		"  for ((s=1;; s++)); do\n" .
 		"    FN=\$(printf " . $indexrdls_pat . " \$s);\n" .
 		"    if [ ! -e \$FN ]; then\n" .
 		"      break;\n" .
 		"    fi\n" .
-		"    N=\$(( \$(" . $fitsgetext . " -i \$FN | wc -l) - 1 ))\n" .
+		"    N=\$(( \$(" . $fitsgetext . " -i \$FN 2>&1 | grep Extension | wc -l) ))\n" .
 		"    echo \"\$FN has \$N extensions.\"\n" .
 		"    for ((i=1; i<N; i++)); do\n" .
-		"      if [ \$i -eq 1 -a \$s -eq 1 ]; then\n" .
-		"        continue;\n" .
+		"      if [ -e index.rd.fits.tmp ]; then\n" .
+		"        " . $tabmerge . " \$FN+\$i " . $indexrdls_fn . ".tmp+1\n" .
+        "      else\n" .
+        "        " . $fitsgetext . " -e 0 -e \$i -i \$FN -o " . $indexrdls_fn . ".tmp\n" .
 		"      fi\n" .
-		"      " . $tabmerge . " \$FN+\$i " . $indexrdls_fn . ".tmp+1\n" .
 		"    done\n" .
 		"  done\n" .
 		"  mv " . $indexrdls_fn . ".tmp " . $indexrdls_fn . "\n" .
