@@ -61,6 +61,7 @@ function allow_email($email) {
 		       'mierle@gmail.com',
 		       'mobiusltd@aol.com',
 		       'mperrin@astro.berkeley.edu',
+               'mstaves@roadrunner.com',
 		       'munz@physics.muni.cz',
 		       'ncarboni@att.net',
 		       'paul@beskeen.com',
