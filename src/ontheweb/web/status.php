@@ -265,16 +265,10 @@ if ($didsolve) {
 		$rac_merc = $infomap["ra_center_merc"];
 		$decc_merc = $infomap["dec_center_merc"];
 		$zoom = $infomap["zoom_merc"];
-		$rac = $infomap["ra_center"];
-		$decc = $infomap["dec_center"];
-		$fieldsize = $infomap["field_size"];
-		$ra_min = $infomap['ra_min'];
-		$ra_max = $infomap['ra_max'];
-		$dec_min = $infomap['dec_min'];
-		$dec_max = $infomap['dec_max'];
 	}
 
-	if (!array_key_exists("cd11", $jd)) {
+	if (!array_key_exists("cd11", $jd) ||
+        !array_key_exists("ra_center", $jd)) {
 		$errfile = $mydir . "wcsinfo.err";
 		$cmd = $wcsinfo . " " . $wcsfile . " > " . $wcsinfofile . " 2> " . $errfile;
 		loggit("Command: " . $cmd);
@@ -305,6 +299,17 @@ if ($didsolve) {
 		$orient = (float)$wcsvals['orientation'];
 		$pixscale = (float)$wcsvals['pixscale'];
 
+		$ra_min = (float)$wcsvals['ra_min'];
+		$ra_max = (float)$wcsvals['ra_max'];
+		$rac = (float)$wcsvals['ra_center'];
+		$dec_min = (float)$wcsvals['dec_min'];
+	    $dec_max = (float)$wcsvals['dec_max'];
+		$decc = (float)$wcsvals['dec_center'];
+
+        $fieldw = (float)$wcsvals['fieldw'];
+        $fieldh = (float)$wcsvals['fieldh'];
+        $fieldu = $wcsvals['fieldunits'];
+
 		$setjd = array('cd11' => $cd11,
 					   'cd12' => $cd12,
 					   'cd21' => $cd21,
@@ -312,7 +317,18 @@ if ($didsolve) {
 					   'det' => $det,
 					   'trueparity' => $parity,
 					   'orientation' => $orient,
-					   'pixscale' => $pixscale);
+					   'pixscale' => $pixscale,
+                       'ra_min' => $ra_min,
+                       'ra_max' => $ra_max,
+                       'ra_center' => $rac,
+                       'dec_min' => $dec_min,
+                       'dec_max' => $dec_max,
+                       'dec_center' => $decc,
+                       'fieldw' => $fieldw,
+                       'fieldh' => $fieldh,
+                       'fieldunits' => $fieldu,
+                       );
+                       
 		if (!setjobdata($db, $setjd)) {
 			fail("Failed to set WCS-related jobdata entries.");
 		}
@@ -325,6 +341,17 @@ if ($didsolve) {
 		$parity = (int)$jd['trueparity'];
 		$orient = (float)$jd['orientation'];
 		$pixscale = (float)$jd['pixscale'];
+
+		$ra_min = (float)$jd['ra_min'];
+		$ra_max = (float)$jd['ra_max'];
+		$rac = (float)$jd['ra_center'];
+		$dec_min = (float)$jd['dec_min'];
+	    $dec_max = (float)$jd['dec_max'];
+	    $decc = (float)$jd['dec_center'];
+
+        $fieldw = (float)$jd['fieldw'];
+        $fieldh = (float)$jd['fieldh'];
+        $fieldu = $jd['fieldunits'];
 	}
 }
 
@@ -579,10 +606,13 @@ if ($didsolve) {
         $units = "arcminutes";
     }
 
-	echo "<h3 class=\"c\">Your field is at (RA, Dec) = (" . $rac . ", " . $decc . ") degrees";
+	echo "<h3 class=\"c\">Your field is at (RA, Dec) = (";
+    printf('%.3f, %.3f', $rac, $decc);
+    echo ") degrees";
     echo "<br />\n";
     echo "and spans " . ($exact ? "" : "about ");
-    printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
+    //printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
+    printf("%.2f x %.2f %s\n", $fieldw, $fieldh, $fieldu);
     echo ".</h3>\n";
 	echo "<hr />\n";
 
