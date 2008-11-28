@@ -24,7 +24,7 @@ $logfile = "test.log";
 $highlevelfile = "test-highlevel.log";
 
 // Email or Interactive?
-$emailver = 1;
+$emailver = 0;
 $webver = !$emailver;
 
 // Script to cancel a job.
