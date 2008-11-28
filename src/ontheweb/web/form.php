@@ -157,7 +157,6 @@ $form->addElement('select', 'index', 'index', $indexes, null);
 $form->addElement('submit', 'submit', 'Submit');
 $form->addElement('submit', 'linkhere', 'Link to these parameter settings');
 $form->addElement('submit', 'reset', "Reset Form");
-$form->addElement('submit', 'logout', 'Logout');
 
 $form->setMaxFileSize($maxfilesize);
 
@@ -194,19 +193,6 @@ if ($form->exportValue("linkhere")) {
 if ($form->exportValue("reset")) {
 	// come back with no args!
 	header("Location: http://" . $host . $myuri);
-	exit;
-}
-
-if ($form->exportValue('logout')) {
-	loggit("Logout.\n");
-	loggit("Form values:\n");
-	foreach ($form->exportValues() as $k => $v) {
-		loggit("  " . $k . " = " . $v . "\n");
-	}
-	header('HTTP/1.0 401 Logging you out.');
-	// HACK - this must match Apache config...
-	header('WWW-Authenticate: Basic realm="Astrometry.net Alpha Test"');
-	echo("Logged out.\n");
 	exit;
 }
 
