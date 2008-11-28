@@ -1167,6 +1167,7 @@ function render_form($form, $headers) {
 	
 	if ($emailver) {
 		$replace['##email-caption##'] = "We need your email address to send you your results.";
+        $replace['##LINK_TO_SIMPLE##'] = '';
 	} else if ($webver) {
 		$replace['##email-caption##'] = "These fields are optional.";
         $replace['##LINK_TO_SIMPLE##'] = '<b>Go to <a href=index.php?simple">simple version</a></b>';

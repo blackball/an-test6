@@ -6,7 +6,7 @@ function tabsort_commandline($infn, $outfn, $column, $descending) {
     if ($descending) {
         $cmd .= " -d";
     }
-    $cmd .= " -i " . $column . " -o " . $infn . " -c " . $outfn;
+    $cmd .= " -c " . $column . " -i " . $infn . " -o " . $outfn;
     return $cmd;
 }
 
