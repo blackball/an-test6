@@ -27,4 +27,9 @@ $webver = !$emailver;
 // Script to cancel a job.
 $cancelscript = $base . "ontheweb/execs/cancel-job-alpha.sh";
 
+// Google Maps URL to use.
+$gmaps_base = "http://explore.astrometry.net/";
+$gmaps_url = $gmaps_base;
+$tiles_url = $gmaps_base . "tile/get/";
+
 ?>
