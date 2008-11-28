@@ -94,6 +94,7 @@ function allow_email($email) {
 			   'hundalhh@yahoo.com',
 		       'hurt@ipac.caltech.edu',
 		       'igor.chilingarian@obspm.fr',
+			   'javier_laina@yahoo.es',
                'jbedient@gmail.com',
                'jbloom@astro.berkeley.edu',
                'jbriggs@dexter-southfield.org',
@@ -127,6 +128,7 @@ function allow_email($email) {
                'kurk@mpia-hd.mpg.de',
 		       'landsman@milkyway.gsfc.nasa.gov',
 		       'lars@eso.org',
+			   'lauman48@yahoo.com',
 		       'leonidas@jpl.nasa.gov',
 		       'lmoustakas@gmail.com',
 		       'lspitler@astro.swin.edu.au',
@@ -149,6 +151,7 @@ function allow_email($email) {
                'mtrawick@richmond.edu',
                'mstaves@roadrunner.com',
 		       'munz@physics.muni.cz',
+			   'naveen.nanjundappa@gmail.com',
 		       'ncarboni@att.net',
                'netastrometry@gmail.com',
                'norup@astro.ku.dk',
@@ -206,8 +209,8 @@ function allow_email($email) {
                'kapadia@ipac.caltech.edu',
                'jewellt@u.washington.edu',
                'kscott@es.com',
-               'zibetti@mpia-hd.mpg.de');
-               
+               'zibetti@mpia-hd.mpg.de',
+                   );
 	if (in_array(strtolower($email), $allow))
 		return TRUE;
 	loggit("disallowing email " . $email . "\n");
