@@ -165,6 +165,9 @@ if ($getfile) {
 	} else if (!strcmp($getfile, $newheader_fn)) {
 		render_newheader($fn, $mydir, $jd, $todelete);
 
+	} else if (!strcmp($getfile, $newfits_fn)) {
+		render_newfits($fn, $mydir, $jd, $todelete);
+
 	} else {
 		$fn = $mydir . $getfile;
 		if (!file_exists($fn)) {
@@ -172,7 +175,7 @@ if ($getfile) {
 		}
 	}
 	$sz = filesize($fn);
-	$attachments = array($wcs_fn, $newheader_fn, $corr_fn,
+	$attachments = array($wcs_fn, $newheader_fn, $newfits_fn, $corr_fn,
 						 $indexxyls_fn, $indexrdls_fn,
 						 $xyls_fn, $rdls_fn,
 						 );
@@ -967,6 +970,10 @@ if ($job_done) {
 		print_link($mydir . $newheader_fn, TRUE);
 		echo "</td></tr>\n";
 
+		echo '<tr><td>New FITS image with header:</td><td>';
+		print_link($mydir . $newfits_fn, TRUE);
+		echo "</td></tr>\n";
+
 		echo '<tr><td>RA, Dec for extracted sources:</td><td>';
 		print_link($rdlist);
 		echo "</td></tr>\n";
@@ -1134,6 +1141,9 @@ echo $valid_blurb;
 </html>
 
 <?php
+function render_newfits(&$fn, $mydir, $jd, &$todelete) {
+}
+
 function render_newheader(&$fn, $mydir, $jd, &$todelete) {
 	global $wcs_fn;
 	global $fits_filter;

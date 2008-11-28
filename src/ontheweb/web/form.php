@@ -1239,28 +1239,14 @@ function render_form($form, $headers) {
 
 }
 
-function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
-					   &$scaleguess, &$wcsfile) {
-	global $image2xy;
-	global $modhead;
-	global $plotxy;
-	//global $tabsort;
-	global $resort;
-	global $objs_fn;
-	global $bigobjs_fn;
-	global $image2xyout_fn;
+// Sets "fitsfile" to the name of the filtered FITS file if the image
+// is FITS.
+function image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete) {
 	global $an_fitstopnm;
-	global $fits_filter;
-	global $fits_guess_scale;
-	global $xyls_fn;
-
-	$filename = $mydir . $basename;
-	$newjd = array();
-	$todelete = array();
-
-	loggit("image file: " . filesize($filename) . " bytes.\n");
 
 	$addsuffix = "";
+	//loggit("image file: " . filesize($filename) . " bytes.\n");
 
 	// Handle compressed file formats.
 	$newfilename = $mydir . "uncompressed.";
@@ -1285,9 +1271,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 					  "TIFF image data"  => array("tiff", "tifftopnm %s > %s"),
 					  );
 
-	$pnmimg_orig_base = "image.pnm";
-	$pnmimg = $mydir . $pnmimg_orig_base;
-	$pnmimg_orig = $pnmimg;
+    $pnmimg = $mydir . "image.pnm";
 
 	$gotit = FALSE;
 	// Look for key phrases in the output of "file".
@@ -1311,21 +1295,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			}
 			$filename = $filtered_fits;
 
-			// Run fits-guess-scale on it...
-			$cmd = $fits_guess_scale . " " . $filename;
-			loggit("Command: " . $cmd . "\n");
-			$out = shell_exec($cmd);
-			//loggit("Got: " . $out . "\n");
-			$lines = explode("\n", $out);
-			foreach ($lines as $ln) {
-				$words = explode(" ", $ln);
-				if (count($words) < 3)
-					continue;
-				if (!strcmp($words[0], "scale")) {
-					loggit("  " . $words[1] . " => " . $words[2] . "\n");
-					$scaleguess[$words[1]] = (float)$words[2];
-				}
-			}
+            // output var.
+            $fitsfile = $filtered_fits;
 		}
 
 		// Run *topnm on it.
@@ -1347,8 +1318,19 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		return FALSE;
 	}
 	loggit("found image type " . $imgtype . "\n");
+    $filename = $pnmimg;
+    return TRUE;
+}
 
-	// Use "pnmfile" to get the image size.
+function image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete, &$pnmimg, &$W, &$H) {
+    if (!image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete)) {
+        return FALSE;
+    }
+    $pnmimg = $filename;
+
+
 	$cmd = "pnmfile " . $pnmimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = shell_exec($cmd);
@@ -1360,19 +1342,12 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	// eg, "/home/gmaps/ontheweb-data/13a732d8ff/image.pnm: PGM raw, 4096 by 4096  maxval 255"
 	$pat = '/.*P.M .*, ([[:digit:]]*) by ([[:digit:]]*) *maxval [[:digit:]]*/';
 	if (!preg_match($pat, $res, &$matches)) {
-		die("preg_match failed: string is \"" . $res . "\"\n");
+		die("PnM preg_match failed: string is \"" . $res . "\"\n");
 	}
 	$W = (int)$matches[1];
 	$H = (int)$matches[2];
 
-	// Decide how much to shrink the image by for displaying results.
-	$shrink = get_shrink_factor($W, $H);
-
-	$newjd['imageW'] = $W;
-	$newjd['imageH'] = $H;
-	$newjd['imageshrink'] = $shrink;
-
-	// Also use the output from "pnmfile" to decide if we need to convert to PGM (greyscale)
+	// Use the output from "pnmfile" to decide if we need to convert to PGM (greyscale)
 	$ss = strstr($res, "PPM");
 	//loggit("strstr: " . $ss . "\n");
 	if (strlen($ss)) {
@@ -1386,17 +1361,30 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$errstr = "Failed to reduce your image to grayscale.";
 			return FALSE;
 		}
-		$pnmimg = $pgmimg;
+		//$pnmimg = $pgmimg;
 		array_push($todelete, $pgmimg);
+        $filename = $pgmimg;
+        return TRUE;
 	}
+    $filename = $pnmimg;
+    return TRUE;
+}
+
+function image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete, &$pnmimg, &$W, &$H) {
+
+    if (!image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete, &$pnmimg,
+                      &$W, &$H)) {
+        return FALSE;
+    }
 
 	if ($imgtype == "fits") {
-		$wcsfile = $filename;
 		$fitsimg = $filename;
 	} else {
 		// Run pnmtofits...
 		$fitsimg = $mydir . "image.fits";
-		$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
+		$cmd = "pnmtofits " . $filename . " > " . $fitsimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if (($res === FALSE) || $retval) {
@@ -1406,6 +1394,84 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		}
 		//? array_push($todelete, $fitsimg);
 	}
+    $filename = $fitsimg;
+    return TRUE;
+}
+
+function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
+					   &$scaleguess, &$wcsfile) {
+	global $image2xy;
+	global $modhead;
+	global $plotxy;
+	//global $tabsort;
+	global $resort;
+	global $objs_fn;
+	global $bigobjs_fn;
+	global $image2xyout_fn;
+	global $an_fitstopnm;
+	global $fits_filter;
+	global $fits_guess_scale;
+	global $xyls_fn;
+
+	$newjd = array();
+	$todelete = array();
+
+	$filename = $mydir . $basename;
+
+    /*
+     if (!image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
+     &$imgtype, &$errstr, &$todelete)) {
+     return FALSE;
+     }
+     */
+
+    /*
+     if (!image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
+     &$imgtype, &$errstr, &$todelete, &$pnmimg,
+     &$W, &$H)) {
+     return FALSE;
+     }
+     */
+
+    if (!image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
+                       &$imgtype, &$errstr, &$todelete, &$pnmimg,
+                       &$W, &$H)) {
+        return FALSE;
+    }
+
+	if ($imgtype == "fits") {
+		$wcsfile = $filename;
+    }
+
+    $fitsimg = $filename;
+
+	$pnmimg_orig = $pnmimg;
+	$pnmimg_orig_base = basename($pnmimg_orig);
+
+    if ($fitsfile) {
+        // Run fits-guess-scale on it...
+        $cmd = $fits_guess_scale . " " . $fitsfile;
+        loggit("Command: " . $cmd . "\n");
+        $out = shell_exec($cmd);
+        //loggit("Got: " . $out . "\n");
+        $lines = explode("\n", $out);
+        foreach ($lines as $ln) {
+            $words = explode(" ", $ln);
+            if (count($words) < 3)
+                continue;
+            if (!strcmp($words[0], "scale")) {
+                loggit("  " . $words[1] . " => " . $words[2] . "\n");
+                $scaleguess[$words[1]] = (float)$words[2];
+            }
+        }
+    }
+
+	// Decide how much to shrink the image by for displaying results.
+	$shrink = get_shrink_factor($W, $H);
+
+	$newjd['imageW'] = $W;
+	$newjd['imageH'] = $H;
+	$newjd['imageshrink'] = $shrink;
 
 	// The xylist filename:
 	// image2xy computes the output filename by trimming .fits and adding .xy.fits.

@@ -48,6 +48,7 @@ $corr_fn = "correspondences.fits";
 $cancel_fn= "cancel";
 $wcs_fn   = "wcs.fits";
 $newheader_fn   = "newheader.fits";
+$newfits_fn   = "new.fits";
 $objs_fn  = "objs.png";
 $bigobjs_fn  = "objs-big.png";
 $overlay_fn="overlay.png";
