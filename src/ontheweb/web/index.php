@@ -117,7 +117,8 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	}
 
     $status_url_rel = "status.php?job=" . $myname;
-    $status_url = "http://" . $host . $uri . "/" . $status_url_url;
+    $uri  = rtrim(dirname($myuri), '/\\');
+    $status_url = "http://" . $host . $uri . "/" . $status_url_rel;
 
 	if ($webver) {
 		highlevellog("Job " . $myname . ": web edition: wrote scripts.\n");
@@ -130,7 +131,6 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 		if ($imgfilename && !$headers["skippreview"]) {
 			$status_url .= "&img";
 		}
-		$uri  = rtrim(dirname($myuri), '/\\');
         header("Location: " . $status_url);
 		exit;
 	}
@@ -174,12 +174,15 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 			"already filled in, you can use this link.  Note, however, that your web browser " .
 			"won't let us set a default value for the file upload field, so you may have to " .
 			"cut-n-paste the filename.\n";
-		$message = wordwrap($message, 70);
 
 		$args = format_preset_url($jd, $formDefaults);
 		$message .= "  http://" . $host . $myuri . $args . "\n\n";
 
+        $message .= "If you like watching the grass grow, you can go straight to the status page for this job at:\n  " .
+            $status_url . "\n";
+
 		$message .= "Thanks for using Astrometry.net!\n\n";
+		$message = wordwrap($message, 70);
 
 		$subject = 'Astrometry.net job ' . $myname;
 		$headers = 'From: Astrometry.net <alpha@astrometry.net>' . "\r\n" .
