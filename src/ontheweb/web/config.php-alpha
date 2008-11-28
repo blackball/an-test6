@@ -3,8 +3,8 @@
 $image2xy_extra_args = '';
 
 // Which set of indices do we use?
-//require_once 'config-index100.php';
-require_once 'config-index200.php';
+//require_once 'config-index200.php';
+require_once 'config-index201.php';
 
 // Site id.
 $siteid = "alpha";

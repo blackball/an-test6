@@ -801,8 +801,10 @@ function download_url($url, $dest, $maxfilesize, &$errmsg, $id=FALSE) {
 
 	// For http:// URLs, look for the "Content-Length:" header.
 	$meta_data = stream_get_meta_data($fin);
-	if ($meta_data) {
+	if ($meta_data && array_key_exists('wrapper_data', $meta_data) &&
+        ($meta_data['wrapper_data'])) {
 		$pat = '/^Content-Length: (\d+)$/';
+        loggit("meta_data[wrapper_data] = " . $meta_data['wrapper_data'] . "\n");
 		foreach ($meta_data['wrapper_data'] as $k=>$v) {
 			if (preg_match($pat, $v, $matches)) {
 				$length = (int)$matches[1];
