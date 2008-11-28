@@ -1,5 +1,7 @@
 <?php
 
+$image2xy_extra_args = '';
+
 // Which set of indices do we use?
 //require_once 'config-index100.php';
 require_once 'config-index200.php';
@@ -9,6 +11,9 @@ $siteid = "alpha";
 
 // Path to executables.
 $base = "/home/gmaps/alpha/";
+
+$quads = $base . "quads/";
+$utils = $quads;
 
 // Google Maps URL to use.
 $gmaps_base = "http://explore.astrometry.net/";

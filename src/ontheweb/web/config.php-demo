@@ -1,5 +1,7 @@
 <?php
 
+$image2xy_extra_args = '';
+
 // Which set of indices do we use?
 //require_once 'config-index100.php';
 require_once 'config-index200.php';
@@ -9,6 +11,8 @@ $siteid = "demo";
 
 // Path to executables.  Share executables with alpha.
 $base = "/home/gmaps/alpha/";
+$quads = $base . "quads/";
+$utils = $quads;
 
 // Log file name.
 $logfile = "demo.log";

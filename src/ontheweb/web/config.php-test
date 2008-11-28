@@ -1,5 +1,8 @@
 <?php
 
+// Only supported in newer versions of image2xy.
+$image2xy_extra_args = ' -D 4';
+
 // Which set of indices do we use?
 //require_once 'config-index100.php';
 //require_once 'config-index200.php';
@@ -11,6 +14,9 @@ $siteid = "test";
 
 // Path to executables.
 $base = "/home/gmaps/test/";
+// 
+$quads = $base . "astrometry/blind/";
+$utils = $base . "astrometry/util/";
 
 // Google Maps URL to use.
 $gmaps_base = "http://oven.cosmo.fas.nyu.edu:8888/test";
