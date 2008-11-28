@@ -116,6 +116,9 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 		highlevellog("Job " . $myname . ": skipped source extraction preview; job started.\n");
 	}
 
+    $status_url_rel = "status.php?job=" . $myname;
+    $status_url = "http://" . $host . $uri . "/" . $status_url_url;
+
 	if ($webver) {
 		highlevellog("Job " . $myname . ": web edition: wrote scripts.\n");
 
@@ -124,13 +127,11 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 
 		loggit("Web version.\n");
 		// Redirect the client to the status page...
-		$status_url = "status.php?job=" . $myname;
-
 		if ($imgfilename && !$headers["skippreview"]) {
 			$status_url .= "&img";
 		}
 		$uri  = rtrim(dirname($myuri), '/\\');
-		header("Location: http://" . $host . $uri . "/" . $status_url);
+        header("Location: " . $status_url);
 		exit;
 	}
 

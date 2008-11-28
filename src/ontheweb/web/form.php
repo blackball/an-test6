@@ -1169,6 +1169,7 @@ function render_form($form, $headers) {
 		$replace['##email-caption##'] = "We need your email address to send you your results.";
 	} else if ($webver) {
 		$replace['##email-caption##'] = "These fields are optional.";
+        $replace['##LINK_TO_SIMPLE##'] = '<b>Go to <a href=index.php?simple">simple version</a></b>';
 	}
 	foreach ($flds as $fld) {
 		$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
@@ -1263,7 +1264,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
         return FALSE;
     }
 
-    loggit("image_to_fits: returned filename is " . $filename . "\n");
+    //loggit("image_to_fits: returned filename is " . $filename . "\n");
 
 	if ($imgtype == "fits") {
 		$wcsfile = $filename;
