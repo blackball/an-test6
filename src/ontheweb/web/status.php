@@ -1158,6 +1158,7 @@ function render_newfits(&$fn, $mydir, $jd, &$todelete) {
 	$merged = tempnam('/tmp', 'newfits');
 	$cmd = $new_wcs . " -d -i " . $fitsimg . " -w " . $mydir . $wcs_fn .
 		" -o " . $merged . " > /dev/null 2> /dev/null";
+    loggit("Command: " . $cmd . "\n");
 	if ((system($cmd, $retval) === FALSE) || $retval) {
 		loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
 		die("Failed to create new FITS file.");
