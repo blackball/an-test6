@@ -276,6 +276,7 @@ function uncompress_file($infile, $outfile, &$suffix) {
 function image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
                       &$imgtype, &$errstr, &$todelete) {
 	global $an_fitstopnm;
+	global $fits_filter;
 
 	$addsuffix = "";
 	//loggit("image file: " . filesize($filename) . " bytes.\n");
@@ -411,8 +412,10 @@ function image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
         return FALSE;
     }
 
+    loggit('image_to_fits: imgtype ' . $imgtype . "\n");
+
 	if ($imgtype == "fits") {
-		$fitsimg = $filename;
+		$fitsimg = $fitsfile;
 	} else {
         if ($color) {
             // Use the RGB image, not the grayscale.

@@ -1249,8 +1249,6 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	global $objs_fn;
 	global $bigobjs_fn;
 	global $image2xyout_fn;
-	global $an_fitstopnm;
-	global $fits_filter;
 	global $fits_guess_scale;
 	global $xyls_fn;
 
@@ -1264,6 +1262,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
                        &$W, &$H, FALSE)) {
         return FALSE;
     }
+
+    loggit("image_to_fits: returned filename is " . $filename . "\n");
 
 	if ($imgtype == "fits") {
 		$wcsfile = $filename;
