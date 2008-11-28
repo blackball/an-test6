@@ -1142,6 +1142,7 @@ echo $valid_blurb;
 
 <?php
 function render_newfits(&$fn, $mydir, $jd, &$todelete) {
+    
 }
 
 function render_newheader(&$fn, $mydir, $jd, &$todelete) {

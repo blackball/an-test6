@@ -1361,7 +1361,6 @@ function image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
 			$errstr = "Failed to reduce your image to grayscale.";
 			return FALSE;
 		}
-		//$pnmimg = $pgmimg;
 		array_push($todelete, $pgmimg);
         $filename = $pgmimg;
         return TRUE;
@@ -1371,7 +1370,8 @@ function image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
 }
 
 function image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
-                      &$imgtype, &$errstr, &$todelete, &$pnmimg, &$W, &$H) {
+                       &$imgtype, &$errstr, &$todelete, &$pnmimg, &$W, &$H,
+                       $color) {
 
     if (!image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
                       &$imgtype, &$errstr, &$todelete, &$pnmimg,
@@ -1382,6 +1382,11 @@ function image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
 	if ($imgtype == "fits") {
 		$fitsimg = $filename;
 	} else {
+        if ($color) {
+            // Use the RGB image, not the grayscale.
+            $filename = $pnmimg;
+        }
+
 		// Run pnmtofits...
 		$fitsimg = $mydir . "image.fits";
 		$cmd = "pnmtofits " . $filename . " > " . $fitsimg;
@@ -1418,24 +1423,9 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 	$filename = $mydir . $basename;
 
-    /*
-     if (!image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
-     &$imgtype, &$errstr, &$todelete)) {
-     return FALSE;
-     }
-     */
-
-    /*
-     if (!image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
-     &$imgtype, &$errstr, &$todelete, &$pnmimg,
-     &$W, &$H)) {
-     return FALSE;
-     }
-     */
-
     if (!image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
                        &$imgtype, &$errstr, &$todelete, &$pnmimg,
-                       &$W, &$H)) {
+                       &$W, &$H, FALSE)) {
         return FALSE;
     }
 
