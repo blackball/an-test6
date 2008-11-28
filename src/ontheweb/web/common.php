@@ -271,6 +271,170 @@ function uncompress_file($infile, $outfile, &$suffix) {
 	return TRUE;
 }
 
+// Sets "fitsfile" to the name of the filtered FITS file if the image
+// is FITS.
+function image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete) {
+	global $an_fitstopnm;
+
+	$addsuffix = "";
+	//loggit("image file: " . filesize($filename) . " bytes.\n");
+
+	// Handle compressed file formats.
+	$newfilename = $mydir . "uncompressed.";
+	if (!uncompress_file($filename, $newfilename, $suff)) {
+		$errstr = "Failed to decompress image " . $filename;
+		return FALSE;
+	}
+	if ($suff) {
+		$addsuffix = $suff;
+		$filename = $newfilename;
+		array_push($todelete, $newfilename);
+	}
+	$typestr = shell_exec("file -b -N -L " . $filename);
+
+	// Handle different image types
+	$imgtypes = array("FITS image data"  => array("fits", $an_fitstopnm . " -i %s > %s"),
+					  "JPEG image data"  => array("jpg",  "jpegtopnm %s > %s"),
+					  "PNG image data"   => array("png",  "pngtopnm %s > %s"),
+					  "GIF image data"   => array("gif",  "giftopnm %s > %s"),
+					  "Netpbm PPM"       => array("pnm",  "ppmtoppm < %s > %s"),
+					  "Netpbm PGM"       => array("pnm",  "pgmtoppm %s > %s"),
+					  "TIFF image data"  => array("tiff", "tifftopnm %s > %s"),
+					  );
+
+    $pnmimg = $mydir . "image.pnm";
+
+	$gotit = FALSE;
+	// Look for key phrases in the output of "file".
+	foreach ($imgtypes as $phrase => $lst) {
+		if (!strstr($typestr, $phrase)) {
+			continue;
+		}
+		$suff    = $lst[0];
+		$command = $lst[1];
+
+		if ($suff == "fits") {
+			// Run fits2fits.py on it...
+			$filtered_fits = $mydir . "filtered.fits";
+			$outfile = $mydir . "fits2fits.out";
+			$cmd = sprintf($fits_filter, $filename, $filtered_fits) . " > " . $outfile . " 2>&1";
+			loggit("Command: " . $cmd . "\n");
+			if ((system($cmd, $retval) === FALSE) || $retval) {
+				loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+				$errstr = "Failed to fix your FITS file: \"" . file_get_contents($outfile) . "\"";
+				return FALSE;
+			}
+			$filename = $filtered_fits;
+
+            // output var.
+            $fitsfile = $filtered_fits;
+		}
+
+		// Run *topnm on it.
+		$outfile = $mydir . "Xtopnm.out";
+		$cmd = sprintf($command, $filename, $pnmimg) . " 2> " . $outfile;
+		loggit("Command: " . $cmd . "\n");
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+			$errstr = "Failed to convert your image: \"" . file_get_contents($outfile) . "\"";
+			return FALSE;
+		}
+		$addsuffix = $suff . $addsuffix;
+		$imgtype = $suff;
+		$gotit = TRUE;
+		break;
+	}
+	if (!$gotit) {
+		$errstr = "Unknown image type: the \"file\" program says: \"" . $typestr . "\"";
+		return FALSE;
+	}
+	loggit("found image type " . $imgtype . "\n");
+    $filename = $pnmimg;
+    return TRUE;
+}
+
+function image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete, &$pnmimg, &$W, &$H) {
+    if (!image_to_pnm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete)) {
+        return FALSE;
+    }
+    $pnmimg = $filename;
+
+
+	$cmd = "pnmfile " . $pnmimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = shell_exec($cmd);
+	if (!$res) {
+		$errstr = "pnmfile failed.";
+		return FALSE;
+	}
+	//loggit("Pnmfile: " . $res . "\n");
+	// eg, "/home/gmaps/ontheweb-data/13a732d8ff/image.pnm: PGM raw, 4096 by 4096  maxval 255"
+	$pat = '/.*P.M .*, ([[:digit:]]*) by ([[:digit:]]*) *maxval [[:digit:]]*/';
+	if (!preg_match($pat, $res, &$matches)) {
+		die("PnM preg_match failed: string is \"" . $res . "\"\n");
+	}
+	$W = (int)$matches[1];
+	$H = (int)$matches[2];
+
+	// Use the output from "pnmfile" to decide if we need to convert to PGM (greyscale)
+	$ss = strstr($res, "PPM");
+	//loggit("strstr: " . $ss . "\n");
+	if (strlen($ss)) {
+		// reduce to PGM.
+		$pgmimg = $mydir . "image.pgm";
+		$cmd = "ppmtopgm " . $pnmimg . " > " . $pgmimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to reduce your image to grayscale.";
+			return FALSE;
+		}
+		array_push($todelete, $pgmimg);
+        $filename = $pgmimg;
+        return TRUE;
+	}
+    $filename = $pnmimg;
+    return TRUE;
+}
+
+function image_to_fits($mydir, &$filename, &$addsuffix, &$fitsfile,
+                       &$imgtype, &$errstr, &$todelete, &$pnmimg, &$W, &$H,
+                       $color) {
+
+    if (!image_to_pgm($mydir, &$filename, &$addsuffix, &$fitsfile,
+                      &$imgtype, &$errstr, &$todelete, &$pnmimg,
+                      &$W, &$H)) {
+        return FALSE;
+    }
+
+	if ($imgtype == "fits") {
+		$fitsimg = $filename;
+	} else {
+        if ($color) {
+            // Use the RGB image, not the grayscale.
+            $filename = $pnmimg;
+        }
+
+		// Run pnmtofits...
+		$fitsimg = $mydir . "image.fits";
+		$cmd = "pnmtofits " . $filename . " > " . $fitsimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to convert your image to a FITS image.";
+			return FALSE;
+		}
+		//? array_push($todelete, $fitsimg);
+	}
+    $filename = $fitsimg;
+    return TRUE;
+}
+
 function get_status_url_args($jobid, $file) {
 	return '?job=' . $jobid . "&get=" . $file;
 }

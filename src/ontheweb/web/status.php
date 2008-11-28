@@ -1142,7 +1142,28 @@ echo $valid_blurb;
 
 <?php
 function render_newfits(&$fn, $mydir, $jd, &$todelete) {
-    
+	global $wcs_fn;
+	global $new_wcs;
+
+	$filename = $mydir . $jd['imagefilename'];
+
+    if (!image_to_fits($mydir, &$filename, &$nil1, &$nil2, &$nil3,
+                       &$errstr, &$todelete, &$nil4, &$nil5, &$nil6,
+                       TRUE)) {
+		die("Failed to create FITS image: " . $errstr);
+    }
+    $fitsimg = $filename;
+
+	// Merge WCS
+	$merged = tempnam('/tmp', 'newfits');
+	$cmd = $new_wcs . " -d -i " . $fitsimg . " -w " . $mydir . $wcs_fn .
+		" -o " . $merged . " > /dev/null 2> /dev/null";
+	if ((system($cmd, $retval) === FALSE) || $retval) {
+		loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+		die("Failed to create new FITS file.");
+	}
+	array_push($todelete, $merged);
+	$fn = $merged;
 }
 
 function render_newheader(&$fn, $mydir, $jd, &$todelete) {
