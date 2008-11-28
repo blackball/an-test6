@@ -11,13 +11,13 @@
 # Select an installation base directory. The directory will be created
 # if it does not exist.
 #
-prefix			 ?= /opt/Ice-$(VERSION)
+prefix			 ?= /data1/dstn/software/ice-3.3.0-hydra
 
 #
 # The "root directory" for runpath embedded in executables. Can be unset
 # to avoid adding a runpath to Ice executables.
 #
-embedded_runpath_prefix  ?= /opt/Ice-$(VERSION_MAJOR).$(VERSION_MINOR)
+embedded_runpath_prefix  ?= 
 
 #
 # Define OPTIMIZE as yes if you want to build with
@@ -50,7 +50,7 @@ embedded_runpath_prefix  ?= /opt/Ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 # the licensing implications of using readline.
 # 
 
-USE_READLINE		?= no
+USE_READLINE		?= yes
 
 
 #
@@ -85,7 +85,7 @@ USE_READLINE		?= no
 # If Mcpp is not installed in a standard location where the  compiler 
 # can find it, set MCPP_HOME to the Mcpp installation directory.
 #
-#MCPP_HOME		?= /opt/mcpp
+MCPP_HOME		?= /data1/dstn/software/mcpp-2.7.1
 
 #
 # If readline is not installed in a standard location where the
