@@ -394,7 +394,7 @@ if (array_key_exists("send-email", $headers)) {
 			"Please let us know if you have any problems retrieving your results " .
 			"or if the solution is wrong.\n\n";
 	} else {
-		$headers .= 'Cc: Dustin Lang <dstn@cs.toronto.edu>' . "\r\n";
+		//$headers .= 'Cc: Dustin Lang <dstn@cs.toronto.edu>' . "\r\n";
 		$message = "Hello again,\n\n" .
 			"Sadly, we were unable to solve your field automatically.\n\n" .
 			"We may take a look at it and see if we can get it to solve; in this case " .
