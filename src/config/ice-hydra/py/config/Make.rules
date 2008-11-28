@@ -12,7 +12,8 @@
 # if it does not exist.
 #
 
-prefix			?= /opt/Ice-$(VERSION)
+prefix			?= /data1/dstn/software/ice-3.3.0-hydra
+
 
 #
 # The "root directory" for runpath embedded in executables. Can be unset
