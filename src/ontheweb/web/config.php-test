@@ -3,6 +3,16 @@
 // Only supported in newer versions of image2xy.
 $image2xy_extra_args = ' -D 4';
 
+function tabsort_commandline($infn, $outfn, $column, $descending) {
+	global $tabsort; 
+    $cmd = $tabsort;
+    if ($descending) {
+        $cmd .= " -d";
+    }
+    $cmd .= " " . $column . " " . $infn . " " . $outfn;
+    return $cmd;
+}
+
 // Which set of indices do we use?
 //require_once 'config-index100.php';
 //require_once 'config-index200.php';

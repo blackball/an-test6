@@ -308,7 +308,6 @@ function process_data ($vals) {
 	global $fitsgetext;
 	global $fitscopy;
 	global $xylist2fits;
-	global $tabsort;
 	global $ontheweblogfile;
 	global $indexdata;
 	global $largest_index;
@@ -784,7 +783,8 @@ function process_data ($vals) {
 		"    " . $tabmerge . " \$FN+1 " . $match_fn . ".tmp+1\n" .
 		"  done\n" .
 		"  echo Sorting match file...\n" .
-		"  " . $tabsort . " -d logodds " . $match_fn . ".tmp " . $match_fn . "\n" .
+        "  " . tabsort_commandline($match_fn . ".tmp", $match_fn, "logodds", TRUE) . "\n" .
+		//"  " . $tabsort . " -d logodds " . $match_fn . ".tmp " . $match_fn . "\n" .
 		"  rm " . $match_fn . ".tmp\n" .
 		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . "\n" .
 		"  echo Adding jobid to FITS headers...\n" .

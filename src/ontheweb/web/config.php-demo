@@ -1,5 +1,15 @@
 <?php
 
+function tabsort_commandline($infn, $outfn, $column, $descending) {
+	global $tabsort; 
+    $cmd = $tabsort;
+    if ($descending) {
+        $cmd .= " -d";
+    }
+    $cmd .= " -i " . $column . " -o " . $infn . " -c " . $outfn;
+    return $cmd;
+}
+
 $image2xy_extra_args = '';
 
 // Which set of indices do we use?
