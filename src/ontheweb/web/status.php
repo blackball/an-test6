@@ -271,7 +271,7 @@ if ($didsolve) {
 	}
 
 	if (!array_key_exists("cd11", $jd) ||
-        !array_key_exists("ra_center", $jd)) {
+        !array_key_exists("ra_center", $jd) || $jd['ra_min'] == 0) {
 		$errfile = $mydir . "wcsinfo.err";
 		$cmd = $wcsinfo . " " . $wcsfile . " > " . $wcsinfofile . " 2> " . $errfile;
 		loggit("Command: " . $cmd);
@@ -302,11 +302,11 @@ if ($didsolve) {
 		$orient = (float)$wcsvals['orientation'];
 		$pixscale = (float)$wcsvals['pixscale'];
 
-		$ra_min = (float)$wcsvals['ra_min'];
-		$ra_max = (float)$wcsvals['ra_max'];
+		$ra_min = (float)$wcsvals['ramin'];
+		$ra_max = (float)$wcsvals['ramax'];
 		$rac = (float)$wcsvals['ra_center'];
-		$dec_min = (float)$wcsvals['dec_min'];
-	    $dec_max = (float)$wcsvals['dec_max'];
+		$dec_min = (float)$wcsvals['decmin'];
+		$dec_max = (float)$wcsvals['decmax'];
 		$decc = (float)$wcsvals['dec_center'];
 
         $fieldw = (float)$wcsvals['fieldw'];
