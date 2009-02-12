@@ -168,6 +168,9 @@ if ($getfile) {
 	} else if (!strcmp($getfile, $newfits_fn)) {
 		render_newfits($fn, $mydir, $jd, $todelete);
 
+	} else if (!strcmp($getfile, $kmz_fn)) {
+		render_kmz($fn, $mydir, $jd, $todelete);
+
 	} else {
 		$fn = $mydir . $getfile;
 		if (!file_exists($fn)) {
@@ -175,7 +178,8 @@ if ($getfile) {
 		}
 	}
 	$sz = filesize($fn);
-	$attachments = array($wcs_fn, $newheader_fn, $newfits_fn, $corr_fn,
+	$attachments = array($wcs_fn, $newheader_fn, $newfits_fn,
+				   		$corr_fn, $kmz_fn,
 						 $indexxyls_fn, $indexrdls_fn,
 						 $xyls_fn, $rdls_fn,
 						 );
@@ -966,6 +970,10 @@ if ($job_done) {
 		print_link($wcsfile);
 		echo "</td></tr>\n";
 
+		echo '<tr><td>KMZ (for viewing in Google Sky/Earth:</td><td>';
+		print_link($mydir . $kmz_fn, TRUE);
+		echo "</td></tr>\n";
+
 		echo '<tr><td>New FITS header:</td><td>';
 		print_link($mydir . $newheader_fn, TRUE);
 		echo "</td></tr>\n";
@@ -1141,6 +1149,53 @@ echo $valid_blurb;
 </html>
 
 <?php
+function render_kmz(&$fn, $mydir, $jd, &$todelete) {
+	global $wcs_fn;
+	global $kmz_fn;
+
+	$filename = $mydir . $jd['imagefilename'];
+
+	if (!image_to_pnm($mydir, &$filename, &$nil, &$nil2, &$nil3,
+	                       &$errstr, &$todelete)) {
+		die("Failed to create PNM image: " . $errstr);
+    }
+    $pnmimg = $filename;
+
+	$dir = sprintf('/tmp/kmz-%08i/', rand(100000000));
+	mkdir(dir);
+
+	//$pngfn = $dir . 'image.png';
+	$pngfn = tempnam('/tmp', 'kmzpng');
+	$cmd = pnmtopng . " " . $pnmimg . " > " . $pngfn;
+    loggit("Command: " . $cmd . "\n");
+	if ((system($cmd, $retval) === FALSE) || $retval) {
+		loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+		die("Failed to create PNG file for KMZ.");
+	}
+	
+	$warpedpngfn = 'image.png';
+	$kmlfn = 'doc.kml';
+
+	$outkmz = sprintf('/tmp/kmz-%08i.zip', rand(100000000));
+
+	$cmd = "cp " . $mydir . $wcs_fn . " " . $dir .
+		 "; cd " . $dir .
+		 "; wcs2kml --input_image_origin_is_upper_left" .
+		 " --fitsfile=" . $wcs_fn .
+		 " --imagefile=" . $pngfn .
+		 " --kmlfile=" . $kmlfn .
+		 " --outfile=" . $warpedpngfn .
+		 "; zip -j - " . $warpedpngfn . " " . $kmlfn . " > " .
+		 $outkmz;
+    loggit("Command: " . $cmd . "\n");
+	if ((system($cmd, $retval) === FALSE) || $retval) {
+		loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+		die("Failed to create KMZ.");
+	}
+
+	$fn = $outkmz;
+}
+
 function render_newfits(&$fn, $mydir, $jd, &$todelete) {
 	global $wcs_fn;
 	global $new_wcs;

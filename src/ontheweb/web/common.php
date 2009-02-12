@@ -49,6 +49,7 @@ $cancel_fn= "cancel";
 $wcs_fn   = "wcs.fits";
 $newheader_fn   = "newheader.fits";
 $newfits_fn   = "new.fits";
+$kmz_fn = "image.kmz";
 $objs_fn  = "objs.png";
 $bigobjs_fn  = "objs-big.png";
 $overlay_fn="overlay.png";
