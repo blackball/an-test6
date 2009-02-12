@@ -970,7 +970,7 @@ if ($job_done) {
 		print_link($wcsfile);
 		echo "</td></tr>\n";
 
-		echo '<tr><td>KMZ (for viewing in Google Sky/Earth:</td><td>';
+		echo '<tr><td>KMZ (for viewing in Google Sky/Earth):</td><td>';
 		print_link($mydir . $kmz_fn, TRUE);
 		echo "</td></tr>\n";
 
@@ -1152,6 +1152,7 @@ echo $valid_blurb;
 function render_kmz(&$fn, $mydir, $jd, &$todelete) {
 	global $wcs_fn;
 	global $kmz_fn;
+    global $wcstokml;
 
 	$filename = $mydir . $jd['imagefilename'];
 
@@ -1161,10 +1162,11 @@ function render_kmz(&$fn, $mydir, $jd, &$todelete) {
     }
     $pnmimg = $filename;
 
-	$dir = sprintf('/tmp/kmz-%08i/', rand(100000000));
-	mkdir(dir);
+	$dir = tempnam('/tmp', 'kmz-');
+    unlink($dir);
+    mkdir($dir);
+    loggit("Trying to create directory: " . $dir . "\n");
 
-	//$pngfn = $dir . 'image.png';
 	$pngfn = tempnam('/tmp', 'kmzpng');
 	$cmd = pnmtopng . " " . $pnmimg . " > " . $pngfn;
     loggit("Command: " . $cmd . "\n");
@@ -1175,16 +1177,15 @@ function render_kmz(&$fn, $mydir, $jd, &$todelete) {
 	
 	$warpedpngfn = 'image.png';
 	$kmlfn = 'doc.kml';
-
-	$outkmz = sprintf('/tmp/kmz-%08i.zip', rand(100000000));
+	$outkmz = sprintf('/tmp/kmz-%08d.zip', rand(0,100000000));
 
 	$cmd = "cp " . $mydir . $wcs_fn . " " . $dir .
 		 "; cd " . $dir .
-		 "; wcs2kml --input_image_origin_is_upper_left" .
+		 "; " . $wcstokml . " --input_image_origin_is_upper_left" .
 		 " --fitsfile=" . $wcs_fn .
 		 " --imagefile=" . $pngfn .
 		 " --kmlfile=" . $kmlfn .
-		 " --outfile=" . $warpedpngfn .
+		 " --outfile=" . $warpedpngfn . " >> " . $mydir . "kmz.log" .
 		 "; zip -j - " . $warpedpngfn . " " . $kmlfn . " > " .
 		 $outkmz;
     loggit("Command: " . $cmd . "\n");

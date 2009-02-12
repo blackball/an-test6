@@ -107,6 +107,8 @@ $indexdir = "/home/gmaps/ontheweb-indexes/";
 
 $sqlite = "sqlite";
 
+$wcstokml = '/usr/local/wcs2kml/bin/wcs2kml';
+
 $image2xy = $quads . "image2xy";
 $plotxy = $quads . "plotxy";
 $plotquad = $quads . "plotquad";
