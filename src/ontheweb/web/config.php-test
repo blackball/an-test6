@@ -16,7 +16,7 @@ function tabsort_commandline($infn, $outfn, $column, $descending) {
 // Which set of indices do we use?
 //require_once 'config-index200.php';
 require_once 'config-index500.php';
-require_once 'config-addindex-hubble.php';
+//require_once 'config-addindex-hubble.php';
 
 // Site id.
 $siteid = "test";
