@@ -63,6 +63,7 @@ $rdlsinfo_fn="rdlsinfo";
 $wcsinfo_fn="wcsinfo";
 $jobdata_fn = "jobdata.db";
 $image2xyout_fn = "image2xy.out";
+$remlinesout_fn = "remlines.out";
 
 $unitmap = array('arcsecperpix' => "arcseconds per pixel",
 				 'arcminperpix' => "arcminutes per pixel",
@@ -131,6 +132,7 @@ $wcs_rd2xy = $quads . "wcs-rd2xy";
 $fits_guess_scale = $quads . "fits-guess-scale";
 $get_wcs = $quads . "get-wcs";
 $an_fitstopnm = $quads . "an-fitstopnm";
+$removelines = $utils . "removelines.py";
 $fits_filter = $utils . "fits2fits.py %s %s";
 $new_wcs = $quads . "new-wcs";
 

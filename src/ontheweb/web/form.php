@@ -1251,6 +1251,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	global $objs_fn;
 	global $bigobjs_fn;
 	global $image2xyout_fn;
+    global $remlinesout_fn;
+    global $removelines;
 	global $fits_guess_scale;
 	global $xyls_fn;
 
@@ -1321,12 +1323,24 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		return FALSE;
 	}
 
+    // remove lines of sources.
+    $remlinesout = $mydir . $remlinesout_fn;
+    $remlinesxy = $mydir . "remlines.xy.fits";
+    $cmd = $removelines . " " . $xylist . " " . $remlinesxy . " > " . $remlinesout . " 2>&1";
+	loggit("Command: " . $cmd . "\n");
+	$res = system($cmd, $retval);
+	if (($res === FALSE) || $retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to remove lines of sources: \"" . file_get_contents($remlinesout) . "\"";
+		return FALSE;
+	}
+
 	// sort the xylist by FLUX.
 	$tabsortout = $mydir . "tabsort.out";
 	$sortedlist = $mydir . $xyls_fn;
 
 	//$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
-	$cmd = $resort . " " . $xylist . " " . $sortedlist . " -d > " . $tabsortout;
+	$cmd = $resort . " " . $remlinesxy . " " . $sortedlist . " -d > " . $tabsortout;
 
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
