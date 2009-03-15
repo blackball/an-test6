@@ -1313,6 +1313,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
     if ($W * $H >= 5000000) {
         $cmd .= " -H";
     }
+    $cmd .= " -v";
     $cmd .= $image2xy_extra_args; //" -D 4";
     $cmd .= " " . $fitsimg . " > " . $image2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");

@@ -28,7 +28,7 @@ $quads = $base . "astrometry/blind/";
 $utils = $base . "astrometry/util/";
 
 // Google Maps URL to use.
-$gmaps_base = "http://oven.cosmo.fas.nyu.edu:8888/test";
+$gmaps_base = "http://edge.astrometry.net";
 $gmaps_url = $gmaps_base . "/gmaps";
 $tiles_url = $gmaps_base . "/tile/get/";
 
