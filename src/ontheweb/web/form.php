@@ -253,7 +253,7 @@ function submit_failed($jobdb, $msg) {
 		loggit("submit_failed: failed to save submit-failure in jobdb.\n");
 	}
 	loggit("Submit failed: " . $msg . "\n");
-	die("Submit failed: " . $msg);
+	die("Submit failed: <pre>" . $msg . "</pre>");
 }
 
 // Handle a valid submitted form.
@@ -1131,6 +1131,19 @@ function render_form($form, $headers) {
 		echo '<' . '?xml version="1.0" encoding="UTF-8"?' . '>';
 		$head = file_get_contents($index_header_simple);
 		echo $head;
+
+        /*
+         phpinfo();
+         echo "<pre>";
+         foreach ($_ENV as $k => $v) {
+         echo "ENV[" . $k . "] = " . $v . "\n";
+         }
+         foreach ($_SERVER as $k => $v) {
+         echo "SERVER[" . $k . "] = " . $v . "\n";
+         }
+         echo "</pre>";
+         */
+
 		// Render the form.
 		echo $renderer->toHtml($template);
 		$tail = file_get_contents($index_tail_simple);
