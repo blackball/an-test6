@@ -133,7 +133,7 @@ $fits_guess_scale = $quads . "fits-guess-scale";
 $get_wcs = $quads . "get-wcs";
 $an_fitstopnm = $quads . "an-fitstopnm";
 $removelines = $utils . "removelines.py";
-$fits_filter = $utils . "fits2fits.py %s %s";
+$fits_filter = $utils . "fits2fits.py -s %s %s";
 $new_wcs = $quads . "new-wcs";
 
 $headers = $_REQUEST;
