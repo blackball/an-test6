@@ -70,6 +70,9 @@ if __name__ == '__main__':
 		wcsfn = os.path.join(jobdir, 'wcs.fits')
 		if not os.path.exists(wcsfn):
 			continue
-		print wcsfn
+		#print d.keys()
+		#if 'imgurl' in d:
+		#	print d['imgurl']
+		print wcsfn.replace('/home/gmaps/ontheweb-data/', 'wcsfn ')
 		#print d['jobid']
 
