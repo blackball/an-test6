@@ -64,15 +64,21 @@ if __name__ == '__main__':
 		f.close()
 
 	for d in lst:
-		if d['email'] != 'christopher@stumm.ca':
-			continue
+		#if d['email'] != 'christopher@stumm.ca':
+		#	continue
 		jobdir = d['jobdir']
 		wcsfn = os.path.join(jobdir, 'wcs.fits')
 		if not os.path.exists(wcsfn):
 			continue
+
+		print wcsfn
+
 		#print d.keys()
+
 		#if 'imgurl' in d:
 		#	print d['imgurl']
-		print wcsfn.replace('/home/gmaps/ontheweb-data/', 'wcsfn ')
+
+		#print wcsfn.replace('/home/gmaps/ontheweb-data/', 'wcsfn ')
+
 		#print d['jobid']
 
