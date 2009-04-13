@@ -110,23 +110,28 @@ foreach ($matches as $m) {
 	$imgurl = $baseurl . $match['imgurl'];
 	$suffix = $match['extension'];
 
-	$img = file_get_contents($imgurl);
-	if (!$img) {
-		die("Couldn't get image: " . $imgurl);
-	}
-	if (!file_put_contents($date . "." . $suffix, $img)) {
-		die("Couldn't write image: " . $imgurl);
+	$get_small = false;
+	$get_big = true;
+
+	if ($get_small) {
+		$img = file_get_contents($imgurl);
+		if (!$img) {
+			die("Couldn't get image: " . $imgurl);
+		}
+		if (!file_put_contents($date . "." . $suffix, $img)) {
+			die("Couldn't write image: " . $imgurl);
+		}
 	}
 
-
-	$bigimg = file_get_contents($bigimgurl);
-	if (!$bigimg) {
-		die("Couldn't get bigimage: " . $bigimgurl);
+	if ($get_big) {
+		$bigimg = file_get_contents($bigimgurl);
+		if (!$bigimg) {
+			die("Couldn't get bigimage: " . $bigimgurl);
+		}
+		if (!file_put_contents($date . "-big." . $suffix, $bigimg)) {
+			die("Couldn't write image: " . $bigimgurl);
+		}
 	}
-	if (!file_put_contents($date . "-big." . $suffix, $bigimg)) {
-		die("Couldn't write image: " . $bigimgurl);
-	}
-
 }
 
 ?>
