@@ -38,9 +38,10 @@ foreach ($matches as $m) {
      echo "  " . $m[3] . "\n";
      */
 
-    // temp
-    if (substr($date, 0, 2) != "02")
-        //if (substr($date, 0, 4) != "9601")
+    // check year or year+month
+    //if (substr($date, 0, 2) != "02")
+    //if (substr($date, 0, 4) != "9601")
+    if (substr($date, 0, 2) != "08")
         continue;
 
     /*
