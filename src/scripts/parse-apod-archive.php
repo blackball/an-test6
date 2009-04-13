@@ -41,7 +41,7 @@ foreach ($matches as $m) {
     // check year or year+month
     //if (substr($date, 0, 2) != "02")
     //if (substr($date, 0, 4) != "9601")
-    if (substr($date, 0, 2) != "08")
+    if (substr($date, 0, 2) != "07")
         continue;
 
     /*
@@ -110,8 +110,8 @@ foreach ($matches as $m) {
 	$imgurl = $baseurl . $match['imgurl'];
 	$suffix = $match['extension'];
 
-	$get_small = false;
-	$get_big = true;
+	$get_small = true;
+	$get_big = false;
 
 	if ($get_small) {
 		$img = file_get_contents($imgurl);
