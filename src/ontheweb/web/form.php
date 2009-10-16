@@ -1353,8 +1353,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$tabsortout = $mydir . "tabsort.out";
 	$sortedlist = $mydir . $xyls_fn;
 
-	//$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
-	$cmd = $resort . " " . $remlinesxy . " " . $sortedlist . " -d > " . $tabsortout;
+	$cmd = $resort . " -d " . $remlinesxy . " " . $sortedlist . " > " . $tabsortout;
 
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
