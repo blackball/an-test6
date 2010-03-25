@@ -51,11 +51,13 @@ function moveToState(newState) {
   $("#save_match").attr("disabled", "disabled");
   $("#remove_match").attr("disabled", "disabled");
   $("#cancel").attr("disabled", "disabled");
+  $("#refit").attr("disabled", "disabled");
   if (state == STATE_NOT_LOADED) {
     selectedCatalog = null;
     selectedImage = null;
     return;
   }
+  $("#refit").removeAttr("disabled");
   if (state == STATE_IMAGE_SELECTED) {
     $("#cancel").removeAttr("disabled");
   }
@@ -99,6 +101,14 @@ function matcherStart() {
   });
   $('#cancel').click(function() {
     moveToState(STATE_NOT_LOADED);
+  });
+  $('#refit').click(function() {
+    moveToState(STATE_NOT_LOADED);
+    log('Fitting....');
+    $.post('/solve', { "tweak_id" : tweak.tweak_id }, function() {
+      log('Fitted.');
+      loadTweak(tweak.tweak_id);
+    });
   });
   ctx = $('#tweak')[0].getContext('2d');
   $('#tweak_id').keypress(function(e) {
