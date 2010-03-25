@@ -3,6 +3,7 @@
 import sys
 
 from astrometry.util.pyfits_utils import *
+import pyfits
 
 import kdb
 import numpy
@@ -33,8 +34,12 @@ if __name__ == '__main__':
 		ixy = table_fields(ixyfn)
 		corr = table_fields(corrfn)
 
+		hdr = pyfits.open(xyfn)[0].header
+		W = hdr['IMAGEW']
+		H = hdr['IMAGEH']
+
 		query('''INSERT INTO tweaks (url, model, wcs, width, height)
-		VALUES ('http://fake', 'TAN', '', 800, 600)''')
+		VALUES (?,?,?,?,?)''', ('http://fake', 'TAN', '', W, H))
 		tweak_id = lastid(db)
 		print 'tweak_id', tweak_id
 
