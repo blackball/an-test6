@@ -40,7 +40,7 @@ class Database(object):
     print sql
     if params is None:
       return [r for r in self.c.execute(sql)]
-    print '  where ? ==', params
+    print '  where ? ==', map(repr, params)
     return [r for r in self.c.execute(sql, params)]
 
   def close(self):
