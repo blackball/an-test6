@@ -23,6 +23,7 @@ __author__ = 'mierle@gmail.com (Keir Mierle)'
 import sqlite3
 import web
 import kweb
+import update_tweak
 
 from kdb import query, Database
 
@@ -77,12 +78,12 @@ def savematch(args):
 
 @kweb.post
 def solve(args):
+    print 'solve()'
     if not 'tweak_id' in args:
         print '404 Not found'
         return
-    # XXX resolve by calling dstns code
-    # XXX update projected_catalog
-    return
+    print 'upd...'
+    update_tweak.update_tweak(int(args['tweak_id']))
 
 @kweb.get
 def index(args):
