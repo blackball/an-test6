@@ -1,0 +1,24 @@
+Manual matcher. Requires a web.py 0.33 or newer installed, in addition to the
+usual numeric python goodness and the astrometry python suite.
+
+To get going:
+
+1. sqlite3 matcher.sqlite < matcher.sql
+2. python add_random.py
+3. python matcher.py
+4. Navigate with a browser to http://localhost:999/
+5. Type in '42' (the random tweak created by add_random) into the field and
+   press enter.
+
+Manual matcher. Requires a web.py 0.33 or newer installed, in addition to the
+usual numeric python goodness and the astrometry python suite.
+
+To get going:
+
+1. sqlite3 matcher.sqlite < matcher.sql
+2. python add_random.py
+3. python matcher.py
+4. Navigate with a browser to http://localhost:999/
+5. Type in '42' (the random tweak created by add_random) into the field and
+   press enter.
+
