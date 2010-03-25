@@ -50,12 +50,19 @@ function moveToState(newState) {
   state = newState;
   $("#save_match").attr("disabled", "disabled");
   $("#remove_match").attr("disabled", "disabled");
+  $("#cancel").attr("disabled", "disabled");
   if (state == STATE_NOT_LOADED) {
+    selectedCatalog = null;
+    selectedImage = null;
     return;
+  }
+  if (state == STATE_IMAGE_SELECTED) {
+    $("#cancel").removeAttr("disabled");
   }
   if (state == STATE_IMAGE_AND_CATALOG_SELECTED) {
     $("#save_match").removeAttr("disabled");
     $("#remove_match").removeAttr("disabled");
+    $("#cancel").removeAttr("disabled");
   }
   draw();
 }
@@ -89,6 +96,9 @@ function matcherStart() {
     if (state == STATE_IMAGE_AND_CATALOG_SELECTED) {
       removeMatch();
     }
+  });
+  $('#cancel').click(function() {
+    moveToState(STATE_NOT_LOADED);
   });
   ctx = $('#tweak')[0].getContext('2d');
   $('#tweak_id').keypress(function(e) {
