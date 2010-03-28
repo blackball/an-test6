@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import sys
 
 from astrometry.util.pyfits_utils import *
@@ -12,6 +13,11 @@ def lastid(db):
 	print db.query('SELECT last_insert_rowid()')
 	return int(db.query('SELECT last_insert_rowid() AS id')[0]['id'])
 
+sample_ul = 'http://oven.cosmo.fas.nyu.edu/blind/status.php?job=tor-200704-39947589&get=index.rd.fits'
+
+def wget(url, fn):
+	os.system("wget '%s' -O %s" % (url, fn))
+
 if __name__ == '__main__':
 	args = sys.argv[1:]
 	if not len(args):
@@ -23,23 +29,36 @@ if __name__ == '__main__':
 	query('BEGIN TRANSACTION')
 
 	for base in args:
-		print 'Reading input files with base filename', base
-		xyfn = '%s.axy' % base
-		rdfn = '%s.rdls' % base
-		ixyfn = '%s-indx.xyls' % base
-		corrfn = '%s.corr' % base
+                # you need corrsepondences.fits,
+                # field.xy.fits (rename to .axy); index.xy.fits (rename to -indx.xyls); index.rd.fits (rename to .rdls)
+		url = ''
+		if base.startswith('http'):
+			print 'Downloading from:', base
+			xyfn = 'field.xy.fits'
+			rdfn = 'index.rd.fits'
+			ixyfn = 'index.xy.fits'
+			corrfn = 'correspondences.fits'
+			url = base + '&get=fullsize.png'
+			for f in xyfn, rdfn, ixyfn, corrfn:
+				wget(base + '&get=' + f, f)
+		else:
+			print 'Reading input files with base filename', base
+			xyfn = '%s.axy' % base
+			rdfn = '%s.rdls' % base
+			ixyfn = '%s-indx.xyls' % base
+			corrfn = '%s.corr' % base
 
 		xy = table_fields(xyfn)
 		rd = table_fields(rdfn)
 		ixy = table_fields(ixyfn)
 		corr = table_fields(corrfn)
 
-		hdr = pyfits.open(xyfn)[0].header
+		hdr = pyfits.open(xyfn)[1].header
 		W = hdr['IMAGEW']
 		H = hdr['IMAGEH']
 
 		query('''INSERT INTO tweaks (url, model, wcs, width, height)
-		VALUES (?,?,?,?,?)''', ('http://fake', 'TAN', '', W, H))
+		VALUES (?,?,?,?,?)''', (url, 'TAN', '', W, H))
 		tweak_id = lastid(db)
 		print 'tweak_id', tweak_id
 

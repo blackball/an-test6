@@ -6,7 +6,7 @@ from astrometry.util import run_command
 db = kdb.Database()
 query = db.query
 
-def update_tweak(tweak_id):
+def update_tweak(tweak_id, order=1):
     print 'hello world, i am update_tweak'
     db = kdb.Database()
     query = db.query
@@ -38,9 +38,11 @@ def update_tweak(tweak_id):
     # -X and -Y for boresight
     # match:   x y a d
     # catalog: -1 -1 a d
-    cmd = 'keirthing -W %(width)s -H %(height)s' % query('''
+    args = query('''
            SELECT id as tweak_id, url, model, wcs, width, height
            FROM tweaks WHERE tweak_id = ?''', (tweak_id,))[0]
+    args['order'] = order
+    cmd = 'keirthing -W %(width)s -H %(height)s -o %(order)s' % args
     exitcode, out, err = run_command.run_command(
         cmd, stdindata='\n'.join(lines))
 

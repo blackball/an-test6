@@ -20,6 +20,18 @@
 //
 // Simple manual correspondence selector.
 
+$.extend($.fn.disableTextSelect = function() {
+  return this.each(function() {
+    if ($.browser.mozilla) {
+      $(this).css('MozUserSelect', 'none');
+    } else if ($.browser.msie) {
+      $(this).bind('selectstart', function() { return false; });
+    } else {
+      $(this).mousedown(function() { return false; });
+    }
+  });
+});
+
 // XXX Disable this on non-firefox non-chrome browsers.
 var log = function(x) {
   console.log(x);
@@ -43,18 +55,26 @@ var selectedImage = null;
 
 var ctx;
 
+var canvasPixelsPerImagePixels = 1;
+
+var field = null;
+
 // End globals
 
 function moveToState(newState) {
   oldState = state;
   state = newState;
+  log('State transition: ' + oldState + ' to ' + newState);
   $("#save_match").attr("disabled", "disabled");
   $("#remove_match").attr("disabled", "disabled");
   $("#cancel").attr("disabled", "disabled");
   $("#refit").attr("disabled", "disabled");
-  if (state == STATE_NOT_LOADED) {
+  if (state == STATE_NOT_LOADED || state == STATE_READY) {
     selectedCatalog = null;
     selectedImage = null;
+  }
+  if (state == STATE_NOT_LOADED) {
+    field = null;
     return;
   }
   $("#refit").removeAttr("disabled");
@@ -77,7 +97,6 @@ function closest(objects, x, y) {
     var dx = objects[i].x - x;
     var dy = objects[i].y - y;
     var d2 = dx*dx + dy*dy;
-    log('This distance: ' + d2 + ', best distance: ' + closestDistance2);
     if (d2 < closestDistance2) {
       closestObject = objects[i];
       closestDistance2 = d2;
@@ -87,8 +106,22 @@ function closest(objects, x, y) {
           closestObject : null);
 }
 
+function refit() {
+  moveToState(STATE_NOT_LOADED);
+  log('Fitting....');
+  $.post('/solve', { "tweak_id" : tweak.tweak_id,
+                     "order"    : $('#order').attr('value')
+                   }, function() {
+    log('Fitted.');
+    loadTweak(tweak.tweak_id);
+  });
+}
+
 // Set up the event handlers; called on document load.
 function matcherStart() {
+  $('#reload').click(function() {
+    loadTweak($('#tweak_id').attr('value'));
+  });
   $('#save_match').click(function() {
     if (state == STATE_IMAGE_AND_CATALOG_SELECTED) {
       saveMatch();
@@ -100,15 +133,16 @@ function matcherStart() {
     }
   });
   $('#cancel').click(function() {
-    moveToState(STATE_NOT_LOADED);
+    moveToState(STATE_READY);
   });
   $('#refit').click(function() {
-    moveToState(STATE_NOT_LOADED);
-    log('Fitting....');
-    $.post('/solve', { "tweak_id" : tweak.tweak_id }, function() {
-      log('Fitted.');
-      loadTweak(tweak.tweak_id);
-    });
+    refit();
+  });
+  $('#order').keypress(function(e) {
+    log('Got keypress for order change.');
+    if (e.keyCode == 13 /* Enter */) {
+      refit();
+    }
   });
   ctx = $('#tweak')[0].getContext('2d');
   $('#tweak_id').keypress(function(e) {
@@ -118,8 +152,8 @@ function matcherStart() {
     }
   });
   $('#tweak').click(function(e) {
-    var x = e.pageX - this.offsetLeft;
-    var y = e.pageY - this.offsetTop;
+    var x = (e.pageX - this.offsetLeft) / canvasPixelsPerImagePixels;
+    var y = (e.pageY - this.offsetTop)  / canvasPixelsPerImagePixels;
     if (state == STATE_READY) {
       var clickedObject = closest(tweak.image, x, y);
       if (clickedObject != null) {
@@ -141,7 +175,8 @@ function matcherStart() {
         log('Click too far from any image objects');
       }
     }
-  });
+  })
+  .disableTextSelect();
   moveToState(STATE_NOT_LOADED);
 }
 
@@ -159,10 +194,26 @@ function setTweak(newTweak) {
   for (var i = 0; i < tweak.catalog.length; ++i) {
     tweak.catalogIdToCatalog[tweak.catalog[i].catalog_id] = tweak.catalog[i];
   }
+  
+  // Recompute the scale.
+  var canvasWidth  = $('#tweak').attr('width');
+  var canvasHeight = $('#tweak').attr('height');
+  var imageWidth = tweak.width;
+  var imageHeight = tweak.height;
+  canvasPixelsPerImagePixels = Math.min(canvasWidth / imageWidth,
+                                        canvasHeight / imageHeight)
+  field = requiredImage(tweak.url);
+}
+
+function requiredImage(src) {
+  var image = new Image();
+  image.src = src;
+  image.onload = draw;
+  return image;
 }
 
 function loadTweak(tweak_id) {
-  state = STATE_NOT_LOADED;
+  moveToState(STATE_NOT_LOADED);
   $.getJSON('/tweak', { "tweak_id" : tweak_id }, function(newTweak) {
     log('Got new tweak')
     log('Image points: ' + newTweak.image.length);
@@ -208,10 +259,13 @@ function removeMatch() {
   });
 }
 
-function drawCross(ctx, x, y, color) {
-  var r = 8;
+var markerRadius = 5;
+var markerWidth = 1;
+
+function drawCross(ctx, x, y, color, thickness) {
+  var r = markerRadius;
   ctx.save();
-  ctx.lineWidth = 3;
+  ctx.lineWidth = thickness ? thickness : markerWidth;
   ctx.strokeStyle = color ? color : '#7755FF';
   ctx.translate(x + 0.5, y + 0.5);
   ctx.beginPath();
@@ -224,10 +278,10 @@ function drawCross(ctx, x, y, color) {
   ctx.restore();
 }
 
-function drawCircle(ctx, x, y, color) {
-  var r = 8;
+function drawCircle(ctx, x, y, color, thickness) {
+  var r = markerRadius;
   ctx.save();
-  ctx.lineWidth = 3;
+  ctx.lineWidth = thickness ? thickness : markerWidth;
   ctx.strokeStyle = color ? color : '#FFCC77';
   ctx.beginPath();
   ctx.arc(x, y, r, 0, 2 * Math.PI, true);
@@ -241,28 +295,47 @@ function draw() {
     return;
   }
 
+  ctx.save()
+
   var canvasWidth  = $('#tweak').attr('width');
   var canvasHeight = $('#tweak').attr('height');
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-  // XXX Do proper scaling here that maintains aspect ratio.
   var imageWidth = tweak.width;
   var imageHeight = tweak.height;
+
+  canvasPixelsPerImagePixels = Math.min(canvasWidth / imageWidth,
+                                        canvasHeight / imageHeight)
+  ctx.scale(canvasPixelsPerImagePixels, canvasPixelsPerImagePixels)
+
+  // Draw background image, if available.
+  if (field && field.complete) {
+    ctx.drawImage(field, 0.5, 0.5);
+  }
 
   // Draw image stars
   for (var i = 0; i < tweak.image.length; ++i) {
     drawCircle(ctx, tweak.image[i].x, tweak.image[i].y);
   }
 
-  // Draw image stars
+  // Draw catalog stars
   for (var i = 0; i < tweak.catalog.length; ++i) {
     drawCross(ctx, tweak.catalog[i].x, tweak.catalog[i].y);
+  }
+
+  // Draw more obvious markers for objects part of matches.
+  for (var i = 0; i < tweak.matches.length; ++i) {
+    var image = tweak.imageIdToImage[tweak.matches[i].image_id];
+    var catalog = tweak.catalogIdToCatalog[tweak.matches[i].catalog_id];
+    drawCircle(ctx, image.x, image.y, undefined, 3);
+    drawCross(ctx, catalog.x, catalog.y, undefined, 3);
   }
 
   // Draw lines between corresponding x's and o's.
   ctx.save();
   ctx.beginPath();
   ctx.strokeStyle = '#00FF00';
+  ctx.lineWidth = 5;
   for (var i = 0; i < tweak.matches.length; ++i) {
     var image = tweak.imageIdToImage[tweak.matches[i].image_id];
     var catalog = tweak.catalogIdToCatalog[tweak.matches[i].catalog_id];
@@ -271,13 +344,16 @@ function draw() {
   }
   ctx.stroke();
   ctx.closePath();
+  ctx.restore();
 
   // Draw the selected x and o, if any.
   if (state == STATE_IMAGE_SELECTED ||
       state == STATE_IMAGE_AND_CATALOG_SELECTED) {
-    drawCircle(ctx, selectedImage.x, selectedImage.y, '#FFFFFF');
+    drawCircle(ctx, selectedImage.x, selectedImage.y, '#FFFFFF', 5);
   }
   if (state == STATE_IMAGE_AND_CATALOG_SELECTED) {
-    drawCross(ctx, selectedCatalog.x, selectedCatalog.y, '#FFFFFF');
+    drawCross(ctx, selectedCatalog.x, selectedCatalog.y, '#FFFFFF', 5);
   }
+
+  ctx.restore()
 }

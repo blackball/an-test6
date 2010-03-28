@@ -82,8 +82,9 @@ def solve(args):
     if not 'tweak_id' in args:
         print '404 Not found'
         return
+    order = int(args.get('order', 1))
     print 'upd...'
-    update_tweak.update_tweak(int(args['tweak_id']))
+    update_tweak.update_tweak(int(args['tweak_id']), order)
 
 @kweb.get
 def index(args):

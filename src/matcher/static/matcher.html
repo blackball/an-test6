@@ -11,17 +11,20 @@
 <script type="text/javascript">$(document).ready(matcherStart);</script>
 </head>
 <body>
+  <img id="image" style="display:none">
   <div id="data"></div>
   <div id="header">
     TWEAK_ID: <input type="text" id="tweak_id" value="" />
+    <button id="reload">RELOAD</button>
+    ORDER: <input type="text" id="order" value="1" />
+    <button id="refit">REFIT</button>
     <button id="save_match">SAVE MATCH</button>
     <button id="remove_match">REMOVE MATCH</button>
     <button id="cancel">CANCEL</button>
-    <button id="refit">REFIT</button>
     <br>
     <div id="info" style="display:inline"></div>
     <div id="status" style="display:inline"></div>
   </div>
-  <canvas id="tweak" width="1000" height="1000"></canvas>
+  <canvas id="tweak" width="1000" height="650"></canvas>
 </body>
 </html>
