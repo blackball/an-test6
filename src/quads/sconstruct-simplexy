@@ -1,4 +1,0 @@
-import glob
-env = Environment()
-env.ParseConfig('echo -lc -lm -L../cfitsio/ -I../cfitsio/ -lcfitsio')
-env.Program('image2xy', glob.glob('src/*.c'))
